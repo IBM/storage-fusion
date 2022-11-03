@@ -1,5 +1,5 @@
 <!-- This should be the location of the title of the repository, normally the short name -->
-# repo-template
+# IBM SPECTRUM FUSION
 
 <!-- Build Status, is a great thing to have at the top of your repository, it shows that you take your CI/CD as first class citizens -->
 <!-- [![Build Status](https://travis-ci.org/jjasghar/ibm-cloud-cli.svg?branch=master)](https://travis-ci.org/jjasghar/ibm-cloud-cli) -->
@@ -7,7 +7,11 @@
 <!-- Not always needed, but a scope helps the user understand in a short sentance like below, why this repo exists -->
 ## Scope
 
-The purpose of this project is to provide a template for new open source repositories.
+Objective of this page is to spread about the unique solution of managing storage infrastructure with compute provided by IBM Spectrum Fusion.
+
+https://www.ibm.com/products/spectrum-fusion
+
+Watch out this space for tools where we can mirror images for IBM Spectrum Fusion and also validate the same.
 
 <!-- A more detailed Usage or detailed explaination of the repository here -->
 ## Usage
