@@ -13,9 +13,10 @@ https://www.ibm.com/products/spectrum-fusion
 
 **Blogs related to IBM Spectrum Fusion**
 
+* [An Introduction to the Hardware of Spectrum Fusion HCI](https://community.ibm.com/community/user/storage/blogs/joe-wigglesworth/2022/10/21/an-introduction-to-the-hardware-of-spectrum-fusion?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
+
 * [Upgraded Compute Power for IBM Spectrum Fusion HCI](https://community.ibm.com/community/user/storage/blogs/joe-wigglesworth/2022/11/01/upgraded-compute-power-for-ibm-spectrum-fusion-hci?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
 
-* [An Introduction to the Hardware of Spectrum Fusion HCI](https://community.ibm.com/community/user/storage/blogs/joe-wigglesworth/2022/10/21/an-introduction-to-the-hardware-of-spectrum-fusion?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
 
 * [Integration of ceph and ODF into IBM’s Software Defined Storage Portfolio](https://community.ibm.com/community/user/storage/blogs/matthew-leib/2022/10/12/integration-of-ceph?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
 
