@@ -1,5 +1,5 @@
 <!-- This should be the location of the title of the repository, normally the short name -->
-# IBM SPECTRUM FUSION
+# IBM Storage FUSION
 
 <!-- Build Status, is a great thing to have at the top of your repository, it shows that you take your CI/CD as first class citizens -->
 <!-- [![Build Status](https://travis-ci.org/jjasghar/ibm-cloud-cli.svg?branch=master)](https://travis-ci.org/jjasghar/ibm-cloud-cli) -->
@@ -11,7 +11,7 @@ Objective of this page is to spread about the unique solution of managing storag
 
 https://www.ibm.com/products/spectrum-fusion
 
-**Blogs related to IBM Spectrum Fusion**
+**Blogs related to IBM Storage Fusion**
 
 * [An Introduction to the Hardware of Spectrum Fusion HCI](https://community.ibm.com/community/user/storage/blogs/joe-wigglesworth/2022/10/21/an-introduction-to-the-hardware-of-spectrum-fusion?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
 
