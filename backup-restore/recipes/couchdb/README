@@ -1,0 +1,18 @@
+Usage:
+------
+
+Native tool support to perform consistent backup and restore of couchdb 
+application is not available on container platforms. To facilitate this,
+we are taking help of a sidecar container and a egress policy which can
+be applied as below (before starting the backup) -
+
+$ oc apply -f couchdb-backup-restore.yaml
+
+$ oc apply -f couchbackuprestore.yaml
+
+$ oc apply -f backuprestore-egress.yaml
+
+$ oc expose pod/c-example-couchdbcluster-m-0 --port 5984
+
+Note: Image used by couchbackuprestore.yaml is from the dockerfile present in
+      /buid directory.
