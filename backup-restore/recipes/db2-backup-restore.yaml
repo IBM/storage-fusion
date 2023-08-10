@@ -1,0 +1,96 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: db2-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: db2ucluster
+  groups:
+    - name: db2u-volumes
+      type: volume
+      includedNamespaces:
+        - db2
+    - name: db2u-resources
+      type: resource
+      includedNamespaces:
+        - db2
+      includeClusterResources: true
+      excludedResourceTypes:
+        - clusterserviceversions
+  hooks:
+  - name: db2uclusters-check
+    type: check
+    namespace: db2
+    selectResource: statefulset
+    labelSelector: app=db2oltp-test,component=db2oltp
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: db2u-operator-check
+    type: check
+    namespace: db2
+    selectResource: deployment
+    labelSelector: operators.coreos.com/db2u-operator.db2=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: db2uclusters-pod-exec
+    type: exec
+    namespace: db2
+    labelSelector: app=db2oltp-test,name=dashmpp-head-0
+    timeout: 300
+    onError: fail
+    ops:
+    - name: "suspend"
+      command: >
+        ["/usr/bin/ksh", "-lc", "manage_snapshots --action suspend --retry 0"]
+      container: db2u
+    - name: "resume"
+      command: >
+        ["/usr/bin/ksh", "-lc", "manage_snapshots --action resume --retry 0"]
+      container: db2u
+    - name: "restore"
+      command: >
+        ["/usr/bin/ksh", "-lc", "manage_snapshots --action restore --retry 0"]
+      container: db2u
+      timeout: 300
+  - name: db2u-operator-manager-exec
+    type: exec
+    namespace: db2
+    labelSelector: control-plane=db2u-operator-manager
+    timeout: 120
+    onError: fail
+    ops:
+    - name: "maintenance-mode-on"
+      command: >
+        ["/bin/bash", "-c", "curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/db2/db2uclusters/db2oltp-test?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":\"true\"}}}'"]
+      container: manager
+    - name: "maintenance-mode-off"
+      command: >
+        ["/bin/bash", "-c", "curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/db2/db2uclusters/db2oltp-test?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":null}}}'"]
+      container: manager
+  workflows:
+  - name: backup
+    sequence:
+    - group: db2u-resources
+    - hook: db2u-operator-manager-exec/maintenance-mode-on
+    - hook: db2uclusters-pod-exec/suspend
+    - group: db2u-volumes
+    - hook: db2uclusters-pod-exec/resume
+    - hook: db2u-operator-manager-exec/maintenance-mode-off
+  - name: restore
+    sequence:
+    - group: db2u-volumes
+    - group: db2u-resources
+    - hook: db2u-operator-check/replicasReady
+    - hook: db2u-operator-manager-exec/maintenance-mode-off
+    - hook: db2uclusters-check/replicasReady
+    - hook: db2uclusters-pod-exec/restore
