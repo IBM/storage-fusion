@@ -3,7 +3,15 @@
 
 https://www.ibm.com/products/spectrum-fusion
 
-A cloud-native platform that delivers a simple, consistent and scalable data services experience for containerized applications. It is designed to meet the data management requirements like persistent storage, resilience, security, mobility and cataloging of open-source Kubernetes applications on a Red Hat® OpenShift® container platform.
+IBM Storage Fusion is a container-native hybrid cloud data platform that offers simplified deployment and data management for Kubernetes applications on Red Hat® OpenShift® Container Platform. IBM Storage Fusion is designed to meet the storage requirements of modern, stateful Kubernetes applications and to make it easy to deploy and manage container-native applications and their data on Red Hat OpenShift Container Platform.
+
+It is an advanced storage and backup solution that is designed to simplify data accessibility and availability across hybrid clouds. Companies can expand data availability across complex hybrid clouds for greater business performance and resilience. With the IBM Storage Fusion solutions, organizations manage only a single copy of data. They need not create duplicate data when moving application workloads across the enterprise, easing management functions when you streamline analytics and AI.
+
+IBM Storage Fusion provides a streamlined way for organizations to discover, secure, protect, and manage data from the edge, to the core data center, to the public cloud.
+
+IBM Storage Fusion is available as two deployments, namely IBM Storage Fusion and IBM Storage Fusion HCI System.
+
+[Documentation](https://www.ibm.com/docs/en/storage-fusion)
 
 <!-- Build Status, is a great thing to have at the top of your repository, it shows that you take your CI/CD as first class citizens -->
 <!-- [![Build Status](https://travis-ci.org/jjasghar/ibm-cloud-cli.svg?branch=master)](https://travis-ci.org/jjasghar/ibm-cloud-cli) -->
