@@ -1,7 +1,7 @@
 <!-- This should be the location of the title of the repository, normally the short name -->
 # IBM Storage Fusion
 
-https://www.ibm.com/products/spectrum-fusion
+https://www.ibm.com/products/storage-fusion
 
 IBM Storage Fusion is a container-native hybrid cloud data platform that offers simplified deployment and data management for Kubernetes applications on Red Hat® OpenShift® Container Platform. IBM Storage Fusion is designed to meet the storage requirements of modern, stateful Kubernetes applications and to make it easy to deploy and manage container-native applications and their data on Red Hat OpenShift Container Platform.
 
