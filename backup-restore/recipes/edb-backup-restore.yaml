@@ -1,0 +1,60 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: edb-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: edbcluster
+  groups:
+    - name: edb-volumes
+      type: volume
+      includedNamespaces:
+        - edb
+      labelSelector: velero.io/exclude-from-backup!=true
+    - name: edb-resources
+      type: resource
+      includedNamespaces:
+        - edb
+      includeClusterResources: true
+      excludedResourceTypes:
+        - pods
+        - replicasets
+        - deployments
+        - services
+        - clusterserviceversions
+  hooks:
+  - name: postgresql-operator-controller-manager-check
+    type: check
+    namespace: edb
+    selectResource: deployment
+    labelSelector: app.kubernetes.io/name=cloud-native-postgresql
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: clusters-pod-exec
+    type: exec
+    namespace: edb
+    labelSelector: k8s.enterprisedb.io/podRole=instance,role=primary
+    singlePodOnly: true
+    timeout: 120
+    onError: fail
+    ops:
+    - name: checkpoint
+      command: "psql -c CHECKPOINT -U postgres"
+      container: postgres
+      timeout: 60
+  workflows:
+  - name: backup
+    sequence:
+    - group: edb-resources
+    - hook: clusters-pod-exec/checkpoint
+    - group: edb-volumes
+  - name: restore
+    sequence:
+    - group: edb-volumes
+    - group: edb-resources
+    - hook: postgresql-operator-controller-manager-check/replicasReady

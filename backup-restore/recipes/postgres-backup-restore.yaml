@@ -1,0 +1,55 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: postgres-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns 
+  labels:
+    app.kubernetes.io/name: pgo
+spec:
+  appType: postgresclusters
+  groups:
+    - name: postgres-volumes
+      type: volume
+      includedNamespaces:
+        - postgres-operator
+    - name: postgres-resources
+      type: resource
+      includedNamespaces:
+        - postgres-operator
+      includeClusterResources: true
+  hooks:
+  - name: postgres-operator-instance-check
+    type: check
+    namespace: postgres-operator
+    selectResource: statefulset
+    labelSelector: postgres-operator.crunchydata.com/instance-set=instance1
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: postgres-operator-instance-exec
+    type: exec
+    namespace: postgres-operator
+    labelSelector: postgres-operator.crunchydata.com/role=master 
+    singlePodOnly: true
+    timeout: 120
+    onError: fail
+    ops:
+    - name: checkpoint
+      command: "psql -c CHECKPOINT" 
+      container: database 
+      timeout: 60
+  workflows:
+  - name: backup
+    sequence:
+    - hook: postgres-operator-instance-exec/checkpoint
+    - group: postgres-resources
+    - group: postgres-volumes
+  - name: restore
+    sequence:
+    - group: postgres-volumes
+    - group: postgres-resources
+    - hook: postgres-operator-instance-check/replicasReady

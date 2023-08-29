@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backup-pvc
+  labels:
+    run: couch-backuprestore
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: couchbackuprestore 
+  labels:
+    run: couch-backuprestore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: couch-backuprestore
+  template:
+    metadata:
+      labels:
+        run: couch-backuprestore
+    spec:
+      containers:
+      - name: backup
+        image: <Image built from Dockerfile>
+        volumeMounts:
+         - mountPath: /mnt
+           name: backup-volume
+        env:
+        - name: password
+          valueFrom:
+            secretKeyRef:
+              name: c-example-couchdbcluster-m
+              key: admin_password
+      imagePullSecrets:
+      - name: couchbackuprestore-secret
+      volumes:
+      - name: backup-volume
+        persistentVolumeClaim:
+          claimName: backup-pvc

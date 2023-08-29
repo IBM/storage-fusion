@@ -43,6 +43,11 @@ This repository will host  the following categories of artifacts that can be use
 
 * [Upgrading IBM Spectrum Fusion 2.2.1 HCI to version 2.3.0](https://community.ibm.com/community/user/storage/blogs/anshu-garg/2022/10/19/upgrading-ibm-spectrum-fusion-221-hci-to-version-2?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
 
+* [How IBM Storage Fusion Simplifies Backup and Recovery of Complex OpenShift Applications - Part 1 "So Why is this Complex?"](https://community.ibm.com/community/user/storage/blogs/jim-smith/2023/07/27/ibm-storage-fusion-backup-restore-recipe-1?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
+
+* [How IBM Storage Fusion Simplifies Backup and Recovery of Complex OpenShift Applications - Part 2 "Orchestrations and Recipes"](https://community.ibm.com/community/user/storage/blogs/jim-smith/2023/08/01/how-ibm-storage-fusion-simplifies-backup-and-recov?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
+
+* [How IBM Storage Fusion Simplifies Backup and Recovery of Complex OpenShift Applications - Part 3 “A Deeper Dive into Recipes"](https://community.ibm.com/community/user/storage/blogs/jim-smith/2023/08/04/how-ibm-storage-fusion-simplifies-backup-and-recov?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
 
 
 
