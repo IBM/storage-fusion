@@ -1,0 +1,82 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: couchdb-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: couchdbcluster
+  groups:
+    - name: couchdb-volumes
+      includedNamespaces:
+        - couchdb
+      type: volume
+      labelSelector: run=couch-backuprestore
+    - name: couchdb-resources
+      includedNamespaces:
+        - couchdb
+      type: resource
+      includeClusterResources: true
+      excludedResourceTypes:
+        - clusterserviceversions
+  hooks:
+  - name: couchdbcluster-check
+    namespace: ${COUCHDB_NAMESPACE}
+    type: check
+    selectResource: statefulset
+    nameSelector: c-example-couchdbcluster-m
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: sidecar-deployment-check
+    namespace: ${COUCHDB_NAMESPACE}
+    type: check
+    selectResource: deployment
+    nameSelector: couchbackuprestore
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: sidecar-container-exec
+    type: exec
+    namespace: couchdb
+    labelSelector: run=couch-backuprestore
+    singlePodOnly: true
+    timeout: 120
+    onError: fail
+    ops:
+    - name: couchbackup
+      command: >
+        ["/bin/bash", "-c", "/usr/local/bin/couchbackup -d mydb -u http://admin:`printenv password`@c-example-couchdbcluster-m-0:5984 -o /mnt/mydb.txt"]
+      container: backup
+      timeout: 60
+    - name: couchrestore
+      command: >
+        ["/bin/bash", "-c", "/bin/cat /mnt/mydb.txt | /usr/local/bin/couchrestore -d mydb -u http://admin:`printenv password`@c-example-couchdbcluster-m-0:5984"]
+      container: backup
+      timeout: 60
+    - name: create-db
+      command: >
+        ["/bin/bash", "-c", "curl -X PUT http://admin:`printenv password`@c-example-couchdbcluster-m-0:5984/mydb"]
+      container: backup
+      timeout: 60
+  workflows:
+  - name: backup
+    sequence:
+    - hook: sidecar-container-exec/couchbackup
+    - group: couchdb-resources
+    - group: couchdb-volumes
+  - name: restore
+    sequence:
+    - group: couchdb-volumes
+    - group: couchdb-resources
+    - hook: couchdbcluster-check/replicasReady
+    - hook: sidecar-deployment-check/replicasReady
+    - hook: sidecar-container-exec/create-db
+    - hook: sidecar-container-exec/couchrestore
