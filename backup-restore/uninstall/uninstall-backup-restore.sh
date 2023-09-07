@@ -78,7 +78,7 @@ fi
 if [ "$SKIP" != true ]
  then
     print_heading "Remove any existing backups"
-    BACKUPS=$(oc get -n "${ISF_NS}" backups.data-protection.isf.ibm.com | grep isf-backup-restore | awk '{print $1}' 2> /dev/null)
+    BACKUPS=$(oc get -n "${ISF_NS}" backups.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore | awk '{print $1}' 2> /dev/null)
     for BACKUP in ${BACKUPS[@]}; do
         export BACKUP
 
