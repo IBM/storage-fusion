@@ -1,0 +1,102 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: redis-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: redis
+  groups:
+    - name: redis-volumes
+      type: volume
+      includedNamespaces:
+        - redis
+    - name: redis-resources
+      type: resource
+      includedNamespaces:
+        - redis
+      includeClusterResources: true
+      excludedResourceTypes:
+        - events
+        - pods
+        - replicasets
+        - deployments
+        - statefulsets
+        - installplans
+        - clusterserviceversions
+        - redissentinels
+        - formationlock.redis.databases.cloud.ibm.com
+        - formation.redis.databases.cloud.ibm.com
+    - name: redis-instances
+      type: resource
+      includedNamespaces:
+        - redis
+      includedResourceTypes:
+        - redissentinels
+  hooks:
+  - name: ibm-cloud-databases-redis-operator-check 
+    type: check
+    namespace: redis
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-cloud-databases-redis-operator.redis=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: c-example-redis-m-check
+    type: check
+    namespace: redis
+    selectResource: statefulset
+    labelSelector: formation_id=example-redis,formation_type=redis,role=m
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: c-example-redis-s-check
+    type: check
+    namespace: redis
+    selectResource: statefulset
+    labelSelector: formation_id=example-redis,formation_type=redis,role=s
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: redissentinels-pod-exec
+    type: exec
+    namespace: redis
+    labelSelector: cluster_role=leader,formation_id=example-redis 
+    timeout: 300
+    onError: fail
+    ops:
+    - name: "copy-password"
+      command: >
+        ["/usr/bin/bash", "-c", "curl -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -k https://kubernetes.default.svc/api/v1/namespaces/redis/secrets/c-example-redis-m | python -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['compose_password'])\" >/data/compose_password"]
+      container: mgmt
+    - name: "bgsave"
+      command: >
+        ["/usr/bin/bash", "-c", "export REDISCLI_AUTH=$(cat /data/compose_password | base64 -d); redis-cli bgsave; while [ $(redis-cli INFO persistence | grep rdb_bgsave_in_progress | tr -d '\r' | rev | cut -c 1) -ne 0 ]; do echo \"Sleeping for a millisecond\"; sleep 0.001; done; rm -f /data/compose_password"]
+      container: db
+  workflows:
+  - name: backup
+    sequence:
+    - group: redis-resources
+    - group: redis-instances 
+    - hook: redissentinels-pod-exec/copy-password
+    - hook: redissentinels-pod-exec/bgsave
+    - group: redis-volumes
+  - name: restore
+    sequence:
+    - group: redis-volumes
+    - group: redis-resources
+    - hook: ibm-cloud-databases-redis-operator-check/replicasReady
+    - group: redis-instances 
+    - hook: c-example-redis-m-check/replicasReady
+    - hook: c-example-redis-s-check/replicasReady

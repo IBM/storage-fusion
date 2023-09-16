@@ -1,0 +1,109 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: mongodb-community-cluster-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: mongodb
+  groups:
+    - name: mongodb-volumes
+      type: volume
+      includedNamespaces:
+        - ot-operators
+    - name: mongodb-resources
+      type: resource
+      includedNamespaces:
+        - ot-operators
+      includeClusterResources: true
+      excludedResourceTypes:
+        - events
+        - mongodbclusters.opstreelabs.in
+    - name: mongodb-instances
+      type: resource
+      includedNamespaces:
+        - ot-operators
+      includedResourceTypes:
+        - mongodbclusters.opstreelabs.in
+  hooks:
+  - name: mongodb-operator-check
+    type: check
+    namespace: ot-operators
+    selectResource: deployment
+    labelSelector: control-plane=mongodb-operator
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mongodb-cluster-check
+    type: check
+    namespace: ot-operators
+    selectResource: statefulset
+    labelSelector: app=mongodb-cluster,mongodb_setup=cluster,role=cluster
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mongodb-cluster-exec
+    labelSelector: app=mongodb-cluster
+    timeout: 300
+    namespace: ot-operators
+    onError: fail
+    ops:
+      - command: >
+          ["/bin/bash", "-c", "[[ $(mongosh -u `printenv MONGO_ROOT_USERNAME` -p `printenv MONGO_ROOT_PASSWORD` --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh -u `printenv MONGO_ROOT_USERNAME` -p `printenv MONGO_ROOT_PASSWORD` --eval \"db.fsyncLock()\" || echo \"Not Master\""]
+        container: mongo
+        timeout: 300
+        name: fsyncLock
+        onError: fail
+      - command: >
+          ["/bin/bash", "-c", "[[ $(mongosh -u `printenv MONGO_ROOT_USERNAME` -p `printenv MONGO_ROOT_PASSWORD` --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh -u `printenv MONGO_ROOT_USERNAME` -p `printenv MONGO_ROOT_PASSWORD` --eval \"db.fsyncUnlock()\" || echo \"Not Master\""]
+        container: mongo
+        timeout: 300
+        name: fsyncUnlock
+        onError: fail
+      - command: >
+          ["/bin/bash", "-c", "mongosh --eval \"var conn = new Mongo('mongodb://admin:`printenv MONGO_ROOT_PASSWORD`@localhost:27017/admin'); conn.getDB('admin').shutdownServer();\"; exit 0"]
+        container: mongo
+        timeout: 300
+        name: shutdown-server 
+        onError: continue
+      - command: >
+          ["/bin/bash", "-c", "mongosh --eval \"var conn = new Mongo(); conn.getDB('local').dropDatabase();\""]
+        container: mongo
+        timeout: 300
+        name: drop-local-database
+        onError: continue
+    selectResource: pod
+    type: exec
+  - name: mongodb-cluster-scale
+    type: scale
+    namespace: ot-operators
+    selectResource: statefulset
+    labelSelector: app=mongodb-cluster,mongodb_setup=cluster,role=cluster
+  workflows:
+  - name: backup
+    sequence:
+    - group: mongodb-resources
+    - group: mongodb-instances
+    - hook: mongodb-cluster-exec/fsyncLock
+    - group: mongodb-volumes
+    - hook: mongodb-cluster-exec/fsyncUnlock
+  - name: restore
+    sequence:
+    - group: mongodb-volumes
+    - group: mongodb-resources
+    - hook: mongodb-operator-check/replicasReady
+    - group: mongodb-instances
+    - hook: mongodb-cluster-check/replicasReady
+    - hook: mongodb-cluster-exec/shutdown-server
+    - hook: mongodb-cluster-exec/drop-local-database
+    - hook: mongodb-cluster-scale/down
+    - hook: mongodb-cluster-scale/sync
+    - hook: mongodb-cluster-scale/up
+    - hook: mongodb-cluster-scale/sync
