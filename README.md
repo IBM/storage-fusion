@@ -64,9 +64,16 @@ Watch out this space for tools where we can mirror images for IBM Spectrum Fusio
 <!-- A Changelog allows you to track major changes and things that happen, https://github.com/github-changelog-generator/github-changelog-generator can help automate the process -->
 * [CHANGELOG.md](CHANGELOG.md)
 
-
+### Reporting Issues and Feedback
 <!-- Questions can be useful but optional, this gives you a place to say, "This is how to contact this project maintainers or create PRs -->
 If you have any questions or issues you can create a new [issue here](https://github.com/IBM/storage-fusion/issues)
+
+### Disclaimer
+
+Please note: All templates / modules / resources in this repo are released for use "AS IS" without any warranties of
+any kind, including, but not limited to their installation, use, or performance. We are not responsible for any damage,
+data loss or charges incurred with their use. You are responsible for reviewing and testing any scripts you run
+thoroughly before use in any production environment. This content is subject to change without notice.
 
 Pull requests are very welcome! Make sure your patches are well tested.
 Ideally create a topic branch for every separate change you make. For
