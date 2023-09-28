@@ -1,0 +1,17 @@
+CIDR,9.zz.aa.tt/25
+NIC,eno1
+DNS1,9.zz.yy.xx
+NTP,9.zz.aa.bb
+CLUSTERNAME,myclustername
+BASEDOMAIN,mybasedomain.com
+APIVIP,api,9.zz.aa.202
+INGRESSVIP,foo.apps,9.zz.aa.203
+KVM,bootstrap,9.zz.aa.201,00:16:3e:67:y9:xx
+RU2,control-1-ru2,9.zz.aa.204,02:10:ed:ff:y7:zz
+RU3,control-1-ru3,9.zz.aa.205,09:71:7b:ee:37:5e
+RU4,control-1-ru4,9.zz.aa.206,06:61:6e:dd:38:aa
+RU5,compute-1-ru5,9.zz.aa.207,09:73:8f:bb:33:de
+RU6,compute-1-ru6,9.zz.aa.208,01:67:a1:aa:34:ae
+RU7,compute-1-ru7,9.zz.aa.209,90:c3:7b:4f:38:5e
+RU8,compute-1-ru8,9.zz.aa.210,11:70:f3:29:a2:03
+RU9,compute-1-ru9,9.zz.aa.211,11:71:fd:12:51:22
