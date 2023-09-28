@@ -1,0 +1,316 @@
+{
+	"version": "2.6.1",
+	"isf-operator-index-env": "linux.amd64",
+	"isf-target-path": "isf-2.6.1",
+	"images": {
+    "spectrum-scale-sds": {
+      "csi": [
+        "csi-attacher@sha256:08721106b949e4f5c7ba34b059e17300d73c8e9495201954edc90eeb3e6d8461",
+        "csi-node-driver-registrar@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183",
+        "csi-provisioner@sha256:e468dddcd275163a042ab297b2d8c2aca50d5e148d2d22f3b6ba119e2f31fa79",
+        "csi-resizer@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d",
+        "csi-snapshotter@sha256:0d8d81948af4897bd07b86046424f022f79634ee0315e9f1d4cdb5c1c8d51c90",
+        "ibm-spectrum-scale-csi-driver@sha256:573b3b2d349359d7871d53060a0fc7df6e03de2e2900d1be46b4146ab1972fb7",
+        "livenessprobe@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0"
+      ],
+      "scale": [
+        "ibm-spectrum-scale-core-init@sha256:0d883e9e218d3c5baccbcf525d6a8539803778325fb28553dbf368c5639a97b2",
+        "ibm-spectrum-scale-gui@sha256:b2026fd3f989dca9cbaded2157d0dc14c4d89dc1d1f3db0613c07924eb03e852",
+        "ibm-spectrum-scale-monitor@sha256:70766c93b2bf352ea42b153913e8eacb156a298e750ddb8d8274d3eecc913c5a",
+        "ibm-spectrum-scale-pmcollector@sha256:5909d1a1418a5f72f4519c9c4a7608bd08bdcbe23a1d70cbd4c9bf488cf72216",
+        "postgres@sha256:c2a30d08a6f9e6c365595fd086c9e0436064c52425f15f72379ecf0807bac518",
+        "ubi-minimal@sha256:65a240ad8bd3f2fff3e18a22ebadc40da0b145616231fc1e16251f3c6dee087a",
+        "ibm-spectrum-scale-grafana-bridge@sha256:bc9eb6ac3a92075cb872c45dc5af2c05422868bdb18e2202ccf928d3cc31d889",
+        "ibm-spectrum-scale-coredns@sha256:29f943685acbf4c0a111ae70889465130bac94a4d6d5a6bf5efa0f879c2a79b1"
+      ],
+      "data-management": [
+        "ibm-spectrum-scale-daemon@sha256:aad29a63c7e6a6ef341babf9896db91a094ba1ecebe0a1112fdf92932bc92fd7"
+      ],
+      "catalog": [
+        "ibm-spectrum-scale-csi-operator@sha256:da7ada19c06b20edc9b3c8067a8380f6879899022dda8a5c1cbed7c15b2a381d",
+        "ibm-spectrum-scale-operator@sha256:eb727060999daea0319c3d67ea7eeb1ca24df6984670272f47f8b6774f451a94",
+        "ibm-spectrum-scale-must-gather@sha256:f9b4e6570a9ff8194840bbb97cd7f021485dabc806a5115c0e14f06813d580e7"
+      ]
+    },
+	  "spectrum-scale-hci": {
+		"csi": [
+		  "csi-snapshotter@sha256:0d8d81948af4897bd07b86046424f022f79634ee0315e9f1d4cdb5c1c8d51c90",
+		  "csi-attacher@sha256:08721106b949e4f5c7ba34b059e17300d73c8e9495201954edc90eeb3e6d8461",
+		  "csi-provisioner@sha256:e468dddcd275163a042ab297b2d8c2aca50d5e148d2d22f3b6ba119e2f31fa79",
+		  "livenessprobe@sha256:2b10b24dafdc3ba94a03fc94d9df9941ca9d6a9207b927f5dfd21d59fbe05ba0",
+		  "csi-node-driver-registrar@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183",
+		  "csi-resizer@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d",
+		  "ibm-spectrum-scale-csi-driver@sha256:573b3b2d349359d7871d53060a0fc7df6e03de2e2900d1be46b4146ab1972fb7"
+		],
+		"scale": [
+		  "ibm-spectrum-scale-core-init@sha256:41b260b696a1470340b3f0e45b92efde7062a439f59e5cd12e7c1bd9b2a55c50",
+		  "ibm-spectrum-scale-gui@sha256:b2026fd3f989dca9cbaded2157d0dc14c4d89dc1d1f3db0613c07924eb03e852",
+		  "postgres@sha256:c2a30d08a6f9e6c365595fd086c9e0436064c52425f15f72379ecf0807bac518",
+		  "ubi-minimal@sha256:65a240ad8bd3f2fff3e18a22ebadc40da0b145616231fc1e16251f3c6dee087a",
+		  "ibm-spectrum-scale-pmcollector@sha256:4fb78bafd2c01c1d30322b491bfbf344c78ddb24c3e8e3c313589536fb7b15b4",
+		  "ibm-spectrum-scale-monitor@sha256:70766c93b2bf352ea42b153913e8eacb156a298e750ddb8d8274d3eecc913c5a",
+		  "ibm-spectrum-scale-grafana-bridge@sha256:bc9eb6ac3a92075cb872c45dc5af2c05422868bdb18e2202ccf928d3cc31d889",
+		  "ibm-spectrum-scale-coredns@sha256:29f943685acbf4c0a111ae70889465130bac94a4d6d5a6bf5efa0f879c2a79b1"
+		],
+		"erasure-code": [
+		  "ibm-spectrum-scale-daemon@sha256:7c019273fb045aadd9eb019829e7733efde9f00447ea30c374b7dfa7861705c9"
+		],
+		"catalog": [
+		  "ibm-spectrum-scale-csi-operator@sha256:da7ada19c06b20edc9b3c8067a8380f6879899022dda8a5c1cbed7c15b2a381d",
+		  "ibm-spectrum-scale-operator@sha256:eb727060999daea0319c3d67ea7eeb1ca24df6984670272f47f8b6774f451a94",
+		  "ibm-spectrum-scale-must-gather@sha256:f9b4e6570a9ff8194840bbb97cd7f021485dabc806a5115c0e14f06813d580e7"
+		]
+	  },
+	  "ocp": {
+		"validation-release-digest": "sha256:60f6c51a852f084a020c3dc32b92cbd91ed293b82c6c5b48aac51460566688c7",
+		"version": "4.10.56"
+	  },
+	  "spp": {
+		"agent-tag": "10.112.5-20230426c",
+		"agent": [
+		  "baas-datamover@sha256:99ad55dd7d2d63ea692d75d09fe9a01013cba9aac6999997653d111ded27dadb",
+		  "baas-minio@sha256:cbe25aaa6d9796a0b019c3f3473c159442d86f12234efb848683d2fe30984b93",
+		  "baas-scheduler@sha256:ff85f931adf26dd047492a98f86179c62ec3012256d3664ccd183b693bf5fe0f",
+		  "baas-spp-agent@sha256:dfe00ea9f25c4cd7aa48d4ad3bb6daf19e34b1c60af973a69e0244f90973bc69",
+		  "baas-transaction-manager-redis@sha256:1a2a52422d28af8cd2f260e99fb4bd30465e7b00243b6f75ac623d6f8e1deebc",
+		  "baas-transaction-manager-worker@sha256:250cf5ceee2d8e389c1d226b078790dd07cb123f5667e809c5fc8c7ba06eccbb",
+		  "baas-transaction-manager@sha256:ab2cf25db3eb1b46e96aad3a216bee435bf72c03ca9042ba4b54b38932d41071"
+		],
+		"server": [
+		  "spp-awsebs@sha256:f8fc2a61b65053dfdd872dce67eed5030ada218d4edf6cad4857ff13f535e9d5",
+		  "spp-awsec2@sha256:4a8bd2623ced4e1ed7cf6b716f05a7c2f7a3b546b1c3c6a73aa58202393a89f2",
+		  "spp-kc@sha256:6122933c04a611c1bc074e94dbab4c7548e449582d85d80e7fc1f6a60641671d",
+		  "spp-manager@sha256:79fb5f35a92efc5588658900c5bddbee03d2ac6b8945db7f99ce4985f1b15085",
+		  "spp-node@sha256:9f99422620aa00179e9642048c2a0a25dffbede7cbd3407d817a1efa57157a0e",
+		  "spp-uinginx@sha256:5773d21946c36a21c9c5bac6e51be6c71ca6ca9fb7c1cbb52422e739cf394df7",
+		  "spp-vadp@sha256:aa0a0b4d8fa87217b8c41e002364dd98ee441216603c2b947346cb1253960751",
+		  "spp@sha256:6d7c12c8559f4e9c8c56040d2dea0f30494805a5444d60936b3fca8107626b17"
+		],
+		"redhat-rhscl": [
+		  "nginx-116-rhel7:latest",
+		  "nginx-116-rhel7@sha256:73044ed47df248eba71c3af06e5af23add6d2ee7140000208aa32d42ef31b8bf",
+		  "redis-5-rhel7:latest",
+		  "redis-5-rhel7@sha256:91781cf512d695339f5a92da8bfae40b42a5585d3b5627d30e6fea08afc932a4"
+		],
+		"redhat-rhel8": [
+		  "postgresql-13:latest",
+		  "postgresql-13@sha256:3960568b197d8a19b6531bffb6cf56578527b9a4f5e32e5db91e4e962f09d3c6",
+		  "postgresql-96:latest",
+		  "postgresql-96@sha256:314747a4a64ac16c33ead6a34479dccf16b9a07abf440ea7eeef7cda4cd19e32"
+		],
+		"redhat-access-rhscl": [
+		  "mongodb-36-rhel7:latest",
+		  "mongodb-36-rhel7@sha256:ffc67a5d76944cbb073862a61b9928400bb948ca0cb220d6718116b9f5637c24"
+		],
+		"catalog": [
+		  "ibmsppc-operator-bundle-ocp@sha256:f3cb82f7bf647f8047213c7d047d16a8751e381c11002901e9ea3447bbe6c225",
+		  "ibmsppc-operator@sha256:608f93542b954dc319eda22baa8861eafeb7e6dee48fdb4ed9d5e90235ccc3a2",
+		  "spp-operator@sha256:6575893edd65e90e8ce8a68794d05d73f7d40a7b21b973f5e8a800044e80549c",
+		  "ibmsppc-operator-catalog-ocp:10.112.6-20230712a",
+		  "ibmsppc-operator-catalog-ocp@sha256:1ace4d4aa9a03f1f2094accb012ad9dabc96179e20da6cfa642b94cebd5dc6d0"
+		],
+		"redhat-openshift4": [
+		  "ose-kube-rbac-proxy@sha256:00c135c071609aad8f569416406d6510101b56740b0a326c1aff708622b4bde3",
+		  "ose-kube-rbac-proxy@sha256:8f527862ae195edfcc613496a686278d998b877a776f72ff58f3ea7a504534b5"
+		],
+		"oadp": [
+		  "oadp-kubevirt-velero-plugin-rhel8@sha256:7f00152aa25efdaf8e24bda16c4fc4086abe030efdc50fb7923020386f8b52b2",
+		  "oadp-operator-bundle@sha256:2c52f43d86e90c3d78d8f3c2e937a3fb861990c0e4f06ada96c0a0c0115ecb32",
+		  "oadp-rhel8-operator@sha256:f812d7cf3f7d5d1b42a795c0cd59314779dbb005d556dffe11de624e3c9872c1",
+		  "oadp-velero-plugin-for-aws-rhel8@sha256:c391b383a86a6a0cf2a4acd83172ba71c9370dbc4301c9e975c83996f25e55ca",
+		  "oadp-velero-plugin-for-csi-rhel8@sha256:1e6e8ac2ec19e236e559d220242938f227284d39f671b010c3cc92dd2d074373",
+		  "oadp-velero-plugin-for-gcp-rhel8@sha256:8b2e260e1812e465c0c0cb518f70c189b20c0bc35c20a199fdbf7a451f5a0396",
+		  "oadp-velero-plugin-for-microsoft-azure-rhel8@sha256:c0716317637c1488c5d21f8635fc7692e2257a60790e87b1aedb514b5d6300a5",
+		  "oadp-velero-plugin-rhel8@sha256:8f599f2b819819c109ec064e77163b2cf6ebeedb763c2eea5da4b8ef1d742337",
+		  "oadp-velero-restic-restore-helper-rhel8@sha256:628b4d91e16e9408d892fa0b7e6c6841fe92edfe06dfe5d59f780175d75b2fdc",
+		  "oadp-velero-rhel8@sha256:2c1c645410a77569705e5521f8abb652b2b46bcb6ee06b9650bde78fcf3e3061",
+		  "oadp-volume-snapshot-mover-rhel8@sha256:088ca4640971d00c16c2fc414d75b603e592d6b51e71329d0bbdd2dfdfead74e"
+		],
+		"amq7": [
+		  "amq-streams-bridge-rhel8@sha256:6ba9529ce2e03118f2ec31e56d812da12aa2ac05a06fecbd6336ef933beae8b7",
+		  "amq-streams-bridge-rhel8@sha256:6ba9529ce2e03118f2ec31e56d812da12aa2ac05a06fecbd6336ef933beae8b7",
+		  "amq-streams-drain-cleaner-rhel8@sha256:00b9a0537c19ff5d77abb9b3fe41dd3594b31ea27717d12727d47d7d7456ea37",
+		  "amq-streams-kafka-31-rhel8@sha256:beee41b49ad466befd990f6148d44bcf42ce9e9e76a021aaae50363142101b2d",
+		  "amq-streams-kafka-32-rhel8@sha256:0152a85f2d0bc85881dacaee62c6e8b0b8b04f57a542b9b82dc93ad5303d6bf9",
+		  "amq-streams-operator-bundle@sha256:80f561cd4f74bd25b7624e5afcaee799f0d3b4a72b8151b59222a329defcd23a",
+		  "amq-streams-rhel8-operator@sha256:3a73d259c459284af40854ad7adc6bfb3d74065183a2ef32b30e54f645ae9d70"
+		],
+		"strimzi": [
+		  "drain-cleaner@sha256:984595f016a92c762380b02ccc975e83f8a9ffdd8c6ca64cd5c2289cb4f61691",
+		  "jmxtrans@sha256:3a55a81790dc88b90d1bf858e2cfd7e591ad0e79f763c6d1667b2d3eb0d0c79d",
+		  "kafka-bridge@sha256:c345c783d8fbbee4edeca2ebc47e7c454fcc2e26686820b8037de97369280ba0",
+		  "kafka@sha256:06e9bda15495feb2b92d9950e834cdeed6ef20064f021a879610f1b59dd46950",
+		  "kafka@sha256:7c04f65e216bb941458aeadffb85e9eeee43d5ca67da566017c2c93a0664c98e",
+		  "operator@sha256:8b010c5fb8244b742a37f264feefc116d75bb2abd2d6895375cbeea250727b39"
+		],
+		"ubi8": [
+		  "openjdk-11@sha256:d9739b266415be7c915daf3c61f8f1cc4e14d0b237a0ab664693bc2e0d3577e4"
+		],
+	  	"redhat-amq-streams": [
+			"bridge-rhel8@sha256:f01c27ecb802e10d332939a4e1e5e95cd3bff8e98e7f1e7ca3a1ae8310f882f6",
+			"kafka-33-rhel8@sha256:f7996a1c1de4f86cd962bc4b315d3abc1e8b48f754a276f74f4bfea9bf185ec3",
+			"kafka-34-rhel8@sha256:308371218c18c558e2fc473d3b2bdf0daae6e895700f262178a915501c6820b2",
+			"strimzi-rhel8-operator@sha256:70d07d41a9d4c7fd937e5fb851feb4fba41ca71f976afb1dd4b1808ab05992ef"
+      ]
+	  },
+	  "redhat": {
+		"openshift4": [
+		  "kubernetes-nmstate-operator-bundle@sha256:bd9c3c0c49ea33dc72f10f9f9b4b8dae9c2783147625c9e6f47ad85b054caa2a",
+		  "kubernetes-nmstate-rhel8-operator@sha256:428c908d3708c11f1768a6d2302f3af0f14cda6024542fcba0120ae9fd6e0086",
+		  "ose-kube-rbac-proxy@sha256:c9d0a5a2871c24c0b1058e419f2b090429363a319856397855412fd2c0037395",
+		  "ose-kubernetes-nmstate-handler-rhel8@sha256:73383d53e366ed4c66796a794f3bd083681a1281e8ebbeebe99306eea6a38511",
+		  "ose-oauth-proxy@sha256:96810c770f75057b8bba6b78a5ba414c8289315d8af1a387f681ae5e4fb7d6dd"
+		],
+		"packages": "kubevirt-hyperconverged,kubernetes-nmstate-operator,redhat-oadp-operator,amq-streams",
+		"redhat-operator-index": "redhat-operator-index",
+		"version": "v4.10"
+	  },
+	  "isf": {
+		"mgmt": [
+		  "callhomeclient@sha256:0bcc8089baf545567c9b20e93997f1a2b94751a60aafef5dde52f86bfbd1dcd1",
+		  "eventmanager@sha256:71ed90ff22f6adf280f45e9dd449acde60f152df9c0055ca339f289bcc836edc",
+		  "logcollector@sha256:67e25f7eac43dec4e0a7f2d0edd1e835252507bed31f6b0e33a6941e675bfd62",
+		  "eventmanager-snmp3@sha256:377028a1343fea060202fecc3ff924b1ce94e1d0c6b7c0e6b8d4946ee427556f",
+		  "fusion-ui@sha256:285de9f0d99bf4bc18168e90a23cbc4331dce3ad060c990dfbc7c8a822f1784a",
+		  "isf-application-operator@sha256:cfcc675d9c5b9289e40e82892f6bb625303b5766ed8d7a24a17f84831aa48ce1",
+		  "isf-bkprstr-operator@sha256:4f5530c64b42afc7a6ea74483bb706636cc65031081a7acc53833976a22e1b13",
+		  "isf-compute-operator@sha256:477602c61c9ac64c871289757f5c72555f49b7c99a6efffb94b2ffe56c9285d8",
+		  "isf-data-protection-operator@sha256:60ee19518902877c99930385bc935bacb27bde09481029905e7b3e73490cfd32",
+		  "isf-ics-operator@sha256:bddda34506c18a93655ed75284a76e0e33ea4ad92d0c221cf26819b7311da802",
+		  "isf-network-fw-updater@sha256:b4787a1a6563f16f8feb1f0ba5e873d036ac40736967476b20d41ed6437909f0",
+		  "isf-network-operator@sha256:0ad7c8b007ab84163e725fa7e417569c0cc48afbfe1c2d2ee08e48b983c490b5",
+		  "isf-node-exporter@sha256:4c1b13790f767a00dc869f8ffbb626b5ffc5b95623940fe8daa3cb556231b17f",
+		  "isf-proxy@sha256:ffa4e93f289ed68210785939af611576fc3f1c6535c2c7d4ffbb18ad77e4ff87",
+		  "isf-serviceability-operator@sha256:de7183e203d01d92e0c50fea3d9a08290917ebfb56831bf9267eb3e5a7c52201",
+		  "isf-snmp-exporter@sha256:d38249f96312d0edd856d5ec917c2f8f3d822b21f61b9dc179b7ccee52371dfc",
+		  "isf-storage-operator@sha256:5fb2d4d76b6648fb737f9a855870456cab6d954a723ad0f87e02eeddb75c0ae1",
+		  "isf-storage-services@sha256:7ea62acb3d2a8756feeff7f0008b2e74f10547be7c26bf81e8c191ad0db7f112",
+		  "isf-ui-operator@sha256:3ee2bee4ad20ad2785e5f95d60f9820f58f35f59493f6ac86304e422c013500e",
+		  "isf-update-operator@sha256:1b235398e878400a821684ff784600e2d3298eeec3cc8bbab59d105bcae6a4b3",
+		  "isf-metrodr-operator@sha256:e4a08fc765d4bdf5c4d48e10287fe614d1a298ca62a89cef1c583a95cbe05ab1",
+		  "isf-prereq-operator@sha256:13b9feec83144ad3fee5cfd9f1e649c33ed772c11f96a2517eb5d21880066733",
+		  "isf-compute-fw-updater@sha256:a9167b73105fed6056135d611c99b25f088819d3aaa30151b3836865ded2ffaf",
+		  "isf-utils@sha256:8961a6ed85ab53043a394b539e88abecc678fca26f552a5d88fed3742550a0d2",
+		  "ramen-operator@sha256:643f19766d032cb4776b50b57a3f210543af0d485f81d17f58434da8eda3b166",
+		  "spp-dp-operator@sha256:796d627dcc934ddf4f8a732db14fdf49c349cd845d02b6dde945bc8e86148e6c",
+		  "baas-minio@sha256:07d8b6a01f4bee6a45cedebaa345b1a15f87900f1fb09df52a287d6fcec1cb73",
+		  "isf-operator-bundle@sha256:4ea5595bc1e150da54165f688b14f14ca164269e4cf482f772feb1f9c4a050de",
+		  "isf-operator-catalog:2.6.1-linux.amd64"
+		],
+		"sds-mgmt": [
+			"fusion-ui@sha256:769a525d83b782b7a149a40e2625f2b1ac51f291c3531a09a1e292f3e9dd97f6",
+		  "isf-application-operator@sha256:bba8f2756cad3b18f792bee8d51d662c471df1bfb0ec91e32787a05cb362a5c8",
+		  "isf-bkprstr-operator@sha256:7359a17bc71bfd63a774a27186fbf9cff4bc8fc33b784848c6eca7f966fa346f",
+		  "isf-cns-operator@sha256:00497bad94900daa9a7986a897f7c4496ce7491313ba9a05ab7d9adb47fe7b1c",
+		  "isf-data-protection-operator@sha256:19104ea1d62173eeff67c79b66923d041b02ad0bb7650618ed8d7ca655475fcb",
+		  "isf-prereq-operator@sha256:224ea5eadf8e3e4875093d4c43ae9f895999917d6a527ef5c28e370571a53131",
+		  "isf-proxy@sha256:f7d33e64e0996a0549f31d5a8353c93a23a08d2726912cf1f13bb75730833d74",
+		  "isf-serviceability-operator@sha256:43c2241507abcc2c2cdfdfa5393a554c98f28782c0676f8344241ee9ed61bb8b",
+		  "isf-ui-operator@sha256:7027a8af4650c564110164ba2e726d975a871d23c613abdace5dd6c002451c42",
+		  "isf-update-operator@sha256:b4f1c609d0016150b02a83b3e97c471ae5eb7944e02a1fbee38698bc519a6d50",
+		  "callhomeclient@sha256:f82752db42e65f562c8537bba2f7f17efde36af4ba1cfeb02813c5a1dd31e5e0",
+		  "eventmanager@sha256:f62eb3eeca87965c01045183cd15563aa372f949d5c4f21206df0f0012849d2d",
+		  "eventmanager-snmp3@sha256:50848c68fdc56d5acbb95ff8d8263710d99062a470076d29691acad913c591ed",
+		  "logcollector@sha256:2f6647c887264730ef06aee80565acd491c654004912d88cf22290bc7e5c12a9",
+		  "spp-dp-operator@sha256:bccd7bc4ab33216b153ca18c2f48d69222ad28e6ff5262161fda3f54ea34f7e7",
+		  "isf-operator-software-bundle@sha256:cd3ce753b5fd978591b25ba913ba5ad3430a1c304afa3d5116a964fa21ebe27a",
+		  "isf-operator-software-catalog:2.6.1"
+		],
+		"kube-proxy": [
+		  "ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd"
+		],
+		"submariner": [
+		  "submariner-operator:0.12.0",
+		  "submariner-gateway:0.12.0",
+		  "lighthouse-agent:0.12.0",
+		  "lighthouse-coredns:0.12.0",
+		  "submariner-networkplugin-syncer:0.12.0",
+		  "submariner-route-agent:0.12.0"
+		],
+    	"gcr-kube-proxy": [
+      	  "kube-rbac-proxy:v0.8.0"
+    	]
+	  },
+	  "backup-restore": {
+		"fbr": [
+		  "guardian-application-service@sha256:0b1c0ec4ec8afb2a55b78c5617ecdd101d264ab4c5fd50f9b06137560601cb85",
+		  "guardian-backup-location@sha256:a51bed46afafca6e0fd569fde6774a59387fa182225aff5a83a93fc72668a9a2",
+		  "guardian-backup-policy@sha256:334715a11f7ffc7134006aa91f14d3f0a199c8228ab4e3583ccfcd8f6aa0c2f4",
+		  "guardian-backup-service@sha256:02dfe0fe397410009478e4699523ca332f70ca62469aa8028a574f8b50e4ac23",
+		  "guardian-job-manager@sha256:1fc7c3ad8922a20597b00289dd047f532fd475793c87ae39333463405595efa2",
+		  "guardian-transaction-manager-minio@sha256:fb41fb768a01a675000b42944e4a76d04513faf38839e4f3c741eb892e5cfbe5",
+		  "guardian-transaction-manager-redis@sha256:2654c89efa255cc6c2066d3390b4567dc9f471266df13223bc0d5b102bf0ad9c",
+		  "guardian-transaction-manager@sha256:1c7958035353091d3413e50437ac3824c97d7e5f1f0a59f2c40f4c040f067c8a"
+		],
+		"docker-bitnami": [
+		  "mongodb-exporter@sha256:6a66dd8712087566e3f8ff6235bb0a1ab514f3c5098cccee2d3611b932f8aad3",
+		  "mongodb@sha256:80211748c393e9c76343f2531a93651db3a7a3f1a7f83cabe5087c55255cfb72",
+      	  "mongodb@sha256:916202d7af766dd88c2fff63bf711162c9d708ac7a3ffccd2aa812e3f03ae209",
+		  "redis@sha256:8b1c6b5c172037ecf8b422f4ba0bd0d58da3025748392e4cf53aec2a2d90e10f"
+		],
+		"ibm-open": [
+		  "guardian-datamover@sha256:a7cdfb623e9a899a83d809986fa7b7caf9bf25900eb84659e31fef2bb94ffe1b",
+		  "guardian-dm-operator-bundle@sha256:5f335789de888725d078203bef945713cc43195acf8c4843079c953ab8a5eb46",
+		  "guardian-dm-operator@sha256:210ffda29b77eaf04066101c6d27b8b192a460238036fc28c71a37cd8acf295e",
+		  "guardian-dp-operator-bundle@sha256:f69515b710f61320db437a07dd2eb4340fa76cdb4d1abf8977787f5416be656b",
+		  "guardian-dp-operator@sha256:39541b9e0d437b2b9702f18041019e6fb892385ee81cc39ec89bfa772ebb7ab4",
+		  "guardian-mongo-operator-bundle@sha256:86f17ba7cb263500e56fa0531f478304b7f49df2232534f2eac6f4923c2a5078",
+		  "guardian-mongo-operator@sha256:f2c0307f338647e6aaa3980a069a4bbf0deb924484c267ca60a3903657ebee42",
+		  "guardian-redis-operator-bundle@sha256:9f80aef501f32115680b3cc8ccb0a449ea3177491dc34ca3b3deddea6283f203",
+		  "guardian-redis-operator@sha256:a5d271e81d26a7c7bcdf3c3a00a806de3df79a3ca9274bf53576e6d92cfde2f8",
+		  "idp-agent-operator-bundle@sha256:c32edf42c26ca7f6cdd0047f66ef8896115accc0d92876850cdf24a004c0f62a",
+		  "idp-agent-operator@sha256:54fc469d92d36ace1d19e9169dcd3a825c8ec82322c7b88b7fedb56f57a55cb8",
+		  "idp-server-operator-bundle@sha256:7d2bb908fd630fa62e8867343d648cdf11ac939c06f8ba7cf582e21777578118",
+		  "idp-server-operator@sha256:78b70227d9b7e2dffd5901c616061cfef5ec701e5837a353a2b44ca414ceceeb",
+		  "idp-server-operator-catalog@sha256:c2eba2f7de0f5ed8992a038f36fff9eaab2ca401a91c9484cf186cec4716cc28"
+		],
+		"redhat-openshift4": [
+		  "ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd"
+		]
+	  },
+	  "data-cataloging": {
+		"ibm-open": [
+		  "db2u-operator@sha256:b8a70a044e5c0217f43e945231bd5c18b06f35d29e1602083a9a84de175422af",
+		  "ibm-operator-catalog@sha256:056db327f51ccc094e72f56d24ed0fc0c333369c33e80624f2bdccf7ca813435",
+		  "ibm-db2uoperator-bundle@sha256:b79ee2e073753a58eaeb1f12794b14afc52c508f6f037407501096cc4a953093",
+		  "ibm-spectrum-discover-operator-catalog@sha256:d57053f13aa687fdd30e6858a31645ff8e80c3f03e02cf1ad2d42432b465e80f",
+		  "ibm-spectrum-discover-operator-bundle@sha256:78e7c3739c6c7d027df82d842acb1b12fb190155d2f96359138fa2c405be221b",
+		  "ibm-spectrum-discover-operator@sha256:08b1530d286dae67238288e6b179874bec1653643b1fa674a4be0519b63e2af4"
+		],
+		"ibm-db2u": [
+		  "db2u.graph@sha256:324b61b8ec86750cece9947eb2440a4fcd6c824f48302325fc75bb24d814e642",
+		  "db2u.auxiliary.auth@sha256:b7ae8eb8ad8e47010872a395957d76a16eead69adb0c9859dffbb05b4fb8d5d8",
+		  "db2u.rest@sha256:62c219aba9cb007455ec970d89ef1a831428fb97435ddd50ff3c0eabd132170a",
+		  "db2u.tools@sha256:e9f4457747f6696f1c1004f71cda4f5fbe1e8ebce33c36f93b7cf61009dc5191",
+		  "db2u.instdb@sha256:e5c116a3d5790a39704ed879db7570d257ff69167f7b3b0b7a263b3b90b659ec",
+		  "db2u@sha256:1eb9acf2c13f331c71fa54d2ed9407672541eed9b099cd64ea6c36d71f4a24da",
+		  "etcd@sha256:341acb4fd18e24221a1a13af87c852c483184616da0742a2a0ad26c8bf180d1e"
+		],
+		"ibm-spectrum-discover": [
+		  "auth@sha256:86b4c9e8cab881ca6d23d391a2413bc203a9045e6023ea735542a13fff87e576",
+		  "backup-restore@sha256:00b78a0afe874d0f6e5d9d5857445ebcb93e71c77be6fe749835d06b3245a9ed",
+		  "connmgr-scheduler@sha256:d786380884eab14767c7d7c4a0e5439d5d345c820bc8133fe1793cb6726a2645",
+		  "connmgr@sha256:2a4ea132ab2b91e8d059d862c4a122df4d7f143d3a9b59766bd4cc91dfd934c4",
+		  "db-schema@sha256:ce414d6530ec3f16a3778c4016d2e84681bed34f7d387d29589a9183c55fcb43",
+		  "db2whrest@sha256:c8e0852809d33413d2a52dedc35966c01a0dc1c71e4fd88306a0b7766811dd18",
+		  "import-tags-app@sha256:5a59884008e59a6dfd6e02c6abe99e144eb6564daf5818708dbe7d356093668e",
+		  "isd-proxy@sha256:b27811ad3549001f9d2caa05526b42fd2f9aa9ef62d22d1f9a627331a99a916e",
+		  "keystone@sha256:13aeaa84391227d5a1eff6bb416f743a0311776ffab53e71863adc627dc8f37c",
+		  "metaocean-api@sha256:f39f93c66ff215e88957fe9facb9bd214a828b453fce7dc05965a2ea7356a4b9",
+		  "mo-agent-extract@sha256:ea334594ecc32f98cdc2f970566961e16a3633e6cce03f2acba465a33591fbe3",
+		  "mo-ubi-init@sha256:c0e5dcc74add9071e15e3f4e2b6a90a9a2856be5a3c2c45b01356ca854df8ccd",
+		  "moconsumer@sha256:c7fe577fb1a6a6cc8a196906580af4c4142db1eb7188c4bb333914a384370447",
+		  "moproducer@sha256:bd2a2ba826050597f9311b89af85380fd4324c24f7e6080a484af70b2c4f2666",
+		  "policyengine@sha256:6b16017d7949ba59896728edddaf9a109288633a9fd616212995733c274ce655",
+		  "reports@sha256:ca1cdbcedc9655d9c741d86ad9071f26d33595d7955d1430b9a3825477e7c3b2",
+		  "scaleafmdatamover@sha256:d485870db5d654b1eb403420fc772ab8a2e14ac8ed71607123df5e5a35fa274b",
+		  "scaleilmdatamover@sha256:cbf362fb09c977591dd92c7671a8fa16467d8026cdf7d63695fa2ebb7cb005b5",
+		  "sdmonitor@sha256:d3e9330ac505bd634991d8f0c1b0a68636cb72e8c004b3ed0a623d09babd4193",
+		  "tikaserver@sha256:e098b1dc4a4c42f406238bc1bb63843c5e162556a92f270150e80e9de1fe04bd",
+		  "uibackend@sha256:47c7d6b5e884a60a95cc3dc4511e89b689ebb0fad03f2da7b56fae3f702dfa63",
+		  "uifrontend@sha256:b9efa7e0932113d39b8576d51150af0ee2fdeaed47ea1ac9faa66a388f803891",
+		  "wkc-connector@sha256:460dfd8e06242278246e55ff8241ad8af5ea8f747e86b5b6f283874c18bbc75a"
+		]
+	  }
+	}
+  }
