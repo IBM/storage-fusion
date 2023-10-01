@@ -53,7 +53,9 @@ oc scale --replicas=0 deployment/isf-prereq-operator-controller-manager -n "${FU
 
 print_heading "Remove any existing Backup & Restore (Legacy) Restore CRs"
 RS=$(oc -n "${FUSION_NS}" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns="NAME:metadata.name" --no-headers)
-[ -n "$RS" ] && oc -n "${FUSION_NS}" delete restore.data-protection.isf.ibm.com  $RS
+[ -n "$RS" ] && oc -n "${FUSION_NS}" delete  --timeout=60s restore.data-protection.isf.ibm.com  $RS
+RS=$(oc -n "${FUSION_NS}" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns="NAME:metadata.name" --no-headers)
+[ -n "$RS" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' restore.data-protection.isf.ibm.com $RS
 
 print_heading "Add any existing Backup & Restore (Legacy) backup to DeleteBackupRequest"
 BACKUPS=$(oc get -n "${FUSION_NS}" backups.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns="NAME:metadata.name" --no-headers 2> /dev/null)
@@ -92,20 +94,28 @@ BS=$(oc -n "${FUSION_NS}" get backups.data-protection.isf.ibm.com  -l dp.isf.ibm
 if [ -n "$BS" ]
 then 
   oc -n "${FUSION_NS}" annotate --overwrite backups.data-protection.isf.ibm.com $BS fusion-config dp.isf.ibm.com/cleanup-status=complete 2> /dev/null
-  oc -n "${FUSION_NS}" delete backups.data-protection.isf.ibm.com  $BS
+  oc -n "${FUSION_NS}" delete  --timeout=60s backups.data-protection.isf.ibm.com  $BS
+  BS=$(oc -n "${FUSION_NS}" get backups.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns="NAME:metadata.name" --no-headers)
+  [ -n "$BS" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' backups.data-protection.isf.ibm.com $BS
 fi
 
 print_heading "Remove any existing Backup & Restore (Legacy) Policy Assignment CRs"
 PA=$(oc -n ${FUSION_NS} get fpa  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
-[ -n "$PA" ] && oc -n "${FUSION_NS}" delete fpa $PA
+[ -n "$PA" ] && oc -n "${FUSION_NS}" delete  --timeout=60s fpa $PA
+PA=$(oc -n ${FUSION_NS} get fpa  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+[ -n "$PA" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fpa $PA
 
 print_heading "Remove any existing Backup & Restore (Legacy) Backup Policies CRs"
 FBP=$(oc  -n "${FUSION_NS}" get fbp -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
-[ -n "$FBP" ] && oc -n "${FUSION_NS}" delete fbp $FBP
+[ -n "$FBP" ] && oc -n "${FUSION_NS}" delete  --timeout=60s fbp $FBP
+FBP=$(oc  -n "${FUSION_NS}" get fbp -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+[ -n "$FBP" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbp $FBP
 
 print_heading "Remove any existing Backup & Restore (Legacy) Backup Storage Location CRs "
 BSL=$(oc -n "${FUSION_NS}" get fbsl -l  dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
-[ -n "$BSL" ] && oc -n "${FUSION_NS}" delete fbsl $BSL
+[ -n "$BSL" ] && oc -n "${FUSION_NS}" delete  --timeout=60s fbsl $BSL
+BSL=$(oc -n "${FUSION_NS}" get fbsl -l  dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+[ -n "$BSL" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbsl $BSL
 
 print_heading "Remove sppmanager CR"
 oc delete sppmanager sppmanager -n "${FUSION_NS}"
