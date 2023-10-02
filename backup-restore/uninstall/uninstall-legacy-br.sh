@@ -30,9 +30,11 @@ START_TIME=$(date +%s)
 print_heading()
 {
    CURRENT_TIME=$(date +%s)
-   ELAPSED_TIME=$[ CURRENT_TIME - $START_TIME ]
+   ELAPSED_TIME=$(( $CURRENT_TIME - $START_TIME ))
+   ELAPSED_MIN=$((  $ELAPSED_TIME / 60 ))
+   ELAPSED_SEC=$((  $ELAPSED_TIME % 60 ))
   echo -e "===================================================================================================="
-  echo -e "$(date)" "$ELAPSED_TIME" "$@"
+  echo "$(date) $ELAPSED_MIN:$ELAPSED_SEC $@"
   echo -e "===================================================================================================="
 }
 
@@ -100,9 +102,9 @@ then
 fi
 
 print_heading "Remove any existing Backup & Restore (Legacy) Policy Assignment CRs"
-PA=$(oc -n ${FUSION_NS} get fpa  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+PA=$(oc -n "${FUSION_NS}" get fpa  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
 [ -n "$PA" ] && oc -n "${FUSION_NS}" delete  --timeout=60s fpa $PA
-PA=$(oc -n ${FUSION_NS} get fpa  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+PA=$(oc -n "${FUSION_NS}" get fpa  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
 [ -n "$PA" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fpa $PA
 
 print_heading "Remove any existing Backup & Restore (Legacy) Backup Policies CRs"

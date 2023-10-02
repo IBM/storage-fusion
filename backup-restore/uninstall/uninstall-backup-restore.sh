@@ -57,12 +57,13 @@ START_TIME=$(date +%s)
 print_heading()
 {
    CURRENT_TIME=$(date +%s)
-   ELAPSED_TIME=$[ CURRENT_TIME - $START_TIME ]
+   ELAPSED_TIME=$(( $CURRENT_TIME - $START_TIME ))
+   ELAPSED_MIN=$((  $ELAPSED_TIME / 60 ))
+   ELAPSED_SEC=$((  $ELAPSED_TIME % 60 ))
   echo -e "===================================================================================================="
-  echo -e "$(date)" "$ELAPSED_TIME" "$@"
+  echo "$(date) $ELAPSED_MIN:$ELAPSED_SEC $@"
   echo -e "===================================================================================================="
 }
-
 
 ISF_NS=$(oc get spectrumfusion -A --no-headers | cut -d" " -f1)
 [ -z "$ISF_NS" ] &&  ISF_NS=ibm-spectrum-fusion-ns
