@@ -3,6 +3,10 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
+LOG=/tmp/$(basename $0)_log.txt
+rm -f "$LOG"
+exec &> >(tee -a $LOG)
+
 USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
        -u to unistall a spoke installation before uninstalling hub 
        -d to creat DeleteBackupRequest to delete backups. Use this if you plan to uninstall Fusion"
@@ -48,18 +52,18 @@ check_cmd jq
 
 oc whoami > /dev/null || err_exit "Not logged in a cluster"
 
+START_TIME=$(date +%s)
 
 print_heading()
 {
-  echo
+   CURRENT_TIME=$(date +%s)
+   ELAPSED_TIME=$(( $CURRENT_TIME - $START_TIME ))
+   ELAPSED_MIN=$((  $ELAPSED_TIME / 60 ))
+   ELAPSED_SEC=$((  $ELAPSED_TIME % 60 ))
   echo -e "===================================================================================================="
-  echo -e "$(date)" "$@"
+  echo "$(date) $ELAPSED_MIN:$ELAPSED_SEC $@"
   echo -e "===================================================================================================="
 }
-
-
-# Track time to set future expectations
-UNINSTALL_STARTED="$(date +%s)"
 
 ISF_NS=$(oc get spectrumfusion -A --no-headers | cut -d" " -f1)
 [ -z "$ISF_NS" ] &&  ISF_NS=ibm-spectrum-fusion-ns
@@ -78,7 +82,7 @@ fi
 if [ "$SKIP" != true ]
  then
     print_heading "Remove any existing backups"
-    BACKUPS=$(oc get -n "${ISF_NS}" backups.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore | awk '{print $1}' 2> /dev/null)
+    BACKUPS=$(oc get -n "${ISF_NS}" backups.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore --no-headers -o custom-columns=N:metadata.name 2> /dev/null)
     for BACKUP in ${BACKUPS[@]}; do
         export BACKUP
 
@@ -97,18 +101,18 @@ EOF
         echo "$YAML" | oc apply -f -
     done
 
-    UNFINISHED=$(oc -n "$ISF_NS" get  deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation" )
+    UNFINISHED=$(oc -n "$ISF_NS" get  deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant" )
 
     while [ -n "$UNFINISHED" ]
      do
       echo "Some requests still not finished"
-      oc -n "$ISF_NS" get deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation"
+      oc -n "$ISF_NS" get deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant"
       sleep 5
-      UNFINISHED=$(oc -n "$ISF_NS" get deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation" )
+      UNFINISHED=$(oc -n "$ISF_NS" get deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant" )
     done
 fi
 
-PA=$(oc -n "$ISF_NS" get policyassignments.data-protection.isf.ibm.com --no-headers | grep "isf-backup-restore" | cut -f1 -d" ")
+PA=$(oc -n "$ISF_NS" get policyassignments.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
 [ -n "$PA" ] && oc -n "$ISF_NS" delete policyassignments.data-protection.isf.ibm.com  $PA
 
 print_heading "Remove any existing backuppolicies CRs"
@@ -161,6 +165,17 @@ remove_fsi ()
 
 remove_fsi
 
+print_heading "Delete Redis"
+oc delete redis redis -n "${NAMESPACE}" --timeout=60s
+if oc get redis redis -n "${NAMESPACE}" >/dev/null 2>&1; then
+   oc patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' redis redis -n "${NAMESPACE}"
+   oc delete redis redis -n "${NAMESPACE}"
+fi
+
+if oc get redis redis -n "${NAMESPACE}" >/dev/null 2>&1; then
+    echo "Redis instance still exists. You may need to deleted it manually."
+fi
+
 # Subscriptions for dependent operators
 SUBSCRIPTION_NAMES=$(oc -n "${NAMESPACE}" get subs --no-headers | cut -d" " -f1)
 
@@ -178,17 +193,6 @@ done
 # delete the operatorgroup created during install
 print_heading "Delete any existing operatorgroups"
 oc delete operatorgroup -n "${NAMESPACE}" --all
-
-print_heading "Delete Redis"
-oc delete redis redis -n "${NAMESPACE}" --timeout=60s
-if oc get redis redis -n "${NAMESPACE}" >/dev/null 2>&1; then
-   oc patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' redis redis -n "${NAMESPACE}"
-   oc delete redis redis -n "${NAMESPACE}"
-fi
-
-if oc get redis redis -n "${NAMESPACE}" >/dev/null 2>&1; then
-    echo "Redis instance still exists. You may need to deleted it manually."
-fi
 
 print_heading "Namespace removal started at $(date)"
 echo
@@ -220,8 +224,5 @@ if [ -z "$INSTS" ]
    echo "==== Other copies of Backup & Restore exist in following namespaces"
    oc get dataprotectionagent,dataprotectionserver -A --no-headers| cut -d" " -f1
 fi
-UNINSTALL_ENDED="$(date +%s)"
 
-print_heading "Overall uninstall time:  $[ ${UNINSTALL_ENDED} - ${UNINSTALL_STARTED} ] seconds"
-
-echo "Done"
+print_heading "Backup and Restore uninstalled"
