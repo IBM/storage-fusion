@@ -8,6 +8,19 @@
 #Email         	:ganshug@gmail.com                                           
 ##############################################################################
 
+##############################################################################
+# This utility will run a healthcheck on IBM Storage Fusion HCI system
+# Execute it from a bash shell where you have logged into HCI OpenShift API
+# It checks:
+# API accessibility
+# machine config pool
+# nodes status
+# cluster operators
+# catalog sources
+# Fusion operators
+# services health
+##############################################################################
+
 CHECK_PASS='  ✅'
 CHECK_FAIL='  ❌'
 CHECK_UNKNOW='  ⏳'
@@ -34,8 +47,16 @@ function print_footer() {
 function print_section() {
     echo ""
     echo "======================================================================================"
+    echo "======================================================================================"
     echo ""
 }
+
+function print_subsection() {
+    echo ""
+    echo "======================================================================================"
+    echo ""
+}
+
 
 function print() {
         case "$1" in
@@ -147,7 +168,8 @@ function verify_mcp() {
 	if [[ $wnotupdated -eq 1 || $wnotready -eq 1 || $winprogress -eq 1 || $wdegraded -eq 1 ]]; then
 		print error "${CHECK_FAIL} $(oc get nodes|grep compute)"
 	fi	
-	
+
+	print_subsection	
 	# Check control mcp
 	if [[ $degcontrol -ne 0 ]]; then
 		print error "${CHECK_FAIL}  $degcontrol control nodes are degraded."
@@ -168,6 +190,9 @@ function verify_mcp() {
 	if [[ $notupdated -eq 1 || $notready -eq 1 || $inprogress -eq 1 || $degraded -eq 1 ]]; then
 		print error "${CHECK_FAIL} $(oc get nodes|grep control)"
 	fi	
+	if [[ $notready -eq 0 && $inprogress -eq 0 && $degraded -eq 0 && $notupdated -eq 0 && $wnotupdated -eq 0 && $wnotready -eq 0 && $winprogress -eq 0 && $wdegraded -eq 0 ]]; then
+		print info "${CHECK_PASS} All machine configuration pools are upto date."
+	fi
 }
 
 # Verify catalogsources
@@ -303,13 +328,13 @@ function verify_br_health() {
 	if [ ${notsuccesscount} -ne 0 ]; then
 		print error "${CHECK_FAIL} ${notsuccesscount} operators for data protection are degraded."
 	        unhealthy=1
-		print error "${CHECK_FAIL} Here are failed operators:"
+		print error "${CHECK_FAIL} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-backup-restore\" to get more details about failure."
 		oc get csv -n ibm-backup-restore|egrep -v 'Succ|NAME'
         else 
 		print info "${CHECK_PASS} All operators for data protection are healthy."
 	fi
 
-	print_section
+	print_subsection
 	# check pods health
 	unhealthy=0
 	notsuccesscount=$(oc get po -n ibm-backup-restore|egrep -v 'Running|Completed|NAME'|wc -l)
@@ -321,6 +346,19 @@ function verify_br_health() {
         else 
 		print info "${CHECK_PASS} All pods for data protection are healthy."
 	fi
+
+	print_subsection
+        # check pvc health
+	unhealthy=0
+        notsuccesscount=$(oc get pvc -n ibm-backup-restore|egrep -v 'Bound|NAME'|wc -l)
+        if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} PVCs for data protection are not bound."
+                unhealthy=1
+                print error "${CHECK_FAIL} List of unbound PVCs:"
+                oc get pvc -n ibm-backup-restore|egrep -v 'Bound|NAME'
+        else
+                print info "${CHECK_PASS} All PVCs for data protection are bound."
+        fi
 
 }
 
@@ -341,8 +379,8 @@ print_section
 verify_scale_daemon_pods_status
 print_section
 verify_br_health
-#print_section
-#verify_mmhealth_summary
 print_section
-verify_mmhealth_details
+verify_mmhealth_summary
+print_section
+#verify_mmhealth_details
 print_footer
