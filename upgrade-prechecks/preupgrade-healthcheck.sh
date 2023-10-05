@@ -47,6 +47,7 @@ function print_footer() {
 function print_section() {
     echo ""
     echo "======================================================================================"
+    echo "=========================$1=================================================="
     echo "======================================================================================"
     echo ""
 }
@@ -69,7 +70,7 @@ function print() {
                 "debug")
                         echo "DEBUG: $2";;
 		"*")
-			echo "INFO: $2";;
+			echo "$2";;
 	esac
 }
 
@@ -365,22 +366,22 @@ function verify_br_health() {
 rm -f ${REPORT} > /dev/null
 print_header
 verify_api_access
-print_section
+print_section "Cluster operators"
 verify_clusteroperators_status
-print_section
+print_section "Nodes"
 verify_nodes_status
-print_section
+print_section "Machine configuration pools"
 verify_mcp
-print_section
-verify_catsrc
-print_section
+print_section "Catalog sources"
+verify_catsrc 
+print_section "Fusion software"
 verify_fusion_health
-print_section
+print_section "Scale daemon pods"
 verify_scale_daemon_pods_status
-print_section
+print_section "Backup & Restore"
 verify_br_health
-print_section
+print_section "Scale cluster"
 verify_mmhealth_summary
-print_section
+print_section 
 #verify_mmhealth_details
 print_footer
