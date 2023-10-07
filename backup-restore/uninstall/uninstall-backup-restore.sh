@@ -112,12 +112,25 @@ EOF
     done
 fi
 
+oc -n "$ISF_NS" patch --type json configmap isf-data-protection-config -p '[{"op": "replace", "path": "/data/Mode", "value": "DisableWebhook"}]'
+
+print_heading "Remove any DeleteBackupRequest CRs"
+DR=$(oc -n "$ISF_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
+[ -n "$DR" ] && oc -n "$ISF_NS" delete fdbr  $DR --timeout=60s
+DR=$(oc -n "$ISF_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
+[ -n "$DR" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fdbr $DR
+
+print_heading "Remove any existing policyAssigments CRs"
 PA=$(oc -n "$ISF_NS" get policyassignments.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
-[ -n "$PA" ] && oc -n "$ISF_NS" delete policyassignments.data-protection.isf.ibm.com  $PA
+[ -n "$PA" ] && oc -n "$ISF_NS" delete policyassignments.data-protection.isf.ibm.com  $PA --timeout=60s
+PA=$(oc -n "$ISF_NS" get policyassignments.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
+[ -n "$PA" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fpa $PA
 
 print_heading "Remove any existing backuppolicies CRs"
 BP=$(oc -n "$ISF_NS" get backuppolicies.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
-[ -n "$BP" ] && oc -n "$ISF_NS" delete backuppolicies.data-protection.isf.ibm.com  $BP
+[ -n "$BP" ] && oc -n "$ISF_NS" delete backuppolicies.data-protection.isf.ibm.com  $BP --timeout=60s
+BP=$(oc -n "$ISF_NS" get backuppolicies.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
+[ -n "$BP" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbp $BP
 
 
 print_heading "Remove any existing backup CRs"
@@ -125,23 +138,29 @@ BS=$(oc -n "$ISF_NS" get backups.data-protection.isf.ibm.com  -l dp.isf.ibm.com/
 if [ -n "$BS" ]
   then 
          oc -n "$ISF_NS" annotate --overwrite backups.data-protection.isf.ibm.com $BS fusion-config dp.isf.ibm.com/cleanup-status=complete
-         oc -n "$ISF_NS" delete backups.data-protection.isf.ibm.com  $BS
+         oc -n "$ISF_NS" delete backups.data-protection.isf.ibm.com  $BS --timeout=60s
+         BS=$(oc -n "$ISF_NS" get backups.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
+         [ -n "$BS" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbackup $BS
 fi
 
 print_heading "Remove any existing restore CRs"
 RS=$(oc -n "$ISF_NS" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
-[ -n "$RS" ] && oc -n "$ISF_NS" delete restore.data-protection.isf.ibm.com  $RS
+[ -n "$RS" ] && oc -n "$ISF_NS" delete restore.data-protection.isf.ibm.com  $RS --timeout=60s
+RS=$(oc -n "$ISF_NS" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
+[ -n "$RS" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' frestore $RS
 
 print_heading "Remove any existing backuplocations CRs"
 BSL=$(oc -n "$ISF_NS" get backupstoragelocation.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
 [ -n "$BSL" ] && oc -n "$ISF_NS" delete --timeout=60s backupstoragelocation.data-protection.isf.ibm.com $BSL
+BSL=$(oc -n "$ISF_NS" get backupstoragelocation.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " " | grep -v "isf-dp-inplace-snapshot")
+[ -n "$BSL" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbsl $BSL
 
 print_heading "Delete any existing guardiancopybackups CRs"
-oc delete guardiancopybackups -n "${NAMESPACE}" --all
+oc delete guardiancopybackups -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardiancopyrestores CRs"
-oc delete guardiancopyrestores -n "${NAMESPACE}" --all
+oc delete guardiancopyrestores -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardianmongoes CRs"
-oc delete guardianmongoes -n "${NAMESPACE}" --all
+oc delete guardianmongoes -n "${NAMESPACE}" --all --timeout=60s
 
 ## err_exit "REMOVE THIS"
 
@@ -158,7 +177,7 @@ remove_fsi ()
                FSD=$(oc -n "$ISF_NS" get fusionserviceinstance "$FBRI" -o json | jq -rc '.spec.serviceDefinition')
                oc -n "$ISF_NS" patch --type json fusionservicedefinition $FSD -p '[{"op": "replace", "path": "/spec/onboarding/serviceOperatorSubscription/triggerCatSrcCreate", "value": false}]'
                echo "oc delete -n $ISF_NS fusionserviceinstance $FBRI"
-               oc delete -n "$ISF_NS" fusionserviceinstance "$FBRI"
+               oc delete -n "$ISF_NS" fusionserviceinstance "$FBRI" --timeout=60s
            fi
    done
 }
@@ -185,14 +204,14 @@ for SUBSCRIPTION_NAME in ${SUBSCRIPTION_NAMES[@]}
 do
     csvName=$(oc get subscription "${SUBSCRIPTION_NAME}" -n "${NAMESPACE}" -o yaml | grep currentCSV | awk -F' ' '{print $2}')
     echo "===== Deleting subscription $SUBSCRIPTION_NAME"
-    oc delete subscription "${SUBSCRIPTION_NAME}" -n "${NAMESPACE}"
+    oc delete subscription "${SUBSCRIPTION_NAME}" -n "${NAMESPACE}" --timeout=60s
     echo "===== Deleting csv ${csvName}"
-    oc delete clusterserviceversion ${csvName} -n "${NAMESPACE}"
+    oc delete clusterserviceversion ${csvName} -n "${NAMESPACE}" --timeout=60s
 done
 
 # delete the operatorgroup created during install
 print_heading "Delete any existing operatorgroups"
-oc delete operatorgroup -n "${NAMESPACE}" --all
+oc delete operatorgroup -n "${NAMESPACE}" --all --timeout=60s
 
 print_heading "Namespace removal started at $(date)"
 echo
@@ -203,10 +222,12 @@ if ! oc get namespace "${NAMESPACE}" >/dev/null 2>&1; then
     echo "oc delete namespace ${NAMESPACE}"
     oc delete namespace "${NAMESPACE}"
 fi
-oc delete validatingwebhookconfigurations -l olm.owner.namespace="${NAMESPACE}" --ignore-not-found
-oc delete mutatingwebhookconfigurations -l olm.owner.namespace="${NAMESPACE}" --ignore-not-found
+oc delete validatingwebhookconfigurations -l olm.owner.namespace="${NAMESPACE}" --ignore-not-found --timeout=60s
+oc delete mutatingwebhookconfigurations -l olm.owner.namespace="${NAMESPACE}" --ignore-not-found --timeout=60s
 
 remove_fsi
+
+oc -n "$ISF_NS" patch --type json configmap isf-data-protection-config -p '[{"op": "replace", "path": "/data/Mode", "value": "Normal"}]'
 
 INSTS=$(oc get dataprotectionserver -A -o name 2> /dev/null)
 INSTA=$(oc get dataprotectionagent  -A -o name 2> /dev/null)
@@ -215,11 +236,11 @@ if [ -z "$INSTS" ]
  then
      echo "==== Deleting cluster role bindings and crds"
      ROLES=$(oc get clusterrole --ignore-not-found | grep -iE "guardian|ibm-backup-restore|dataprotectionagent|dataprotectionserver" | cut -d" " -f1)
-     [ -n "$ROLES" ] && oc delete clusterrole $ROLES
+     [ -n "$ROLES" ] && oc delete clusterrole $ROLES --timeout=60s
      BINDINGS=$(oc get clusterrolebinding --ignore-not-found | grep -iE "guardian|ibm-backup-restore|dataprotectionagent|dataprotectionserver" | cut -d" " -f1)
-     [ -n "$BINDINGS" ] && oc delete clusterrolebinding $BINDINGS
+     [ -n "$BINDINGS" ] && oc delete clusterrolebinding $BINDINGS --timeout=60s
      CRDS=$(oc get crd -o name | grep -E 'guardian.*ibm.com|dataprotection.*.ibm.com')
-     [ -n "$CRDS" ]  && oc delete $CRDS
+     [ -n "$CRDS" ]  && oc delete $CRDS --timeout=60s
  else
    echo "==== Other copies of Backup & Restore exist in following namespaces"
    oc get dataprotectionagent,dataprotectionserver -A --no-headers| cut -d" " -f1
