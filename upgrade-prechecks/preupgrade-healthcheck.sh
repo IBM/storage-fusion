@@ -11,6 +11,7 @@
 ##############################################################################
 # This utility will run a healthcheck on IBM Storage Fusion HCI system
 # Execute it from a bash shell where you have logged into HCI OpenShift API
+# Ensure jq is installed on that system
 # It checks:
 # API accessibility
 # access from nodes to Quay.io and IBM registries (icr.io and cp.icr.io)
@@ -335,6 +336,53 @@ function verify_fusion_health() {
 	fi
 }
 
+# Get data cataloging status
+function verify_dcs_health () {
+	print info "Verify Data classification service health."
+	# check operators health
+        unhealthy=0
+        oc get project |grep ibm-data-cataloging > /dev/null
+        if [[ $? -ne 0 ]]; then
+                print info "${CHECK_UNKNOW} ibm-data-cataloging project does not exist. It is possible that service is not installed or failed at very early stage."
+                return 0
+        fi
+        notsuccesscount=$(oc get csv -n ibm-data-cataloging|egrep -v 'Succ|NAME'|wc -l)
+	if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} operators for DCS are degraded."
+                unhealthy=1
+                print error "${CHECK_UNKNOWN} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-data-cataloging\" to get more details about failure."
+                oc get csv -n ibm-data-cataloging|egrep -v 'Succ|NAME'
+	else
+                print info "${CHECK_PASS} All operators for DCS are healthy."
+        fi
+
+        print_subsection
+        # check pods health
+        unhealthy=0
+        notsuccesscount=$(oc get po -n ibm-data-cataloging |egrep -v 'Running|Completed|NAME'|wc -l)
+        if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} pods for DCS are not running."
+                unhealthy=1
+                print error "${CHECK_FAIL} Here are failed pods:"
+                oc get pods -n ibm-data-cataloging|egrep -v 'Running|Completed|NAME'
+        else
+                print info "${CHECK_PASS} All pods for DCS  are healthy."
+        fi
+
+        print_subsection
+        # check pvc health
+        unhealthy=0
+        notsuccesscount=$(oc get pvc -n ibm-data-cataloging|egrep -v 'Bound|NAME'|wc -l)
+        if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} PVCs for DCS are not bound."
+                unhealthy=1
+                print error "${CHECK_FAIL} List of unbound PVCs:"
+                oc get pvc -n ibm-data-cataloging|egrep -v 'Bound|NAME'
+        else
+                print info "${CHECK_PASS} All PVCs for DCS are bound."
+        fi
+}
+
 # Get data protection operators health
 function verify_br_health() {
 	print info "Verify IBM Storage Fusion Data protection health."
@@ -564,6 +612,8 @@ print_section "Backup & Restore"
 verify_br_health
 print_section "Legacy SPP"
 verify_spp_health
+print_section "Data Classification"
+verify_dcs_health
 print_section "Scale cluster"
 verify_mmhealth_summary
 #print_section 
