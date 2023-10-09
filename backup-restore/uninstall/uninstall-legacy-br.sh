@@ -49,9 +49,12 @@ export FUSION_NS
 
 print_heading "Remove Backup & Restore (Legacy) from Fusion"
 
-oc patch $(oc get spectrumfusion.prereq.isf.ibm.com -n "${FUSION_NS}" --no-headers -o name ) -n "${FUSION_NS}" --type json -p '[{"op": "replace", "path": "/spec/DataProtection/Enable", "value": false}]'
+SF_CR=$(oc get spectrumfusion.prereq.isf.ibm.com -n "${FUSION_NS}" --no-headers -o name)
+oc patch -n "${FUSION_NS}" "$SF_CR" --type json -p '[{"op": "replace", "path": "/spec/DataProtection/Enable", "value": false}]'
 
 oc scale --replicas=0 deployment/isf-prereq-operator-controller-manager -n "${FUSION_NS}"
+
+oc -n "$FUSION_NS" patch --type json configmap isf-data-protection-config -p '[{"op": "replace", "path": "/data/Mode", "value": "DisableWebhook"}]'
 
 print_heading "Remove any existing Backup & Restore (Legacy) Restore CRs"
 RS=$(oc -n "${FUSION_NS}" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns="NAME:metadata.name" --no-headers)
@@ -116,11 +119,19 @@ FBP=$(oc  -n "${FUSION_NS}" get fbp -l dp.isf.ibm.com/provider-name=isf-ibmspp -
 print_heading "Remove any existing Backup & Restore (Legacy) Backup Storage Location CRs "
 BSL=$(oc -n "${FUSION_NS}" get fbsl -l  dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
 [ -n "$BSL" ] && oc -n "${FUSION_NS}" delete  --timeout=60s fbsl $BSL
-BSL=$(oc -n "${FUSION_NS}" get fbsl -l  dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+BSL=$(oc -n "${FUSION_NS}" get fbsl -l  dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers| grep -v "in-place-snapshot")
 [ -n "$BSL" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbsl $BSL
+
+print_heading "Remove any existing Backup & Restore (Legacy)  DeleteBackupRequest CRs "
+DR=$(oc -n "$FUSION_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+[ -n "$DR" ] && oc -n "$FUSION_NS" delete fdbr  $DR --timeout=60s
+DR=$(oc -n "$FUSION_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+[ -n "$DR" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fdbr $DR
 
 print_heading "Remove sppmanager CR"
 oc delete sppmanager sppmanager -n "${FUSION_NS}"
+
+oc -n "$FUSION_NS" patch --type json configmap isf-data-protection-config -p '[{"op": "replace", "path": "/data/Mode", "value": "Normal"}]'
 
 print_heading "Remove subscriptions in namespace ibm-spectrum-protect-plus-ns and baas" 
 for NAMESPACE in ${NAMESPACES[@]}
@@ -179,6 +190,9 @@ BINDINGS=$(oc get clusterrolebinding --ignore-not-found | egrep -i "spp-operator
 [ -n "$BINDINGS" ] && oc delete clusterrolebinding $BINDINGS
 CRDS=$(oc get crd -o name | egrep -i "ibmsppcs.sppc.ibm.com|ibmspps.ocp.spp.ibm.com")
 [ -n "$CRDS" ]  && oc delete $CRDS
+
+SF_CR_FILE=/tmp/sf_${START_TIME}_$$.yaml
+oc -n "${FUSION_NS}" get "$SF_CR" -o yaml | awk '{ if ($0 == "status:") {exit} else {print $0}}' | grep -Ev '^  uid:|^  resourceVersion:|^  generation:|^  creationTimestamp:' > $SF_CR_FILE
 
 oc scale --replicas=1 deployment/isf-prereq-operator-controller-manager -n "${FUSION_NS}"
 
