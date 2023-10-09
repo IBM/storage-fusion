@@ -290,7 +290,7 @@ function verify_mmhealth_summary() {
 	if [ $unhealthy  -eq 0 ]; then
 		print info "${CHECK_PASS} All of IBM Storage Scale components are healthy."
 	else
-		print error "${CHECK_FAIL} health summary:"
+		print error "${CHECK_UNKNOW} health summary:"
 		oc -n ibm-spectrum-scale rsh $nodename mmhealth cluster show
 	fi
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
@@ -341,11 +341,16 @@ function verify_br_health() {
 
 	# check operators health
 	unhealthy=0
+	oc get project |grep ibm-backup-restore > /dev/null
+	if [[ $? -ne 0 ]]; then
+		print info "${CHECK_UNKNOW} ibm-backup-restore project does not exist. It is possible that service is not installed or failed at very early stage."
+		return 0
+	fi
 	notsuccesscount=$(oc get csv -n ibm-backup-restore|egrep -v 'Succ|NAME'|wc -l)
 	if [ ${notsuccesscount} -ne 0 ]; then
 		print error "${CHECK_FAIL} ${notsuccesscount} operators for data protection are degraded."
 	        unhealthy=1
-		print error "${CHECK_FAIL} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-backup-restore\" to get more details about failure."
+		print error "${CHECK_UNKNOWN} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-backup-restore\" to get more details about failure."
 		oc get csv -n ibm-backup-restore|egrep -v 'Succ|NAME'
         else 
 		print info "${CHECK_PASS} All operators for data protection are healthy."
@@ -379,6 +384,77 @@ function verify_br_health() {
 
 }
 
+# Get Legacy SPP service health
+function verify_spp_health() {
+        print info "Verify IBM Storage Fusion legacy SPP health."
+
+        # check namespace for spp server
+        oc get project |grep ibm-spectrum-protect-plus-ns > /dev/null
+        if [[ $? -ne 0 ]]; then
+                print info "${CHECK_UNKNOW} ibm-spectrum-protect-plus-ns project does not exist. It is possible that service is not installed or failed at very early stage."
+                return 0
+        fi
+
+        # check pods health
+        unhealthy=0
+        notsuccesscount=$(oc get po -n ibm-spectrum-protect-plus-ns|egrep -v 'Running|Completed|NAME'|wc -l)
+        if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} pods for SPP server are not running."
+                unhealthy=1
+                print error "${CHECK_FAIL} Here are failed pods:"
+                oc get pods -n ibm-spectrum-protect-plus-ns|egrep -v 'Running|Completed|NAME'
+        else
+                print info "${CHECK_PASS} All pods for SPP server are healthy."
+        fi
+
+        print_subsection
+        # check pvc health
+        unhealthy=0
+        notsuccesscount=$(oc get pvc -n ibm-spectrum-protect-plus-ns|egrep -v 'Bound|NAME'|wc -l)
+        if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} PVCs for SPP server are not bound."
+                unhealthy=1
+                print error "${CHECK_FAIL} List of unbound PVCs:"
+                oc get pvc -n ibm-spectrum-protect-plus-ns|egrep -v 'Bound|NAME'
+	else
+		print info "${CHECK_PASS} All PVCs for SPP server are bound."
+	fi
+
+	print_subsection
+        # check namespace for spp agent
+        oc get project |grep baas > /dev/null
+        if [[ $? -ne 0 ]]; then
+                print info "${CHECK_UNKNOW} baas project does not exist. It is possible that service is not installed or failed at very early stage."
+                return 0
+        fi
+	
+	# check pods health
+        unhealthy=0
+        notsuccesscount=$(oc get po -n baas|egrep -v 'Running|Completed|NAME'|wc -l)
+        if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} pods for SPP agent are not running."
+                unhealthy=1
+                print error "${CHECK_FAIL} Here are failed pods:"
+                oc get pods -n baas|egrep -v 'Running|Completed|NAME'
+        else
+                print info "${CHECK_PASS} All pods for SPP agent are healthy."
+        fi
+
+	print_subsection
+        # check pvc health
+        unhealthy=0
+        notsuccesscount=$(oc get pvc -n baas|egrep -v 'Bound|NAME'|wc -l)
+        if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} PVCs for SPP agent are not bound."
+                unhealthy=1
+                print error "${CHECK_FAIL} List of unbound PVCs:"
+                oc get pvc -n baas|egrep -v 'Bound|NAME'
+        else
+                print info "${CHECK_PASS} All PVCs for SPP agent are bound."
+        fi
+}
+
+
 # Utility to check if it is disconnected install
 function isDisconnectedDeployment () {
         isoffline=$(oc -n ibm-spectrum-fusion-ns get secret userconfig-secret -o json | jq '.data."userconfig_secret.json"'|cut -d '"' -f 2|base64 -d|grep isPrivateRegistry)
@@ -405,20 +481,14 @@ function isQuayAccessible () {
 	getReadyControlNode
 	oc debug nodes/$CONTROLNODE -- chroot /host curl https://$QUAY|grep "Quay " > /dev/null
 	if [[ $? -ne 0 ]]; then
-		print error "${CHECK_FAIL} quay.io is not accessible."
+		print error "${CHECK_FAIL} $QUAY is not accessible."
 	else
-		print info "${CHECK_PASS} quay.io is accessible."
+		print info "${CHECK_PASS} $QUAY is accessible."
 	fi
 }
 
 # Verify ibm registry access
 function isIBMRegistryAccessible () {
-#OCPRELEASE_IMAGE="ocp-release@sha256:bb7e12e9dd638f584fee587b6fae07c29100143ad5428560f114df11704627fa"
-#QUAYPATH="quay.io/openshift-release-dev"
-#ISFCATALOG_PATH="icr.io/cpopen"
-#ISFCATALOG_IMAGE="2.5.2-linux.amd64"
-#ISFENTITLEMENT_PATH="cp.icr.io/cp/isf"
-#ISFENTITLEMENT_IMAGE="isf-validate-entitlement@sha256:1a0dbf7c537f02dc0091e3abebae0ccac83da6aa147529f5de49af0f23cd9e8e"
 	getReadyControlNode
 	oc debug nodes/$CONTROLNODE -- chroot /host curl https://$IBMENTITLEDREG |grep "Connection timed out" > /dev/null
 	if [[ $? -ne 0 ]]; then
@@ -492,6 +562,8 @@ print_section "Scale daemon pods"
 verify_scale_daemon_pods_status
 print_section "Backup & Restore"
 verify_br_health
+print_section "Legacy SPP"
+verify_spp_health
 print_section "Scale cluster"
 verify_mmhealth_summary
 #print_section 
