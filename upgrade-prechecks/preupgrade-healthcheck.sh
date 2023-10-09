@@ -13,12 +13,16 @@
 # Execute it from a bash shell where you have logged into HCI OpenShift API
 # It checks:
 # API accessibility
+# access from nodes to Quay.io and IBM registries (icr.io and cp.icr.io)
+# pull access from one of the node for OCP release image and IDF entitlement validation image
 # machine config pool
 # nodes status
 # cluster operators
 # catalog sources
 # Fusion operators
 # services health
+# Scale
+# Backup and Restore
 ##############################################################################
 
 CHECK_PASS='  ✅'
@@ -28,6 +32,18 @@ PADDING_1='   '
 PADDING_2='      '
 REPORT=$(pwd)/preupgrade_healthcheck_report.log
 TEMP_MMHEALTH_FILE=$(pwd)/tmp_health.log
+DISCONNECTEDINSTALL=no
+PROXYINSTALL=no
+OCPRELEASE_IMAGE="ocp-release@sha256:bb7e12e9dd638f584fee587b6fae07c29100143ad5428560f114df11704627fa"
+QUAY=quay.io
+QUAYPATH="$QUAY/openshift-release-dev"
+IBMOPENREG="icr.io"
+ISFCATALOG_PATH="$IBMOPENREG/cpopen"
+ISFCATALOG_IMAGE="2.5.2-linux.amd64"
+IBMENTITLEDREG="cp.icr.io"
+ISFENTITLEMENT_PATH="$IBMENTITLEDREG/cp/isf"
+ISFENTITLEMENT_IMAGE="isf-validate-entitlement@sha256:1a0dbf7c537f02dc0091e3abebae0ccac83da6aa147529f5de49af0f23cd9e8e"
+CONTROLNODE=""
 
 #exec >>(tee ${REPORT}) 2>&1
 
@@ -256,7 +272,7 @@ function verify_mmhealth_summary() {
 	unhealthy=0
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 	nodename=$(oc get nodes |grep 'control'|grep 'Ready'|head -1|awk '{print $1}'|cut -d"." -f 1)
-	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc -n ibm-spectrum-scale rsh $nodename mmhealth cluster show|egrep 'NODE|GPFS|NETWORK|FILESYSTEM|DISK|FILESYSMGR|GUI|NATIVE_RAID|PERFMON|THRESHOLD')"
+	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc -n ibm-spectrum-scale rsh $nodename mmhealth cluster show|egrep 'NODE|GPFS|NETWORK|FILESYSTEM|DISK|FILESYSMGR|GUI|NATIVE_RAID|PERFMON|THRESHOLD|STRETCHCLUSTER')"
 	while IFS= read -r line 
 	do 
 		comp=$(echo $line|awk '{print $1}')
@@ -363,9 +379,105 @@ function verify_br_health() {
 
 }
 
+# Utility to check if it is disconnected install
+function isDisconnectedDeployment () {
+        isoffline=$(oc -n ibm-spectrum-fusion-ns get secret userconfig-secret -o json | jq '.data."userconfig_secret.json"'|cut -d '"' -f 2|base64 -d|grep isPrivateRegistry)
+        if [ $? -ne 0 ]; then
+		DISCONNECTEDINSTALL=yes
+	fi
+}
+
+# Utility to check if it is proxy install
+function isProxyDeployment () {
+        isproxy=$(oc -n ibm-spectrum-fusion-ns get secret userconfig-secret -o json | jq '.data."userconfig_secret.json"'|cut -d '"' -f 2|base64 -d|grep isProxy)
+        if [ $? -ne 0 ]; then
+		PROXYINSTALL=yes
+	fi
+}
+
+# Get one of control node name (ready)
+function getReadyControlNode() {
+	CONTROLNODE=$(oc get nodes|grep -vE 'NAME|worker|NotReady|Scheduling'|head -1|awk '{print $1}')
+}
+
+# Verify quay access
+function isQuayAccessible () {
+	getReadyControlNode
+	oc debug nodes/$CONTROLNODE -- chroot /host curl https://$QUAY|grep "Quay " > /dev/null
+	if [[ $? -ne 0 ]]; then
+		print error "${CHECK_FAIL} quay.io is not accessible."
+	else
+		print info "${CHECK_PASS} quay.io is accessible."
+	fi
+}
+
+# Verify ibm registry access
+function isIBMRegistryAccessible () {
+#OCPRELEASE_IMAGE="ocp-release@sha256:bb7e12e9dd638f584fee587b6fae07c29100143ad5428560f114df11704627fa"
+#QUAYPATH="quay.io/openshift-release-dev"
+#ISFCATALOG_PATH="icr.io/cpopen"
+#ISFCATALOG_IMAGE="2.5.2-linux.amd64"
+#ISFENTITLEMENT_PATH="cp.icr.io/cp/isf"
+#ISFENTITLEMENT_IMAGE="isf-validate-entitlement@sha256:1a0dbf7c537f02dc0091e3abebae0ccac83da6aa147529f5de49af0f23cd9e8e"
+	getReadyControlNode
+	oc debug nodes/$CONTROLNODE -- chroot /host curl https://$IBMENTITLEDREG |grep "Connection timed out" > /dev/null
+	if [[ $? -ne 0 ]]; then
+                print info "${CHECK_PASS} $IBMENTITLEDREG is accessible."
+	else
+                print error "${CHECK_FAIL} $IBMENTITLEDREG is not accessible."
+	fi
+	print_subsection
+	oc debug nodes/$CONTROLNODE -- chroot /host curl https://$IBMOPENREG|grep "Connection timed out" > /dev/null
+	if [[ $? -ne 0 ]]; then
+		print info "${CHECK_PASS} $IBMOPENREG is accessible."
+        else
+		print error "${CHECK_FAIL} $IBMOPENREG is not accessible."
+	fi
+}
+
+# Verify registry accesses
+function areRegistriesAccessible () {
+	isQuayAccessible
+	print_subsection
+	isIBMRegistryAccessible
+}
+
+# Verify registry can pull isf images
+function canPullIsfImage() {
+	getReadyControlNode
+	oc debug nodes/$CONTROLNODE -- chroot /host podman pull --authfile /var/lib/kubelet/config.json "$ISFENTITLEMENT_PATH/$ISFENTITLEMENT_IMAGE" |grep "Writing manifest"
+	if [[ $? -ne 0 ]]; then
+                print error "${CHECK_FAIL} unable to pull image from IBM registry."
+        else
+                print info "${CHECK_PASS} successfully able to pull ISF images."
+        fi
+}
+
+# Verify registry can pull isf images
+function canPullOCPImage () {
+	getReadyControlNode
+	oc debug nodes/$CONTROLNODE -- chroot /host podman pull --authfile /var/lib/kubelet/config.json "$QUAYPATH/$OCPRELEASE_IMAGE" |grep "Writing manifest"
+	if [[ $? -ne 0 ]]; then
+                print error "${CHECK_FAIL} unable to pull image from OpenShift quay.io."
+	else
+                print info "${CHECK_PASS} successfully able to pull image from OpenShift quay.io."
+	fi
+}
+
+# Verify images can be pulled, auth is good
+function isAuthCorrect () {
+	canPullIsfImage
+	print_subsection
+	canPullOCPImage
+}
+
 rm -f ${REPORT} > /dev/null
 print_header
 verify_api_access
+print_section "Registry access"
+areRegistriesAccessible
+print_section "Registry authentication and authorisation"
+isAuthCorrect
 print_section "Cluster operators"
 verify_clusteroperators_status
 print_section "Nodes"
@@ -382,6 +494,6 @@ print_section "Backup & Restore"
 verify_br_health
 print_section "Scale cluster"
 verify_mmhealth_summary
-print_section 
+#print_section 
 #verify_mmhealth_details
 print_footer
