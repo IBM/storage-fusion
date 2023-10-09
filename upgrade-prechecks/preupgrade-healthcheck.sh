@@ -1,3 +1,4 @@
+cat preupgrade-healthcheck.sh 
 #!/bin/bash 
 
 ##############################################################################
@@ -45,6 +46,10 @@ IBMENTITLEDREG="cp.icr.io"
 ISFENTITLEMENT_PATH="$IBMENTITLEDREG/cp/isf"
 ISFENTITLEMENT_IMAGE="isf-validate-entitlement@sha256:1a0dbf7c537f02dc0091e3abebae0ccac83da6aa147529f5de49af0f23cd9e8e"
 CONTROLNODE=""
+SCALENS="ibm-spectrum-scale"
+SCALEDNSNS="ibm-spectrum-scale-dns"
+SCALEOPNS="ibm-spectrum-scale-operator"
+SCALECSINS="ibm-spectrum-scale-csi"
 
 #exec >>(tee ${REPORT}) 2>&1
 
@@ -241,11 +246,11 @@ function verify_catsrc() {
 function verify_scale_daemon_pods_status() {
         print info "Verify IBM Storage Scale daemon pods status."
 	fail=0
-        running=$(oc get daemons ibm-spectrum-scale -n ibm-spectrum-scale -ojson | jq -r '.status.podsStatus'|grep running| awk '{print $2}'|cut -d '"' -f 2)
-        terminating=$(oc get daemons ibm-spectrum-scale -n ibm-spectrum-scale -ojson | jq -r '.status.podsStatus'|grep terminating| awk '{print $2}'|cut -d '"' -f 2)
-        starting=$(oc get daemons ibm-spectrum-scale -n ibm-spectrum-scale -ojson | jq -r '.status.podsStatus'|grep starting| awk '{print $2}'|cut -d '"' -f 2)
-        waitingForDelete=$(oc get daemons ibm-spectrum-scale -n ibm-spectrum-scale -ojson | jq -r '.status.podsStatus'|grep waitingForDelete| awk '{print $2}'|cut -d '"' -f 2)
-        unknown=$(oc get daemons ibm-spectrum-scale -n ibm-spectrum-scale -ojson | jq -r '.status.podsStatus'|grep unknown| awk '{print $2}'|cut -d '"' -f 2)
+        running=$(oc get daemons ibm-spectrum-scale -n $SCALENS -ojson | jq -r '.status.podsStatus'|grep running| awk '{print $2}'|cut -d '"' -f 2)
+        terminating=$(oc get daemons ibm-spectrum-scale -n $SCALENS -ojson | jq -r '.status.podsStatus'|grep terminating| awk '{print $2}'|cut -d '"' -f 2)
+        starting=$(oc get daemons ibm-spectrum-scale -n $SCALENS -ojson | jq -r '.status.podsStatus'|grep starting| awk '{print $2}'|cut -d '"' -f 2)
+        waitingForDelete=$(oc get daemons ibm-spectrum-scale -n $SCALENS -ojson | jq -r '.status.podsStatus'|grep waitingForDelete| awk '{print $2}'|cut -d '"' -f 2)
+        unknown=$(oc get daemons ibm-spectrum-scale -n $SCALENS -ojson | jq -r '.status.podsStatus'|grep unknown| awk '{print $2}'|cut -d '"' -f 2)
         if [ "${terminating}" -ne 0 ]; then
                 print error "${CHECK_FAIL} ${terminating} daemons are in terminating state."
 		fail=1
@@ -267,13 +272,46 @@ function verify_scale_daemon_pods_status() {
         fi
 }
 
+# Verify scale operator pod 
+function verify_scale_operator_pods () {
+	print info "Verify IBM Storage Scale operator pod status."
+	oc -n $SCALEOPNS get pods|grep "Running" >/dev/null
+	if [[ $? -ne 0 ]]; then
+		print error "${CHECK_UNKNOW} IBM Storage Scale operator is not healthy."
+	else
+		print info "${CHECK_PASS} IBM Storage Scale operator is healthy."
+	fi
+}
+
+# Verify scale dns pods 
+function verify_scale_dns_pods () {
+	print info "Verify IBM Storage Scale dns pods status."
+	oc -n $SCALEDNSNS get pods|grep "Running" >/dev/null
+	if [[ $? -ne 0 ]]; then
+		print error "${CHECK_UNKNOW} All IBM Storage Scale dns pods are not healthy."
+	else
+		print info "${CHECK_PASS} All IBM Storage Scale dns pods are healthy."
+	fi
+}
+
+# Verify scale csi pods 
+function verify_scale_csi_pods () {
+	print info "Verify IBM Storage Scale csi pods status."
+	oc -n $SCALECSINS get pods|grep "Running" >/dev/null
+	if [[ $? -ne 0 ]]; then
+		print error "${CHECK_UNKNOW} All IBM Storage Scale CSI pods are not healthy."
+	else
+		print info "${CHECK_PASS} All IBM Storage Scale CSI pods are healthy."
+	fi
+}
+
 # Get Scale health summary
 function verify_mmhealth_summary() {
 	print info "Verify IBM Storage Scale health"
 	unhealthy=0
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 	nodename=$(oc get nodes |grep 'control'|grep 'Ready'|head -1|awk '{print $1}'|cut -d"." -f 1)
-	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc -n ibm-spectrum-scale rsh $nodename mmhealth cluster show|egrep 'NODE|GPFS|NETWORK|FILESYSTEM|DISK|FILESYSMGR|GUI|NATIVE_RAID|PERFMON|THRESHOLD|STRETCHCLUSTER')"
+	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc -n $SCALENS rsh $nodename mmhealth cluster show|egrep 'NODE|GPFS|NETWORK|FILESYSTEM|DISK|FILESYSMGR|GUI|NATIVE_RAID|PERFMON|THRESHOLD|STRETCHCLUSTER')"
 	while IFS= read -r line 
 	do 
 		comp=$(echo $line|awk '{print $1}')
@@ -292,7 +330,7 @@ function verify_mmhealth_summary() {
 		print info "${CHECK_PASS} All of IBM Storage Scale components are healthy."
 	else
 		print error "${CHECK_UNKNOW} health summary:"
-		oc -n ibm-spectrum-scale rsh $nodename mmhealth cluster show
+		oc -n $SCALENS rsh $nodename mmhealth cluster show
 	fi
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
@@ -324,6 +362,21 @@ function verify_mmhealth_details() {
                 oc rsh control-1-ru2 mmhealth cluster show
         fi
         rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+# Verify Scale health
+function verify_scale_health () {
+	verify_scale_operator_pods
+	print_subsection
+	verify_scale_daemon_pods_status
+	print_subsection
+	verify_scale_dns_pods
+	print_subsection
+	verify_scale_csi_pods
+	print_subsection
+	verify_mmhealth_summary
+	#print_subsection
+	#verify_mmhealth_details
 }
 
 # Get Fusion operator health
@@ -591,6 +644,7 @@ function isAuthCorrect () {
 
 rm -f ${REPORT} > /dev/null
 print_header
+print_section "API access"
 verify_api_access
 print_section "Registry access"
 areRegistriesAccessible
@@ -606,8 +660,6 @@ print_section "Catalog sources"
 verify_catsrc 
 print_section "Fusion software"
 verify_fusion_health
-print_section "Scale daemon pods"
-verify_scale_daemon_pods_status
 print_section "Backup & Restore"
 verify_br_health
 print_section "Legacy SPP"
@@ -615,7 +667,5 @@ verify_spp_health
 print_section "Data Classification"
 verify_dcs_health
 print_section "Scale cluster"
-verify_mmhealth_summary
-#print_section 
-#verify_mmhealth_details
+verify_scale_health
 print_footer
