@@ -193,9 +193,6 @@ CRDS=$(oc get crd -o name | egrep -i "ibmsppcs.sppc.ibm.com|ibmspps.ocp.spp.ibm.
 
 SF_CR_FILE=/tmp/sf_${START_TIME}_$$.yaml
 oc -n "${FUSION_NS}" get "$SF_CR" -o yaml | awk '{ if ($0 == "status:") {exit} else {print $0}}' | grep -Ev '^  uid:|^  resourceVersion:|^  generation:|^  creationTimestamp:' > $SF_CR_FILE
-oc -n "${FUSION_NS}" delete "$SF_CR"
-oc apply -f $SF_CR_FILE
-rm $SF_CR_FILE
 
 oc scale --replicas=1 deployment/isf-prereq-operator-controller-manager -n "${FUSION_NS}"
 
