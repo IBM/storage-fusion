@@ -350,7 +350,7 @@ function verify_dcs_health () {
 	if [ ${notsuccesscount} -ne 0 ]; then
                 print error "${CHECK_FAIL} ${notsuccesscount} operators for DCS are degraded."
                 unhealthy=1
-                print error "${CHECK_UNKNOWN} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-data-cataloging\" to get more details about failure."
+                print error "${CHECK_UNKNOW} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-data-cataloging\" to get more details about failure."
                 oc get csv -n ibm-data-cataloging|egrep -v 'Succ|NAME'
 	else
                 print info "${CHECK_PASS} All operators for DCS are healthy."
@@ -398,7 +398,7 @@ function verify_br_health() {
 	if [ ${notsuccesscount} -ne 0 ]; then
 		print error "${CHECK_FAIL} ${notsuccesscount} operators for data protection are degraded."
 	        unhealthy=1
-		print error "${CHECK_UNKNOWN} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-backup-restore\" to get more details about failure."
+		print error "${CHECK_UNKNOW} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-backup-restore\" to get more details about failure."
 		oc get csv -n ibm-backup-restore|egrep -v 'Succ|NAME'
         else 
 		print info "${CHECK_PASS} All operators for data protection are healthy."
