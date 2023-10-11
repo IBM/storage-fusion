@@ -8,7 +8,7 @@ rm -f "$LOG"
 exec &> >(tee -a $LOG)
 
 USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
-       -u to uninstall a spoke installation before uninstalling hub 
+       -u to unistall a spoke installation before uninstalling hub 
        -d to creat DeleteBackupRequest to delete backups. Use this if you plan to uninstall Fusion"
 
 NAMESPACE=ibm-backup-restore
