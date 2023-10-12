@@ -164,7 +164,11 @@ do
   fi
 done
 
+print_heading "Remove Backup & Restore (Legacy) catalogsource "
+oc delete CatalogSource ibm-sppc-operator -n openshift-marketplace 2> /dev/null
+
 FBR_NS=$(oc get dataprotectionservers -A -o custom-columns=NS:metadata.namespace --no-headers)
+[ -z "$FBR_NS" ] && FBR_NS=$(oc get dataprotectionagent -A -o custom-columns=NS:metadata.namespace --no-headers)
 export FBR_NS
 if [ -n "$FBR_NS" ] ; then
   print_heading "Fusion Backup & Restore installed. Double check if OADP and AMQ subscription has the correct source."
@@ -180,8 +184,16 @@ if [ -n "$FBR_NS" ] ; then
   fi
 fi
 
-print_heading "Remove Backup & Restore (Legacy) catalogsource "
-oc delete CatalogSource ibm-sppc-operator -n openshift-marketplace 2> /dev/null
+FSD_NS=$(oc get SpectrumDiscover -A -o custom-columns=NS:metadata.namespace --no-headers)
+export FSD_NS
+if [ -n "$FSD_NS" ] ; then
+  print_heading "Data Cataloging installed. Double check if AMQ subscription has the correct source."
+  if [[ $(oc -n "${FSD_NS}" get $(oc get subs -n "${FSD_NS}" -o name | grep "amq" ) -o json|jq -r .spec.source) == "ibm-sppc-operator" ]] ; then
+    AMQ_CAT=$(oc -n openshift-marketplace get packagemanifests amq-streams -o custom-columns=CS:status.catalogSource --no-headers)
+    AMQ_SUBS=$(oc get subs -n "${FSD_NS}" -o name |grep "amq")
+    oc patch ${AMQ_SUBS} -n "${FSD_NS}" --type='json' -p="[{\"op\": \"replace\", \"path\": \"/spec/source\", \"value\": \"${AMQ_CAT}\"}]"
+  fi
+fi
 
 print_heading "Deleting cluster role bindings and crds"
 ROLES=$(oc get clusterrole --ignore-not-found | egrep -i "ibmsppcs.sppc.ibm.com|ibmsppc-operator-metrics-reader|baas-spp-agent|spp-operator" | cut -d" " -f1)
@@ -191,9 +203,21 @@ BINDINGS=$(oc get clusterrolebinding --ignore-not-found | egrep -i "spp-operator
 CRDS=$(oc get crd -o name | egrep -i "ibmsppcs.sppc.ibm.com|ibmspps.ocp.spp.ibm.com")
 [ -n "$CRDS" ]  && oc delete $CRDS
 
+oc scale --replicas=1 deployment/isf-prereq-operator-controller-manager -n "${FUSION_NS}"
+#make sure prereq pod is running
+print_heading "Waiting for prereq pod to be ready"
+oc wait --for=condition=available deploy/isf-prereq-operator-controller-manager -n "${FUSION_NS}" --timeout=300s
+PREREQ_POD=$(oc -n "${FUSION_NS}" get pods -o name | grep isf-prereq-operator-controller-manager)
+while [ -z "$PREREQ_POD" ]
+ do
+   sleep 2
+   PREREQ_POD=$(oc -n "${FUSION_NS}" get pods -o name | grep isf-prereq-operator-controller-manager)
+done
+oc -n "${FUSION_NS}" wait --for=condition=ready "$PREREQ_POD" --timeout=300s
+
 SF_CR_FILE=/tmp/sf_${START_TIME}_$$.yaml
 oc -n "${FUSION_NS}" get "$SF_CR" -o yaml | awk '{ if ($0 == "status:") {exit} else {print $0}}' | grep -Ev '^  uid:|^  resourceVersion:|^  generation:|^  creationTimestamp:' > $SF_CR_FILE
-
-oc scale --replicas=1 deployment/isf-prereq-operator-controller-manager -n "${FUSION_NS}"
+oc -n "${FUSION_NS}" delete "$SF_CR"
+oc apply -f $SF_CR_FILE
 
 print_heading "Backup and Restore (Legacy) uninstalled"
