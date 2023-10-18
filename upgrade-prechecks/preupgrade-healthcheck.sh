@@ -1,11 +1,11 @@
-#!/bin/bash 
+#!/bin/bash
 
 ##############################################################################
-#Script Name	: preupgrade_healthcheck.sh                                             
-#Description	: Utility to run healthcheck for IBM Storage Fusion HCI system                                                      
-#Args       	:                                                                                           
-#Author       	:Anshu Garg     
-#Email         	:ganshug@gmail.com                                           
+#Script Name	: preupgrade_healthcheck.sh
+#Description	: Utility to run healthcheck for IBM Storage Fusion HCI system
+#Args       	:
+#Author       	:Anshu Garg,Divya Jain
+#Email         	:ganshug@gmail.com, divya.jn5194@gmail.com
 ##############################################################################
 
 ##############################################################################
@@ -24,6 +24,7 @@
 # services health
 # Scale
 # Backup and Restore
+# VirtualMachine PVCs accessmode
 ##############################################################################
 
 CHECK_PASS='  ✅'
@@ -96,14 +97,15 @@ function print() {
 }
 
 
-# Verify we are able to access OCP API and can execute oc commands 
+# Verify we are able to access OCP API and can execute oc commands
 function verify_api_access() {
 	print info "Verify Red Hat OpenShift API access."
-	oc get clusterversion
+	oc get clusterversion >/dev/null
 	if [ $? -ne 0 ]; then
-        	print error "${CHECK_FAIL} Red Hat OpenShift API is inaccessible."	
+        	print error "${CHECK_FAIL} Red Hat OpenShift API is inaccessible. Rest of the check can not be executed. Please login to OCP api before executing script."
+		exit 1
         else
-        	print info "${CHECK_PASS} Red Hat OpenShift API is accessible."	
+        	print info "${CHECK_PASS} Red Hat OpenShift API is accessible."
 	fi
 }
 
@@ -189,9 +191,9 @@ function verify_mcp() {
 	fi
 	if [[ $wnotupdated -eq 1 || $wnotready -eq 1 || $winprogress -eq 1 || $wdegraded -eq 1 ]]; then
 		print error "${CHECK_FAIL} $(oc get nodes|grep compute)"
-	fi	
+	fi
 
-	print_subsection	
+	print_subsection
 	# Check control mcp
 	if [[ $degcontrol -ne 0 ]]; then
 		print error "${CHECK_FAIL}  $degcontrol control nodes are degraded."
@@ -211,7 +213,7 @@ function verify_mcp() {
 	fi
 	if [[ $notupdated -eq 1 || $notready -eq 1 || $inprogress -eq 1 || $degraded -eq 1 ]]; then
 		print error "${CHECK_FAIL} $(oc get nodes|grep control)"
-	fi	
+	fi
 	if [[ $notready -eq 0 && $inprogress -eq 0 && $degraded -eq 0 && $notupdated -eq 0 && $wnotupdated -eq 0 && $wnotready -eq 0 && $winprogress -eq 0 && $wdegraded -eq 0 ]]; then
 		print info "${CHECK_PASS} All machine configuration pools are upto date."
 	fi
@@ -223,7 +225,7 @@ function verify_catsrc() {
 	print info "Verify catalog sources health in cluster."
         unhealthy=0
 	# oc get catsrc -A
-	#NAMESPACE               NAME                                	 	
+	#NAMESPACE               NAME
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
         while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get catsrc -A |grep -v NAME)"
         while IFS= read -r line
@@ -271,7 +273,7 @@ function verify_scale_daemon_pods_status() {
         fi
 }
 
-# Verify scale operator pod 
+# Verify scale operator pod
 function verify_scale_operator_pods () {
 	print info "Verify IBM Storage Scale operator pod status."
 	oc -n $SCALEOPNS get pods|grep "Running" >/dev/null
@@ -282,7 +284,7 @@ function verify_scale_operator_pods () {
 	fi
 }
 
-# Verify scale dns pods 
+# Verify scale dns pods
 function verify_scale_dns_pods () {
 	print info "Verify IBM Storage Scale dns pods status."
 	oc -n $SCALEDNSNS get pods|grep "Running" >/dev/null
@@ -293,7 +295,7 @@ function verify_scale_dns_pods () {
 	fi
 }
 
-# Verify scale csi pods 
+# Verify scale csi pods
 function verify_scale_csi_pods () {
 	print info "Verify IBM Storage Scale csi pods status."
 	oc -n $SCALECSINS get pods|grep "Running" >/dev/null
@@ -311,8 +313,8 @@ function verify_mmhealth_summary() {
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 	nodename=$(oc get nodes |grep 'control'|grep 'Ready'|head -1|awk '{print $1}'|cut -d"." -f 1)
 	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc -n $SCALENS rsh $nodename mmhealth cluster show|egrep 'NODE|GPFS|NETWORK|FILESYSTEM|DISK|FILESYSMGR|GUI|NATIVE_RAID|PERFMON|THRESHOLD|STRETCHCLUSTER')"
-	while IFS= read -r line 
-	do 
+	while IFS= read -r line
+	do
 		comp=$(echo $line|awk '{print $1}')
 		failed=$(echo $line|awk '{print $3}')
 		degraded=$(echo $line|awk '{print $4}')
@@ -324,7 +326,7 @@ function verify_mmhealth_summary() {
                         print error "${CHECK_FAIL} ${degraded} degraded $comp found."
 			unhealthy=1
 		fi
-	done <<< $(cat "${TEMP_MMHEALTH_FILE}")	
+	done <<< $(cat "${TEMP_MMHEALTH_FILE}")
 	if [ $unhealthy  -eq 0 ]; then
 		print info "${CHECK_PASS} All of IBM Storage Scale components are healthy."
 	else
@@ -365,6 +367,11 @@ function verify_mmhealth_details() {
 
 # Verify Scale health
 function verify_scale_health () {
+        oc get project |grep ibm-spectrum-scale-operator > /dev/null
+        if [[ $? -ne 0 ]]; then
+                print info "${CHECK_UNKNOW} ibm-spectrum-scale-operator project does not exist. It is possible that service is not installed or failed at very early stage."
+                return 0
+        fi
 	verify_scale_operator_pods
 	print_subsection
 	verify_scale_daemon_pods_status
@@ -452,7 +459,7 @@ function verify_br_health() {
 	        unhealthy=1
 		print error "${CHECK_UNKNOW} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-backup-restore\" to get more details about failure."
 		oc get csv -n ibm-backup-restore|egrep -v 'Succ|NAME'
-        else 
+        else
 		print info "${CHECK_PASS} All operators for data protection are healthy."
 	fi
 
@@ -465,7 +472,7 @@ function verify_br_health() {
 	        unhealthy=1
 		print error "${CHECK_FAIL} Here are failed pods:"
 		oc get pods -n ibm-backup-restore|egrep -v 'Running|Completed|NAME'
-        else 
+        else
 		print info "${CHECK_PASS} All pods for data protection are healthy."
 	fi
 
@@ -527,7 +534,7 @@ function verify_spp_health() {
                 print info "${CHECK_UNKNOW} baas project does not exist. It is possible that service is not installed or failed at very early stage."
                 return 0
         fi
-	
+
 	# check pods health
         unhealthy=0
         notsuccesscount=$(oc get po -n baas|egrep -v 'Running|Completed|NAME'|wc -l)
@@ -573,7 +580,7 @@ function isProxyDeployment () {
 
 # Get one of control node name (ready)
 function getReadyControlNode() {
-	CONTROLNODE=$(oc get nodes|grep -vE 'NAME|worker|NotReady|Scheduling'|head -1|awk '{print $1}')
+	CONTROLNODE=$(oc get nodes | grep -vE 'NAME|NotReady|Scheduling' | grep 'master' | head -1|awk '{print $1}')
 }
 
 # Verify quay access
@@ -641,6 +648,46 @@ function isAuthCorrect () {
 	canPullOCPImage
 }
 
+
+# Get Virtual machines
+# Sample VMS:
+#NAMESPACE                 NAME                            AGE     STATUS    READY
+#clusters-devcluster-414   devcluster-414-598f1ac6-nfmtd   3d23h   Running   True
+#clusters-scale-414        scale-414-7eec1c0e-n9gmj        2d15h   Running   True
+function get_virtual_machines () {
+	nonMigratableVM=0
+	#vms=$(oc get virtualmachine -A|awk '{print $1 $2}')
+	#echo $vm
+	#echo "Anshu ns:vm:dvName:volClaim:Access mode" |  column -t -s ':'
+	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get virtualmachine -A |grep -v NAME |awk '{print $1,$2}')"
+        while IFS= read -r line
+        do
+                ns=$(echo $line |awk '{print $1}')
+		vm=$(echo $line |awk '{print $2}')
+		dvName=$(oc get virtualmachine -n $ns  $vm -o json|jq '.spec.template.spec.volumes[0].dataVolume.name' | tr -d '"')
+		volClaim=$(oc get datavolume -n $ns  $dvName -o json| jq '.status.claimName' | tr -d '"')
+		am=$(oc -n $ns get pvc $volClaim  -o json|jq '.spec.accessModes[]' | tr -d '"' )
+		echo $am|grep -q "ReadWriteMany"
+		if [[ $? -ne 0 ]]; then
+			nonMigratableVM=$nonMigratableVM+1
+			if [[ $nonMigratableVM -eq 1 ]]; then
+				print info "VMs that do not use ReadWriteMany access mode for PVC can not be evicted."
+			fi
+			print error "${CHECK_FAIL} Non-migratable VM: $vm in namespace $ns."
+		fi
+        done < ${TEMP_MMHEALTH_FILE}
+	if [[ $nonMigratableVM -eq 0 ]]; then
+		print info "${CHECK_PASS} All vms are migratable."
+	fi
+}
+
+# Verify VMs are livemigratable
+# If VMs are not live migratable then all drains will fail unless VMs are deleted manually
+function verify_livemigratable_vms() {
+	get_virtual_machines
+}
+
 rm -f ${REPORT} > /dev/null
 print_header
 print_section "API access"
@@ -656,7 +703,7 @@ verify_nodes_status
 print_section "Machine configuration pools"
 verify_mcp
 print_section "Catalog sources"
-verify_catsrc 
+verify_catsrc
 print_section "Fusion software"
 verify_fusion_health
 print_section "Backup & Restore"
@@ -667,4 +714,6 @@ print_section "Data Classification"
 verify_dcs_health
 print_section "Scale cluster"
 verify_scale_health
+print_section "VMs migration"
+verify_livemigratable_vms
 print_footer
