@@ -47,6 +47,11 @@ export FUSION_NS
 
 [ -z "$FUSION_NS" ] &&  err_exit "No Fusion namespace found. Exiting."
 
+echo "Fusion Installplans:"
+oc -n "${FUSION_NS}" get ip
+echo "Fusion CSVs:"
+oc -n "${FUSION_NS}" get csv
+
 print_heading "Remove Backup & Restore (Legacy) from Fusion"
 
 SF_CR=$(oc get spectrumfusion.prereq.isf.ibm.com -n "${FUSION_NS}" --no-headers -o name)
