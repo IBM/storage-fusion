@@ -69,6 +69,11 @@ ISF_NS=$(oc get spectrumfusion -A --no-headers | cut -d" " -f1)
 [ -z "$ISF_NS" ] &&  ISF_NS=ibm-spectrum-fusion-ns
 export ISF_NS
 
+echo "Fusion Installplans:"
+oc -n "${ISF_NS}" get ip
+echo "Fusion CSVs:"
+oc -n "${ISF_NS}" get csv
+
 CONNECTION=$(oc -n "$NAMESPACE" get cm guardian-configmap -o custom-columns="CONN:data.connectionName" --no-headers)
 if [ -n "$CONNECTION" ]
   then
