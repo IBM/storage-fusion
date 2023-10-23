@@ -47,11 +47,19 @@ export FUSION_NS
 
 [ -z "$FUSION_NS" ] &&  err_exit "No Fusion namespace found. Exiting."
 
+echo "Fusion Installplans:"
+oc -n "${FUSION_NS}" get ip
+echo "Fusion CSVs:"
+oc -n "${FUSION_NS}" get csv
+
 print_heading "Remove Backup & Restore (Legacy) from Fusion"
 
-oc patch $(oc get spectrumfusion.prereq.isf.ibm.com -n "${FUSION_NS}" --no-headers -o name ) -n "${FUSION_NS}" --type json -p '[{"op": "replace", "path": "/spec/DataProtection/Enable", "value": false}]'
+SF_CR=$(oc get spectrumfusion.prereq.isf.ibm.com -n "${FUSION_NS}" --no-headers -o name)
+oc patch -n "${FUSION_NS}" "$SF_CR" --type json -p '[{"op": "replace", "path": "/spec/DataProtection/Enable", "value": false}]'
 
 oc scale --replicas=0 deployment/isf-prereq-operator-controller-manager -n "${FUSION_NS}"
+
+oc -n "$FUSION_NS" patch --type json configmap isf-data-protection-config -p '[{"op": "replace", "path": "/data/Mode", "value": "DisableWebhook"}]'
 
 print_heading "Remove any existing Backup & Restore (Legacy) Restore CRs"
 RS=$(oc -n "${FUSION_NS}" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns="NAME:metadata.name" --no-headers)
@@ -116,11 +124,19 @@ FBP=$(oc  -n "${FUSION_NS}" get fbp -l dp.isf.ibm.com/provider-name=isf-ibmspp -
 print_heading "Remove any existing Backup & Restore (Legacy) Backup Storage Location CRs "
 BSL=$(oc -n "${FUSION_NS}" get fbsl -l  dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
 [ -n "$BSL" ] && oc -n "${FUSION_NS}" delete  --timeout=60s fbsl $BSL
-BSL=$(oc -n "${FUSION_NS}" get fbsl -l  dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+BSL=$(oc -n "${FUSION_NS}" get fbsl -l  dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers| grep -v "in-place-snapshot")
 [ -n "$BSL" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbsl $BSL
+
+print_heading "Remove any existing Backup & Restore (Legacy)  DeleteBackupRequest CRs "
+DR=$(oc -n "$FUSION_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+[ -n "$DR" ] && oc -n "$FUSION_NS" delete fdbr  $DR --timeout=60s
+DR=$(oc -n "$FUSION_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-ibmspp -o custom-columns=N:metadata.name --no-headers)
+[ -n "$DR" ] && oc -n "${FUSION_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fdbr $DR
 
 print_heading "Remove sppmanager CR"
 oc delete sppmanager sppmanager -n "${FUSION_NS}"
+
+oc -n "$FUSION_NS" patch --type json configmap isf-data-protection-config -p '[{"op": "replace", "path": "/data/Mode", "value": "Normal"}]'
 
 print_heading "Remove subscriptions in namespace ibm-spectrum-protect-plus-ns and baas" 
 for NAMESPACE in ${NAMESPACES[@]}
@@ -153,7 +169,11 @@ do
   fi
 done
 
+print_heading "Remove Backup & Restore (Legacy) catalogsource "
+oc delete CatalogSource ibm-sppc-operator -n openshift-marketplace 2> /dev/null
+
 FBR_NS=$(oc get dataprotectionservers -A -o custom-columns=NS:metadata.namespace --no-headers)
+[ -z "$FBR_NS" ] && FBR_NS=$(oc get dataprotectionagent -A -o custom-columns=NS:metadata.namespace --no-headers)
 export FBR_NS
 if [ -n "$FBR_NS" ] ; then
   print_heading "Fusion Backup & Restore installed. Double check if OADP and AMQ subscription has the correct source."
@@ -169,8 +189,16 @@ if [ -n "$FBR_NS" ] ; then
   fi
 fi
 
-print_heading "Remove Backup & Restore (Legacy) catalogsource "
-oc delete CatalogSource ibm-sppc-operator -n openshift-marketplace 2> /dev/null
+FSD_NS=$(oc get SpectrumDiscover -A -o custom-columns=NS:metadata.namespace --no-headers)
+export FSD_NS
+if [ -n "$FSD_NS" ] ; then
+  print_heading "Data Cataloging installed. Double check if AMQ subscription has the correct source."
+  if [[ $(oc -n "${FSD_NS}" get $(oc get subs -n "${FSD_NS}" -o name | grep "amq" ) -o json|jq -r .spec.source) == "ibm-sppc-operator" ]] ; then
+    AMQ_CAT=$(oc -n openshift-marketplace get packagemanifests amq-streams -o custom-columns=CS:status.catalogSource --no-headers)
+    AMQ_SUBS=$(oc get subs -n "${FSD_NS}" -o name |grep "amq")
+    oc patch ${AMQ_SUBS} -n "${FSD_NS}" --type='json' -p="[{\"op\": \"replace\", \"path\": \"/spec/source\", \"value\": \"${AMQ_CAT}\"}]"
+  fi
+fi
 
 print_heading "Deleting cluster role bindings and crds"
 ROLES=$(oc get clusterrole --ignore-not-found | egrep -i "ibmsppcs.sppc.ibm.com|ibmsppc-operator-metrics-reader|baas-spp-agent|spp-operator" | cut -d" " -f1)
@@ -181,5 +209,20 @@ CRDS=$(oc get crd -o name | egrep -i "ibmsppcs.sppc.ibm.com|ibmspps.ocp.spp.ibm.
 [ -n "$CRDS" ]  && oc delete $CRDS
 
 oc scale --replicas=1 deployment/isf-prereq-operator-controller-manager -n "${FUSION_NS}"
+#make sure prereq pod is running
+print_heading "Waiting for prereq pod to be ready"
+oc wait --for=condition=available deploy/isf-prereq-operator-controller-manager -n "${FUSION_NS}" --timeout=300s
+PREREQ_POD=$(oc -n "${FUSION_NS}" get pods -o name | grep isf-prereq-operator-controller-manager)
+while [ -z "$PREREQ_POD" ]
+ do
+   sleep 2
+   PREREQ_POD=$(oc -n "${FUSION_NS}" get pods -o name | grep isf-prereq-operator-controller-manager)
+done
+oc -n "${FUSION_NS}" wait --for=condition=ready "$PREREQ_POD" --timeout=300s
+
+SF_CR_FILE=/tmp/sf_${START_TIME}_$$.yaml
+oc -n "${FUSION_NS}" get "$SF_CR" -o yaml | awk '{ if ($0 == "status:") {exit} else {print $0}}' | grep -Ev '^  uid:|^  resourceVersion:|^  generation:|^  creationTimestamp:' > $SF_CR_FILE
+oc -n "${FUSION_NS}" delete "$SF_CR"
+oc apply -f $SF_CR_FILE
 
 print_heading "Backup and Restore (Legacy) uninstalled"
