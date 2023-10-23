@@ -12,6 +12,7 @@
 # This utility will run a healthcheck on IBM Storage Fusion HCI system
 # Execute it from a bash shell where you have logged into HCI OpenShift API
 # Ensure jq is installed on that system
+# It is to be used for only online/connected installs of HCI
 # It checks:
 # API accessibility
 # access from nodes to Quay.io and IBM registries (icr.io and cp.icr.io)
@@ -25,6 +26,9 @@
 # Scale
 # Backup and Restore
 # VirtualMachine PVCs accessmode
+
+# Execute as
+# ./preupgrade_healthcheck.sh 
 ##############################################################################
 
 CHECK_PASS='  ✅'
