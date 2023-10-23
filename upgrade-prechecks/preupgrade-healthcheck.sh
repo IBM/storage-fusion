@@ -12,6 +12,7 @@
 # This utility will run a healthcheck on IBM Storage Fusion HCI system
 # Execute it from a bash shell where you have logged into HCI OpenShift API
 # Ensure jq is installed on that system
+# It is to be used for only online/connected installs of HCI
 # It checks:
 # API accessibility
 # access from nodes to Quay.io and IBM registries (icr.io and cp.icr.io)
@@ -25,6 +26,9 @@
 # Scale
 # Backup and Restore
 # VirtualMachine PVCs accessmode
+
+# Execute as
+# ./preupgrade_healthcheck.sh 
 ##############################################################################
 
 CHECK_PASS='  ✅'
@@ -406,7 +410,7 @@ function verify_dcs_health () {
                 return 0
         fi
         notsuccesscount=$(oc get csv -n ibm-data-cataloging|egrep -v 'Succ|NAME'|wc -l)
-	if [ ${notsuccesscount} -ne 0 ]; then
+		if [ ${notsuccesscount} -ne 0 ]; then
                 print error "${CHECK_FAIL} ${notsuccesscount} operators for DCS are degraded."
                 unhealthy=1
                 print error "${CHECK_UNKNOW} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-data-cataloging\" to get more details about failure."
@@ -655,10 +659,17 @@ function isAuthCorrect () {
 #clusters-devcluster-414   devcluster-414-598f1ac6-nfmtd   3d23h   Running   True
 #clusters-scale-414        scale-414-7eec1c0e-n9gmj        2d15h   Running   True
 function get_virtual_machines () {
+        # check namespace for spp server
+        oc get virtualmachine -A 2>&1 >> /dev/null
+        if [[ $? -ne 0 ]]; then
+                print info "${CHECK_PASS} There are no virtual machines on this cluster, so there is no need to continue this check."
+                return 0
+        fi
+
 	nonMigratableVM=0
 	#vms=$(oc get virtualmachine -A|awk '{print $1 $2}')
 	#echo $vm
-	#echo "Anshu ns:vm:dvName:volClaim:Access mode" |  column -t -s ':'
+	#echo "ns:vm:dvName:volClaim:Access mode" |  column -t -s ':'
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get virtualmachine -A |grep -v NAME |awk '{print $1,$2}')"
         while IFS= read -r line
