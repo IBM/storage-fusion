@@ -699,6 +699,22 @@ function verify_livemigratable_vms() {
 	get_virtual_machines
 }
 
+# Verify OLM pods are healthy
+# OLM pods are responsible for managing catalog sources and operator life cycle managemt
+function verify_olm_pods() {
+        # check pods health in openshift-operator-lifecycle-manager namespace
+        unhealthy=0
+        notsuccesscount=$(oc get po -n openshift-operator-lifecycle-manager  --no-headers  | egrep 'Running|Completed' -v |wc -l)
+        if [ ${notsuccesscount} -ne 0 ]; then
+                print error "${CHECK_FAIL} ${notsuccesscount} pods in openshift-operator-lifecycle-manager namespace are not running."
+                unhealthy=1
+                print error "${CHECK_FAIL} Here are failed pods:"
+                oc get po -n openshift-operator-lifecycle-manager  | egrep 'Running|Completed' -v
+        else
+                print info "${CHECK_PASS} All pods in openshift-operator-lifecycle-manager namespace are healthy."
+        fi
+}
+
 rm -f ${REPORT} > /dev/null
 print_header
 print_section "API access"
@@ -713,6 +729,8 @@ print_section "Nodes"
 verify_nodes_status
 print_section "Machine configuration pools"
 verify_mcp
+print_section "Verify olm pods health"
+verify_olm_pods
 print_section "Catalog sources"
 verify_catsrc
 print_section "Fusion software"
