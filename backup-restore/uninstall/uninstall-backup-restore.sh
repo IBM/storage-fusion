@@ -161,6 +161,12 @@ BSL=$(oc -n "$ISF_NS" get backupstoragelocation.data-protection.isf.ibm.com -o c
 BSL=$(oc -n "$ISF_NS" get backupstoragelocation.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " " | grep -v "isf-dp-inplace-snapshot")
 [ -n "$BSL" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbsl $BSL
 
+print_heading "Remove isfconsoleplugins CRs"
+ISFCP="$(oc get -n "$ISF_NS" isfconsoleplugins.mgmtsft.isf.ibm.com --ignore-not-found -o custom-columns="Name:metadata.name" --no-headers)"
+[ -n "$ISFCP" ] && oc -n "$ISF_NS" delete --timeout=60s isfconsoleplugins.mgmtsft.isf.ibm.com $ISFCP
+## no further check on finalizers are needed, as the controller will take care of removing it
+## isf-consoleplugin deletion is done
+
 print_heading "Delete any existing guardiancopybackups CRs"
 oc delete guardiancopybackups -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardiancopyrestores CRs"
