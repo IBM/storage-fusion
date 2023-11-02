@@ -662,7 +662,6 @@ function isAuthCorrect () {
 #clusters-devcluster-414   devcluster-414-598f1ac6-nfmtd   3d23h   Running   True
 #clusters-scale-414        scale-414-7eec1c0e-n9gmj        2d15h   Running   True
 function get_virtual_machines () {
-  # check namespace for spp server
   oc get virtualmachine -A 2>&1 >> /dev/null
   if [[ $? -ne 0 ]]; then
     print info "${CHECK_PASS} There are no virtual machines on this cluster, so there is no need to continue this check."
