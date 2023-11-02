@@ -12,6 +12,7 @@
 # This utility will run a healthcheck on IBM Storage Fusion HCI system
 # Execute it from a bash shell where you have logged into HCI OpenShift API
 # Ensure jq is installed on that system
+# It is to be used for only online/connected installs of HCI
 # It checks:
 # API accessibility
 # access from nodes to Quay.io and IBM registries (icr.io and cp.icr.io)
@@ -25,6 +26,9 @@
 # Scale
 # Backup and Restore
 # VirtualMachine PVCs accessmode
+
+# Execute as
+# ./preupgrade_healthcheck.sh
 ##############################################################################
 
 CHECK_PASS='  ✅'
@@ -50,6 +54,7 @@ SCALENS="ibm-spectrum-scale"
 SCALEDNSNS="ibm-spectrum-scale-dns"
 SCALEOPNS="ibm-spectrum-scale-operator"
 SCALECSINS="ibm-spectrum-scale-csi"
+FUSIONNS="ibm-spectrum-fusion-ns"
 
 #exec >>(tee ${REPORT}) 2>&1
 
@@ -406,7 +411,7 @@ function verify_dcs_health () {
                 return 0
         fi
         notsuccesscount=$(oc get csv -n ibm-data-cataloging|egrep -v 'Succ|NAME'|wc -l)
-	if [ ${notsuccesscount} -ne 0 ]; then
+		if [ ${notsuccesscount} -ne 0 ]; then
                 print error "${CHECK_FAIL} ${notsuccesscount} operators for DCS are degraded."
                 unhealthy=1
                 print error "${CHECK_UNKNOW} Here are failed operators. Use \"oc describe csv <csv name> -n ibm-data-cataloging\" to get more details about failure."
@@ -655,28 +660,35 @@ function isAuthCorrect () {
 #clusters-devcluster-414   devcluster-414-598f1ac6-nfmtd   3d23h   Running   True
 #clusters-scale-414        scale-414-7eec1c0e-n9gmj        2d15h   Running   True
 function get_virtual_machines () {
+  # check namespace for spp server
+  oc get virtualmachine -A 2>&1 >> /dev/null
+  if [[ $? -ne 0 ]]; then
+    print info "${CHECK_PASS} There are no virtual machines on this cluster, so there is no need to continue this check."
+    return 0
+  fi
+
 	nonMigratableVM=0
 	#vms=$(oc get virtualmachine -A|awk '{print $1 $2}')
 	#echo $vm
-	#echo "Anshu ns:vm:dvName:volClaim:Access mode" |  column -t -s ':'
+	#echo "ns:vm:dvName:volClaim:Access mode" |  column -t -s ':'
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get virtualmachine -A |grep -v NAME |awk '{print $1,$2}')"
-        while IFS= read -r line
-        do
-                ns=$(echo $line |awk '{print $1}')
-		vm=$(echo $line |awk '{print $2}')
-		dvName=$(oc get virtualmachine -n $ns  $vm -o json|jq '.spec.template.spec.volumes[0].dataVolume.name' | tr -d '"')
-		volClaim=$(oc get datavolume -n $ns  $dvName -o json| jq '.status.claimName' | tr -d '"')
-		am=$(oc -n $ns get pvc $volClaim  -o json|jq '.spec.accessModes[]' | tr -d '"' )
-		echo $am|grep -q "ReadWriteMany"
-		if [[ $? -ne 0 ]]; then
-			nonMigratableVM=$nonMigratableVM+1
-			if [[ $nonMigratableVM -eq 1 ]]; then
-				print info "VMs that do not use ReadWriteMany access mode for PVC can not be evicted."
-			fi
-			print error "${CHECK_FAIL} Non-migratable VM: $vm in namespace $ns."
-		fi
-        done < ${TEMP_MMHEALTH_FILE}
+  while IFS= read -r line
+    do
+      ns=$(echo $line |awk '{print $1}')
+      vm=$(echo $line |awk '{print $2}')
+      dvName=$(oc get virtualmachine -n $ns  $vm -o json|jq '.spec.template.spec.volumes[0].dataVolume.name' | tr -d '"')
+      volClaim=$(oc get datavolume -n $ns  $dvName -o json| jq '.status.claimName' | tr -d '"')
+      am=$(oc -n $ns get pvc $volClaim  -o json|jq '.spec.accessModes[]' | tr -d '"' )
+      echo $am|grep -q "ReadWriteMany"
+      if [[ $? -ne 0 ]]; then
+        nonMigratableVM=$nonMigratableVM+1
+        if [[ $nonMigratableVM -eq 1 ]]; then
+          print info "VMs that do not use ReadWriteMany access mode for PVC can not be evicted."
+        fi
+        print error "${CHECK_FAIL} Non-migratable VM: $vm in namespace $ns."
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
 	if [[ $nonMigratableVM -eq 0 ]]; then
 		print info "${CHECK_PASS} All vms are migratable."
 	fi
@@ -686,6 +698,189 @@ function get_virtual_machines () {
 # If VMs are not live migratable then all drains will fail unless VMs are deleted manually
 function verify_livemigratable_vms() {
 	get_virtual_machines
+}
+
+function verify_node_taints(){
+  print info "Verify if any nodes has taints applied"
+  taint_used=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes | grep -vi "Name" |awk '{print $1}')"
+  while IFS= read -r line
+  do
+          taints=$(oc describe node $line | grep -i "taints" | awk '{print $2}')
+          if [ ${taints} == "<none>" ]; then
+                  print error "${CHECK_FAIL} ${failed} failed $comp found."
+                  taint_used=1
+          fi
+  done <<< $(cat "${TEMP_MMHEALTH_FILE}")
+  if [ $taint_used  -eq 0 ]; then
+          print info "${CHECK_PASS} All of IBM Storage Scale components are healthy."
+  else
+          print error "${CHECK_UNKNOW} Following node has taints:"
+  fi
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+function verify_nodes_maintenance_mode(){
+  print info "Verify if any node is under maintenance"
+  mainNode=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes | grep -vi "Name" )"
+  while IFS= read -r line
+    do
+      nodename=$(echo $line |awk '{print $1}')
+      inMaintenance=$(echo ${line} | grep -i "SchedulingDisabled")
+      if [ $? -eq 0 ]; then
+        mainNode=1
+        print info "${CHECK_UNKNOW} ${nodename} is under maintenance"
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $mainNode -eq 0 ]; then
+    print info "${CHECK_PASS} No node is under maintenance."
+  else
+    print error "${CHECK_UNKNOW} Verify if need to uncordon above node"
+  fi
+}
+
+#ImagePullBackOff,CrashLoopBackOff,
+function verify_imagepullbackoff_pods(){
+  print info "Verify if any pod across cluster is with imagepullbackoff status"
+  imagepullbackoffPod=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  #while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | grep -ivE "Running|Completed" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | grep -v "Name"| grep -i "ImagePullBackOff" )"
+  while IFS= read -r line
+    do
+      imagepullbackoffPod=1
+      podname=$(echo $line |awk '{print $2}')
+      podns=$(echo $line |awk '{print $1}')
+      podstatus=$(echo $line |awk '{print $4}')
+      print error "${CHECK_FAIL} ${podname} in namespace ${podns} is failing due to ${podstatus}"
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $imagepullbackoffPod -eq 0 ]; then
+    print info "${CHECK_PASS} No pods with imagepullbackoff error."
+  else
+    print info "Check your pull-secret and fix the pod."
+  fi
+}
+
+#oc get computemonitoring -n ibm-spectrum-fusion-ns monitoring-compute-1-ru5 -o json | jq .status.nodes[].nodeMonStatus.state
+function verify_nodes_hw(){
+  print info "Verify node hardware status"
+  nodeStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get computemonitoring -n ${FUSIONNS} | grep -vi "Name" )"
+  while IFS= read -r line
+    do
+      monitoringCRD=$(echo $line |awk '{print $1}')
+      #check only configured nodes, not discovered one
+      configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].ocpNodeName )
+      if [[ "$configuredNode" != "" ]]; then
+        nodeHwStatus=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].nodeMonStatus.state)
+        if [[ "$nodeHwStatus" == "Succeeded" ]]; then
+          nodeStatus=1
+          print error "${CHECK_FAIL} ${configuredNode} hardware is not healthy"
+        fi
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $nodeStatus -eq 0 ]; then
+    print info "${CHECK_PASS} All configured nodes hardware is healthy."
+  fi
+}
+
+function verify_nodes_dns () {
+  print info "Verify dns"
+  dnsStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes | grep -vi "Name" )"
+  while IFS= read -r line
+    do
+      nodeName=$(echo $line |awk '{print $1}')
+      oc debug nodes/${nodeName} -- chroot /host nslookup $IBMENTITLEDREG|grep "NXDOMAIN" > /dev/null
+      if [[ $? -eq 0 ]]; then
+        dnsStatus=1
+	      print error "${CHECK_FAIL} DNS is not working on $nodeName."
+      else
+        print info "${CHECK_PASS} DNS is working on $nodeName."
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $dnsStatus -eq 0 ]; then
+    print info "${CHECK_PASS} DNS is working fine on all nodes."
+  fi
+}
+
+function verify_link(){
+  print info "Verify Link"
+  linkStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get link -n ${FUSIONNS} | grep -vi "Name" )"
+  while IFS= read -r line
+    do
+      linkName=$(echo $line |awk '{print $1}')
+      linkuuid=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .spec.torLinkSpec[].uuid)
+      linkCreatedStatus=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .status.torUplinkStatus.$linkuuid.linkCreated)
+      linkState=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .status.torUplinkStatus.$linkuuid.linkState)
+      if [[ !$linkCreatedStatus ]] && [[ !$linkState ]] ; then
+        linkStatus=1
+	      print error "${CHECK_FAIL} Link $linkName status is $linkState ."
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $linkStatus -eq 0 ]; then
+    print info "${CHECK_PASS} All links are working."
+  fi
+}
+
+function verify_switches(){
+  print info "Verify switch"
+  switchStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get switches -n ${FUSIONNS} | grep -vi "Name" )"
+  while IFS= read -r line
+    do
+      switchName=$(echo $line |awk '{print $1}')
+      switchLogin=$(oc get switches -n ${FUSIONNS} $switchName -o json | jq .status.status)
+      switchState=$(oc get switches -n ${FUSIONNS} $switchName -o json | jq .status.powerStatus.state)
+      if [[ $switchLogin == "login successful" ]] && [[ $switchState == "OK" ]] ; then
+        switchStatus=1
+	      print error "${CHECK_FAIL} Switch $switchName status is $switchState ."
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $switchStatus -eq 0 ]; then
+    print info "${CHECK_PASS} Switches are working as expected."
+  fi
+}
+
+function verify_vlan(){
+  print info "Verify vlan"
+  vlanStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get vlan -n ${FUSIONNS} | grep -vi "Name" )"
+  while IFS= read -r line
+    do
+      vlanName=$(echo $line |awk '{print $1}')
+      vlanids=$(oc get vlan -n ${FUSIONNS} ${vlanName} -o json | jq .spec.torVlanSpec[].vlanId)
+      echo $vlanids
+      for vlanId in $vlanids
+      do
+        echo $vlanId
+        vlanCreated=$(oc get vlan -n ibm-spectrum-fusion-ns rack-vlans -o json | jq '.status.torVlanStatus."1".vlanCreated')
+        vlanIdStatus=$(oc get vlan -n ibm-spectrum-fusion-ns rack-vlans -o json | jq '.status.torVlanStatus."1".vlanStatus')
+        if [[ $vlanCreated ]] && [[ $vlanIdStatus = "Success" ]] ; then
+          vlanStatus=1
+          print error "${CHECK_FAIL} Vlan $vlanId status is $vlanIdStatus ."
+        fi
+      done
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $vlanStatus -eq 0 ]; then
+    print info "${CHECK_PASS} vlans are working as expected."
+  fi
 }
 
 rm -f ${REPORT} > /dev/null
@@ -716,4 +911,18 @@ print_section "Scale cluster"
 verify_scale_health
 print_section "VMs migration"
 verify_livemigratable_vms
+print_section "Nodes in Maintenance"
+verify_nodes_maintenance_mode
+print_section "Pods with imagepullbackoff"
+verify_imagepullbackoff_pods
+print_section "Nodes hardware status"
+verify_nodes_hw
+print_section "Nodes dns verification"
+verify_nodes_dns
+print_section "Rack links status"
+verify_link
+print_section "Rack switch status"
+verify_switches
+print_section "Rack vlan status"
+verify_vlan
 print_footer
