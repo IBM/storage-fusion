@@ -26,6 +26,8 @@
 # Scale
 # Backup and Restore
 # VirtualMachine PVCs accessmode
+# Nodes hardware health
+# Switch, vlan and link health
 
 # Execute as
 # ./preupgrade_healthcheck.sh
@@ -723,6 +725,11 @@ function verify_node_taints(){
 
 #ImagePullBackOff,CrashLoopBackOff,
 function verify_imagepullbackoff_pods(){
+  oc get pods -A | grep -v "Name"| grep -i "ImagePullBackOff" 2>&1 >> /dev/null
+  if [[ $? -ne 0 ]]; then
+    print info "${CHECK_PASS} There are no pods with status ImagePullBackOff on this cluster."
+    return 0
+  fi
   print info "Verify if any pod across cluster is with imagepullbackoff status"
   imagepullbackoffPod=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
@@ -780,15 +787,12 @@ function verify_nodes_dns () {
       oc debug nodes/${nodeName} -- chroot /host nslookup $IBMENTITLEDREG|grep "NXDOMAIN" > /dev/null
       if [[ $? -eq 0 ]]; then
         dnsStatus=1
-	      print error "${CHECK_FAIL} DNS is not working on $nodeName."
+	print error "${CHECK_FAIL} DNS is not working on $nodeName."
       else
         print info "${CHECK_PASS} DNS is working on $nodeName."
       fi
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  if [ $dnsStatus -eq 0 ]; then
-    print info "${CHECK_PASS} DNS is working fine on all nodes."
-  fi
 }
 
 function verify_link(){
@@ -802,15 +806,14 @@ function verify_link(){
       linkuuid=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .spec.torLinkSpec[].uuid)
       linkCreatedStatus=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .status.torUplinkStatus.$linkuuid.linkCreated)
       linkState=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .status.torUplinkStatus.$linkuuid.linkState)
-      if [[ !$linkCreatedStatus ]] && [[ !$linkState ]] ; then
+      if [[ "$linkCreatedStatus" != "true" ]] && [[ "$linkState" != "true" ]] ; then
         linkStatus=1
-	      print error "${CHECK_FAIL} Link $linkName status is $linkState ."
+	print error "${CHECK_FAIL} Link $linkName status is $linkState."
+      else
+    	print info "${CHECK_PASS} Link $linkName is healthy."
       fi
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  if [ $linkStatus -eq 0 ]; then
-    print info "${CHECK_PASS} All links are working."
-  fi
 }
 
 function verify_switches(){
@@ -825,13 +828,12 @@ function verify_switches(){
       switchState=$(oc get switches -n ${FUSIONNS} $switchName -o json | jq .status.powerStatus.state)
       if [[ $switchLogin == "login successful" ]] && [[ $switchState == "OK" ]] ; then
         switchStatus=1
-	      print error "${CHECK_FAIL} Switch $switchName status is $switchState ."
+	print error "${CHECK_FAIL} Switch $switchName status is $switchState ."
+      else
+        print info "${CHECK_PASS} Switch $switchName is healthy."
       fi
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  if [ $switchStatus -eq 0 ]; then
-    print info "${CHECK_PASS} Switches are working as expected."
-  fi
 }
 
 function verify_vlan(){
@@ -843,22 +845,19 @@ function verify_vlan(){
     do
       vlanName=$(echo $line |awk '{print $1}')
       vlanids=$(oc get vlan -n ${FUSIONNS} ${vlanName} -o json | jq .spec.torVlanSpec[].vlanId)
-      echo $vlanids
       for vlanId in $vlanids
       do
-        echo $vlanId
         vlanCreated=$(oc get vlan -n ibm-spectrum-fusion-ns rack-vlans -o json | jq '.status.torVlanStatus."1".vlanCreated')
         vlanIdStatus=$(oc get vlan -n ibm-spectrum-fusion-ns rack-vlans -o json | jq '.status.torVlanStatus."1".vlanStatus')
         if [[ $vlanCreated ]] && [[ $vlanIdStatus = "Success" ]] ; then
           vlanStatus=1
           print error "${CHECK_FAIL} Vlan $vlanId status is $vlanIdStatus ."
+	else
+ 	  print info "${CHECK_PASS} vlan $vlanId is heathy."
         fi
       done
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  if [ $vlanStatus -eq 0 ]; then
-    print info "${CHECK_PASS} vlans are working as expected."
-  fi
 }
 
 rm -f ${REPORT} > /dev/null
