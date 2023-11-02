@@ -721,28 +721,6 @@ function verify_node_taints(){
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
 
-function verify_nodes_maintenance_mode(){
-  print info "Verify if any node is under maintenance"
-  mainNode=0
-  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes | grep -vi "Name" )"
-  while IFS= read -r line
-    do
-      nodename=$(echo $line |awk '{print $1}')
-      inMaintenance=$(echo ${line} | grep -i "SchedulingDisabled")
-      if [ $? -eq 0 ]; then
-        mainNode=1
-        print info "${CHECK_UNKNOW} ${nodename} is under maintenance"
-      fi
-    done < ${TEMP_MMHEALTH_FILE}
-  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  if [ $mainNode -eq 0 ]; then
-    print info "${CHECK_PASS} No node is under maintenance."
-  else
-    print error "${CHECK_UNKNOW} Verify if need to uncordon above node"
-  fi
-}
-
 #ImagePullBackOff,CrashLoopBackOff,
 function verify_imagepullbackoff_pods(){
   print info "Verify if any pod across cluster is with imagepullbackoff status"
@@ -911,9 +889,7 @@ print_section "Scale cluster"
 verify_scale_health
 print_section "VMs migration"
 verify_livemigratable_vms
-print_section "Nodes in Maintenance"
-verify_nodes_maintenance_mode
-print_section "Pods with imagepullbackoff"
+print_section "Pods with imagepullbackoff across cluster"
 verify_imagepullbackoff_pods
 print_section "Nodes hardware status"
 verify_nodes_hw
