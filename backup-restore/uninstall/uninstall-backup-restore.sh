@@ -8,8 +8,8 @@ rm -f "$LOG"
 exec &> >(tee -a $LOG)
 
 USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
-       -u to unistall a spoke installation before uninstalling hub 
-       -d to creat DeleteBackupRequest to delete backups. Use this if you plan to uninstall Fusion"
+       -u to uninstall a spoke installation before uninstalling hub 
+       -d to create DeleteBackupRequest to delete backups. Use this if you plan to uninstall Fusion"
 
 NAMESPACE=ibm-backup-restore
 FORCE=false
@@ -69,6 +69,11 @@ ISF_NS=$(oc get spectrumfusion -A --no-headers | cut -d" " -f1)
 [ -z "$ISF_NS" ] &&  ISF_NS=ibm-spectrum-fusion-ns
 export ISF_NS
 
+echo "Fusion Installplans:"
+oc -n "${ISF_NS}" get ip
+echo "Fusion CSVs:"
+oc -n "${ISF_NS}" get csv
+
 CONNECTION=$(oc -n "$NAMESPACE" get cm guardian-configmap -o custom-columns="CONN:data.connectionName" --no-headers)
 if [ -n "$CONNECTION" ]
   then
@@ -79,6 +84,7 @@ if [ -n "$CONNECTION" ]
      fi
 fi
 
+IGNORE_DBR_STATES="DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant|CancelPending"
 if [ "$SKIP" != true ]
  then
     print_heading "Remove any existing backups"
@@ -101,14 +107,14 @@ EOF
         echo "$YAML" | oc apply -f -
     done
 
-    UNFINISHED=$(oc -n "$ISF_NS" get  deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant" )
+    UNFINISHED=$(oc -n "$ISF_NS" get fdbr -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "$IGNORE_DBR_STATES" )
 
     while [ -n "$UNFINISHED" ]
      do
       echo "Some requests still not finished"
-      oc -n "$ISF_NS" get deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant"
+      oc -n "$ISF_NS" get fdbr -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "$IGNORE_DBR_STATES"
       sleep 5
-      UNFINISHED=$(oc -n "$ISF_NS" get deletebackuprequest.data-protection.isf.ibm.com -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant" )
+      UNFINISHED=$(oc -n "$ISF_NS" get fdbr -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "$IGNORE_DBR_STATES" )
     done
 fi
 
