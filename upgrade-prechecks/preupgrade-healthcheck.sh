@@ -702,7 +702,7 @@ function verify_livemigratable_vms() {
 }
 
 function verify_node_taints(){
-  print info "Verify if any nodes has taints applied"
+  print info "Verify if any node is under fusion maintenance"
   taint_used=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
   while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes | grep -vi "Name" |awk '{print $1}')"
@@ -715,9 +715,9 @@ function verify_node_taints(){
           fi
   done <<< $(cat "${TEMP_MMHEALTH_FILE}")
   if [ $taint_used  -eq 0 ]; then
-          print info "${CHECK_PASS} All of IBM Storage Scale components are healthy."
+          print info "${CHECK_PASS} No node is under fusion maintenance."
   else
-          print error "${CHECK_UNKNOW} Following node has taints:"
+          print error "${CHECK_UNKNOW} Following nodes are under fusion maintenance."
   fi
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
@@ -755,7 +755,7 @@ function verify_nodes_hw(){
   print info "Verify node hardware status"
   nodeStatus=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get computemonitoring -n ${FUSIONNS} | grep -vi "Name" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get computemonitoring -n ${FUSIONNS} --no-headers )"
   while IFS= read -r line
     do
       monitoringCRD=$(echo $line |awk '{print $1}')
@@ -776,19 +776,19 @@ function verify_nodes_hw(){
 }
 
 function verify_nodes_dns () {
-  print info "Verify dns"
+  print info "Verify DNS on nodes"
   dnsStatus=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes | grep -vi "Name" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers )"
   while IFS= read -r line
     do
       nodeName=$(echo $line |awk '{print $1}')
       oc debug nodes/${nodeName} -- chroot /host nslookup $IBMENTITLEDREG|grep "NXDOMAIN" > /dev/null
       if [[ $? -eq 0 ]]; then
         dnsStatus=1
-	print error "${CHECK_FAIL} DNS is not working on $nodeName."
+	print error "${CHECK_FAIL} DNS is configured correctly on $nodeName."
       else
-        print info "${CHECK_PASS} DNS is working on $nodeName."
+        print info "${CHECK_PASS} DNS is not configured correctly on $nodeName."
       fi
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
@@ -798,7 +798,7 @@ function verify_link(){
   print info "Verify Link"
   linkStatus=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get link -n ${FUSIONNS} | grep -vi "Name" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get link -n ${FUSIONNS} --no-headers )"
   while IFS= read -r line
     do
       linkName=$(echo $line |awk '{print $1}')
@@ -819,7 +819,7 @@ function verify_switches(){
   print info "Verify switch"
   switchStatus=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get switches -n ${FUSIONNS} | grep -vi "Name" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get switches -n ${FUSIONNS} --no-headers )"
   while IFS= read -r line
     do
       switchName=$(echo $line |awk '{print $1}')
@@ -839,7 +839,7 @@ function verify_vlan(){
   print info "Verify vlan"
   vlanStatus=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get vlan -n ${FUSIONNS} | grep -vi "Name" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get vlan -n ${FUSIONNS} --no-headers )"
   while IFS= read -r line
     do
       vlanName=$(echo $line |awk '{print $1}')
@@ -857,6 +857,16 @@ function verify_vlan(){
       done
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+function verify_network_checks(){
+verify_nodes_dns
+print_subsection
+verify_link
+print_subsection
+verify_switches
+print_subsection
+verify_vlan
 }
 
 rm -f ${REPORT} > /dev/null
@@ -891,12 +901,6 @@ print_section "Pods with imagepullbackoff across cluster"
 verify_imagepullbackoff_pods
 print_section "Nodes hardware status"
 verify_nodes_hw
-print_section "Nodes dns verification"
-verify_nodes_dns
-print_section "Rack links status"
-verify_link
-print_section "Rack switch status"
-verify_switches
-print_section "Rack vlan status"
-verify_vlan
+print_section "Network checks"
+verify_network_checks
 print_footer
