@@ -705,31 +705,33 @@ function verify_node_taints(){
   print info "Verify if any node is under fusion maintenance"
   taint_used=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes | grep -vi "Name" |awk '{print $1}')"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers |awk '{print $1}')"
   while IFS= read -r line
   do
-          taints=$(oc describe node $line | grep -i "taints" | awk '{print $2}')
-          if [ ${taints} == "<none>" ]; then
-                  print error "${CHECK_FAIL} ${failed} failed $comp found."
-                  taint_used=1
-          fi
-  done <<< $(cat "${TEMP_MMHEALTH_FILE}")
+    taintkey=$(oc get node $line -o json | jq -r '.spec.taints[]?|.key')
+    taintval=$(oc get node $line -o json | jq -r '.spec.taints[]?|.effect')
+    if [[ "${taintkey}" == "isf.compute.fusion.io/drain" ]] && [[ "${taintval}" == "NoSchedule" ]] ; then
+      print error "${CHECK_FAIL} node $line has fusion taint."
+      taint_used=1
+    fi
+  done < ${TEMP_MMHEALTH_FILE}
   if [ $taint_used  -eq 0 ]; then
           print info "${CHECK_PASS} No node is under fusion maintenance."
-  else
-          print error "${CHECK_UNKNOW} Following nodes are under fusion maintenance."
   fi
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
 
 #ImagePullBackOff,CrashLoopBackOff,
 function verify_imagepullbackoff_pods(){
+  print info "Verify if any pod across cluster is with imagepullbackoff/CrashLoopBackOff status"
   oc get pods -A | grep -v "Name"| grep -i "ImagePullBackOff" 2>&1 >> /dev/null
   if [[ $? -ne 0 ]]; then
     print info "${CHECK_PASS} There are no pods with status ImagePullBackOff on this cluster."
     return 0
+  else
+    print info "${CHECK_FAIL} Below are pods with status ImagePullBackOff/CrashLoopBackOff on this cluster."
   fi
-  print info "Verify if any pod across cluster is with imagepullbackoff status"
+
   imagepullbackoffPod=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
   #while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | grep -ivE "Running|Completed" )"
@@ -740,13 +742,12 @@ function verify_imagepullbackoff_pods(){
       podname=$(echo $line |awk '{print $2}')
       podns=$(echo $line |awk '{print $1}')
       podstatus=$(echo $line |awk '{print $4}')
-      print error "${CHECK_FAIL} ${podname} in namespace ${podns} is failing due to ${podstatus}"
+      #print error "${CHECK_FAIL} ${podname} in namespace ${podns} is failing due to ${podstatus}"
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  if [ $imagepullbackoffPod -eq 0 ]; then
-    print info "${CHECK_PASS} No pods in ImagePullBackOff or CrashLoopBackOff."
-  else
-    print error "${CHECK_FAIL} Check your pull-secret for ImagePullBackOff error."
+  if [ $imagepullbackoffPod -ne 0 ]; then
+    oc get pods -A --no-headers| grep -iE "ImagePullBackOff|CrashLoopBackOff"
+    print info "${CHECK_UNKNOW} Check your pull-secret for ImagePullBackOff error."
   fi
 }
 
@@ -779,7 +780,7 @@ function verify_nodes_dns () {
   print info "Verify DNS on nodes"
   dnsStatus=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers | grep -v "NotReady" )"
   while IFS= read -r line
     do
       nodeName=$(echo $line |awk '{print $1}')
@@ -901,6 +902,8 @@ print_section "Pods with imagepullbackoff across cluster"
 verify_imagepullbackoff_pods
 print_section "Nodes hardware status"
 verify_nodes_hw
+print_section "Fusion nodes maintenance"
+verify_node_taints
 print_section "Network checks"
 verify_network_checks
 print_footer
