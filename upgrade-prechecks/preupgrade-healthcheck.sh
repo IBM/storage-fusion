@@ -733,7 +733,7 @@ function verify_imagepullbackoff_pods(){
   imagepullbackoffPod=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
   #while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | grep -ivE "Running|Completed" )"
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | grep -v "Name"| grep -i "ImagePullBackOff" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A --no-headers| grep -iE "ImagePullBackOff|CrashLoopBackOff" )"
   while IFS= read -r line
     do
       imagepullbackoffPod=1
@@ -744,9 +744,9 @@ function verify_imagepullbackoff_pods(){
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
   if [ $imagepullbackoffPod -eq 0 ]; then
-    print info "${CHECK_PASS} No pods with imagepullbackoff error."
+    print info "${CHECK_PASS} No pods in ImagePullBackOff or CrashLoopBackOff."
   else
-    print info "Check your pull-secret and fix the pod."
+    print error "${CHECK_FAIL} Check your pull-secret for ImagePullBackOff error."
   fi
 }
 
@@ -786,9 +786,9 @@ function verify_nodes_dns () {
       oc debug nodes/${nodeName} -- chroot /host nslookup $IBMENTITLEDREG|grep "NXDOMAIN" > /dev/null
       if [[ $? -eq 0 ]]; then
         dnsStatus=1
-	print error "${CHECK_FAIL} DNS is configured correctly on $nodeName."
+	print error "${CHECK_FAIL} DNS is not configured correctly on $nodeName."
       else
-        print info "${CHECK_PASS} DNS is not configured correctly on $nodeName."
+        print info "${CHECK_PASS} DNS is configured correctly on $nodeName."
       fi
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
