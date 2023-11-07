@@ -723,19 +723,19 @@ function verify_node_taints(){
 
 #ImagePullBackOff,CrashLoopBackOff,
 function verify_imagepullbackoff_pods(){
-  print info "Verify if any pod across cluster is with imagepullbackoff/CrashLoopBackOff status"
-  oc get pods -A | grep -v "Name"| grep -i "ImagePullBackOff" 2>&1 >> /dev/null
+  print info "Verify unhealthy pods across cluster."
+  oc get pods -A | egrep -v 'Running|Completed|NAME' 2>&1 >> /dev/null
   if [[ $? -ne 0 ]]; then
-    print info "${CHECK_PASS} There are no pods with status ImagePullBackOff on this cluster."
+    print info "${CHECK_PASS} All pods in this cluster is healthy."
     return 0
   else
-    print info "${CHECK_FAIL} Below are pods with status ImagePullBackOff/CrashLoopBackOff on this cluster."
+    print error "${CHECK_FAIL} Below pods in this cluster are unhealthy."
   fi
 
   imagepullbackoffPod=0
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
   #while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | grep -ivE "Running|Completed" )"
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A --no-headers| grep -iE "ImagePullBackOff|CrashLoopBackOff" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | egrep -v 'Running|Completed|NAME')"
   while IFS= read -r line
     do
       imagepullbackoffPod=1
@@ -746,8 +746,7 @@ function verify_imagepullbackoff_pods(){
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
   if [ $imagepullbackoffPod -ne 0 ]; then
-    oc get pods -A --no-headers| grep -iE "ImagePullBackOff|CrashLoopBackOff"
-    print info "${CHECK_UNKNOW} Check your pull-secret for ImagePullBackOff error."
+    oc get pods -A | egrep -v 'Running|Completed|NAME'
   fi
 }
 
