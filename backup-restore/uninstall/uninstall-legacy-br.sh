@@ -225,4 +225,9 @@ oc -n "${FUSION_NS}" get "$SF_CR" -o yaml | awk '{ if ($0 == "status:") {exit} e
 oc -n "${FUSION_NS}" delete "$SF_CR"
 oc apply -f $SF_CR_FILE
 
+echo "Fusion Installplans:"
+oc -n "${FUSION_NS}" get ip
+echo "Fusion CSVs:"
+oc -n "${FUSION_NS}" get csv
+
 print_heading "Backup and Restore (Legacy) uninstalled"
