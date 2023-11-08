@@ -245,11 +245,15 @@ if [ -z "$INSTS" ]
      [ -n "$ROLES" ] && oc delete clusterrole $ROLES --timeout=60s
      BINDINGS=$(oc get clusterrolebinding --ignore-not-found | grep -iE "guardian|ibm-backup-restore|dataprotectionagent|dataprotectionserver" | cut -d" " -f1)
      [ -n "$BINDINGS" ] && oc delete clusterrolebinding $BINDINGS --timeout=60s
-     CRDS=$(oc get crd -o name | grep -E 'guardian.*ibm.com|dataprotection.*.ibm.com')
+     CRDS=$(oc get crd -o name | grep -E 'guardian.*ibm.com|dataprotectionserver.*.ibm.com|dataprotectionagent.*.ibm.com')
      [ -n "$CRDS" ]  && oc delete $CRDS --timeout=60s
  else
    echo "==== Other copies of Backup & Restore exist in following namespaces"
    oc get dataprotectionagent,dataprotectionserver -A --no-headers| cut -d" " -f1
 fi
 
+echo "Fusion Installplans:"
+oc -n "${ISF_NS}" get ip
+echo "Fusion CSVs:"
+oc -n "${ISF_NS}" get csv
 print_heading "Backup and Restore uninstalled"
