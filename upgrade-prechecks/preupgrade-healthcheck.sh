@@ -26,9 +26,11 @@
 # Scale
 # Backup and Restore
 # VirtualMachine PVCs accessmode
+# Nodes hardware health
+# Switch, vlan and link health
 
 # Execute as
-# ./preupgrade_healthcheck.sh 
+# ./preupgrade_healthcheck.sh
 ##############################################################################
 
 CHECK_PASS='  ✅'
@@ -54,6 +56,9 @@ SCALENS="ibm-spectrum-scale"
 SCALEDNSNS="ibm-spectrum-scale-dns"
 SCALEOPNS="ibm-spectrum-scale-operator"
 SCALECSINS="ibm-spectrum-scale-csi"
+FUSIONNS="ibm-spectrum-fusion-ns"
+COMPUTEDRAINTAINTKEY="isf.compute.fusion.io/drain"
+NOSCHEDULEEFFECT="NoSchedule"
 
 #exec >>(tee ${REPORT}) 2>&1
 
@@ -659,12 +664,11 @@ function isAuthCorrect () {
 #clusters-devcluster-414   devcluster-414-598f1ac6-nfmtd   3d23h   Running   True
 #clusters-scale-414        scale-414-7eec1c0e-n9gmj        2d15h   Running   True
 function get_virtual_machines () {
-        # check namespace for spp server
-        oc get virtualmachine -A 2>&1 >> /dev/null
-        if [[ $? -ne 0 ]]; then
-                print info "${CHECK_PASS} There are no virtual machines on this cluster, so there is no need to continue this check."
-                return 0
-        fi
+  oc get virtualmachine -A 2>&1 >> /dev/null
+  if [[ $? -ne 0 ]]; then
+    print info "${CHECK_PASS} There are no virtual machines on this cluster, so there is no need to continue this check."
+    return 0
+  fi
 
 	nonMigratableVM=0
 	#vms=$(oc get virtualmachine -A|awk '{print $1 $2}')
@@ -672,22 +676,22 @@ function get_virtual_machines () {
 	#echo "ns:vm:dvName:volClaim:Access mode" |  column -t -s ':'
 	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get virtualmachine -A |grep -v NAME |awk '{print $1,$2}')"
-        while IFS= read -r line
-        do
-                ns=$(echo $line |awk '{print $1}')
-		vm=$(echo $line |awk '{print $2}')
-		dvName=$(oc get virtualmachine -n $ns  $vm -o json|jq '.spec.template.spec.volumes[0].dataVolume.name' | tr -d '"')
-		volClaim=$(oc get datavolume -n $ns  $dvName -o json| jq '.status.claimName' | tr -d '"')
-		am=$(oc -n $ns get pvc $volClaim  -o json|jq '.spec.accessModes[]' | tr -d '"' )
-		echo $am|grep -q "ReadWriteMany"
-		if [[ $? -ne 0 ]]; then
-			nonMigratableVM=$nonMigratableVM+1
-			if [[ $nonMigratableVM -eq 1 ]]; then
-				print info "VMs that do not use ReadWriteMany access mode for PVC can not be evicted."
-			fi
-			print error "${CHECK_FAIL} Non-migratable VM: $vm in namespace $ns."
-		fi
-        done < ${TEMP_MMHEALTH_FILE}
+  while IFS= read -r line
+    do
+      ns=$(echo $line |awk '{print $1}')
+      vm=$(echo $line |awk '{print $2}')
+      dvName=$(oc get virtualmachine -n $ns  $vm -o json|jq '.spec.template.spec.volumes[0].dataVolume.name' | tr -d '"')
+      volClaim=$(oc get datavolume -n $ns  $dvName -o json| jq '.status.claimName' | tr -d '"')
+      am=$(oc -n $ns get pvc $volClaim  -o json|jq '.spec.accessModes[]' | tr -d '"' )
+      echo $am|grep -q "ReadWriteMany"
+      if [[ $? -ne 0 ]]; then
+        nonMigratableVM=$nonMigratableVM+1
+        if [[ $nonMigratableVM -eq 1 ]]; then
+          print info "VMs that do not use ReadWriteMany access mode for PVC can not be evicted."
+        fi
+        print error "${CHECK_FAIL} Non-migratable VM: $vm in namespace $ns."
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
 	if [[ $nonMigratableVM -eq 0 ]]; then
 		print info "${CHECK_PASS} All vms are migratable."
 	fi
@@ -697,6 +701,174 @@ function get_virtual_machines () {
 # If VMs are not live migratable then all drains will fail unless VMs are deleted manually
 function verify_livemigratable_vms() {
 	get_virtual_machines
+}
+
+function verify_node_taints(){
+  print info "Verify if any node is under fusion maintenance"
+  taint_used=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers |awk '{print $1}')"
+  while IFS= read -r line
+  do
+    taintkey=$(oc get node $line -o json | jq -r '.spec.taints[]?|.key')
+    taintval=$(oc get node $line -o json | jq -r '.spec.taints[]?|.effect')
+    if [[ "${taintkey}" == "${COMPUTEDRAINTAINTKEY}" ]] && [[ "${taintval}" == "${NOSCHEDULEEFFECT}" ]] ; then
+      print error "${CHECK_FAIL} node $line has fusion taint."
+      taint_used=1
+    fi
+  done < ${TEMP_MMHEALTH_FILE}
+  if [ $taint_used  -eq 0 ]; then
+          print info "${CHECK_PASS} No node is under fusion maintenance."
+  fi
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+#ImagePullBackOff,CrashLoopBackOff,
+function verify_imagepullbackoff_pods(){
+  print info "Verify unhealthy pods across cluster."
+  oc get pods -A | egrep -v 'Running|Completed|NAME' 2>&1 >> /dev/null
+  if [[ $? -ne 0 ]]; then
+    print info "${CHECK_PASS} All pods in this cluster is healthy."
+    return 0
+  else
+    print error "${CHECK_FAIL} Below pods in this cluster are unhealthy."
+  fi
+
+  imagepullbackoffPod=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  #while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | grep -ivE "Running|Completed" )"
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pods -A | egrep -v 'Running|Completed|NAME')"
+  while IFS= read -r line
+    do
+      imagepullbackoffPod=1
+      podname=$(echo $line |awk '{print $2}')
+      podns=$(echo $line |awk '{print $1}')
+      podstatus=$(echo $line |awk '{print $4}')
+      #print error "${CHECK_FAIL} ${podname} in namespace ${podns} is failing due to ${podstatus}"
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $imagepullbackoffPod -ne 0 ]; then
+    oc get pods -A | egrep -v 'Running|Completed|NAME'
+  fi
+}
+
+#oc get computemonitoring -n ibm-spectrum-fusion-ns monitoring-compute-1-ru5 -o json | jq .status.nodes[].nodeMonStatus.state
+function verify_nodes_hw(){
+  print info "Verify node hardware status"
+  nodeStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get computemonitoring -n ${FUSIONNS} --no-headers )"
+  while IFS= read -r line
+    do
+      monitoringCRD=$(echo $line |awk '{print $1}')
+      #check only configured nodes, not discovered one
+      configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].ocpNodeName )
+      if [[ "$configuredNode" != "" ]]; then
+        nodeHwStatus=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].nodeMonStatus.state)
+        if [[ "$nodeHwStatus" == "Succeeded" ]]; then
+          nodeStatus=1
+          print error "${CHECK_FAIL} ${configuredNode} hardware is not healthy"
+        fi
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $nodeStatus -eq 0 ]; then
+    print info "${CHECK_PASS} All configured nodes hardware is healthy."
+  fi
+}
+
+function verify_nodes_dns () {
+  print info "Verify DNS on nodes"
+  dnsStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers | grep -v "NotReady" )"
+  while IFS= read -r line
+    do
+      nodeName=$(echo $line |awk '{print $1}')
+      oc debug nodes/${nodeName} -- chroot /host nslookup $IBMENTITLEDREG|grep "NXDOMAIN" > /dev/null
+      if [[ $? -eq 0 ]]; then
+        dnsStatus=1
+	print error "${CHECK_FAIL} DNS is not configured correctly on $nodeName."
+      else
+        print info "${CHECK_PASS} DNS is configured correctly on $nodeName."
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+function verify_link(){
+  print info "Verify Link"
+  linkStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get link -n ${FUSIONNS} --no-headers )"
+  while IFS= read -r line
+    do
+      linkName=$(echo $line |awk '{print $1}')
+      linkuuid=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .spec.torLinkSpec[].uuid)
+      linkCreatedStatus=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .status.torUplinkStatus.$linkuuid.linkCreated)
+      linkState=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .status.torUplinkStatus.$linkuuid.linkState)
+      if [[ "$linkCreatedStatus" != "true" ]] && [[ "$linkState" != "true" ]] ; then
+        linkStatus=1
+	print error "${CHECK_FAIL} Link $linkName status is $linkState."
+      else
+    	print info "${CHECK_PASS} Link $linkName is healthy."
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+function verify_switches(){
+  print info "Verify switch"
+  switchStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get switches -n ${FUSIONNS} --no-headers )"
+  while IFS= read -r line
+    do
+      switchName=$(echo $line |awk '{print $1}')
+      switchLogin=$(oc get switches -n ${FUSIONNS} $switchName -o json | jq .status.status)
+      switchState=$(oc get switches -n ${FUSIONNS} $switchName -o json | jq .status.powerStatus.state)
+      if [[ $switchLogin == "login successful" ]] && [[ $switchState == "OK" ]] ; then
+        switchStatus=1
+	print error "${CHECK_FAIL} Switch $switchName status is $switchState ."
+      else
+        print info "${CHECK_PASS} Switch $switchName is healthy."
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+function verify_vlan(){
+  print info "Verify vlan"
+  vlanStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get vlan -n ${FUSIONNS} --no-headers )"
+  while IFS= read -r line
+    do
+      vlanName=$(echo $line |awk '{print $1}')
+      vlanids=$(oc get vlan -n ${FUSIONNS} ${vlanName} -o json | jq .spec.torVlanSpec[].vlanId)
+      for vlanId in $vlanids
+      do
+        vlanCreated=$(oc get vlan -n ibm-spectrum-fusion-ns rack-vlans -o json | jq '.status.torVlanStatus."1".vlanCreated')
+        vlanIdStatus=$(oc get vlan -n ibm-spectrum-fusion-ns rack-vlans -o json | jq '.status.torVlanStatus."1".vlanStatus')
+        if [[ $vlanCreated ]] && [[ $vlanIdStatus = "Success" ]] ; then
+          vlanStatus=1
+          print error "${CHECK_FAIL} Vlan $vlanId status is $vlanIdStatus ."
+	else
+ 	  print info "${CHECK_PASS} vlan $vlanId is heathy."
+        fi
+      done
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+function verify_network_checks(){
+verify_nodes_dns
+print_subsection
+verify_link
+print_subsection
+verify_switches
+print_subsection
+verify_vlan
 }
 
 rm -f ${REPORT} > /dev/null
@@ -727,4 +899,12 @@ print_section "Scale cluster"
 verify_scale_health
 print_section "VMs migration"
 verify_livemigratable_vms
+print_section "Pods with imagepullbackoff across cluster"
+verify_imagepullbackoff_pods
+print_section "Nodes hardware status"
+verify_nodes_hw
+print_section "Fusion nodes maintenance"
+verify_node_taints
+print_section "Network checks"
+verify_network_checks
 print_footer
