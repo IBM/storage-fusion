@@ -57,6 +57,8 @@ SCALEDNSNS="ibm-spectrum-scale-dns"
 SCALEOPNS="ibm-spectrum-scale-operator"
 SCALECSINS="ibm-spectrum-scale-csi"
 FUSIONNS="ibm-spectrum-fusion-ns"
+COMPUTEDRAINTAINTKEY="isf.compute.fusion.io/drain"
+NOSCHEDULEEFFECT="NoSchedule"
 
 #exec >>(tee ${REPORT}) 2>&1
 
@@ -710,7 +712,7 @@ function verify_node_taints(){
   do
     taintkey=$(oc get node $line -o json | jq -r '.spec.taints[]?|.key')
     taintval=$(oc get node $line -o json | jq -r '.spec.taints[]?|.effect')
-    if [[ "${taintkey}" == "isf.compute.fusion.io/drain" ]] && [[ "${taintval}" == "NoSchedule" ]] ; then
+    if [[ "${taintkey}" == "${COMPUTEDRAINTAINTKEY}" ]] && [[ "${taintval}" == "${NOSCHEDULEEFFECT}" ]] ; then
       print error "${CHECK_FAIL} node $line has fusion taint."
       taint_used=1
     fi
