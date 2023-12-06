@@ -4,7 +4,7 @@
 #Script Name	: preupgrade_healthcheck.sh
 #Description	: Utility to run healthcheck for IBM Storage Fusion HCI system
 #Args       	:
-#Author       	:Anshu Garg,Divya Jain
+#Author       	:Anshu Garg,Divya Jain,Pruthvi TD
 #Email         	:ganshug@gmail.com, divya.jn5194@gmail.com
 ##############################################################################
 
@@ -765,7 +765,7 @@ function verify_nodes_hw(){
       configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].ocpNodeName )
       if [[ "$configuredNode" != "" ]]; then
         nodeHwStatus=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].nodeMonStatus.state)
-        if [[ "$nodeHwStatus" == "Succeeded" ]]; then
+        if [[ "$nodeHwStatus" != "Succeeded" ]]; then
           nodeStatus=1
           print error "${CHECK_FAIL} ${configuredNode} hardware is not healthy"
         fi
@@ -774,6 +774,30 @@ function verify_nodes_hw(){
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
   if [ $nodeStatus -eq 0 ]; then
     print info "${CHECK_PASS} All configured nodes hardware is healthy."
+  fi
+}
+
+function verify_nodes_fw(){
+  print info "Verify node firmware status"
+  nodeStatus=0
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get cfw -n ${FUSIONNS} --no-headers )"
+  while IFS= read -r line
+    do
+      firmwareCR=$(echo $line |awk '{print $1}')
+      #check firmware status only configured nodes, not discovered one
+      configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].ocpNodeName )
+      if [[ "$configuredNode" != "" ]]; then
+        nodeHwStatus=$(oc get computefirmware -n ${FUSIONNS} $firmwareCR -o json | jq .status.updateRequired)
+        if [[ "$nodeHwStatus" == "true" ]]; then
+          nodeStatus=1
+          print error "${CHECK_FAIL} ${configuredNode} firmware is not at latest level."
+        fi
+      fi
+    done < ${TEMP_MMHEALTH_FILE}
+  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  if [ $nodeStatus -eq 0 ]; then
+    print info "${CHECK_PASS} All nodes are at latest firmware level."
   fi
 }
 
