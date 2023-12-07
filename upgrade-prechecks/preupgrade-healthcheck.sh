@@ -767,7 +767,7 @@ function verify_nodes_hw(){
         print error "$monitoringCRD is not part of OCP yet."
       else
         nodeHwStatus=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].nodeMonStatus.state)
-        if [[ "$nodeHwStatus" != "Succeeded" ]]; then
+        if [[ "$nodeHwStatus" == "Succeeded" ]]; then
           nodeStatus=1
           print error "${CHECK_FAIL} ${configuredNode} hardware is not healthy"
         fi
