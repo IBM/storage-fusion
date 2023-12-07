@@ -763,7 +763,9 @@ function verify_nodes_hw(){
       monitoringCRD=$(echo $line |awk '{print $1}')
       #check only configured nodes, not discovered one
       configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].ocpNodeName )
-      if [[ "$configuredNode" != "" ]]; then
+      if [[ "${configuredNode}" == null ]]; then
+        print error "$monitoringCRD is not part of OCP yet."
+      else
         nodeHwStatus=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].nodeMonStatus.state)
         if [[ "$nodeHwStatus" != "Succeeded" ]]; then
           nodeStatus=1
@@ -785,19 +787,22 @@ function verify_nodes_fw(){
   while IFS= read -r line
     do
       firmwareCR=$(echo $line |awk '{print $1}')
-      #check firmware status only configured nodes, not discovered one
-      configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].ocpNodeName )
-      if [[ "$configuredNode" != "" ]]; then
-        nodeHwStatus=$(oc get computefirmware -n ${FUSIONNS} $firmwareCR -o json | jq .status.updateRequired)
-        if [[ "$nodeHwStatus" == "true" ]]; then
-          nodeStatus=1
-          print error "${CHECK_FAIL} ${configuredNode} firmware is not at latest level."
+      monitorCR="monitoring-c"`echo $firmwareCR | cut -f2 -d'c'`
+      configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitorCR -o json | jq .status.nodes[].ocpNodeName)
+      #check only configured nodes, not discovered one
+      if [[ "${configuredNode}" == null ]]; then
+        print error "$monitorCR is not part of OCP yet."
+      else
+        nodeFwStatus=$(oc get computefirmware -n ${FUSIONNS} $firmwareCR -o json | jq .status.updateRequired)
+        if [[ "$nodeFwStatus" == "true" ]]; then
+           nodeStatus=1
+           print error "${CHECK_FAIL} ${configuredNode} firmware is not at latest level."
         fi
       fi
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
   if [ $nodeStatus -eq 0 ]; then
-    print info "${CHECK_PASS} All nodes are at latest firmware level."
+    print info "${CHECK_PASS} All configured nodes are at latest firmware level."
   fi
 }
 
