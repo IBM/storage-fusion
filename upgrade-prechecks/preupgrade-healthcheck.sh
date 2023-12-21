@@ -664,8 +664,8 @@ function isAuthCorrect () {
 #clusters-devcluster-414   devcluster-414-598f1ac6-nfmtd   3d23h   Running   True
 #clusters-scale-414        scale-414-7eec1c0e-n9gmj        2d15h   Running   True
 function get_virtual_machines () {
-  oc get virtualmachine -A 2>&1 >> /dev/null
-  if [[ $? -ne 0 ]]; then
+  vms=$(oc get virtualmachine -A 2>&1 >> /dev/null)
+  if [[ "${vms}" == "No resources found" ]]; then
     print info "${CHECK_PASS} There are no virtual machines on this cluster, so there is no need to continue this check."
     return 0
   fi
