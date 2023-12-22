@@ -42,6 +42,18 @@ spec:
       timeout: 600
       onError: fail
       condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: db2ucluster-instance-check
+    type: check
+    namespace: db2
+    selectResource: db2u.databases.ibm.com/v1/db2uclusters
+    labelSelector: formation_id=db2oltp-test
+    timeout: 800
+    onError: fail
+    chks:
+    - name: stateReady
+      timeout: 900
+      onError: fail
+      condition: "{$.status.state} == {\"Ready\"}"
   - name: db2uclusters-pod-exec
     type: exec
     namespace: db2
@@ -94,3 +106,4 @@ spec:
     - hook: db2u-operator-manager-exec/maintenance-mode-off
     - hook: db2uclusters-check/replicasReady
     - hook: db2uclusters-pod-exec/restore
+    - hook: db2ucluster-instance-check/stateReady
