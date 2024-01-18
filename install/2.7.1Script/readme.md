@@ -82,7 +82,7 @@ nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -l
 
 - Sample Command to Mirror only the DATA CATALOGING images
 ```
-nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -dcs &
+nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -dcs &
 ```
 
 **NOTE**: The Input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY are based on mirroring in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
