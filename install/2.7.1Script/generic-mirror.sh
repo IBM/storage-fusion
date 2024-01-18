@@ -44,7 +44,9 @@ To Mirror images present in the enterprise registry, execute as following:
 Example:
     nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all &
 
-NOTE: The LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY input values are based on mirroring in KC, please refer the KC for more info.
+NOTE: 
+- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file
+- The Input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY are based on mirroring in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
 
 EOF
     exit 1
@@ -218,6 +220,37 @@ EOF
 		exit 1
 	else
 		print info "Successfully mirrored get_kc_df_images()!!!"
+	fi
+}
+
+function get_kc_local_df_images() {
+  # Function for mirroring Data Cataloging images
+  print info "EXECUTING get_kc_local_df_images()"
+  REDHAT_VERSION=$(echo $OCP_VERSION | cut -d'.' -f1,2)
+  cat << EOF > imageset-config-lso.yaml
+  kind: ImageSetConfiguration
+  apiVersion: mirror.openshift.io/v1alpha2
+  storageConfig:
+    registry:
+      imageURL: "$TARGET_PATH/df/odf-lso-metadata:latest"
+      skipTLS: true
+  mirror:
+    operators:
+      - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.14
+        packages:
+          - name: "local-storage-operator"
+          - name: "lvms-operator"
+EOF
+  MIRROR_LOG=${FDF}
+  echo -e "================= Skopeo Commands for local storage operator FDF Images =================\n" >> ${FDF}
+  print info "oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
+  oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history
+  if [[ $? -ne 0 ]] ; then print error "Failed to execute oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history"; failedtocopy=1; fi
+  if [[ $failedtocopy -eq 1  ]] ; then
+		print error "Some get_kc_local_df_images() are having issues to copy, please check nohup.out / output of execution"
+		exit 1
+	else
+		print info "Successfully mirrored get_kc_local_df_images()!!!"
 	fi
 }
 
@@ -439,6 +472,7 @@ function mirror_images() {
   mirror_megabom_missing_images
   if [[ $FDF_IMAGES = "-df" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
     get_kc_df_images
+    get_kc_local_df_images
   fi
 }
 
@@ -651,6 +685,7 @@ rm -f ${REDHAT}
 rm -f ${DISCOVER}
 rm -f ${GUARDIAN}
 rm -rf ./temporary
+rm -f ./nohup.out
 rm -f imageset-config-df.yaml
 rm -f imageset-config-lso.yaml
 
