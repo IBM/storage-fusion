@@ -685,7 +685,6 @@ rm -f ${REDHAT}
 rm -f ${DISCOVER}
 rm -f ${GUARDIAN}
 rm -rf ./temporary
-rm -f ./nohup.out
 rm -f imageset-config-df.yaml
 rm -f imageset-config-lso.yaml
 
