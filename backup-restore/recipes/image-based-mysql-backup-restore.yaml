@@ -1,0 +1,53 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: image-based-mysql-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: mysql-ns 
+  groups:
+    - name: mysql-volumes
+      type: volume
+      includedNamespaces:
+        - mysql
+    - name: mysql-resources
+      type: resource
+      includedNamespaces:
+        - mysql
+      includedResourceTypes:
+        - deployments
+  hooks:
+  - name: mysql-deployment-check
+    type: check
+    namespace: mysql
+    selectResource: deployment
+    nameSelector: mysql
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mysql-pod-exec
+    type: exec
+    namespace: mysql
+    labelSelector: app=mysql
+    timeout: 60
+    onError: fail
+    ops:
+    - name: "flush-tables-with-read-lock"
+      command: >
+        ["/bin/bash", "-c", "mysql --user=root --password=$MYSQL_ROOT_PASSWORD -e 'FLUSH TABLES WITH READ LOCK;'"]
+      container: mysql
+  workflows:
+  - name: backup
+    sequence:
+    - group: mysql-resources
+    - hook: mysql-pod-exec/flush-tables-with-read-lock 
+    - group: mysql-volumes
+  - name: restore
+    sequence:
+    - group: mysql-volumes
+    - group: mysql-resources
+    - hook: mysql-deployment-check/replicasReady
