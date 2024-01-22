@@ -441,7 +441,7 @@ function mirror_ocp_images() {
   # Function to mirror the ocp images
   print info "EXECUTING mirror_ocp_images()"
   OCP="$(pwd)/OCP_images.txt"
-  echo -e "================= Skopeo Commands for Redhat Images =================\n" >> ${OCP}
+  echo -e "================= Skopeo Commands for OCP Images =================\n" >> ${OCP}
   MIRROR_LOG=${OCP}
   echo "oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64" >> ${MIRROR_LOG}
   oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64
