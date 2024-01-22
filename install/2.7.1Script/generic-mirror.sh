@@ -675,6 +675,15 @@ failedtocopy=0
 ########################## GLOBAL VALUES ##########################
 #Removing existing files to collect skopeo cmds
 echo "================= Deleting existing files if any ================="
+rm -f ${AVAILABLE_IMAGES}
+rm -f ${MISSING_IMAGES}
+rm -f ${FUSION}
+rm -f ${GDP}
+rm -f ${FDF}
+rm -f ${OCP}
+rm -f ${REDHAT}
+rm -f ${DISCOVER}
+rm -f ${GUARDIAN}
 rm -f imageset-config-df.yaml
 rm -f imageset-config-lso.yaml
 
