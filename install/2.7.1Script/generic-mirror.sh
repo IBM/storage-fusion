@@ -469,7 +469,6 @@ function mirror_images() {
     mirror_submariner_images
   fi
   mirror_internal_images
-  mirror_megabom_missing_images
   if [[ $FDF_IMAGES = "-df" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
     get_kc_df_images
     get_kc_local_df_images
