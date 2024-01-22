@@ -675,16 +675,6 @@ failedtocopy=0
 ########################## GLOBAL VALUES ##########################
 #Removing existing files to collect skopeo cmds
 echo "================= Deleting existing files if any ================="
-rm -f ${AVAILABLE_IMAGES}
-rm -f ${MISSING_IMAGES}
-rm -f ${FUSION}
-rm -f ${GDP}
-rm -f ${FDF}
-rm -f ${OCP}
-rm -f ${REDHAT}
-rm -f ${DISCOVER}
-rm -f ${GUARDIAN}
-rm -rf ./temporary
 rm -f imageset-config-df.yaml
 rm -f imageset-config-lso.yaml
 
@@ -766,30 +756,38 @@ validate_images
 
 if [[ $ISF = "-fusion" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${FUSION}
+  rm -f ${FUSION}
 fi
 if [[ $GDP_IMAGES = "-gdp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${GDP}
+  rm -f ${GDP}
 fi
 if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${GUARDIAN}
+  rm -f ${GUARDIAN}
+  
 fi
 if [[ $DISCOVER_IMAGES = "-dcs" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${DISCOVER}
+  rm -f ${DISCOVER}
 fi
 if [[ $REDHAT_IMAGES = "-redhat" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${REDHAT}
+  rm -f ${REDHAT}
 fi
 if [[ $FDF_IMAGES = "-df" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${FDF}
+  rm -f ${FDF}
 fi
 if [[ $OCP_IMAGES = "-ocp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${OCP}
+  rm -f ${OCP}
 fi
 
-echo "This is the missing images file: "
 cat ${MISSING_IMAGES}
-echo "This is the available images file: "
+rm -f ${MISSING_IMAGES}
 cat ${AVAILABLE_IMAGES}
+rm -f ${AVAILABLE_IMAGES}
 
 if [[ $failedtocopy -ne 1  ]] ; then
   print info "MIRRORING DONE Successfully!!!"
