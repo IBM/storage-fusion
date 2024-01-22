@@ -60,6 +60,11 @@ nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -l
 nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -redhat &
 ```
 
+- Sample Command to Mirror only the DATA FOUNDATION images
+```
+nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -df &
+```
+
 - Sample Command to Mirror only the IBM Storage Fusion operator images:
 ```
 nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -fusion &
@@ -68,11 +73,6 @@ nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -l
 - Sample Command to Mirror only the GLOBAL DATA PLATFORM images
 ```
 nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -gdp &
-```
-
-- Sample Command to Mirror only the DATA FOUNDATION images
-```
-nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -df &
 ```
 
 - Sample Command to Mirror only the BACKUP & RESTORE images
