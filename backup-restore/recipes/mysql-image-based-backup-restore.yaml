@@ -1,7 +1,7 @@
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
 metadata:
-  name: image-based-mysql-backup-restore-recipe
+  name: mysql-image-based-backup-restore-recipe
   namespace: ibm-spectrum-fusion-ns
 spec:
   appType: mysql-ns 
