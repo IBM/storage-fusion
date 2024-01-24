@@ -903,18 +903,19 @@ verify_vlan
 function verify_pid_limit(){
     print info "Verify PID Limit"
     rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+    flag=0
     while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers |awk '{print $1}')"
     while IFS= read -r line
     do
-        pidvalue=$(oc debug nodes/$line -- chroot /host grep podPidsLimit /etc/kubernetes/kubelet.conf)
-        count=$(echo $pidvalue | grep -c "12228")
-        if [ "${count}" -ne 1 ]; then
-            print error "PID LIMIT for node $line : $(echo $pidvalue|awk '{ print $2}'|tr -d ,)"
-            print error "PID limit should be 12228"
-        else
-            print info "PID limit is okay for the node : $line"
+        pidvalue=$(oc debug node/$line -- chroot /host grep podPidsLimit /etc/kubernetes/kubelet.conf 2>/dev/null |awk '{ print $2}'|tr -d ,)
+        if [ "$((pidvalue))" -lt 12228 ]; then
+            flag=1
+            print error "PID LIMIT for node $line : $pidvalue. PID limit should atleast be 12228"
         fi
     done < ${TEMP_MMHEALTH_FILE}
+    if [ $flag -eq 0 ]; then
+        print info "${CHECK_PASS} PID limit on all nodes are okay."
+    fi
     rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
 
@@ -954,6 +955,6 @@ print_section "Fusion nodes maintenance"
 verify_node_taints
 print_section "Network checks"
 verify_network_checks
-print_section "verify PID limit"
+print_section "Verify PID limit"
 verify_pid_limit
 print_footer
