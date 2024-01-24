@@ -910,7 +910,7 @@ function verify_pid_limit(){
         pidvalue=$(oc debug node/$line -- chroot /host grep podPidsLimit /etc/kubernetes/kubelet.conf 2>/dev/null |awk '{ print $2}'|tr -d ,)
         if [ "$((pidvalue))" -lt 12228 ]; then
             flag=1
-            print error "PID LIMIT for node $line : $pidvalue. PID limit should atleast be 12228"
+            print error "PID LIMIT for node $line is less than 12228"
         fi
     done < ${TEMP_MMHEALTH_FILE}
     if [ $flag -eq 0 ]; then
