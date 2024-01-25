@@ -28,6 +28,7 @@
 # VirtualMachine PVCs accessmode
 # Nodes hardware health
 # Switch, vlan and link health
+# PID Limit on all nodes in cluster
 
 # Execute as
 # ./preupgrade_healthcheck.sh
