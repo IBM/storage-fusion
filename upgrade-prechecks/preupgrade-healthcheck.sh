@@ -30,7 +30,6 @@
 # Switch, vlan and link health
 # pid limit on all nodes
 # CSI configmap verification on 2.6.1 Metrodr setup
-# presence of token secret in scale service account
 
 # Execute as
 # ./preupgrade_healthcheck.sh
@@ -949,20 +948,6 @@ function verify_CSI_configmap_present(){
     fi
 }
 
-function verify_token_secret_present(){
-    print info "Verify the presence of secret token in scale service account"
-    ocpversion=$(oc get clusterversion -o jsonpath='{.items[0].status.desired.version}')
-    if [[ $(echo $ocpversion | cut -d. -f1) -eq 4 && $(echo $ocpversion | cut -d. -f2) -eq 12 ]] && [ "$(is_metrodr_setup)" -eq 1 ]; then
-        if [ $(oc get serviceaccount "$SCALEOPNS" -n "$SCALEOPNS" -o jsonpath='{.secrets[0].name}' | grep "ibm-spectrum-scale-operator-token" ) ]; then
-            print info "${CHECK_PASS} token secret is present in service account for scale"
-        else
-            print error "${CHECK_FAIL} token secret is not present in service account for scale"
-        fi
-    else
-        print info "Skipping this test as its is not a metrodr setup having OCP version 4.12"
-    fi
-}
-
 rm -f ${REPORT} > /dev/null
 print_header
 print_section "API access"
@@ -1003,6 +988,4 @@ print_section "Verify PID limit"
 verify_pid_limit
 print_section "Verify Presence of CSI Configmap"
 verify_CSI_configmap_present
-print_section "Verify token secret in Scale service account"
-verify_token_secret_present
 print_footer
