@@ -970,7 +970,8 @@ function verify_token_secret_present(){
 }
 
 rm -f ${REPORT} > /dev/null
-if [ "$1" != "postcheck" ]; then
+
+if [ $# -eq 0 ]; then
         print_header
         print_section "API access"
         verify_api_access
@@ -1011,11 +1012,11 @@ if [ "$1" != "postcheck" ]; then
         print_section "Verify Presence of CSI Configmap"
         verify_CSI_configmap_present
         print_footer
-fi
-
-if [ "$1" == "postcheck" ]; then
-      print_header
-      print_section "verify token secret in Scale service account"
-      verify_token_secret_present
-      print_footer
+elif [ "$1" == "postcheck" ]; then
+        print_header
+        print_section "API access"
+        verify_api_access
+        print_section "verify token secret in Scale service account"
+        verify_token_secret_present
+        print_footer
 fi
