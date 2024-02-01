@@ -1019,4 +1019,6 @@ elif [ "$1" == "postcheck" ]; then
         print_section "verify token secret in Scale service account"
         verify_token_secret_present
         print_footer
+else
+        print info "For postcheck validation proper argument not provided. To invoke postchecks pass the argument 'postcheck'"
 fi
