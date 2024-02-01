@@ -4,8 +4,8 @@
 #Script Name	: monitor_scale_upgrade.sh
 #Description	: Utility to monitor Storage Scale upgrade for IBM Storage Fusion HCI system                                                      
 #Args       	:                                                                                           
-#Author       	:Anshu Garg     
-#Email         	:ganshug@gmail.com                                           
+#Author       	:Anshu Garg, Anvesh Thangallapalli     
+#Email         	:ganshug@gmail.com, thangallapallianvesh625@gmail.com                                          
 ##############################################################################
 
 ##############################################################################
