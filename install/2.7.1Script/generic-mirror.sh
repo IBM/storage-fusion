@@ -189,7 +189,6 @@ function get_megabom_images() {
 function get_kc_df_images() {
   # Function for mirroring Data Cataloging images
   print info "EXECUTING get_kc_df_images()"
-  REDHAT_VERSION=$(echo $OCP_VERSION | cut -d'.' -f1,2)
   cat <<EOF > imageset-config-df.yaml
   kind: ImageSetConfiguration
   apiVersion: mirror.openshift.io/v1alpha2
@@ -199,7 +198,7 @@ function get_kc_df_images() {
       skipTLS: true
   mirror:
     operators:
-      - catalog: icr.io/cpopen/isf-data-foundation-catalog:v${REDHAT_VERSION}
+      - catalog: icr.io/cpopen/isf-data-foundation-catalog:v4.14
         packages:
           - name: "mcg-operator"
           - name: "ocs-operator"
@@ -226,7 +225,6 @@ EOF
 function get_kc_local_df_images() {
   # Function for mirroring Data Cataloging images
   print info "EXECUTING get_kc_local_df_images()"
-  REDHAT_VERSION=$(echo $OCP_VERSION | cut -d'.' -f1,2)
   cat << EOF > imageset-config-lso.yaml
   kind: ImageSetConfiguration
   apiVersion: mirror.openshift.io/v1alpha2
