@@ -312,8 +312,8 @@ function pods_blocking_drains() {
 oc -n openshift-machine-config-operator logs machine-config-controller-7997756fc7-8s58l  machine-config-controller -f  | grep "error when evicting pods"
 }
 
-duration=$((60))
-timedifference=5
+duration=$((5 * 60 * 60))
+timedifference=600
 starttime=$(date +%s)
 # rm -f ${REPORT} > /dev/null
 # print_header
