@@ -931,16 +931,18 @@ function verify_pid_limit(){
 function is_metrodr_setup(){
     metrodrinstances=$(oc get metrodrs -n $FUSIONNS | tail -n +2 | wc -l)
     if [ $metrodrinstances -gt 0 ]; then
-        echo 1
+        return 1
     else
-        echo 0
+        return 0
     fi
 }
 
 function verify_CSI_configmap_present(){
     print info "Verify presence of CSI configmap if it is a 2.6.1 MetroDR setup"
-    isfversion=$(oc get csv -n ibm-spectrum-fusion-ns | grep -n . | tail -n +2 | head -n 1 | awk '{print $5}' | grep "2.6.1" | wc -l)
-    if [ "$(is_metrodr_setup)" -eq 1 ] && [ "$isfversion" -eq 1 ]; then
+    isfversion=$(oc get csv -n $FUSIONNS | grep -n . | tail -n +2 | head -n 1 | awk '{print $5}' | grep "2.6.1" | wc -l)
+    is_metrodr_setup
+    is_metrodr_setup_op=$?
+    if [ "$is_metrodr_setup_op" -eq 1 ] && [ "$isfversion" -eq 1 ]; then
         # 2.6.1 metrodr setup
         # check for CSI configmap
             check=$(oc get configmap -n "$SCALECSINS" ibm-spectrum-scale-csi-config -o json | jq '.data."VAR_DRIVER_DISCOVER_CG_FILESET"' | grep "DISABLED")
@@ -1020,5 +1022,5 @@ elif [ "$1" == "postcheck" ]; then
         verify_token_secret_present
         print_footer
 else
-        print info "For postcheck validation proper argument not provided. To invoke postchecks pass the argument 'postcheck'"
+        print error "${CHECK_FAIL} No Proper argument provided.If you want to run prechecks, do not pass any argument. For postchecks pass the argument 'postcheck'"
 fi
