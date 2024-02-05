@@ -1,0 +1,210 @@
+# Before applying this recipe
+  # 1. export MYSQL_ROOT_PASSWORD=<replace_mysql_root_password>
+  # 2. Labels the resources which will help in to select resources while taking backup i.e run ./scripts/labels.sh
+  # 3. Update the clusterrole transaction-manager-ibm-backup-restore as need to check the status of custom resource innodbcluster.mysql.oracle.com (i.e. ONLINE)
+  #    oc get clusterrole transaction-manager-ibm-backup-restore -o json | jq '.rules += [{"verbs":["get","list"],"apiGroups":["mysql.oracle.com"],"resources":["innodbclusters"]}]' | oc apply -f -
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: mysql-operator-based-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: mysql
+  groups:
+    - name: mysql-volumes
+      type: volume
+      includedNamespaces:
+        - mysql-operator
+    - name: mysql-operator-crds
+      type: resource
+      includedResourceTypes:
+        - customresourcedefinitions
+      includeClusterResources: true  
+      labelSelector: custom-label=mysql-operator-crd    
+    - name: mysql-operator-resources
+      type: resource
+      includedNamespaces:
+        - mysql-operator
+      includedResourceTypes:
+        - serviceaccount
+        - deployment
+        - clusterkopfpeering.zalando.org
+      includeClusterResources: true   
+      labelSelector: custom-label=mysql-operator        
+    - name: mysql-operator-resources-clusterroles
+      type: resource
+      includedNamespaces:
+        - mysql-operator
+      includedResourceTypes:
+        - clusterroles
+      includeClusterResources: true   
+      labelSelector: custom-label=mysql-operator         
+    - name: mysql-operator-resources-clusterrolebindings
+      type: resource
+      includedNamespaces:
+        - mysql-operator
+      includedResourceTypes:
+        - clusterrolebindings
+      includeClusterResources: true   
+      labelSelector: custom-label=mysql-operator        
+    - name: mysql-innodbcluster-resources
+      type: resource
+      includedNamespaces:
+        - mysql-operator
+      includedResourceTypes:
+        - role
+        - rolebinding
+        - secret
+      labelSelector: custom-label=mysql-innodbcluster  
+    - name: mysql-innodbcluster
+      type: resource
+      includedNamespaces:
+        - mysql-operator
+      includedResourceTypes:
+        - innodbcluster.mysql.oracle.com    
+    - name: secrets-innodbcluster-backup
+      type: resource
+      includedNamespaces:
+        - mysql-operator
+      includedResourceTypes:  
+        - secrets
+      labelSelector: custom-label=mysql-innodbcluster-post      
+    - name: restore-secrets-innodbcluster-backup
+      type: resource
+      restoreOverwriteResources: true  
+      backupRef: secrets-innodbcluster-backup
+  hooks:
+  - name: mysql-operator-deployment-check
+    type: check
+    namespace: mysql-operator
+    selectResource: deployment
+    labelSelector: app.kubernetes.io/name=mysql-operator
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}" 
+  - name: mysql-innodbcluster-check
+    type: check
+    namespace: mysql-operator
+    selectResource: statefulset
+    labelSelector: app.kubernetes.io/name=mysql-innodbcluster
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mysql-innodbcluster-pod-check
+    type: check
+    namespace: mysql-operator
+    selectResource: pod
+    nameSelector: mysql-c1.*
+    timeout: 120
+    onError: fail
+    chks:
+    - name: podReady
+      timeout: 600
+      onError: fail
+      condition: "{$.status.phase} == {\"Running\"}"                 
+  - name: mysql-backup-pod-exec
+    type: exec
+    namespace: mysql-operator
+    labelSelector: mysql.oracle.com/cluster-role=PRIMARY
+    singlePodOnly: true
+    ops:
+    - name: flush-tables-with-read-lock
+      command: >
+        ["/bin/bash", "-c", "mysqlsh --sql -h  mysql-c1.mysql-operator.svc.cluster.local  -u root --password=$MYSQL_ROOT_PASSWORD -e \"FLUSH TABLES WITH READ LOCK;\""]
+      container: mysql   
+  - name: mysql-operator-deployment-scale
+    type: scale
+    namespace: mysql-operator
+    selectResource: deployment
+    nameSelector: mysql-operator       
+  - name: mysql-operator-pod-exec
+    type: exec
+    namespace: mysql-operator
+    labelSelector: name=mysql-operator
+    singlePodOnly: true
+    ops:    
+    - name: clear-annotation-last-handled-config
+      command: >
+        ["/bin/bash", "-c","curl -X PATCH -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/mysql.oracle.com/v2/namespaces/mysql-operator/innodbclusters/mysql-c1?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"kopf.zalando.org/last-handled-configuration\":null}}}'"]
+      container: mysql-operator   
+  - name: mysql-operator-pod-post-exec
+    type: exec
+    namespace: mysql-operator
+    labelSelector: name=mysql-operator
+    singlePodOnly: true
+    ops:
+    - name: reboot-innodbcluster-cluster
+      command: >
+        ["/bin/bash", "-c", "mysqlsh --uri=root:$MYSQL_ROOT_PASSWORD@mysql-c1-instances.mysql-operator.svc.cluster.local:3306 --execute=\"dba.rebootClusterFromCompleteOutage();\""]
+      container: mysql-operator 
+    - name: scale-router-replica
+      command: >
+        ["/bin/bash", "-c","curl -X PATCH -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/apps/v1/namespaces/mysql-operator/deployments/mysql-c1-router -d '{\"spec\":{\"replicas\":'1'}}'"]
+      container: mysql-operator                     
+  - name: mysql-router-pod-check
+    type: check
+    namespace: mysql-operator
+    selectResource: pod
+    labelSelector: app.kubernetes.io/name=mysql-router
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: innodbcluster-online-check
+    type: check
+    namespace: mysql-operator
+    selectResource: mysql.oracle.com/v2/innodbclusters
+    nameSelector: mysql-c1
+    timeout: 120
+    onError: fail
+    chks:
+    - name: onlineStatus
+      timeout: 600
+      onError: fail
+      condition: "{$.status.cluster.status} == {\"ONLINE\"}"                   
+  workflows:
+  - name: backup
+    sequence:
+    - group: mysql-operator-crds
+    - group: mysql-operator-resources
+    - group: mysql-operator-resources-clusterroles
+    - group: mysql-operator-resources-clusterrolebindings
+    - hook: mysql-backup-pod-exec/flush-tables-with-read-lock
+    - group: mysql-volumes
+    - group: mysql-innodbcluster-resources
+    - group: mysql-innodbcluster
+    - group: secrets-innodbcluster-backup
+  - name: restore
+    sequence:
+    - group: mysql-volumes
+    - group: mysql-operator-crds    
+    - group: mysql-operator-resources
+    - group: mysql-operator-resources-clusterroles
+    - group: mysql-operator-resources-clusterrolebindings      
+    - hook: mysql-operator-deployment-check/replicasReady
+    - group: mysql-innodbcluster-resources
+    - group: mysql-innodbcluster   
+    - hook: mysql-operator-pod-exec/clear-annotation-last-handled-config
+    - hook: mysql-innodbcluster-pod-check/podReady    
+    - group: restore-secrets-innodbcluster-backup   
+    - hook: mysql-operator-deployment-scale/down
+    - hook: mysql-operator-deployment-scale/sync
+    - hook: mysql-operator-deployment-scale/up
+    - hook: mysql-operator-deployment-scale/sync
+    - hook: mysql-operator-deployment-check/replicasReady    
+    - hook: mysql-operator-pod-post-exec/reboot-innodbcluster-cluster
+    - hook: mysql-operator-pod-post-exec/scale-router-replica
+    - hook: mysql-router-pod-check/replicasReady
+    - hook: mysql-innodbcluster-check/replicasReady
+    - hook: innodbcluster-online-check/onlineStatus
