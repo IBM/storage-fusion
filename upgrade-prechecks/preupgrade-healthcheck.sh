@@ -13,7 +13,8 @@
 # Execute it from a bash shell where you have logged into HCI OpenShift API
 # Ensure jq is installed on that system
 # It is to be used for only online/connected installs of HCI
-# It checks:
+
+# It has the following prechecks:
 # API accessibility
 # access from nodes to Quay.io and IBM registries (icr.io and cp.icr.io)
 # pull access from one of the node for OCP release image and IDF entitlement validation image
@@ -28,9 +29,17 @@
 # VirtualMachine PVCs accessmode
 # Nodes hardware health
 # Switch, vlan and link health
+# pid limit on all nodes
+# CSI configmap verification on 2.6.1 Metrodr setup
 
-# Execute as
+# It has the following postchecks:
+# token secret validation in scale service account
+
+# Execute as (for prechecks)
 # ./preupgrade_healthcheck.sh
+
+# Execute as (for postchecks)
+# ./preupgrade_healthcheck.sh postcheck
 ##############################################################################
 
 CHECK_PASS='  ✅'
@@ -919,42 +928,99 @@ function verify_pid_limit(){
     rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
 
+function is_metrodr_setup(){
+    metrodrinstances=$(oc get metrodrs -n $FUSIONNS | tail -n +2 | wc -l)
+    if [ $metrodrinstances -gt 0 ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+function verify_CSI_configmap_present(){
+    print info "Verify presence of CSI configmap if it is a 2.6.1 MetroDR setup"
+    isfversion=$(oc get csv -n $FUSIONNS | grep -n . | tail -n +2 | head -n 1 | awk '{print $5}' | grep "2.6.1" | wc -l)
+    is_metrodr_setup
+    is_metrodr_setup_op=$?
+    if [ "$is_metrodr_setup_op" -eq 1 ] && [ "$isfversion" -eq 1 ]; then
+        # 2.6.1 metrodr setup
+        # check for CSI configmap
+            check=$(oc get configmap -n "$SCALECSINS" ibm-spectrum-scale-csi-config -o json | jq '.data."VAR_DRIVER_DISCOVER_CG_FILESET"' | grep "DISABLED")
+            if [ $? -eq 0 ]; then
+		        print info "${CHECK_PASS} CSI Configmap with required values present on 2.6.1 metrodr setup"
+            else
+                print error "${CHECK_FAIL} CSI Configmap with required values not present on 2.6.1 MetroDR setup."
+	        fi
+    else
+        # MetroDR setup is not present, skip CSI configmap verification
+        print info "Skipping CSI configmap verification as it is not a metroDR 2.6.1 setup"
+    fi
+}
+
+function verify_token_secret_present(){
+    print info "Verify the presence of secret token in scale service account"
+    ocpversion=$(oc get clusterversion -o jsonpath='{.items[0].status.desired.version}')
+    if [[ $(echo $ocpversion | cut -d. -f1) -eq 4 && $(echo $ocpversion | cut -d. -f2) -eq 12 ]] && [ "$(is_metrodr_setup)" -eq 1 ]; then
+        if [ $(oc get serviceaccount "$SCALEOPNS" -n "$SCALEOPNS" -o jsonpath='{.secrets[0].name}' | grep "ibm-spectrum-scale-operator-token" ) ]; then
+            print info "${CHECK_PASS} token secret is present in service account for scale"
+        else
+            print error "${CHECK_FAIL} token secret is not present in service account for scale"
+        fi
+    else
+        print info "Skipping this test as its is not a metrodr setup having OCP version 4.12"
+    fi
+}
+
 rm -f ${REPORT} > /dev/null
-print_header
-print_section "API access"
-verify_api_access
-print_section "Registry access"
-areRegistriesAccessible
-print_section "Registry authentication and authorisation"
-isAuthCorrect
-print_section "Cluster operators"
-verify_clusteroperators_status
-print_section "Nodes"
-verify_nodes_status
-print_section "Machine configuration pools"
-verify_mcp
-print_section "Catalog sources"
-verify_catsrc
-print_section "Fusion software"
-verify_fusion_health
-print_section "Backup & Restore"
-verify_br_health
-print_section "Legacy SPP"
-verify_spp_health
-print_section "Data Classification"
-verify_dcs_health
-print_section "Scale cluster"
-verify_scale_health
-print_section "VMs migration"
-verify_livemigratable_vms
-print_section "Pods with imagepullbackoff across cluster"
-verify_imagepullbackoff_pods
-print_section "Nodes hardware status"
-verify_nodes_hw
-print_section "Fusion nodes maintenance"
-verify_node_taints
-print_section "Network checks"
-verify_network_checks
-print_section "Verify PID limit"
-verify_pid_limit
-print_footer
+
+if [ $# -eq 0 ]; then
+        print_header
+        print_section "API access"
+        verify_api_access
+        print_section "Registry access"
+        areRegistriesAccessible
+        print_section "Registry authentication and authorisation"
+        isAuthCorrect
+        print_section "Cluster operators"
+        verify_clusteroperators_status
+        print_section "Nodes"
+        verify_nodes_status
+        print_section "Machine configuration pools"
+        verify_mcp
+        print_section "Catalog sources"
+        verify_catsrc
+        print_section "Fusion software"
+        verify_fusion_health
+        print_section "Backup & Restore"
+        verify_br_health
+        print_section "Legacy SPP"
+        verify_spp_health
+        print_section "Data Classification"
+        verify_dcs_health
+        print_section "Scale cluster"
+        verify_scale_health
+        print_section "VMs migration"
+        verify_livemigratable_vms
+        print_section "Pods with imagepullbackoff across cluster"
+        verify_imagepullbackoff_pods
+        print_section "Nodes hardware status"
+        verify_nodes_hw
+        print_section "Fusion nodes maintenance"
+        verify_node_taints
+        print_section "Network checks"
+        verify_network_checks
+        print_section "Verify PID limit"
+        verify_pid_limit
+        print_section "Verify Presence of CSI Configmap"
+        verify_CSI_configmap_present
+        print_footer
+elif [ "$1" == "postcheck" ]; then
+        print_header
+        print_section "API access"
+        verify_api_access
+        print_section "verify token secret in Scale service account"
+        verify_token_secret_present
+        print_footer
+else
+        print error "${CHECK_FAIL} No Proper argument provided.If you want to run prechecks, do not pass any argument. For postchecks pass the argument 'postcheck'"
+fi
