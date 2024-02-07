@@ -327,7 +327,7 @@ starttime=$(date +%s)
 # pods_blocking_drains
 print_header
 scale_version_details
-while true; do 
+while true; do
     if is_scale_upgraded; then 
         print info "${CHECK_PASS} Scale Upgrade is Completed."
         break
@@ -336,6 +336,14 @@ while true; do
         print error "${CHECK_FAIL} Scale upgrade not completed in given time frame."
         break
     fi
+    echo "Press 'q' within 5 seconds to quit"
+    if read -rsn1 -t 5 key; then
+        if [[ $key == "q" ]]; then
+            echo "q key Pressed. Quiting"
+            break
+        fi
+    fi
+    echo "Key not pressed. Continuing"
     monitor_scale_progress_table
     sleep "$timedifference"
 done
