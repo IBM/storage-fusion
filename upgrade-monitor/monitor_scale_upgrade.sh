@@ -4,8 +4,8 @@
 #Script Name	: monitor_scale_upgrade.sh
 #Description	: Utility to monitor Storage Scale upgrade for IBM Storage Fusion HCI system                                                      
 #Args       	:                                                                                           
-#Author       	:Anshu Garg, Anvesh Thangallapalli     
-#Email         	:ganshug@gmail.com, thangallapallianvesh625@gmail.com                                          
+#Author       	:Anshu Garg, Anvesh Thangallapalli, Anushka Jaiswal     
+#Email         	:ganshug@gmail.com, thangallapallianvesh625@gmail.com, anushka.jaiswal2@ibm.com                                          
 ##############################################################################
 
 ##############################################################################
@@ -50,7 +50,7 @@ function print_section() {
 
 function print_subsection() {
     echo ""
-    echo "============================================================================================================="
+    echo "=========================================================================================================================="
     echo ""
 }
 
@@ -290,10 +290,10 @@ function monitor_scale_progress_table () {
         upgraded_pods=()
     done   
     print_subsection
-    cat table2.txt | column -t |  awk '{printf "%-7s%-50s%-15s%-15s%-15s\n", $1, $2, $3, $4, $5}'
+    cat table2.txt | column -t |  awk '{printf "%-7s%-50s%-15s%-20s%-15s\n", $1, $2, $3, $4, $5}'
     rm table2.txt
     print_subsection
-    cat table3.txt | column -t |  awk '{printf "%-7s%-30s%-15s%-15s%-15s%-15s\n", $1, $2, $3, $4, $5, $6}'
+    cat table3.txt | column -t |  awk '{printf "%-7s%-30s%-15s%-15s%-15s%-25s%-15s\n", $1, $2, $3, $4, $5, $6, $7}'
     rm table3.txt
     print_subsection
     cat table4.txt | column -t | awk '{printf "%-60s%-40s\n", $1, $2}'
@@ -304,8 +304,17 @@ function monitor_scale_progress_table () {
 function is_scale_upgraded(){
     nodecount=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq -r '.status.roles[].nodeCount' | awk '{sum+=$1} END {print sum}')
     newversionnodes=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.versions[0].count')
+    newscaleversion=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.versions[0].version')
     newversionnodes_integer="${newversionnodes//\"}"
-    [ "$nodecount" -eq "$newversionnodes_integer" ]
+    flag=1
+    scale_pods=$(oc get pods -n ibm-spectrum-scale --selector=app.kubernetes.io/name=core -o jsonpath='{.items[*].metadata.name}')
+    for pod in $scale_pods; do
+        if ! oc exec $pod -n ibm-spectrum-scale -- mmdiag --version 2>/dev/null | grep -c $newscaleversion; then
+            flag=0
+            break
+        fi
+    done
+    [ "$flag" -a "$nodecount" -eq "$newversionnodes_integer" ]
 }
 
 function pods_blocking_drains() {
