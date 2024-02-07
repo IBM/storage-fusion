@@ -4,8 +4,8 @@
 #Script Name	: monitor_scale_upgrade.sh
 #Description	: Utility to monitor Storage Scale upgrade for IBM Storage Fusion HCI system                                                      
 #Args       	:                                                                                           
-#Author       	:Anshu Garg, Anvesh Thangallapalli     
-#Email         	:ganshug@gmail.com, thangallapallianvesh625@gmail.com                                          
+#Author       	:Anshu Garg, Anvesh Thangallapalli, Anushka Jaiswal     
+#Email         	:ganshug@gmail.com, thangallapallianvesh625@gmail.com, anushka.jaiswal2@ibm.com                                          
 ##############################################################################
 
 ##############################################################################
@@ -50,7 +50,7 @@ function print_section() {
 
 function print_subsection() {
     echo ""
-    echo "======================================================================================"
+    echo "=========================================================================================================================="
     echo ""
 }
 
@@ -174,98 +174,156 @@ function monitor_scale_progress () {
     # echo $QP
 }
 
-function monitor_scale_progress_table () {
-    echo "Fetching details..."
-    s_no=0
-    s_no2=0
+function scale_version_details(){
     cv=$(oc get clusterversion)
-    scale_version=`oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.versions[0].version'`
-    nodeCount=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq -r '.status.roles[0].nodeCount' | awk '{print int($1)}')
+    echo "$cv" >> table.txt
+    echo "" >> table.txt
+    scale_version=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.versions[0].version')
+    echo "SCALE_VERSION: $scale_version" >> table.txt
+    cat table.txt | column -t |  awk '{printf "%-15s%-15s%-15s%-15s%-15s%-15s\n", $1, $2, $3, $4, $5, $6}'
+    rm table.txt
+    print_subsection
+}
+
+function monitor_scale_progress_table () {    
+    echo "Fetching details at $(date +'%F %z %r')"
+    s_no=0
+    s_no2=0   
+    daemon=$(oc get daemon $DAEMONNAME -n $SCALENS -o json)
+    rolecount=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq -r '.status.roles | length')
     node_rebooting_details=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.statusDetails.nodesRebooting')
     node_unreachable_details=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.statusDetails.nodesUnreachable')
     node_waiting_for_reboot_details=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.statusDetails.nodesWaitingForReboot')
-    podCount=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq -r '.status.roles[0].podCount' | awk '{print int($1)}')
     pods_starting_details=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.statusDetails.podsStarting')
     pods_terminating_details=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.statusDetails.podsTerminating')
     pods_unknown_details=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.statusDetails.podsUnknown')
     pods_waiting_for_delete_details=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.statusDetails.podsWaitingForDelete')
     quorum_pods_details=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.statusDetails.quorumPods')
-    echo "$cv" >> table.txt
-    echo "SCALE_VERSION: $scale_version" >> table.txt
-    echo "S_NO STORAGE_NODE IS_REBOOTING IS_REACHABLE IS_WAITING_FOR_REBOOT" >> table2.txt
-    for ((i=0; i<nodeCount; i++))
-    do
-        s_no=$(($s_no+1))
-        storage_node=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq -r --argjson key $i '.status.roles[0].nodes | split(",") | .[$key]' | sed 's/^[[:space:]]*//')
-        if echo "$node_rebooting_details" | grep -q "$storage_node"
-        then
-            node_rebooting="${CHECK_INPROGRESS}"
-        else
-            node_rebooting="-"
-        fi
-        if echo "$node_unreachable_details" | grep -q "$storage_node"
-        then
-            node_unreachable="${CHECK_PASS}"
-        else
-            node_unreachable="${CHECK_FAIL}"
-        fi
-        if echo "$node_waiting_for_reboot_details" | grep -q "$storage_node"
-        then
-            node_waiting_for_reboot="${CHECK_UNKNOW}"
-        else
-            node_waiting_for_reboot="-"
-        fi
-        echo "$s_no $storage_node $node_rebooting $node_unreachable $node_waiting_for_reboot" >> table2.txt
-    done
+    echo "S_NO STORAGE_NODE IS_REBOOTING IS_UNREACHABLE IS_WAITING_FOR_REBOOT" >> table2.txt
     echo "S_NO CORE_POD IS_STARTING IS_TERMINATING IS_UNKNOWN IS_WAITING_FOR_DELETE IS_QUORUM_PODS" >> table3.txt
-    for ((i=0; i<podCount; i++))
+    echo "UPDRADED_NODE" "UPGRADED_POD" >> table4.txt
+    upgraded_nodes=()
+    upgraded_pods=()
+    for ((j=0; j<rolecount; j++))
     do
-        s_no2=$(($s_no2+1))
-        core_pod=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq -r --argjson key $i '.status.roles[0].pods | split(",") | .[$key]' | sed 's/^[[:space:]]*//')
-        if echo "$pods_starting_details" | grep -q "$core_pod"
-        then
-            pods_starting="${CHECK_INPROGRESS}"
-        else
-            pods_starting="${CHECK_INPROGRESS}"
-        fi
-        if echo "$pods_terminating_details" | grep -q "$core_pod"
-        then
-            pods_terminating="${CHECK_TERMINATING}"
-        else
-            pods_terminating="${CHECK_TERMINATING}"
-        fi
-        if echo "$pods_unknown_details" | grep -q "$core_pod"
-        then
-            pods_unknown="?"
-        else
-            pods_unknown="?"
-        fi
-        if echo "$pods_waiting_for_delete_details" | grep -q "$core_pod"
-        then
-            pods_waiting_for_delete="${CHECK_UNKNOW}"
-        else
-            pods_waiting_for_delete="${CHECK_UNKNOW}"
-        fi
-        if echo "$quorum_pods_details" | grep -q "$core_pod"
-        then
-            quorum_pods="${CHECK_PASS}"
-        else
-            quorum_pods="-"
-        fi
-        echo "$s_no2 $core_pod $pods_starting $pods_terminating $pods_unknown $pods_waiting_for_delete $quorum_pods" >> table3.txt
-    done
-    cat table.txt
-    cat table2.txt | column -t
-    cat table3.txt | column -t
-    rm table.txt
+        nodeCount=$(jq -r --argjson j "$j" '.status.roles[$j].nodeCount' <<< "$daemon" | awk '{print int($1)}')
+        role=$(jq -r --argjson j "$j" '.status.roles[$j] | .name' <<< "$daemon")
+        node_names=($(oc get nodes --selector="scale.spectrum.ibm.com/role=$role" --output=jsonpath='{.items[*].metadata.name}' | tr -d '\n'))
+        podCount=$(jq -r --argjson j "$j" '.status.roles[$j].podCount' <<< "$daemon" | awk '{print int($1)}')
+        for ((i=0; i<nodeCount; i++))
+        do
+            s_no=$(($s_no+1))
+            storage_node="${node_names[i]}"
+            if echo "$node_rebooting_details" | grep -q "$storage_node"
+            then
+                node_rebooting="${CHECK_INPROGRESS}"
+            else
+                node_rebooting="-"
+            fi
+            if echo "$node_unreachable_details" | grep -q "$storage_node"
+            then
+                node_unreachable="${CHECK_PASS}"
+            else
+                node_unreachable="${CHECK_FAIL}"
+            fi
+            if echo "$node_waiting_for_reboot_details" | grep -q "$storage_node"
+            then
+                node_waiting_for_reboot="${CHECK_UNKNOW}"
+            else
+                node_waiting_for_reboot="-"
+            fi
+            if ! echo "$node_waiting_for_reboot_details" | grep -q "$storage_node" && \
+               ! echo "$node_rebooting_details" | grep -q "$storage_node"; then
+               upgraded_nodes+=("$storage_node")
+            fi
+            echo "$s_no $storage_node $node_rebooting $node_unreachable $node_waiting_for_reboot" >> table2.txt
+        done
+        for ((i=0; i<podCount; i++))
+        do
+            s_no2=$(($s_no2+1))
+            core_pod=$(jq -r --argjson key "$i" --argjson j "$j" '.status.roles[$j].pods | split(",") | .[$key]' <<< "$daemon" | sed 's/^[[:space:]]*//')
+            if echo "$pods_starting_details" | grep -q "$core_pod"
+            then
+                pods_starting="${CHECK_INPROGRESS}"
+            else
+                pods_starting="-"
+            fi
+            if echo "$pods_terminating_details" | grep -q "$core_pod"
+            then
+                pods_terminating="${CHECK_TERMINATING}"
+            else
+                pods_terminating="-"
+            fi
+            if echo "$pods_unknown_details" | grep -q "$core_pod"
+            then
+                pods_unknown="?"
+            else
+                pods_unknown="-"
+            fi
+            if echo "$pods_waiting_for_delete_details" | grep -q "$core_pod"
+            then
+                pods_waiting_for_delete="${CHECK_UNKNOW}"
+            else
+                pods_waiting_for_delete="-"
+            fi
+            if echo "$quorum_pods_details" | grep -q "$core_pod"
+            then
+                quorum_pods="${CHECK_PASS}"
+            else
+                quorum_pods="-"
+            fi
+            if ! echo "$pods_waiting_for_delete_details" | grep -q "$core_pod" && \
+               ! echo "$pods_terminating_details" | grep -q "$core_pod" && \
+               ! echo "$pods_starting_details" | grep -q "$core_pod" && \
+               ! echo "$pods_unknown_details" | grep -q "$core_pod"; then
+               upgraded_pods+=("$core_pod")
+            fi
+            echo "$s_no2 $core_pod $pods_starting $pods_terminating $pods_unknown $pods_waiting_for_delete $quorum_pods" >> table3.txt
+        done
+        max_length=$((${#upgraded_nodes[@]} > ${#upgraded_pods[@]} ? ${#upgraded_nodes[@]} : ${#upgraded_pods[@]}))
+        for ((i=0; i<max_length; i++)); do
+            node="${upgraded_nodes[i]:-}"
+            pod="${upgraded_pods[i]:-}"
+            echo "$node" "$pod" >> table4.txt
+        done
+        upgraded_nodes=()
+        upgraded_pods=()
+    done   
+    print_subsection
+    cat table2.txt | column -t |  awk '{printf "%-7s%-50s%-15s%-20s%-15s\n", $1, $2, $3, $4, $5}'
     rm table2.txt
+    print_subsection
+    cat table3.txt | column -t |  awk '{printf "%-7s%-30s%-15s%-15s%-15s%-25s%-15s\n", $1, $2, $3, $4, $5, $6, $7}'
     rm table3.txt
+    print_subsection
+    cat table4.txt | column -t | awk '{printf "%-60s%-40s\n", $1, $2}'
+    rm table4.txt
+    print_subsection
+}
+
+function is_scale_upgraded(){
+    nodecount=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq -r '.status.roles[].nodeCount' | awk '{sum+=$1} END {print sum}')
+    newversionnodes=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.versions[0].count')
+    newscaleversion=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.versions[0].version')
+    newversionnodes_integer="${newversionnodes//\"}"
+    flag=1
+    scale_pods=$(oc get pods -n ibm-spectrum-scale --selector=app.kubernetes.io/name=core -o jsonpath='{.items[*].metadata.name}')
+    for pod in $scale_pods; do
+        if ! oc exec $pod -n ibm-spectrum-scale -- mmdiag --version 2>/dev/null | grep -c $newscaleversion; then
+            flag=0
+            break
+        fi
+    done
+    [ "$flag" -a "$nodecount" -eq "$newversionnodes_integer" ]
 }
 
 function pods_blocking_drains() {
 oc -n openshift-machine-config-operator logs machine-config-controller-7997756fc7-8s58l  machine-config-controller -f  | grep "error when evicting pods"
 }
 
+duration=$((5 * 60 * 60))
+timedifference=600
+starttime=$(date +%s)
 # rm -f ${REPORT} > /dev/null
 # print_header
 # print_section "API access"
@@ -275,5 +333,29 @@ oc -n openshift-machine-config-operator logs machine-config-controller-7997756fc
 # print_section "Begin Storage Scale upgrade status"
 # monitor_scale_progress
 # print_footer
-monitor_scale_progress_table
-pods_blocking_drains
+# pods_blocking_drains
+print_header
+scale_version_details
+while true; do
+    if is_scale_upgraded; then 
+        print info "${CHECK_PASS} Scale Upgrade is Completed."
+        break
+    fi
+    if [ $(( $(date +%s) - starttime )) -gt $duration ]; then
+        print error "${CHECK_FAIL} Scale upgrade not completed in given time frame."
+        break
+    fi
+    print info "Press 'q' within 5 seconds to quit"
+    if read -rsn1 -t 5 key; then
+        if [[ $key == "q" ]]; then
+            print info "q key Pressed. Quiting"
+            break
+        fi
+    fi
+    print info "Key not pressed. Continuing the monitoring"
+    print_subsection
+    print info "Scale Upgrade not yet completed. Refer the tables below"
+    monitor_scale_progress_table
+    sleep "$timedifference"
+done
+print_footer
