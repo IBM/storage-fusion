@@ -336,14 +336,16 @@ while true; do
         print error "${CHECK_FAIL} Scale upgrade not completed in given time frame."
         break
     fi
-    echo "Press 'q' within 5 seconds to quit"
+    print info "Press 'q' within 5 seconds to quit"
     if read -rsn1 -t 5 key; then
         if [[ $key == "q" ]]; then
-            echo "q key Pressed. Quiting"
+            print info "q key Pressed. Quiting"
             break
         fi
     fi
-    echo "Key not pressed. Continuing"
+    print info "Key not pressed. Continuing the monitoring"
+    print_subsection
+    print info "Scale Upgrade not yet completed. Refer the tables below"
     monitor_scale_progress_table
     sleep "$timedifference"
 done
