@@ -4,8 +4,8 @@
 #Script Name	: monitor_scale_upgrade.sh
 #Description	: Utility to monitor Storage Scale upgrade for IBM Storage Fusion HCI system                                                      
 #Args       	:                                                                                           
-#Author       	:Anshu Garg, Anvesh Thangallapalli, Anushka Jaiswal     
-#Email         	:ganshug@gmail.com, thangallapallianvesh625@gmail.com, anushka.jaiswal2@ibm.com                                          
+#Author       	:Anvesh Thangallapalli, Anushka Jaiswal, Anshu Garg 
+#Email         	:thangallapallianvesh625@gmail.com, anushka.jaiswal2@ibm.com, ganshug@gmail.com                                        
 ##############################################################################
 
 ##############################################################################
@@ -26,6 +26,9 @@ TEMP_MMHEALTH_FILE=$(pwd)/tmp-monitoring.log
 
 SCALENS="ibm-spectrum-scale"
 DAEMONNAME="ibm-spectrum-scale"
+
+MACHINECONFIGOPERATORNS=openshift-machine-config-operator
+MACHINCONFIGOPERATORCONTAINER=machine-config-operator
 
 function print_header() {
     echo "======================================================================================"
@@ -318,7 +321,7 @@ function is_scale_upgraded(){
 }
 
 function pods_blocking_drains() {
-oc -n openshift-machine-config-operator logs machine-config-controller-7997756fc7-8s58l  machine-config-controller -f  | grep "error when evicting pods"
+	oc -n $MACHINECONFIGOPERATORNS get pods  |grep $MACHINCONFIGOPERATORCONTAINER |awk '{print $1}'| xargs oc -n $MACHINECONFIGOPERATORNS -c $MACHINCONFIGOPERATORCONTAINER logs |grep "error when evicting pods"
 }
 
 duration=$((5 * 60 * 60))
@@ -356,6 +359,8 @@ while true; do
     print_subsection
     print info "Scale Upgrade not yet completed. Refer the tables below"
     monitor_scale_progress_table
+    print_subsecton
+    pods_blocking_drains
     sleep "$timedifference"
 done
 print_footer
