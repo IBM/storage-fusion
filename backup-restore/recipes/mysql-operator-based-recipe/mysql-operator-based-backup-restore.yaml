@@ -29,24 +29,10 @@ spec:
         - serviceaccount
         - deployment
         - clusterkopfpeering.zalando.org
+        - clusterroles        
+        - clusterrolebindings        
       includeClusterResources: true   
-      labelSelector: custom-label=mysql-operator        
-    - name: mysql-operator-resources-clusterroles
-      type: resource
-      includedNamespaces:
-        - mysql-operator
-      includedResourceTypes:
-        - clusterroles
-      includeClusterResources: true   
-      labelSelector: custom-label=mysql-operator         
-    - name: mysql-operator-resources-clusterrolebindings
-      type: resource
-      includedNamespaces:
-        - mysql-operator
-      includedResourceTypes:
-        - clusterrolebindings
-      includeClusterResources: true   
-      labelSelector: custom-label=mysql-operator        
+      labelSelector: custom-label=mysql-operator                      
     - name: mysql-innodbcluster-resources
       type: resource
       includedNamespaces:
@@ -118,7 +104,7 @@ spec:
     ops:
     - name: flush-tables-with-read-lock
       command: >
-        ["/bin/bash", "-c", "mysqlsh --sql -h  mysql-c1.mysql-operator.svc.cluster.local  -u root --password=$MYSQL_ROOT_PASSWORD -e \"FLUSH TABLES WITH READ LOCK;\""]
+        ["/bin/bash", "-c", "MYSQL_ROOT_PASSWORD=$(curl -k -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" https://kubernetes.default.svc/api/v1/namespaces/mysql-operator/secrets/mysql-c1-root-user-creds |  grep -o '\"rootPassword\": \".*\"' | awk -F'\"' '{print $4}' | base64 --decode); mysqlsh --sql -h  mysql-c1.mysql-operator.svc.cluster.local  -u root --password=$MYSQL_ROOT_PASSWORD -e \"FLUSH TABLES WITH READ LOCK;\""]
       container: mysql   
   - name: mysql-operator-deployment-scale
     type: scale
@@ -143,7 +129,7 @@ spec:
     ops:
     - name: reboot-innodbcluster-cluster
       command: >
-        ["/bin/bash", "-c", "mysqlsh --uri=root:$MYSQL_ROOT_PASSWORD@mysql-c1-instances.mysql-operator.svc.cluster.local:3306 --execute=\"dba.rebootClusterFromCompleteOutage();\""]
+        ["/bin/bash", "-c", "MYSQL_ROOT_PASSWORD=$(curl -k -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" https://kubernetes.default.svc/api/v1/namespaces/mysql-operator/secrets/mysql-c1-root-user-creds |  grep -o '\"rootPassword\": \".*\"' | awk -F'\"' '{print $4}' | base64 --decode); mysqlsh --uri=root:$MYSQL_ROOT_PASSWORD@mysql-c1-instances.mysql-operator.svc.cluster.local:3306 --execute=\"dba.rebootClusterFromCompleteOutage();\""]
       container: mysql-operator 
     - name: scale-router-replica
       command: >
@@ -157,10 +143,10 @@ spec:
     timeout: 120
     onError: fail
     chks:
-    - name: replicasReady
+    - name: podReady
       timeout: 600
       onError: fail
-      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
   - name: innodbcluster-online-check
     type: check
     namespace: mysql-operator
@@ -178,8 +164,6 @@ spec:
     sequence:
     - group: mysql-operator-crds
     - group: mysql-operator-resources
-    - group: mysql-operator-resources-clusterroles
-    - group: mysql-operator-resources-clusterrolebindings
     - hook: mysql-backup-pod-exec/flush-tables-with-read-lock
     - group: mysql-volumes
     - group: mysql-innodbcluster-resources
@@ -189,9 +173,7 @@ spec:
     sequence:
     - group: mysql-volumes
     - group: mysql-operator-crds    
-    - group: mysql-operator-resources
-    - group: mysql-operator-resources-clusterroles
-    - group: mysql-operator-resources-clusterrolebindings      
+    - group: mysql-operator-resources    
     - hook: mysql-operator-deployment-check/replicasReady
     - group: mysql-innodbcluster-resources
     - group: mysql-innodbcluster   
@@ -205,6 +187,6 @@ spec:
     - hook: mysql-operator-deployment-check/replicasReady    
     - hook: mysql-operator-pod-post-exec/reboot-innodbcluster-cluster
     - hook: mysql-operator-pod-post-exec/scale-router-replica
-    - hook: mysql-router-pod-check/replicasReady
+    - hook: mysql-router-pod-check/podReady
     - hook: mysql-innodbcluster-check/replicasReady
     - hook: innodbcluster-online-check/onlineStatus
