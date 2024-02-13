@@ -1,0 +1,135 @@
+# Labels the resources before applying this recipe i.e run ./scripts/labels.sh
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: mariadb-operator-based-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: mariadb
+  groups:
+    - name: mariadb-volumes
+      type: volume
+      includedNamespaces:
+        - mariadb
+      labelSelector: app.kubernetes.io/name=mariadb    
+    - name: mariadb-operator-crds
+      type: resource
+      includedResourceTypes:
+        - customresourcedefinitions
+      includeClusterResources: true  
+      labelSelector: custom-label=mariadb    
+    - name: mariadb-operator-resources
+      type: resource
+      includedNamespaces:
+        - mariadb
+      includedResourceTypes:
+        - clusterroles
+        - clusterrolebinding
+      includeClusterResources: true   
+      labelSelector: custom-label=mariadb
+    - name: mariadb-resources
+      type: resource
+      includedNamespaces:
+        - mariadb
+      excludedResourceTypes:
+        - mariadbs
+        - statefulsets
+        - deployments
+        - pods
+        - replicasets
+    - name: mariadb-operator-deployment
+      type: resource
+      includedNamespaces:
+        - mariadb
+      includedResourceTypes:
+        - deployments        
+    - name: mariadb-instance
+      type: resource
+      includedNamespaces:
+        - mariadb
+      includedResourceTypes:
+        - mariadbs.mariadb.mmontes.io        
+  hooks:
+  - name: mariadb-operator-deployment-check
+    type: check
+    namespace: mariadb
+    selectResource: deployment
+    labelSelector: app.kubernetes.io/name=mariadb-operator
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}" 
+  - name: mariadb-operator-webhook-deployment-check
+    type: check
+    namespace: mariadb
+    selectResource: deployment
+    labelSelector: app.kubernetes.io/name=mariadb-operator-webhook
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mariadb-instance-statefulsets-check
+    type: check
+    namespace: mariadb
+    selectResource: statefulset
+    nameSelector: mariadb-repl
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mariadb-instance-check
+    type: check
+    namespace: mariadb
+    selectResource: mariadb.mmontes.io/v1alpha1/mariadbs
+    nameSelector: mariadb-repl
+    timeout: 120
+    onError: fail
+    chks:
+    - name: readyStatus
+      timeout: 600
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].message} == {\"Running\"}"     
+  - name: mariadb-backup-pod-exec
+    nameSelector: mariadb-repl-0
+    namespace: mariadb
+    singlePodOnly: true
+    onError: fail
+    selectResource: pod
+    type: exec
+    ops:
+      - command: >
+          ["/bin/bash", "-c", "mariadb -u root -p$MARIADB_ROOT_PASSWORD -e \"FLUSH TABLES WITH READ LOCK;\""]
+        container: mariadb
+        name: flush-tables-with-read-lock
+        onError: fail                              
+  workflows:
+  - name: backup
+    sequence:
+    - group: mariadb-operator-crds
+    - group: mariadb-operator-resources
+    - group: mariadb-resources
+    - group: mariadb-operator-deployment
+    - group: mariadb-instance
+    - hook: mariadb-backup-pod-exec/flush-tables-with-read-lock
+    - group: mariadb-volumes    
+  - name: restore
+    sequence:
+    - group: mariadb-volumes    
+    - group: mariadb-operator-crds
+    - group: mariadb-operator-resources  
+    - group: mariadb-resources
+    - group: mariadb-operator-deployment    
+    - hook: mariadb-operator-deployment-check/replicasReady      
+    - hook: mariadb-operator-webhook-deployment-check/replicasReady
+    - group: mariadb-instance    
+    - hook: mariadb-instance-statefulsets-check/replicasReady   
+    - hook: mariadb-instance-check/readyStatus
