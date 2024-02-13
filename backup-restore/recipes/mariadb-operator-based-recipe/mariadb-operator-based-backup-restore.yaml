@@ -1,4 +1,7 @@
-# Labels the resources before applying this recipe i.e run ./scripts/labels.sh
+# Before applying this recipe
+  # 1. Labels the resources which will help in to select resources while taking backup i.e run ./scripts/labels.sh
+  # 2. Update the clusterrole transaction-manager-ibm-backup-restore as need to check the status of custom resource mariadb (i.e. Running). This step is required during restore on target cluster only.
+  #    oc get clusterrole transaction-manager-ibm-backup-restore -o json | jq '.rules += [{"verbs":["get","list"],"apiGroups":["mariadb.mmontes.io"],"resources":["mariadbs"]}]' | oc apply -f -
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
 metadata:
