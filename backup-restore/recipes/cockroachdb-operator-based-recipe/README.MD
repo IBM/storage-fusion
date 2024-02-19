@@ -1,4 +1,4 @@
-MySQL Operator Based Recipe
+Cockroachdb Operator Based Recipe
 ==============================
 
 ## Preparation for Backup & Restore
