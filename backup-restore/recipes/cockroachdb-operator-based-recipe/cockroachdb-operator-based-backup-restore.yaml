@@ -1,0 +1,126 @@
+# Labels the resources before applying this recipe i.e run ./scripts/labels.sh
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: cockroachdb-operator-based-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: cockroachdb
+  groups:
+    - name: cockroachdb-volumes
+      type: volume
+      includedNamespaces:
+        - cockroach-operator-system  
+    - name: cockroachdb-operator-crds
+      type: resource
+      includedResourceTypes:
+        - customresourcedefinitions
+      includeClusterResources: true  
+      labelSelector: custom-label=cockroach-operator-crd    
+    - name: cockroachdb-operator-resources
+      type: resource
+      includedNamespaces:
+        - cockroach-operator-system
+      includedResourceTypes:
+        - serviceaccount
+        - service
+        - deployment
+        - mutatingwebhookconfiguration
+        - validatingwebhookconfiguration
+      includeClusterResources: true   
+      labelSelector: app=cockroach-operator   
+    - name: cockroachdb-operator-resources-clusterrole-clusterrolebinding
+      type: resource
+      includedNamespaces:
+        - cockroach-operator-system
+      includedResourceTypes:
+        - clusterrole
+        - clusterrolebinding
+      includeClusterResources: true   
+      labelSelector: app=cockroach-operator        
+    - name: cockroachdb-cluster
+      type: resource
+      includedNamespaces:
+        - cockroach-operator-system
+      includedResourceTypes:
+        - crdbcluster.crdb.cockroachlabs.com             
+  hooks:
+  - name: operator-check
+    type: check
+    namespace: cockroach-operator-system
+    selectResource: deployment
+    labelSelector: app=cockroach-operator
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: cockroach-operator-pod-exec
+    type: exec
+    namespace: cockroach-operator-system
+    labelSelector: app=cockroach-operator
+    timeout: 900
+    onError: fail
+    ops:
+    - name: sleep-a-minute
+      command: >
+        ["/bin/bash", "-c", "sleep 60"]
+      container: cockroach-operator
+      timeout: 900          
+  - name: cluster-check
+    type: check
+    namespace: cockroach-operator-system
+    selectResource: statefulset
+    labelSelector: app.kubernetes.io/name=cockroachdb
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"     
+  - name: cockroachdb-data
+    type: exec
+    namespace: cockroach-operator-system
+    labelSelector: statefulset.kubernetes.io/pod-name=cockroachdb-0
+    timeout: 900
+    onError: fail
+    ops:
+    - name: backup
+      command: >
+        ["/bin/bash", "-c", "./cockroach sql --certs-dir=/cockroach/cockroach-certs --host=cockroachdb-public -e \"BACKUP INTO 'nodelocal://1/data' AS OF SYSTEM TIME '-10s';\""]
+      container: db
+      timeout: 900     
+    - name: restore
+      command: >
+        ["/bin/bash", "-c", "./cockroach sql --certs-dir=/cockroach/cockroach-certs --host=cockroachdb-public -e \"RESTORE FROM LATEST IN 'nodelocal://1/data';\""]
+      container: db
+      timeout: 900        
+    - name: clear
+      command: >
+        ["/bin/bash", "-c", "./cockroach sql --certs-dir=/cockroach/cockroach-certs --host=cockroachdb-public -e \"DROP DATABASE workloads CASCADE;\""]
+      container: db
+      timeout: 900                            
+  workflows:
+  - name: backup
+    sequence:
+    - hook: cockroachdb-data/backup    
+    - group: cockroachdb-volumes
+    - group: cockroachdb-operator-crds
+    - group: cockroachdb-operator-resources
+    - group: cockroachdb-operator-resources-clusterrole-clusterrolebinding
+    - group: cockroachdb-cluster
+  - name: restore
+    sequence:
+    - group: cockroachdb-volumes
+    - group: cockroachdb-operator-crds
+    - group: cockroachdb-operator-resources
+    - group: cockroachdb-operator-resources-clusterrole-clusterrolebinding    
+    - hook: operator-check/replicasReady
+    - hook: cockroach-operator-pod-exec/sleep-a-minute
+    - group: cockroachdb-cluster
+    - hook: cluster-check/replicasReady
+    - hook: cockroachdb-data/clear
+    - hook: cockroachdb-data/restore            
