@@ -1,9 +1,11 @@
+#!/bin/bash 
+
 ##############################################################################
 #Script Name	: monitor_scale_upgrade.sh
 #Description	: Utility to monitor Storage Scale upgrade for IBM Storage Fusion HCI system                                                      
 #Args       	:                                                                                           
-#Author       	:Anvesh Thangallapalli, Anushka Jaiswal, Anshu Garg 
-#Email         	:thangallapallianvesh625@gmail.com, anushka.jaiswal2@ibm.com, ganshug@gmail.com                                        
+#Author       	:Anshu Garg, Anvesh Thangallapalli, Anushka Jaiswal 
+#Email         	:ganshug@gmail.com, thangallapallianvesh625@gmail.com, anushka.jaiswal2@ibm.com                                       
 ##############################################################################
 
 ##############################################################################
@@ -188,8 +190,8 @@ function scale_version_details(){
 
 function check_if_pod_is_upgraded(){
     local pod=$1
-    newscaleversion=$(oc get scales storagemanager -o json | jq '.status.availableSoftwareVersion' )
-    if oc exec $pod -n ibm-spectrum-scale -- mmdiag --version 2>/dev/null | grep $newscaleversion; then
+    newscaleversion=$(oc get scales storagemanager -o json | jq '.status.availableSoftwareVersion' | sed 's/"//g')
+    if oc exec $pod -n ibm-spectrum-scale -- mmdiag --version 2>/dev/null | grep -q $newscaleversion; then
         return 0
     else
         return 1
@@ -323,12 +325,12 @@ function monitor_scale_progress_table () {
 function is_scale_upgraded(){
     nodecount=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq -r '.status.roles[].nodeCount' | awk '{sum+=$1} END {print sum}')
     newversionnodes=$(oc get daemon $DAEMONNAME -n $SCALENS -o json | jq  '.status.versions[0].count')
-    newscaleversion=$(oc get scales storagemanager -o json | jq '.status.availableSoftwareVersion' )
+    newscaleversion=$(oc get scales storagemanager -o json | jq '.status.availableSoftwareVersion' | sed 's/"//g')
     newversionnodes_integer="${newversionnodes//\"}"
     flag=1
     scale_pods=$(oc get pods -n ibm-spectrum-scale --selector=app.kubernetes.io/name=core -o jsonpath='{.items[*].metadata.name}')
     for pod in $scale_pods; do
-        if ! oc exec $pod -n ibm-spectrum-scale -- mmdiag --version 2>/dev/null | grep $newscaleversion; then
+        if ! oc exec $pod -n ibm-spectrum-scale -- mmdiag --version 2>/dev/null | grep -q "$newscaleversion"; then
             flag=0
             break
         fi
@@ -347,7 +349,6 @@ function pods_blocking_drains() {
 }
 
 duration=$((5 * 60 * 60))
-#timedifference=600
 timedifference=600
 starttime=$(date +%s)
 # rm -f ${REPORT} > /dev/null
