@@ -1,0 +1,116 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: cassandra-operator-based-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: cassandracluster
+  groups:
+    - name: cassandra_volumes
+      type: volume 
+      includedNamespaces:
+        - cass-operator
+    - name: cass-operator-crds
+      type: resource
+      includedResourceTypes:
+        - customresourcedefinitions
+      includeClusterResources: true  
+      labelSelector: custom-label=cassandra-operator    
+    - name: cassandra-operator-resources
+      type: resource
+      includedNamespaces:
+        - cass-operator
+      includedResourceTypes:
+        - serviceaccount
+        - role 
+        - rolebinding
+        - configmap
+        - service
+        - certificate
+        - clusterrole    
+        - clusterrolebinding
+        - issuer
+        - validatingwebhookconfiguration
+        - deployment
+      includeClusterResources: true   
+      labelSelector: custom-label=cassandra-operator 
+    - name: cassandra-cassandradatacenter
+      type: resource
+      includedNamespaces:
+        - cass-operator
+      includedResourceTypes:
+        - cassandradatacenter.cassandra.datastax.com 
+    - name: secrets-cassanadra-backup
+      type: resource
+      includedNamespaces:
+        - cass-operator
+      includedResourceTypes:  
+        - secret
+      labelSelector: app.kubernetes.io/name=cassandra      
+    - name: restore-secrets-cassanadra-backup
+      type: resource
+      restoreOverwriteResources: true  
+      backupRef: secrets-cassanadra-backup                       
+  hooks:
+  - name: cassandra-operator-deployment-check
+    type: check
+    namespace: cass-operator
+    selectResource: deployment
+    labelSelector: control-plane=controller-manager
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"     
+  - name: cassandra-pods-exec
+    nameSelector: development-dc1-rack1-sts-.*
+    namespace: cass-operator
+    onError: fail
+    ops:
+      - command: >
+          ["/bin/bash", "-c", "nodetool flush; nodetool repair -pr"]
+        container: cassandra
+        name: flush-and-commit-data
+        onError: fail
+      - command: >
+          ["/bin/bash", "-c", "nodetool verify -f"]
+        container: cassandra
+        name: verify-data
+        onError: fail        
+    selectResource: pod
+    type: exec
+  - name: cassandradatacenter-ready-check
+    type: check
+    namespace: cass-operator
+    selectResource: cassandra.datastax.com/v1beta1/cassandradatacenters
+    nameSelector: dc1
+    timeout: 120
+    onError: fail
+    chks:
+    - name: readyStatus
+      timeout: 600
+      onError: fail
+      condition: "{$.status.cassandraOperatorProgress} == {\"Ready\"}"     
+  workflows:
+    - failOn: any-error
+      name: backup
+      sequence:
+        - group: cass-operator-crds
+        - group: cassandra-operator-resources
+        - hook: cassandra-pods-exec/flush-and-commit-data
+        - group: cassandra_volumes   
+        - group: cassandra-cassandradatacenter
+        - group: secrets-cassanadra-backup     
+    - failOn: any-error
+      name: restore
+      sequence:
+        - group: cassandra_volumes      
+        - group: cass-operator-crds
+        - group: cassandra-operator-resources
+        - hook: cassandra-operator-deployment-check/replicasReady
+        - group: cassandra-cassandradatacenter
+        - hook: cassandradatacenter-ready-check/readyStatus
+        - hook: cassandra-pods-exec/verify-data
+        - group: restore-secrets-cassanadra-backup
