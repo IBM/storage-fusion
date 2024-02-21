@@ -240,6 +240,8 @@ INSTA=$(oc get dataprotectionagent  -A -o name 2> /dev/null)
 [ -n "$INSTA" ] && INSTS="$INSTS $INSTA"
 if [ -z "$INSTS" ] 
  then
+     echo "==== Deleting Fusion control plane recipe"
+     oc -n "$ISF_NS" delete recipes.spp-data-protection.isf.ibm.com fusion-control-plane
      echo "==== Deleting cluster role bindings and crds"
      ROLES=$(oc get clusterrole --ignore-not-found | grep -iE "guardian|ibm-backup-restore|dataprotectionagent|dataprotectionserver" | cut -d" " -f1)
      [ -n "$ROLES" ] && oc delete clusterrole $ROLES --timeout=60s
