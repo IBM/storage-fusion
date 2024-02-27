@@ -10,30 +10,26 @@ spec:
       type: volume 
       includedNamespaces:
         - cass-operator
-    - name: cass-operator-crds
+    - name: cass-operator-cluster-resources
       type: resource
       includedResourceTypes:
         - customresourcedefinitions
+        - validatingwebhookconfiguration
+        - clusterrole    
+        - clusterrolebinding
       includeClusterResources: true  
       labelSelector: custom-label=cassandra-operator    
     - name: cassandra-operator-resources
       type: resource
       includedNamespaces:
         - cass-operator
-      includedResourceTypes:
-        - serviceaccount
-        - role 
-        - rolebinding
-        - configmap
-        - service
-        - certificate
-        - clusterrole    
-        - clusterrolebinding
-        - issuer
-        - validatingwebhookconfiguration
-        - deployment
-      includeClusterResources: true   
-      labelSelector: custom-label=cassandra-operator 
+      excludedResourceTypes:
+        - cassandradatacenter.cassandra.datastax.com 
+        - pods
+        - endpoints
+        - replicasets
+        - statefulsets
+        - endpointslices
     - name: cassandra-cassandradatacenter
       type: resource
       includedNamespaces:
@@ -97,7 +93,7 @@ spec:
     - failOn: any-error
       name: backup
       sequence:
-        - group: cass-operator-crds
+        - group: cass-operator-cluster-resources
         - group: cassandra-operator-resources
         - hook: cassandra-pods-exec/flush-and-commit-data
         - group: cassandra-volumes   
@@ -107,7 +103,7 @@ spec:
       name: restore
       sequence:
         - group: cassandra-volumes      
-        - group: cass-operator-crds
+        - group: cass-operator-cluster-resources
         - group: cassandra-operator-resources
         - hook: cassandra-operator-deployment-check/replicasReady
         - group: cassandra-cassandradatacenter
