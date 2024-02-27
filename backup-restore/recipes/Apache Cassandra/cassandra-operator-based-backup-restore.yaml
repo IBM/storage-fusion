@@ -6,7 +6,7 @@ metadata:
 spec:
   appType: cassandracluster
   groups:
-    - name: cassandra_volumes
+    - name: cassandra-volumes
       type: volume 
       includedNamespaces:
         - cass-operator
@@ -100,13 +100,13 @@ spec:
         - group: cass-operator-crds
         - group: cassandra-operator-resources
         - hook: cassandra-pods-exec/flush-and-commit-data
-        - group: cassandra_volumes   
+        - group: cassandra-volumes   
         - group: cassandra-cassandradatacenter
         - group: secrets-cassanadra-backup     
     - failOn: any-error
       name: restore
       sequence:
-        - group: cassandra_volumes      
+        - group: cassandra-volumes      
         - group: cass-operator-crds
         - group: cassandra-operator-resources
         - hook: cassandra-operator-deployment-check/replicasReady
