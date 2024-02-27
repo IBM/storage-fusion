@@ -1,3 +1,5 @@
+#!/bin/bash
+
 oc label crd cassandradatacenters.cassandra.datastax.com custom-label=cassandra-operator
 oc label crd cassandratasks.control.k8ssandra.io custom-label=cassandra-operator
 
