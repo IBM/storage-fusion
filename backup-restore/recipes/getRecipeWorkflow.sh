@@ -66,5 +66,5 @@ if [[ -n $2 ]]; then
 	echo "===== Log format ====="
 	oc exec -it $podName -n $brNs -- curl -k https://backup-service:9443/dataprotection/backup-service/v1/logs/$job_uid/recipe$queryParam | jq -r '[.logs] | @sh'
 else
-	echo "Usage: " $0 " (backup | restore) <job id>"
+        usage
 fi
