@@ -1,0 +1,50 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: mariadb-image-based-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: mariadb
+  groups:
+    - name: mariadb-volumes
+      type: volume    
+    - name: mariadb-resources
+      type: resource
+      excludedResourceTypes:
+        - pods
+        - replicasets    
+  hooks:
+  - name: mariadb-deployment-check
+    type: check
+    namespace: ${GROUP.mariadb-resources.namespace}
+    selectResource: deployment
+    nameSelector: mariadb
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mariadb-pod-exec
+    type: exec
+    namespace: ${GROUP.mariadb-resources.namespace}
+    labelSelector: app=mariadb
+    timeout: 60
+    onError: fail
+    ops:
+    - name: "flush-tables-with-read-lock"
+      command: >
+        ["/bin/bash", "-c", "mariadb -u root -p$MARIADB_ROOT_PASSWORD -e \"FLUSH TABLES WITH READ LOCK;\""] 
+      container: mariadb  
+  workflows:
+  - name: backup
+    sequence:
+    - group: mariadb-resources
+    - hook: mariadb-pod-exec/flush-tables-with-read-lock
+    - group: mariadb-volumes
+  - name: restore
+    sequence:
+    - group: mariadb-volumes
+    - group: mariadb-resources
+    - hook: mariadb-deployment-check/replicasReady
