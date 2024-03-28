@@ -1,0 +1,51 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: postgres-image-based-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: postgres
+  groups:
+    - name: postgres-volumes
+      type: volume
+    - name: postgres-resources
+      type: resource
+      excludedResourceTypes:
+        - pods
+        - replicasets
+  hooks:
+  - name: postgres-deployment-check
+    type: check
+    namespace: ${GROUP.postgres-resources.namespace}
+    selectResource: deployment
+    nameSelector: postgres-deployment
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: postgres-instance-exec
+    type: exec
+    namespace: ${GROUP.postgres-resources.namespace}
+    labelSelector: run=postgres 
+    singlePodOnly: true
+    timeout: 120
+    onError: fail
+    ops:
+    - name: checkpoint
+      command: "psql -U postgres -c CHECKPOINT" 
+      container: postgres 
+      timeout: 60      
+  workflows:
+  - name: backup
+    sequence:
+    - group: postgres-resources
+    - hook: postgres-instance-exec/checkpoint 
+    - group: postgres-volumes
+  - name: restore
+    sequence:
+    - group: postgres-volumes
+    - group: postgres-resources
+    - hook: postgres-deployment-check/replicasReady
