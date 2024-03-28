@@ -1,0 +1,61 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: mongodb-image-based-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: mongodb
+  groups:
+    - name: mongodb-volumes
+      type: volume
+    - name: mongodb-resources
+      type: resource
+      excludedResourceTypes:
+        - events
+        - pods
+        - replicasets
+  hooks:
+  - name: mongodb-deployment-check
+    type: check
+    namespace: ${GROUP.mongodb-resources.namespace}
+    selectResource: deployment
+    nameSelector: mongodb
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mongodb-pod-exec
+    labelSelector: app=mongodb
+    timeout: 300
+    namespace: ${GROUP.mongodb-resources.namespace}
+    onError: fail
+    ops:
+      - command: >
+          ["/bin/bash", "-c", "mongosh -u `printenv MONGO_INITDB_ROOT_USERNAME` -p `printenv MONGO_INITDB_ROOT_PASSWORD` --eval \"db.fsyncLock()\""]
+        container: mongodb
+        timeout: 300
+        name: fsyncLock
+        onError: fail
+      - command: >
+          ["/bin/bash", "-c", "mongosh -u `printenv MONGO_INITDB_ROOT_USERNAME` -p `printenv MONGO_INITDB_ROOT_PASSWORD` --eval \"db.fsyncUnlock()\""]
+        container: mongodb
+        timeout: 300
+        name: fsyncUnlock
+        onError: fail
+    selectResource: pod
+    type: exec
+  workflows:
+  - name: backup
+    sequence:
+    - group: mongodb-resources
+    - hook: mongodb-pod-exec/fsyncLock
+    - group: mongodb-volumes
+    - hook: mongodb-pod-exec/fsyncUnlock
+  - name: restore
+    sequence:
+    - group: mongodb-volumes
+    - group: mongodb-resources
+    - hook: mongodb-deployment-check/replicasReady
