@@ -1,9 +1,9 @@
 #!/bin/bash
 # This script returns recipe workflow logs of a backup or restore job in IBM Storage Fusion Backup & Restore service.
-# Usage: getResources.sh (backup | restore) <job uid | -n job name>
+# Usage: getRecipeWorkflow.sh (backup | restore) <job uid | -n job name>
 #        example -
-#        getResources.sh backup 9c1e7f2d-fd74-4bcc-b28e-6cb82785913a
-#        getResources.sh backup -n filebrowser-filebrowser-policy-apps.hostname-202402161744
+#        getRecipeWorkflow.sh backup 9c1e7f2d-fd74-4bcc-b28e-6cb82785913a
+#        getRecipeWorkflow.sh backup -n filebrowser-filebrowser-policy-apps.hostname-202402161744
 
 usage() {
     echo "Usage: $0 (backup | restore) <job_uid | -n job_name>"
