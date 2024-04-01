@@ -6,7 +6,7 @@
 # Licensed Materials - Property of IBM
 #
 # IBM Storage Fusion 5639-SPS
-# (C) Copyright IBM Corp. 2021 All Rights Reserved.
+# (C) Copyright IBM Corp. 2024 All Rights Reserved.
 #
 # US Government Users Restricted Rights - Use, duplication or
 # disclosure restricted by GSA ADP Schedule Contract with
@@ -16,7 +16,7 @@
 # usage - This function used for user guidance what are the flags they have to pass while running the script
 usage(){
 cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") <args>
+Usage: $(basename "${BASH_SOURCE[0]}") error <args>
 
 Prerequisites Required:
     Minimum Skopeo version should be 1.14
@@ -25,28 +25,30 @@ Available options:
     -ps    : Mandatory PULL-SECRET file path.
     -lreg  : Mandatory LOCAL_ISF_REGISTRY="<Your Enterprise Registry Host>:<Port>", PORT is optional.
     -lrep  : Mandatory LOCAL_ISF_REPOSITORY="<Your Image Path>", which is the image path to mirror the images.
-    -ocpv  : Optional OCP_VERSION, Required only if '-all' or '-ocp' or '-redhat' or '-df' is used.
+    -pr    : Optional PRODUCT type, either "hci" or "sds", by default "hci" will be considered.
+    -ocpv  : Optional OCP_VERSION, Required only if '-all' or '-ocp' or '-redhat' is used.
+    -fdfv  : Optional FDF_VERSION, Required only if '-all' or '-fdf' or '-redhat' is used.
     -all   : Optional ALL_IMAGES, which mirrors all the images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING).
     -ocp   : Optional OCP_IMAGES, which mirrors all the OCP images.
     -redhat: Optional REDHAT_IMAGES, which mirrors all the REDHAT images.
     -fusion: Optional FUSION_IMAGES, which mirrors all the FUSION images.
     -gdp   : Optional GDP_IMAGES, which mirrors all the GLOBAL DATA PLATFORM images.
-    -df    : Optional DF_IMAGES, which mirrors all the  DATA FOUNDATION images.
+    -fdf    : Optional DF_IMAGES, which mirrors all the  DATA FOUNDATION images.
     -br    : Optional BR_IMAGES, which mirrors all the  BACKUP & RESTORE images.
-    -dcs"  : Optional DCS_IMAGES, which mirrors all the  DATA CATALOGING images.
+    -dcs   : Optional DCS_IMAGES, which mirrors all the  DATA CATALOGING images.
  
 To Mirror images present in the enterprise registry, execute as following:
     To Mirror All Images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
         nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -all &
     To Mirror Only Required Images(Any/Some of the OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
-        nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -ocp -redhat -fusion -gdp -df -br -dcs &
+        nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -ocp -redhat -fusion -gdp -fdf -br -dcs &
 
 Example:
     nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all &
 
 NOTE: 
 - If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file
-- The Input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY are based on mirroring in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
+- The Input values like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY are based on mirroring in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
 
 EOF
     exit 1
@@ -75,44 +77,47 @@ function processArguments {
 		arg=$1
 		shift
 		case $arg in
-		-ps)
-			PULL_SECRET=$1
-			shift ;;
+		  -ps)
+        PULL_SECRET=$1
+        shift ;;
 	    -lreg)
-			LOCAL_ISF_REGISTRY=$1
-			shift ;;
+        LOCAL_ISF_REGISTRY=$1
+        shift ;;
 	    -lrep)
-			LOCAL_ISF_REPOSITORY=$1
-			shift ;;
+        LOCAL_ISF_REPOSITORY=$1
+        shift ;;
 	    -pr)
-            PRODUCT=$1
-            shift ;;
-		-env)
-			ENV=$1
-			shift ;;
-	    -isf)
-			ISF_VERSION=$1
-			shift ;;
-        -ocpv)
-            OCP_VERSION=$1
-            shift ;;
-        -fusion)
-            ISF=$arg ;;
-        -gdp)
-            GDP_IMAGES=$arg ;;
-        -br)
-            GUARDIAN_IMAGES=$arg ;;
-        -dcs)
-            DISCOVER_IMAGES=$arg ;;
-        -df)
-            FDF_IMAGES=$arg ;;
-        -redhat)
-            REDHAT_IMAGES=$arg ;;
-        -ocp)
-            OCP_IMAGES=$arg ;;
-        -all)
-            ALL_IMAGES=$arg ;;
-		-*)
+        PRODUCT=$1
+        shift ;;
+      -env)
+        ENV=$1
+        shift ;;
+      -isf)
+        ISF_VERSION=$1
+        shift ;;
+      -ocpv)
+          OCP_VERSION=$1
+          shift ;;
+      -fdfv)
+        FDF_VERSION=$1
+        shift ;;
+      -fusion)
+          ISF=$arg ;;
+      -gdp)
+          GDP_IMAGES=$arg ;;
+      -br)
+          GUARDIAN_IMAGES=$arg ;;
+      -dcs)
+          DISCOVER_IMAGES=$arg ;;
+      -fdf)
+          FDF_IMAGES=$arg ;;
+      -redhat)
+          REDHAT_IMAGES=$arg ;;
+      -ocp)
+          OCP_IMAGES=$arg ;;
+      -all)
+          ALL_IMAGES=$arg ;;
+	  	-*)
 			print warn "Ignoring unrecognized option $arg" >&2
 			# Discard option value
 			shift ;;
@@ -139,7 +144,12 @@ function repo_login() {
     print info "Using podman as container tool."
     CTOOL=podman
   fi
-  for LOGIN_SRC_REG in ${IBM_REGISTRY} ${REDHAT_REGISTRY} ${QUAY_REGISTRY} ${LOCAL_ISF_REGISTRY}
+  if [[ $LOCAL_ISF_REGISTRY == *":"* ]] ; then
+    LOCAL_ISF_REGISTRY_NOPORT=${LOCAL_ISF_REGISTRY%%:*}
+  else
+    LOCAL_ISF_REGISTRY_NOPORT=""
+  fi
+  for LOGIN_SRC_REG in ${IBM_REGISTRY} ${REDHAT_REGISTRY} ${QUAY_REGISTRY} ${LOCAL_ISF_REGISTRY} ${LOCAL_ISF_REGISTRY_NOPORT}
   do
     DECODED_AUTH_VALUE=$(jq -r ".auths[\"$LOGIN_SRC_REG\"].auth" ${PULL_SECRET} | base64 -d)
     USERNAME=$(echo $DECODED_AUTH_VALUE | cut -d':' -f1)
@@ -158,7 +168,15 @@ function repo_login() {
 function get_image_list_json() {
   # get the megabom from a json file
   print info "EXECUTING get_image_list_json()"
-  IMAGE_LIST_JSON=./isf-271-images.json
+  if [[ $PRODUCT = "sds" ]] ; then
+    IMAGE_LIST_JSON=./isf-272-sds-images.json
+  else
+    IMAGE_LIST_JSON=./isf-272-hci-images.json
+  fi
+  if [[ $? -ne 0 ]] ; then
+		print error "Please make sure isf-272-hci-images.json & isf-272-sds-images.json files are in this folder"
+		exit 1
+	fi
 }
 
 function get_megabom_images() {
@@ -181,7 +199,7 @@ function get_megabom_images() {
   EXT_PARENT_LOC=($(jq -r '.external[]."parent_location"' $IMAGE_LIST_JSON))
   EXT_OCP_VER=($(jq -r '.external[]."ocp_version"' $IMAGE_LIST_JSON))
   if [[ $? -ne 0 ]] ; then
-    print error "Please make sure isf-271-images.json file is in this folder"
+    print error "Please make sure isf-272-hci-images.json & isf-272-sds-images.json files are in this folder"
     exit 1
   fi
 }
@@ -198,7 +216,7 @@ function get_kc_df_images() {
       skipTLS: true
   mirror:
     operators:
-      - catalog: icr.io/cpopen/isf-data-foundation-catalog:v4.14
+      - catalog: icr.io/cpopen/isf-data-foundation-catalog:v${FDF_VERSION}
         packages:
           - name: "mcg-operator"
           - name: "ocs-operator"
@@ -207,6 +225,7 @@ function get_kc_df_images() {
           - name: "odf-operator"
           - name: "odr-cluster-operator"
           - name: "odr-hub-operator"
+          - name: "ocs-client-operator"
 EOF
   FDF="$(pwd)/DF_images.txt"
   echo -e "================= Skopeo Commands for FDF Images =================\n" >> ${FDF}
@@ -214,12 +233,6 @@ EOF
   print info "oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history"; failedtocopy=1; fi
-  if [[ $failedtocopy -eq 1  ]] ; then
-		print error "Some get_kc_df_images() are having issues to copy, please check nohup.out / output of execution"
-		exit 1
-	else
-		print info "Successfully mirrored get_kc_df_images()!!!"
-	fi
 }
 
 function get_kc_local_df_images() {
@@ -234,22 +247,20 @@ function get_kc_local_df_images() {
       skipTLS: true
   mirror:
     operators:
-      - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.14
+      - catalog: registry.redhat.io/redhat/redhat-operator-index:v${FDF_VERSION}
         packages:
           - name: "local-storage-operator"
           - name: "lvms-operator"
+          - name: "kubernetes-nmstate-operator"
+          - name: "redhat-oadp-operator"
+          - name: "amq-streams"
+          - name: "kubevirt-hyperconverged"
 EOF
   MIRROR_LOG=${FDF}
   echo -e "================= Skopeo Commands for local storage operator FDF Images =================\n" >> ${FDF}
   print info "oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history"; failedtocopy=1; fi
-  if [[ $failedtocopy -eq 1  ]] ; then
-		print error "Some get_kc_local_df_images() are having issues to copy, please check nohup.out / output of execution"
-		exit 1
-	else
-		print info "Successfully mirrored get_kc_local_df_images()!!!"
-	fi
 }
 
 function get_kc_redhat_external() {
@@ -274,12 +285,6 @@ EOF
   print info "oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history"; failedtocopy=1; fi
-  if [[ $failedtocopy -eq 1  ]] ; then
-		print error "Some get_kc_redhat_external() are having issues to copy, please check nohup.out / output of execution"
-		exit 1
-	else
-		print info "Successfully mirrored get_kc_redhat_external()!!!"
-	fi
 }
 
 function mirror_internal_images() {
@@ -292,11 +297,14 @@ function mirror_internal_images() {
       IMG_LOC="${ARTIFACTORY_LOC[i]}"
     fi
     SOURCE_IMAGE="docker://${IMG_LOC}/${INT_IMAGE[i]}@${DIGEST[i]}"
-    DEST_IMAGE=$(echo "${PRODUCT_LOC[i]}/${INT_IMAGE[i]}@${DIGEST[i]}" | sed "s|${PARENT_LOC[i]}||")
-    IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
+    IMAGE_URL="docker://${TARGET_PATH}/${INT_IMAGE[i]}@${DIGEST[i]}"
     if [[ $GDP_IMAGES = "-gdp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GDP}
       if [[ "${INT_SERVICE[i]}" = "cnsa" ]] ; then
+        if [[ "${INT_IMAGE[i]}" = "ibm-spectrum-scale-daemon" ]] || [[ "${INT_IMAGE[i]}" = "csi-snapshotter" ]] || [[ "${INT_IMAGE[i]}" = "csi-attacher" ]] || [[ "${INT_IMAGE[i]}" = "csi-provisioner" ]] || [[ "${INT_IMAGE[i]}" = "livenessprobe" ]] || [[ "${INT_IMAGE[i]}" = "csi-node-driver-registrar" ]] || [[ "${INT_IMAGE[i]}" = "csi-resizer" ]] || [[ "${INT_IMAGE[i]}" = "ibm-spectrum-scale-csi-driver" ]] ; then
+          DEST_FOLDER=$(basename "$IMG_LOC")
+          IMAGE_URL="docker://${TARGET_PATH}/${DEST_FOLDER}/${INT_IMAGE[i]}@${DIGEST[i]}"
+        fi
         echo "skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"" >> ${MIRROR_LOG}
         skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"
         if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL""; failedtocopy=1; fi
@@ -337,12 +345,6 @@ function mirror_internal_images() {
       fi
     fi
   done
-  if [[ $failedtocopy -eq 1  ]] ; then
-		print error "Some mirror_internal_images() are having issues to copy, please check nohup.out / output of execution"
-		exit 1
-	else
-		print info "Successfully mirrored mirror_internal_images()!!!"
-	fi
 }
 
 function mirror_megabom_external_images() {
@@ -350,7 +352,7 @@ function mirror_megabom_external_images() {
   print info "EXECUTING mirror_megabom_external_images()"
   for ((i=0; i<${#EXT_IMAGE[@]}; i++)); do
     SOURCE_IMAGE="docker://${EXT_IMAGE[i]}"
-    DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed "s|${EXT_PARENT_LOC[i]}||")
+    DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|.*/|/|')
     IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
     if [[ $GDP_IMAGES = "-gdp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GDP}
@@ -363,6 +365,13 @@ function mirror_megabom_external_images() {
     if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GUARDIAN}
       if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${INT_SERVICE[i]}" = "backup-restore-server" ]] ; then
+        if [[ ${EXT_IMAGE[i]} = *"ose-kube-rbac-proxy"* ]] ; then
+          DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
+          IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
+          echo "skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"" >> ${MIRROR_LOG}
+          skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"
+          if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL""; failedtocopy=1; fi
+        fi
         echo "skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"" >> ${MIRROR_LOG}
         skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"
         if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL""; failedtocopy=1; fi
@@ -371,6 +380,10 @@ function mirror_megabom_external_images() {
     if [[ $DISCOVER_IMAGES = "-dcs" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${DISCOVER}
       if [[ "${EXT_SERVICE[i]}" = "discover" ]] ; then
+        if [[ ${EXT_IMAGE[i]} = *"db2u/"* ]] ; then
+          DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
+          IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
+        fi
         echo "skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"" >> ${MIRROR_LOG}
         skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"
         if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL""; failedtocopy=1; fi
@@ -380,59 +393,46 @@ function mirror_megabom_external_images() {
       MIRROR_LOG=${FUSION}
       if [[ "${EXT_SERVICE[i]}" = "fusion" ]] ; then
         if [[ ${EXT_IMAGE[i]} = *"ose-kube-rbac-proxy"* ]] ; then
-          SRC_IMAGE=$(echo $DEST_IMAGE | cut -d'/' -f 3-)
+          SRC_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|.*/||')
           echo "skopeo copy --all --preserve-digests "$SOURCE_IMAGE" docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE" >> ${MIRROR_LOG}
           skopeo copy --all --preserve-digests "$SOURCE_IMAGE" docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE
           if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all --preserve-digests "$SOURCE_IMAGE" docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE"; failedtocopy=1; fi
         fi
+        DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
+        IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
         echo "skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"" >> ${MIRROR_LOG}
         skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL"
         if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --insecure-policy --all "$SOURCE_IMAGE" "$IMAGE_URL""; failedtocopy=1; fi
       fi
     fi
   done
-  if [[ $failedtocopy -eq 1  ]] ; then
-		print error "Some mirror_megabom_external_images() are having issues to copy, please check nohup.out / output of execution"
-		exit 1
-	else
-		print info "Successfully mirrored mirror_megabom_external_images()!!!"
-	fi
 }
 
 function mirror_submariner_images () {
   # Hard Coding the copy commands for submariner images
   # Can be removed if the images are added to the megabom
   print info "EXECUTING mirror_submariner_images()"
-  echo "skopeo copy --all docker://quay.io/submariner/submariner-operator:0.15.2 docker://$TARGET_PATH/submariner/submariner-operator:0.15.2" >> "$FUSION"
-  skopeo copy --all docker://quay.io/submariner/submariner-operator:0.15.2 docker://$TARGET_PATH/submariner/submariner-operator:0.15.2
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/submariner-operator:0.15.2 docker://$TARGET_PATH/submariner/submariner-operator:0.15.2"; failedtocopy=1; fi
-  echo "skopeo copy --all docker://quay.io/submariner/submariner-gateway:0.15.2 docker://$TARGET_PATH/submariner/submariner-gateway:0.15.2" >> "$FUSION"
-  skopeo copy --all docker://quay.io/submariner/submariner-gateway:0.15.2 docker://$TARGET_PATH/submariner/submariner-gateway:0.15.2
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/submariner-operator:0.15.2 docker://$TARGET_PATH/submariner/submariner-operator:0.15.2"; failedtocopy=1; fi
-  echo "skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.15.2 docker://$TARGET_PATH/submariner/lighthouse-agent:0.15.2" >> "$FUSION"
-  skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.15.2 docker://$TARGET_PATH/submariner/lighthouse-agent:0.15.2
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.15.2 docker://$TARGET_PATH/submariner/lighthouse-agent:0.15.2"; failedtocopy=1; fi
-  echo "skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.15.2 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.15.2" >> "$FUSION"
-  skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.15.2 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.15.2
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.15.2 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.15.2"; failedtocopy=1; fi
-  echo "skopeo copy --all docker://quay.io/submariner/submariner-networkplugin-syncer:0.15.2 docker://$TARGET_PATH/submariner/submariner-networkplugin-syncer:0.15.2" >> "$FUSION"
-  skopeo copy --all docker://quay.io/submariner/submariner-networkplugin-syncer:0.15.2 docker://$TARGET_PATH/submariner/submariner-networkplugin-syncer:0.15.2
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/submariner-networkplugin-syncer:0.15.2 docker://$TARGET_PATH/submariner/submariner-networkplugin-syncer:0.15.2"; failedtocopy=1; fi
-  echo "skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.15.2 docker://$TARGET_PATH/submariner/submariner-route-agent:0.15.2" >> "$FUSION"
-  skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.15.2 docker://$TARGET_PATH/submariner/submariner-route-agent:0.15.2
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.15.2 docker://$TARGET_PATH/submariner/submariner-route-agent:0.15.2"; failedtocopy=1; fi
+  echo "skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3" >> "$FUSION"
+  skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3"; failedtocopy=1; fi
+  echo "skopeo copy --all docker://quay.io/submariner/submariner-gateway:0.16.3 docker://$TARGET_PATH/submariner/submariner-gateway:0.16.3" >> "$FUSION"
+  skopeo copy --all docker://quay.io/submariner/submariner-gateway:0.16.3 docker://$TARGET_PATH/submariner/submariner-gateway:0.16.3
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3"; failedtocopy=1; fi
+  echo "skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3" >> "$FUSION"
+  skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3"; failedtocopy=1; fi
+  echo "skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3" >> "$FUSION"
+  skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3"; failedtocopy=1; fi
+  echo "skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3" >> "$FUSION"
+  skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3"; failedtocopy=1; fi
   echo "skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.8.0" >> "$FUSION"
   skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.8.0
   if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.8.0"; failedtocopy=1; fi
   echo "skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.8.0" >> "$FUSION"
   skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.8.0
   if [[ $? -ne 0 ]] ; then print error "Failed to copy skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.8.0"; failedtocopy=1; fi
-  if [[ $failedtocopy -eq 1  ]] ; then
-    print error "Some mirror_submariner_images() are having issues to copy, please check nohup.out / output of execution"
-    exit 1 
-  else
-    print info "Successfully mirrored mirror_submariner_images()!!!"
-  fi
 }
 
 function mirror_ocp_images() {
@@ -444,12 +444,6 @@ function mirror_ocp_images() {
   echo "oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64" >> ${MIRROR_LOG}
   oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64
   if [[ $? -ne 0 ]] ; then print error "Failed to copy oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64"; failedtocopy=1; fi
-  if [[ $failedtocopy -eq 1  ]] ; then
-    print error "Some mirror_ocp_images() are having issues to copy, please check nohup.out / output of execution"
-    exit 1 
-  else
-    print info "Successfully mirrored mirror_ocp_images()!!!"
-  fi
 }
 
 function mirror_images() {
@@ -463,11 +457,11 @@ function mirror_images() {
   if [[ $OCP_IMAGES = "-ocp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
     mirror_ocp_images
   fi
-  if [[ $ISF = "-fusion" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
+  if [[ ($ALL_IMAGES = "-all" || $ISF = "-fusion") && $PRODUCT = "hci" ]] ; then
     mirror_submariner_images
   fi
   mirror_internal_images
-  if [[ $FDF_IMAGES = "-df" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
+  if [[ $FDF_IMAGES = "-fdf" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
     get_kc_df_images
     get_kc_local_df_images
   fi
@@ -486,11 +480,14 @@ function validate_images() {
     else
       IMG_LOC="${ARTIFACTORY_LOC[i]}"
     fi
-    DEST_IMAGE=$(echo "${PRODUCT_LOC[i]}/${INT_IMAGE[i]}@${DIGEST[i]}" | sed "s|${PARENT_LOC[i]}||")
-    IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
+    IMAGE_URL="docker://${TARGET_PATH}/${INT_IMAGE[i]}@${DIGEST[i]}"
     if [[ $GDP_IMAGES = "-gdp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GDP}
       if [[ "${INT_SERVICE[i]}" = "cnsa" ]] ; then
+        if [[ "${INT_IMAGE[i]}" = "ibm-spectrum-scale-daemon" ]] || [[ "${INT_IMAGE[i]}" = "csi-snapshotter" ]] || [[ "${INT_IMAGE[i]}" = "csi-attacher" ]] || [[ "${INT_IMAGE[i]}" = "csi-provisioner" ]] || [[ "${INT_IMAGE[i]}" = "livenessprobe" ]] || [[ "${INT_IMAGE[i]}" = "csi-node-driver-registrar" ]] || [[ "${INT_IMAGE[i]}" = "csi-resizer" ]] || [[ "${INT_IMAGE[i]}" = "ibm-spectrum-scale-csi-driver" ]] ; then
+          DEST_IMAGE=$(basename "$IMG_LOC")
+          IMAGE_URL="docker://${TARGET_PATH}/${DEST_IMAGE}/${INT_IMAGE[i]}@${DIGEST[i]}"
+        fi
         echo "skopeo inspect "$IMAGE_URL""
         skopeo inspect "$IMAGE_URL"
         if [[ $? -ne 0 ]] ; then
@@ -551,8 +548,7 @@ function validate_images() {
   for ((i=0; i<${#EXT_IMAGE[@]}; i++)); do
     EXT_CNT=$(($i + 1))
     echo VALIDATING EXTERNAL IMAGE [${EXT_CNT}/${#EXT_SERVICE[@]}]....${EXT_IMAGE[i]}
-    SOURCE_IMAGE="docker://${EXT_IMAGE[i]}"
-    DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed "s|${EXT_PARENT_LOC[i]}||")
+    DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|.*/|/|')
     IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
     if [[ $GDP_IMAGES = "-gdp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GDP}
@@ -560,36 +556,52 @@ function validate_images() {
         echo "skopeo inspect "$IMAGE_URL""
         skopeo inspect "$IMAGE_URL"
         if [[ $? -ne 0 ]] ; then
-          echo -e "${EXT_IMAGE[i]}\n" >> ${MISSING_IMAGES}
+          echo -e "${IMAGE_URL}\n" >> ${MISSING_IMAGES}
           failedtocopy=1
         else
-          echo -e "${EXT_IMAGE[i]}\n" >> ${AVAILABLE_IMAGES}
+          echo -e "${IMAGE_URL}\n" >> ${AVAILABLE_IMAGES}
         fi
       fi
     fi
     if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GUARDIAN}
       if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${INT_SERVICE[i]}" = "backup-restore-server" ]] ; then
+        if [[ ${EXT_IMAGE[i]} = *"ose-kube-rbac-proxy"* ]] ; then
+          DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
+          IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
+          echo "skopeo inspect "$IMAGE_URL""
+          skopeo inspect "$IMAGE_URL"
+          if [[ $? -ne 0 ]] ; then
+            echo -e "${IMAGE_URL}\n" >> ${MISSING_IMAGES}
+            failedtocopy=1
+          else
+            echo -e "${IMAGE_URL}\n" >> ${AVAILABLE_IMAGES}
+          fi
+        fi
         echo "skopeo inspect "$IMAGE_URL""
         skopeo inspect "$IMAGE_URL"
         if [[ $? -ne 0 ]] ; then
-          echo -e "${EXT_IMAGE[i]}\n" >> ${MISSING_IMAGES}
+          echo -e "${IMAGE_URL}\n" >> ${MISSING_IMAGES}
           failedtocopy=1
         else
-          echo -e "${EXT_IMAGE[i]}\n" >> ${AVAILABLE_IMAGES}
+          echo -e "${IMAGE_URL}\n" >> ${AVAILABLE_IMAGES}
         fi
       fi
     fi
     if [[ $DISCOVER_IMAGES = "-dcs" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${DISCOVER}
       if [[ "${EXT_SERVICE[i]}" = "discover" ]] ; then
+        if [[ ${EXT_IMAGE[i]} = *"db2u/"* ]] ; then
+          DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
+          IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
+        fi
         echo "skopeo inspect "$IMAGE_URL""
         skopeo inspect "$IMAGE_URL"
         if [[ $? -ne 0 ]] ; then
-          echo -e "${EXT_IMAGE[i]}\n" >> ${MISSING_IMAGES}
+          echo -e "${IMAGE_URL}\n" >> ${MISSING_IMAGES}
           failedtocopy=1
         else
-          echo -e "${EXT_IMAGE[i]}\n" >> ${AVAILABLE_IMAGES}
+          echo -e "${IMAGE_URL}\n" >> ${AVAILABLE_IMAGES}
         fi
       fi
     fi
@@ -597,24 +609,26 @@ function validate_images() {
       MIRROR_LOG=${FUSION}
       if [[ "${EXT_SERVICE[i]}" = "fusion" ]] ; then
         if [[ ${EXT_IMAGE[i]} = *"ose-kube-rbac-proxy"* ]] ; then
-          SRC_IMAGE=$(echo $DEST_IMAGE | cut -d'/' -f 3-)
+          SRC_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|.*/||')
           IMAGE_URL="docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE"
           echo "skopeo inspect "$IMAGE_URL""
           skopeo inspect $IMAGE_URL
           if [[ $? -ne 0 ]] ; then
-            echo -e "${EXT_IMAGE[i]}\n" >> ${MISSING_IMAGES}
+            echo -e "${IMAGE_URL}\n" >> ${MISSING_IMAGES}
             failedtocopy=1
           else
-            echo -e "${EXT_IMAGE[i]}\n" >> ${AVAILABLE_IMAGES}
+            echo -e "${IMAGE_URL}\n" >> ${AVAILABLE_IMAGES}
           fi
         else
+          DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
+          IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
           echo "skopeo inspect "$IMAGE_URL""
           skopeo inspect "$IMAGE_URL"
           if [[ $? -ne 0 ]] ; then
-            echo -e "${EXT_IMAGE[i]}\n" >> ${MISSING_IMAGES}
+            echo -e "${IMAGE_URL}\n" >> ${MISSING_IMAGES}
             failedtocopy=1
           else
-            echo -e "${EXT_IMAGE[i]}\n" >> ${AVAILABLE_IMAGES}
+            echo -e "${IMAGE_URL}\n" >> ${AVAILABLE_IMAGES}
           fi
         fi
       fi
@@ -629,10 +643,10 @@ function validate_images() {
     echo "skopeo inspect "$IMAGE_URL""
     skopeo inspect "$IMAGE_URL"
     if [[ $? -ne 0 ]] ; then
-      echo -e "${EXT_IMAGE[i]}\n" >> ${MISSING_IMAGES}
+      echo -e "${IMAGE_URL}\n" >> ${MISSING_IMAGES}
       failedtocopy=1
     else
-      echo -e "${EXT_IMAGE[i]}\n" >> ${AVAILABLE_IMAGES}
+      echo -e "${IMAGE_URL}\n" >> ${AVAILABLE_IMAGES}
     fi
   fi
   # Loop through the OCP images and validate them
@@ -643,17 +657,11 @@ function validate_images() {
     echo "skopeo inspect "$IMAGE_URL""
     skopeo inspect "$IMAGE_URL"
     if [[ $? -ne 0 ]] ; then
-      echo -e "${EXT_IMAGE[i]}\n" >> ${MISSING_IMAGES}
+      echo -e "${IMAGE_URL}\n" >> ${MISSING_IMAGES}
       failedtocopy=1
     else
-      echo -e "${EXT_IMAGE[i]}\n" >> ${AVAILABLE_IMAGES}
+      echo -e "${IMAGE_URL}\n" >> ${AVAILABLE_IMAGES}
     fi
-  fi
-  if [[ $failedtocopy -eq 1  ]] ; then
-    print error "Some validate_images() are having issues please check nohup.out / output of execution"
-    exit 1
-  else
-    print info "Successfully validated validate_images()!!!"
   fi
 }
 
@@ -715,8 +723,8 @@ echo "REPO_PREFIX: $REPO_PREFIX"
 [[  -z "$PULL_SECRET" ]] && usage
 
 if [[  -z "$ISF_VERSION" ]] ; then
-	print info "No $ISF_VERSION -isf is provided, using 2.7.1 as default"
-	ISF_VERSION="2.7.1"
+	print info "No $ISF_VERSION -isf is provided, using 2.7.2 as default"
+	ISF_VERSION="2.7.2"
 else
   ISF_VERSION=$ISF_VERSION
 fi
@@ -734,8 +742,12 @@ else
   PRODUCT=$PRODUCT
 fi
 
-if [[ $REDHAT_IMAGES = "-redhat" ]] || [[ $FDF_IMAGES = "-df" ]] || [[ $OCP_IMAGES = "-ocp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
+if [[ $REDHAT_IMAGES = "-redhat" ]] || [[ $OCP_IMAGES = "-ocp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   [[  -z "$OCP_VERSION" ]] && usage
+fi
+
+if [[ $FDF_IMAGES = "-fdf" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
+  [[  -z "$FDF_VERSION" ]] && usage
 fi
 
 if [[ -z "$ENV" ]] ; then
@@ -771,7 +783,6 @@ fi
 if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${GUARDIAN}
   rm -f ${GUARDIAN}
-  
 fi
 if [[ $DISCOVER_IMAGES = "-dcs" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${DISCOVER}
@@ -781,7 +792,7 @@ if [[ $REDHAT_IMAGES = "-redhat" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${REDHAT}
   rm -f ${REDHAT}
 fi
-if [[ $FDF_IMAGES = "-df" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
+if [[ $FDF_IMAGES = "-fdf" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   cat ${FDF}
   rm -f ${FDF}
 fi
@@ -790,12 +801,18 @@ if [[ $OCP_IMAGES = "-ocp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
   rm -f ${OCP}
 fi
 
-cat ${MISSING_IMAGES}
-rm -f ${MISSING_IMAGES}
+echo "These are the available images: "
 cat ${AVAILABLE_IMAGES}
 rm -f ${AVAILABLE_IMAGES}
 
+echo "These are the missing images: "
+cat ${MISSING_IMAGES}
+rm -f ${MISSING_IMAGES}
+
 if [[ $failedtocopy -ne 1  ]] ; then
   print info "MIRRORING DONE Successfully!!!"
+  exit 0
+else
+  print error "Failed to mirror some images, please check for the error in nohup.out or missing_img.txt !!!"
   exit 1
 fi
