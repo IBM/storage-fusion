@@ -48,14 +48,7 @@ if [[ -n $2 ]]; then
 	fi
 
 	fusionNs=$(oc get spectrumfusion -A --no-headers | cut -d" " -f1)
-        uname=$(uname)
-        case "$uname" in
-          "Darwin")
-             [[ "${job_name}" ]] && job_uid=$(oc get f$job_type $job_name -n $fusionNs -o json | jq '.metadata.uid' | tr -d '"') ;;
-          "Linux")
-             [ "${job_name+set}" ] && job_uid=$(oc get f$job_type $job_name -n $fusionNs -o json | jq '.metadata.uid' | tr -d '"') ;;
-          *) echo "Error: Unsupported platform $uname"; exit 1; ;;
-        esac
+        [ "${job_name+set}" ] && job_uid=$(oc get f$job_type $job_name -n $fusionNs -o json | jq '.metadata.uid' | tr -d '"')
 	brNs=$(oc -n "$fusionNs" get fusionserviceinstance ibm-backup-restore-service-instance -o json |jq -rc '[(.spec.parameters[]|"\n",.name,.value)]|@csv' | tr -d '"' | grep ",namespace," | cut -d"," -f3)
 
 	if [[ -z "$brNs" ]]; then
