@@ -20,6 +20,7 @@ Usage: $(basename "${BASH_SOURCE[0]}") error <args>
 
 Prerequisites Required:
     Minimum Skopeo version should be 1.14
+    jq to be installed
 
 Available options:
     -ps    : Mandatory PULL-SECRET file path.
@@ -232,6 +233,7 @@ EOF
   MIRROR_LOG=${FDF}
   print info "oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history
+  wait $!
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history"; failedtocopy=1; fi
 }
 
@@ -260,6 +262,7 @@ EOF
   echo -e "================= Skopeo Commands for local storage operator FDF Images =================\n" >> ${FDF}
   print info "oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history
+  wait $!
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history"; failedtocopy=1; fi
 }
 
@@ -284,6 +287,7 @@ EOF
   MIRROR_LOG=${REDHAT}
   print info "oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history
+  wait $!
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history"; failedtocopy=1; fi
 }
 
@@ -443,6 +447,7 @@ function mirror_ocp_images() {
   MIRROR_LOG=${OCP}
   echo "oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64" >> ${MIRROR_LOG}
   oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64
+  wait $!
   if [[ $? -ne 0 ]] ; then print error "Failed to copy oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64"; failedtocopy=1; fi
 }
 
