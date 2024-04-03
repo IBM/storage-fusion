@@ -2,7 +2,11 @@
 
 This script does the mirroring and validation of both HCI & SDS Images.
 
-To execute the script, ensure you have either Docker or Podman on your mirroring host, jq to be installed and Skopeo version should be minimum of 1.14 .
+### Prerequisites Required:
+- Docker or Podman should be installed
+- jq to be installed
+- Skopeo should be installed with minimum version of 1.14
+- oc-mirror utility should be installed if redhat images are going to be mirrored
 
 Ensure all the required repository auths are added in the pull-secret.json file.
 
