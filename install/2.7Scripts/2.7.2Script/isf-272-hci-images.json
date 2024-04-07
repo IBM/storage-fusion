@@ -1560,7 +1560,7 @@
     },
     {
       "service": "backup-restore-server",
-      "image_name": "/idp-server-operator-bundle@sha256:563b30a7072c6f7b734a67607b2cffa314ccf41312635ee2e0e45c706febad13",
+      "image_name": "icr.io/cpopen/idp-server-operator-bundle@sha256:563b30a7072c6f7b734a67607b2cffa314ccf41312635ee2e0e45c706febad13",
       "ocp_version": "all"
     },
     {
@@ -1705,7 +1705,7 @@
     },
     {
       "service": "discover",
-      "image_name": "cp.icr.io/cp/ibm-spectrum-discover/must-gather@sha256:7b4e1d52db1e0d7ab368a074e703900806ba5a18ff0add08fe5f0c9bb4ac590c",
+      "image_name": "cp.icr.io/cp/ibm-spectrum-discover/must-gather@sha256:822f77e3d6dbbbe6243316dd544961c2b9584c06d56e18a841a5010c649e39b7",
       "ocp_version": "all"
     }
   ]
