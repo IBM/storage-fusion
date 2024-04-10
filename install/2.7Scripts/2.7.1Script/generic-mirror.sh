@@ -207,6 +207,7 @@ function get_kc_df_images() {
           - name: "odf-operator"
           - name: "odr-cluster-operator"
           - name: "odr-hub-operator"
+          - name: "ocs-client-operator"
 EOF
   FDF="$(pwd)/DF_images.txt"
   echo -e "================= Skopeo Commands for FDF Images =================\n" >> ${FDF}
@@ -238,6 +239,10 @@ function get_kc_local_df_images() {
         packages:
           - name: "local-storage-operator"
           - name: "lvms-operator"
+          - name: "kubernetes-nmstate-operator"
+          - name: "redhat-oadp-operator"
+          - name: "amq-streams"
+          - name: "kubevirt-hyperconverged"
 EOF
   MIRROR_LOG=${FDF}
   echo -e "================= Skopeo Commands for local storage operator FDF Images =================\n" >> ${FDF}
