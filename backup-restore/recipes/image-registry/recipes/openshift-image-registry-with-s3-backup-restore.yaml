@@ -1,0 +1,59 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: openshift-image-registry-with-s3-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: openshift-image-registry
+  groups: 
+    - name: openshift-image-registry-secret
+      type: resource
+      includedResourceTypes:
+        - secret
+      labelSelector: cutom-label=fusion  
+    - name: openshift-image-registry-custom-resources-configs-backup
+      type: resource
+      includeClusterResources: true
+      includedResourceTypes:
+        - configs.imageregistry.operator.openshift.io 
+    - name: openshift-image-registry-custom-resources-configs-restore
+      type: resource
+      restoreOverwriteResources: true  
+      includeClusterResources: true
+      backupRef: openshift-image-registry-custom-resources-configs-backup    
+  hooks:
+  - name: cluster-image-registry-operator-check
+    type: check
+    namespace: ${GROUP.openshift-image-registry-secret.namespace}
+    selectResource: deployment
+    nameSelector: cluster-image-registry-operator
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: image-registry-check 
+    type: check
+    namespace: ${GROUP.openshift-image-registry-secret.namespace}
+    selectResource: deployment
+    nameSelector: image-registry
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  workflows:
+  - name: backup
+    sequence:
+    - group: openshift-image-registry-secret
+    - group: openshift-image-registry-custom-resources-configs-backup
+  - name: restore
+    sequence:
+    - group: openshift-image-registry-secret
+    - group: openshift-image-registry-custom-resources-configs-restore    
+    - hook: cluster-image-registry-operator-check/replicasReady
+    - hook: image-registry-check/replicasReady
