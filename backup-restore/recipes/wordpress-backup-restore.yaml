@@ -1,0 +1,60 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: wordpress-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: wordpress
+  groups:
+    - name: wordpress-volumes
+      type: volume
+    - name: wordpress-resources
+      type: resource
+  hooks:
+  - name: mysql-pod-exec
+    type: exec
+    namespace: ${GROUP.wordpress-volumes.namespace}
+    labelSelector: app=mysql
+    timeout: 60
+    onError: fail
+    ops:
+      - name: "flush-tables-with-read-lock"
+        command: >
+            ["/bin/bash", "-c", "mysql --user=root --password=$MYSQL_ROOT_PASSWORD -e 'FLUSH TABLES WITH READ LOCK;'"]
+        container: mysql
+  - name: wordpress-deployment-check
+    type: check
+    namespace: ${GROUP.wordpress-volumes.namespace}
+    labelSelector: app=wordpress
+    selectResource: deployment
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 120
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mysql-deployment-check
+    type: check
+    namespace: ${GROUP.wordpress-volumes.namespace}
+    labelSelector: app=mysql
+    selectResource: deployment
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 120
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  workflows:
+    - name: backup
+      sequence:
+        - group: wordpress-resources
+        - hook: mysql-pod-exec/flush-tables-with-read-lock
+        - group: wordpress-volumes
+    - name: restore
+      sequence:
+        - group: wordpress-volumes
+        - group: wordpress-resources
+        - hook: wordpress-deployment-check/replicasReady
+        - hook: mysql-deployment-check/replicasReady
