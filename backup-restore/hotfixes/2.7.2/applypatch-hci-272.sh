@@ -2,7 +2,7 @@
 
 BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace)
 [ -n "$BR_NS" ] && HUB=true
-echo "Saving data before applying patch..."
+echo "Saving data before applying HCI patch..."
 if [ -n "$HUB" ]
  then
    echo " This is hub"
@@ -71,8 +71,5 @@ if [[ -z ${ISF_CSV} ]]; then
 fi
 echo "Saving original to isf-operator.v2.7.2-original.yaml"
 oc get csv -n ibm-spectrum-fusion-ns ${ISF_CSV} -o yaml > isf-operator.v2.7.2-original.yaml
-echo "Updating csv ${ISF_CSV}"
+echo "Updating HCI csv ${ISF_CSV}"
 oc patch csv -n ibm-spectrum-fusion-ns $ISF_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/4/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/isf/isf-application-operator:2.7.2-f2f8eec-31017"}]'
-
-
- 
