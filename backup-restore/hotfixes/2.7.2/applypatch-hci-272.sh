@@ -28,7 +28,7 @@ echo "Saved application-controller deployment"
 if [ -n "$HUB" ]
  then
   echo "Patching backup-service deployment..."
-  oc patch deployment backup-service -n ibm-backup-restore -p '{"spec":{"template":{"spec":{"containers":[{"name":"backup-service","image":"cp.icr.io/cp/fbr/guardian-backup-service:2.7.2-16220444-33283","resources":{"limits":{"ephemeral-storage":"1Gi"},"requests":{"ephemeral-storage":"512Mi"}},"env":[{"name":"POD_NAMESPACE","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.namespace"}}}],"volumeMounts":[{"name":"tls-service-ca","readOnly":true,"mountPath":"/etc/tls-service-ca"},{"name":"spdata","mountPath":"/spdata"}]}],"volumes":[{"name":"tls-service-ca","configMap":{"name":"guardian-service-ca","defaultMode":292}},{"name":"spdata","emptyDir":{}}]}}}}'
+  oc patch deployment backup-service -n ibm-backup-restore -p '{"spec":{"template":{"spec":{"containers":[{"name":"backup-service","image":"cp.icr.io/cp/fbr/guardian-backup-service@sha256:54820def941c9ebfde1acca54368b9bc7cd34fedfa94151deb8a6766aeedc505","resources":{"limits":{"ephemeral-storage":"1Gi"},"requests":{"ephemeral-storage":"512Mi"}},"env":[{"name":"POD_NAMESPACE","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.namespace"}}}],"volumeMounts":[{"name":"tls-service-ca","readOnly":true,"mountPath":"/etc/tls-service-ca"},{"name":"spdata","mountPath":"/spdata"}]}],"volumes":[{"name":"tls-service-ca","configMap":{"name":"guardian-service-ca","defaultMode":292}},{"name":"spdata","emptyDir":{}}]}}}}'
 
   echo "Patching backup-service clusterrole..."
   oc patch clusterrole backup-service-role-ibm-backup-restore --type=json -p '[{"op":"add","path":"/rules/-","value":{"verbs":["get"],"apiGroups":[""],"resources":["secrets"]}}]'
@@ -41,10 +41,10 @@ if [ -n "$HUB" ]
 fi
 
 echo "Patching transaction-manager deployment..."
-oc patch deployment/transaction-manager -n ibm-backup-restore -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager:2.7.2-16317973-33579"}]}}}}'
+oc patch deployment/transaction-manager -n ibm-backup-restore -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:f7e325d1a051dfacfe18139e46a668359a9c11129870a4b2c4b3c2fdaec615eb"}]}}}}'
 
 echo "Patching application-controller deployment..."
-oc patch deployment/application-controller -n ibm-backup-restore -p '{"spec":{"template":{"spec":{"containers":[{"name":"application-controller","image":"cp.icr.io/cp/fbr/guardian-transaction-manager:2.7.2-16317973-33579"}]}}}}'
+oc patch deployment/application-controller -n ibm-backup-restore -p '{"spec":{"template":{"spec":{"containers":[{"name":"application-controller","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:f7e325d1a051dfacfe18139e46a668359a9c11129870a4b2c4b3c2fdaec615eb"}]}}}}'
 
 echo "Deployment rollout status..."
 if [ -n "$HUB" ]
@@ -60,9 +60,9 @@ echo "Saving original guardian-dm-operator yaml"
 oc get csv -n ibm-backup-restore ${DM_CSV} -o yaml > guardian-dm-operator.v2.7.2-original.yaml
 oc get configmap  -n ibm-backup-restore guardian-dm-image-config -o yaml > guardian-dm-image-config-original.yaml
 echo Updating data mover image...
-oc set data -n ibm-backup-restore cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cp/fbr/guardian-datamover:2.7.2-16061418-33705
+oc set data -n ibm-backup-restore cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cp/fbr/guardian-datamover@sha256:fda1faf48cadef717de9926d37c05305103ed86e0821359423fcc8e60f250178
 echo Updating CSV $DM_CSV...
-oc patch csv -n ibm-backup-restore $DM_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator:2.7.2-16061418-33705"}]'
+oc patch csv -n ibm-backup-restore $DM_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:63b136b38a07c0afdd5082bc594e0d4d6bf5a2b2cbb1297f371d7852279121c9"}]'
 
 ISF_CSV=$(oc get csv -n ibm-spectrum-fusion-ns | grep "isf-operator.v2.7.2" | awk '{print $1}')
 if [[ -z ${ISF_CSV} ]]; then
@@ -72,4 +72,4 @@ fi
 echo "Saving original to isf-operator.v2.7.2-original.yaml"
 oc get csv -n ibm-spectrum-fusion-ns ${ISF_CSV} -o yaml > isf-operator.v2.7.2-original.yaml
 echo "Updating HCI csv ${ISF_CSV}"
-oc patch csv -n ibm-spectrum-fusion-ns $ISF_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/4/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/isf/isf-application-operator:2.7.2-f2f8eec-31017"}]'
+oc patch csv -n ibm-spectrum-fusion-ns $ISF_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/4/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/isf/isf-application-operator@sha256:2d9b28574cb4a46ee2ff96b487d56bb395e90c8bfbbe10f0932f88ac51ece376"}]'
