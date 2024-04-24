@@ -37,6 +37,7 @@ Available options:
     -fdf    : Optional DF_IMAGES, which mirrors all the  DATA FOUNDATION images.
     -br    : Optional BR_IMAGES, which mirrors all the  BACKUP & RESTORE images.
     -dcs   : Optional DCS_IMAGES, which mirrors all the  DATA CATALOGING images.
+    -validate : Optional VALIDATE_IMAGES, to only validate the mirrored images, should be used only with any/some of the -all/-ocp/-redhat/-fusion/-gdp/-fdf/-br/-dcs.
  
 To Mirror images present in the enterprise registry, execute as following:
     To Mirror All Images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
@@ -44,8 +45,17 @@ To Mirror images present in the enterprise registry, execute as following:
     To Mirror Only Required Images(Any/Some of the OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
         nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -ocp -redhat -fusion -gdp -fdf -br -dcs &
 
-Example:
+To only Validate the mirrored images:
+    To only validate All Images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
+        nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -all -validate &
+    To only validate Required Images(Any/Some of the OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
+        nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -ocp -redhat -fusion -gdp -fdf -br -dcs -validate &
+
+Example for mirroring:
     nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all &
+
+Example for only validation:
+    nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all -validate &
 
 NOTE: 
 - If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file
@@ -118,6 +128,8 @@ function processArguments {
           OCP_IMAGES=$arg ;;
       -all)
           ALL_IMAGES=$arg ;;
+      -validate)
+          VALIDATE_IMAGES=$arg ;;
 	  	-*)
 			print warn "Ignoring unrecognized option $arg" >&2
 			# Discard option value
@@ -233,7 +245,6 @@ EOF
   MIRROR_LOG=${FDF}
   print info "oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history
-  wait $!
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc mirror --config imageset-config-df.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history"; failedtocopy=1; fi
 }
 
@@ -262,7 +273,6 @@ EOF
   echo -e "================= Skopeo Commands for local storage operator FDF Images =================\n" >> ${FDF}
   print info "oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history
-  wait $!
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc mirror --config imageset-config-lso.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history"; failedtocopy=1; fi
 }
 
@@ -287,7 +297,6 @@ EOF
   MIRROR_LOG=${REDHAT}
   print info "oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history" >> ${MIRROR_LOG}
   oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history
-  wait $!
   if [[ $? -ne 0 ]] ; then print error "Failed to execute oc-mirror --config imageset-redhat-external.yaml docker://"$TARGET_PATH" --dest-skip-tls --ignore-history"; failedtocopy=1; fi
 }
 
@@ -447,7 +456,6 @@ function mirror_ocp_images() {
   MIRROR_LOG=${OCP}
   echo "oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64" >> ${MIRROR_LOG}
   oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64
-  wait $!
   if [[ $? -ne 0 ]] ; then print error "Failed to copy oc adm release mirror -a ${PULL_SECRET} --from=quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 --to=$TARGET_PATH --to-release-image=$TARGET_PATH:${OCP_VERSION}-x86_64"; failedtocopy=1; fi
 }
 
@@ -641,6 +649,7 @@ function validate_images() {
   done
   # Loop through the Redhat images and validate them
   if [[ $REDHAT_IMAGES = "-redhat" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
+    echo "Validating Redhat Images"
     MIRROR_LOG=${REDHAT}
     REDHAT_VERSION=$(echo $OCP_VERSION | cut -d'.' -f1,2)
     DEST_IMAGE=/redhat/redhat-operator-index:v${REDHAT_VERSION}
@@ -656,6 +665,7 @@ function validate_images() {
   fi
   # Loop through the OCP images and validate them
   if [[ $OCP_IMAGES = "-ocp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
+    echo "Validating OCP Images"
     MIRROR_LOG=${OCP}
     DEST_IMAGE="$(oc adm release info quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64 | sed -n 's/Pull From: .*@//p')"
     IMAGE_URL="docker://${TARGET_PATH}@${DEST_IMAGE}"
@@ -772,7 +782,9 @@ echo -e "================= List of images mirrored successfully ================
 echo -e "================= Below images are missing!!!! =================\n" >> ${MISSING_IMAGES}
 
 #Mirroring the Images
-mirror_images
+if [[ $VALIDATE_IMAGES != "-validate" ]]; then
+  mirror_images
+fi
 
 #Validating the Images
 validate_images
@@ -815,9 +827,17 @@ cat ${MISSING_IMAGES}
 rm -f ${MISSING_IMAGES}
 
 if [[ $failedtocopy -ne 1  ]] ; then
-  print info "MIRRORING DONE Successfully!!!"
+  if [[ $VALIDATE_IMAGES = "-validate" ]]; then
+    print info "VALIDATION DONE Successfully!!!"
+  else
+    print info "MIRRORING DONE Successfully!!!"
+  fi
   exit 0
 else
-  print error "Failed to mirror some images, please check for the error in nohup.out or missing_img.txt !!!"
+  if [[ $VALIDATE_IMAGES = "-validate" ]]; then
+    print error "Failed to validate some images, please check for the error in nohup.out or missing_img.txt !!!"
+  else
+    print error "Failed to mirror some images, please check for the error in nohup.out or missing_img.txt !!!"
+  fi
   exit 1
 fi
