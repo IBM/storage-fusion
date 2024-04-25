@@ -36,6 +36,11 @@ To use this script, follow the below steps:
 -validate : Optional VALIDATE_IMAGES, to only validate the mirrored images, should be used only with any/some of the -all/-ocp/-redhat/-fusion/-gdp/-fdf/-br/-dcs.
 ```
 
+### NOTE:
+```
+- This Script supports only single repo mirroring & validation, for multirepo please execute this script twice with appropriate options
+```
+
 ### Syntax to execute the generic-mirror.sh script
 - To Mirror All The Images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, FUSION DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
 ```
