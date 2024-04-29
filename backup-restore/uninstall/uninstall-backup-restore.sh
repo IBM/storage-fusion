@@ -7,13 +7,18 @@ LOG=/tmp/$(basename $0)_log.txt
 rm -f "$LOG"
 exec &> >(tee -a $LOG)
 
+echo "ARGUMENTS:" "$@"
+
 USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
        -u to uninstall a spoke installation before uninstalling hub 
-       -d to create DeleteBackupRequest to delete backups. Use this if you plan to uninstall Fusion"
+       -f to delete CRs in Fusion namespace
+       -d to create DeleteBackupRequest to delete backups. Use this if you plan to uninstall Fusion
+          -d is effective only when -f is used as well"
 
 NAMESPACE=ibm-backup-restore
 FORCE=false
 SKIP=true
+SKIP_ISF_CRS=true
 
 err_exit()
 {
@@ -21,11 +26,14 @@ err_exit()
         exit 1
 }
 
-while getopts "dub:" OPT
+while getopts "dfub:" OPT
 do
   case ${OPT} in
     b )
       NAMESPACE="${OPTARG}"
+      ;;
+    f )
+      SKIP_ISF_CRS=false
       ;;
     d )
       SKIP=false
@@ -41,6 +49,13 @@ do
       ;;
   esac
 done
+
+
+if [ "$SKIP_ISF_CRS" == "true" ] && [ "$SKIP" == "false" ]
+ then
+     print_heading "Ignored -d as -f is not present. -d is application only if -f is used"
+    SKIP=true
+fi
 
 check_cmd ()
 {
@@ -120,46 +135,56 @@ fi
 
 oc -n "$ISF_NS" patch --type json configmap isf-data-protection-config -p '[{"op": "replace", "path": "/data/Mode", "value": "DisableWebhook"}]'
 
-print_heading "Remove any DeleteBackupRequest CRs"
-DR=$(oc -n "$ISF_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
-[ -n "$DR" ] && oc -n "$ISF_NS" delete fdbr  $DR --timeout=60s
-DR=$(oc -n "$ISF_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
-[ -n "$DR" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fdbr $DR
+if [ "$SKIP_ISF_CRS" == "true" ]
+  then
+     print_heading "Skipping deletion of Fusion CRs"
+  else
+     print_heading "Remove any DeleteBackupRequest CRs"
+     DR=$(oc -n "$ISF_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
+     [ -n "$DR" ] && oc -n "$ISF_NS" delete fdbr  $DR --timeout=60s
+     DR=$(oc -n "$ISF_NS" get fdbr -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
+     [ -n "$DR" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fdbr $DR
 
-print_heading "Remove any existing policyAssigments CRs"
-PA=$(oc -n "$ISF_NS" get policyassignments.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
-[ -n "$PA" ] && oc -n "$ISF_NS" delete policyassignments.data-protection.isf.ibm.com  $PA --timeout=60s
-PA=$(oc -n "$ISF_NS" get policyassignments.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
-[ -n "$PA" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fpa $PA
+     print_heading "Remove any existing policyAssigments CRs"
+     PA=$(oc -n "$ISF_NS" get policyassignments.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
+     [ -n "$PA" ] && oc -n "$ISF_NS" delete policyassignments.data-protection.isf.ibm.com  $PA --timeout=60s
+     PA=$(oc -n "$ISF_NS" get policyassignments.data-protection.isf.ibm.com -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns=N:metadata.name --no-headers)
+     [ -n "$PA" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fpa $PA
 
-print_heading "Remove any existing backuppolicies CRs"
-BP=$(oc -n "$ISF_NS" get backuppolicies.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
-[ -n "$BP" ] && oc -n "$ISF_NS" delete backuppolicies.data-protection.isf.ibm.com  $BP --timeout=60s
-BP=$(oc -n "$ISF_NS" get backuppolicies.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
-[ -n "$BP" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbp $BP
+     print_heading "Remove any existing backuppolicies CRs"
+     BP=$(oc -n "$ISF_NS" get backuppolicies.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
+     [ -n "$BP" ] && oc -n "$ISF_NS" delete backuppolicies.data-protection.isf.ibm.com  $BP --timeout=60s
+     BP=$(oc -n "$ISF_NS" get backuppolicies.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
+     [ -n "$BP" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbp $BP
 
 
-print_heading "Remove any existing backup CRs"
-BS=$(oc -n "$ISF_NS" get backups.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
-if [ -n "$BS" ]
-  then 
-         oc -n "$ISF_NS" annotate --overwrite backups.data-protection.isf.ibm.com $BS fusion-config dp.isf.ibm.com/cleanup-status=complete
-         oc -n "$ISF_NS" delete backups.data-protection.isf.ibm.com  $BS --timeout=60s
-         BS=$(oc -n "$ISF_NS" get backups.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
-         [ -n "$BS" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbackup $BS
+     print_heading "Remove any existing backup CRs"
+     BS=$(oc -n "$ISF_NS" get backups.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
+     if [ -n "$BS" ]
+       then 
+              oc -n "$ISF_NS" annotate --overwrite backups.data-protection.isf.ibm.com $BS fusion-config dp.isf.ibm.com/cleanup-status=complete
+              oc -n "$ISF_NS" delete backups.data-protection.isf.ibm.com  $BS --timeout=60s
+              BS=$(oc -n "$ISF_NS" get backups.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
+              [ -n "$BS" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbackup $BS
+     fi
+
+     print_heading "Remove any existing restore CRs"
+     RS=$(oc -n "$ISF_NS" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
+     [ -n "$RS" ] && oc -n "$ISF_NS" delete restore.data-protection.isf.ibm.com  $RS --timeout=60s
+     RS=$(oc -n "$ISF_NS" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
+     [ -n "$RS" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' frestore $RS
+
+     print_heading "Remove any existing backuplocations CRs"
+     BSL=$(oc -n "$ISF_NS" get backupstoragelocation.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
+     [ -n "$BSL" ] && oc -n "$ISF_NS" delete --timeout=60s backupstoragelocation.data-protection.isf.ibm.com $BSL
+     BSL=$(oc -n "$ISF_NS" get backupstoragelocation.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " " | grep -v "isf-dp-inplace-snapshot")
+     [ -n "$BSL" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbsl $BSL
+     print_heading "Remove any BSL secrets"
+     BSL_SECRET=$(oc -n "$ISF_NS" get secret -l dp.isf.ibm.com/ownedBy=fbsl,dp.isf.ibm.com/provider-name=isf-backup-restore  -o custom-columns="NAME:metadata.name" --no-headers)
+     [ -n "$BSL_SECRET" ] && oc -n "$ISF_NS" delete --timeout=60s secret $BSL_SECRET
+     BSL_SECRET=$(oc -n "$ISF_NS" get secret -l dp.isf.ibm.com/ownedBy=fbsl,dp.isf.ibm.com/provider-name=isf-backup-restore  -o custom-columns="NAME:metadata.name" --no-headers)
+     [ -n "$BSL_SECRET" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' secret $BSL_SECRET
 fi
-
-print_heading "Remove any existing restore CRs"
-RS=$(oc -n "$ISF_NS" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
-[ -n "$RS" ] && oc -n "$ISF_NS" delete restore.data-protection.isf.ibm.com  $RS --timeout=60s
-RS=$(oc -n "$ISF_NS" get restore.data-protection.isf.ibm.com  -l dp.isf.ibm.com/provider-name=isf-backup-restore -o custom-columns="NAME:metadata.name" --no-headers)
-[ -n "$RS" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' frestore $RS
-
-print_heading "Remove any existing backuplocations CRs"
-BSL=$(oc -n "$ISF_NS" get backupstoragelocation.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " ")
-[ -n "$BSL" ] && oc -n "$ISF_NS" delete --timeout=60s backupstoragelocation.data-protection.isf.ibm.com $BSL
-BSL=$(oc -n "$ISF_NS" get backupstoragelocation.data-protection.isf.ibm.com -o custom-columns="NAME:metadata.name,PROVIDER:spec.provider" --no-headers | grep 'isf-backup-restore$' | cut -f1 -d " " | grep -v "isf-dp-inplace-snapshot")
-[ -n "$BSL" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' fbsl $BSL
 
 print_heading "Delete any existing guardiancopybackups CRs"
 oc delete guardiancopybackups -n "${NAMESPACE}" --all --timeout=60s
