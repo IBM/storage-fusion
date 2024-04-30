@@ -25,7 +25,13 @@ To use this script, follow the below steps:
 -gdp   : Optional GDP_IMAGES, which mirrors all the GLOBAL DATA PLATFORM images.
 -df    : Optional DF_IMAGES, which mirrors all the  DATA FOUNDATION images.
 -br    : Optional BR_IMAGES, which mirrors all the  BACKUP & RESTORE images.
--dcs"  : Optional DCS_IMAGES, which mirrors all the  DATA CATALOGING images.
+-dcs   : Optional DCS_IMAGES, which mirrors all the  DATA CATALOGING images.
+-validate : Optional VALIDATE_IMAGES, to only validate the mirrored images, should be used only with any/some of the -all/-ocp/-redhat/-fusion/-gdp/-df/-br/-dcs.
+```
+
+### NOTE"
+```
+- This Script supports only single repo mirroring & validation, for multirepo please execute this script twice with appropriate options
 ```
 
 ### Syntax to execute the generic-mirror.sh script
@@ -37,6 +43,16 @@ nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_RE
 - To Mirror Only The Required HCI Images(Any/Some of the OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
 ```
 nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -ocp -redhat -fusion -gdp -df -br -dcs &
+```
+
+- To only Validate All The Images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, FUSION DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
+```
+nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -all -validate &
+```
+
+- To only Validate the Required Images(Any/Some of the OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
+```
+nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -ocp -redhat -fusion -gdp -df -br -dcs -validate &
 ```
 
 ### Example commands to execute the generic-mirror.sh script
@@ -83,6 +99,16 @@ nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -l
 - Sample Command to Mirror only the DATA CATALOGING images
 ```
 nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -dcs &
+```
+
+- Sample Command to only validate all the HCI images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
+```
+nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all -validate &
+```
+
+- Sample Command to only validate the Required Images(Any/Some of the OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
+```
+nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -ocp -redhat -fusion -gdp -df -br -dcs -validate &
 ```
 
 ### NOTE
