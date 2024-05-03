@@ -22,7 +22,6 @@ oc get deployment -n ibm-backup-restore transaction-manager -o yaml > transactio
 echo "Saved transaction-manager deployment"
 oc get deployment -n ibm-backup-restore application-controller -o yaml > application-controller-deployment.save.yaml
 echo "Saved application-controller deployment"
-
 echo "Deleting clusterrole guardian-dm-datamover-scc"
 oc delete clusterrole guardian-dm-datamover-scc
 
