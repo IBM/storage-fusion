@@ -25,7 +25,6 @@ echo "Saved application-controller deployment"
 echo "Deleting clusterrole guardian-dm-datamover-scc"
 oc delete clusterrole guardian-dm-datamover-scc
 
-
 if [ -n "$HUB" ]
  then
   echo "Patching backup-service deployment..."
