@@ -22,8 +22,8 @@ oc get deployment -n ibm-backup-restore transaction-manager -o yaml > transactio
 echo "Saved transaction-manager deployment"
 oc get deployment -n ibm-backup-restore application-controller -o yaml > application-controller-deployment.save.yaml
 echo "Saved application-controller deployment"
-
-
+echo "Deleting clusterrole guardian-dm-datamover-scc"
+oc delete clusterrole guardian-dm-datamover-scc
 
 if [ -n "$HUB" ]
  then
@@ -60,9 +60,9 @@ echo "Saving original guardian-dm-operator yaml"
 oc get csv -n ibm-backup-restore ${DM_CSV} -o yaml > guardian-dm-operator.v2.7.2-original.yaml
 oc get configmap  -n ibm-backup-restore guardian-dm-image-config -o yaml > guardian-dm-image-config-original.yaml
 echo Updating data mover image...
-oc set data -n ibm-backup-restore cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cp/fbr/guardian-datamover@sha256:fda1faf48cadef717de9926d37c05305103ed86e0821359423fcc8e60f250178
+oc set data -n ibm-backup-restore cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cp/fbr/guardian-datamover@sha256:5873062a347d02e12b74c9aa98d53d35778370ad33ce3d6115362da2c89ba71a
 echo Updating CSV $DM_CSV...
-oc patch csv -n ibm-backup-restore $DM_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:63b136b38a07c0afdd5082bc594e0d4d6bf5a2b2cbb1297f371d7852279121c9"}]'
+oc patch csv -n ibm-backup-restore $DM_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:36df2a2cacd66f5cf8c01297728cb59dabc013d3c8d0b4eae3d8e1770f3839ec"}]'
 
 ISF_CSV=$(oc get csv -n ibm-spectrum-fusion-ns | grep "isf-operator.v2.7.2" | awk '{print $1}')
 if [[ -z ${ISF_CSV} ]]; then
