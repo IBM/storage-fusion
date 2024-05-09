@@ -14,6 +14,8 @@ if [ -n "$HUB" ]
    echo "Saved job-manager deployment"
    oc get recipes.spp-data-protection.isf.ibm.com fusion-control-plane -n ibm-spectrum-fusion-ns -o yaml > fusion-control-plane-recipe.save.yaml
    echo "Saved fusion-control-plane recipe"
+   oc get deployment -n ibm-backup-restore backup-location-deployment -o yaml > backup-location-deployment.save.yaml
+   echo "Saved backup-location-deployment"
  else
    echo "This is spoke" 
 fi
@@ -38,6 +40,9 @@ if [ -n "$HUB" ]
   
   echo "Patching fusion-control-plane recipe..."
   oc patch recipes.spp-data-protection.isf.ibm.com fusion-control-plane -n ibm-spectrum-fusion-ns --type=merge -p '{"spec":{"hooks":[{"name":"fbr-hooks","nameSelector":"transaction-manager.*","namespace":"${FBR_NAMESPACE}","onError":"fail","ops":[{"command":"[\"/usr/src/app/code/.venv/bin/python3\",\"/usr/src/app/code/ctl-plane.pyc\",\"backup\"]","container":"transaction-manager","name":"export-backup-inventory"},{"command":"[\"/usr/src/app/code/.venv/bin/python3\",\"/usr/src/app/code/ctl-plane.pyc\",\"restore\"]","container":"transaction-manager","name":"restore-backup-inventory","timeout":28800},{"command":"[\"/usr/src/app/code/.venv/bin/python3\",\"/usr/src/app/code/ctl-plane.pyc\",\"deleteCRs\"]","container":"transaction-manager","name":"deleteCRs","timeout":28800}],"selectResource":"pod","singlePodOnly":true,"type":"exec"},{"name":"isf-dp-operator-hook","nameSelector":"transaction-manager.*","namespace":"${FBR_NAMESPACE}","onError":"fail","ops":[{"command":"[\"/usr/src/app/code/.venv/bin/python3\",\"/usr/src/app/code/patch-isd-dp-cm.pyc\",\"${PARENT_NAMESPACE}\",\"isf-data-protection-config\",\"DisableWebhook\"]","container":"transaction-manager","name":"disable-webhook"},{"command":"[\"/usr/src/app/code/.venv/bin/python3\",\"/usr/src/app/code/patch-isd-dp-cm.pyc\",\"${PARENT_NAMESPACE}\",\"isf-data-protection-config\",\"Recover\"]","container":"transaction-manager","name":"quiesce-isf-dp-controller"},{"command":"[\"/usr/src/app/code/.venv/bin/python3\",\"/usr/src/app/code/patch-isd-dp-cm.pyc\",\"${PARENT_NAMESPACE}\",\"isf-data-protection-config\",\"Normal\"]","container":"transaction-manager","name":"unquiesce-isf-dp-controller"}],"selectResource":"pod","singlePodOnly":true,"type":"exec"},{"name":"appcontroller-restart","nameSelector":"application-controller","namespace":"${FBR_NAMESPACE}","onError":"fail","selectResource":"deployment","type":"scale"}]}}'
+
+  echo "Patching backup-location-deployment..."
+  oc patch deployment backup-location-deployment -n ibm-backup-restore -p '{"spec":{"template":{"spec":{"containers":[{"name":"backup-location-container","image":"cp.icr.io/cp/fbr/guardian-backup-location@sha256:7abd42c19eea0e23618fd84d3e1335b51b959d232f88ea1db2a0c2391bc241c3"}]}}}}'
 fi
 
 echo "Patching transaction-manager deployment..."
@@ -49,7 +54,7 @@ oc patch deployment/application-controller -n ibm-backup-restore -p '{"spec":{"t
 echo "Deployment rollout status..."
 if [ -n "$HUB" ]
  then
-  oc rollout status -n ibm-backup-restore deployment backup-service  job-manager  transaction-manager application-controller
+  oc rollout status -n ibm-backup-restore deployment backup-service  job-manager  transaction-manager application-controller backup-location-deployment
  else
   oc rollout status -n ibm-backup-restore deployment transaction-manager application-controller
 fi
