@@ -929,7 +929,7 @@ function verify_pid_limit(){
 }
 
 function is_metrodr_setup(){
-    metrodrinstances=$(oc get metrodrs -n $FUSIONNS | tail -n +2 | wc -l)
+    metrodrinstances=$(oc get metrodrs -n $FUSIONNS 2>/dev/null | tail -n +2 | wc -l)
     if [ $metrodrinstances -gt 0 ]; then
         return 1
     else
@@ -939,7 +939,7 @@ function is_metrodr_setup(){
 
 function verify_CSI_configmap_present(){
     print info "Verify presence of CSI configmap if it is a 2.6.1 MetroDR setup"
-    isfversion=$(oc get csv -n $FUSIONNS | grep -n . | tail -n +2 | head -n 1 | awk '{print $5}' | grep "2.6.1" | wc -l)
+    isfversion=$(oc get csv -n $FUSIONNS | grep isf-operator | grep "2.8.0" | wc -l)
     is_metrodr_setup
     is_metrodr_setup_op=$?
     if [ "$is_metrodr_setup_op" -eq 1 ] && [ "$isfversion" -eq 1 ]; then
