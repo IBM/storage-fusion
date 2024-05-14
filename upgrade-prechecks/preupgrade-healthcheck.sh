@@ -939,7 +939,7 @@ function is_metrodr_setup(){
 
 function verify_CSI_configmap_present(){
     print info "Verify presence of CSI configmap if it is a 2.6.1 MetroDR setup"
-    isfversion=$(oc get csv -n $FUSIONNS | grep isf-operator | grep "2.8.0" | wc -l)
+    isfversion=$(oc get csv -n $FUSIONNS | grep isf-operator | grep "2.6.1" | wc -l)
     is_metrodr_setup
     is_metrodr_setup_op=$?
     if [ "$is_metrodr_setup_op" -eq 1 ] && [ "$isfversion" -eq 1 ]; then
