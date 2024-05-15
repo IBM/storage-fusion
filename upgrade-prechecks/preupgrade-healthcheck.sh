@@ -938,7 +938,7 @@ function is_metrodr_setup(){
 }
 
 function verify_CSI_configmap_present(){
-    print info "Verify presence of CSI configmap if it is a 2.6.1 MetroDR setup"
+    print info "Verify presence of CSI configmap if it is a 2.6.1 MetroDR setup before going for 2.7.1 upgrade"
     isfversion=$(oc get csv -n $FUSIONNS | grep isf-operator | awk '{print $1}' | grep "2.6.1" | wc -l)
     is_metrodr_setup
     is_metrodr_setup_op=$?
@@ -949,7 +949,7 @@ function verify_CSI_configmap_present(){
             if [ $? -eq 0 ]; then
 		        print info "${CHECK_PASS} CSI Configmap with required values present on 2.6.1 metrodr setup"
             else
-                print error "${CHECK_FAIL} CSI Configmap with required values not present on 2.6.1 MetroDR setup."
+                print error "${CHECK_FAIL} CSI Configmap with required values not present on 2.6.1 MetroDR setup. \nPlease refer to the workaround to create CSI Configmap present in this doc : https://www.ibm.com/docs/en/sfhs/2.7.x?topic=system-prerequisites-prechecks and retry again."
 	        fi
     else
         # MetroDR setup is not present, skip CSI configmap verification
@@ -958,13 +958,15 @@ function verify_CSI_configmap_present(){
 }
 
 function verify_token_secret_present(){
-    print info "Verify the presence of secret token in scale service account"
+    print info "Verify the presence of secret token in scale service account after OCP upgraded to 4.12"
     ocpversion=$(oc get clusterversion -o jsonpath='{.items[0].status.desired.version}')
-    if [[ $(echo $ocpversion | cut -d. -f1) -eq 4 && $(echo $ocpversion | cut -d. -f2) -eq 12 ]] && [ "$(is_metrodr_setup)" -eq 1 ]; then
-        if [ $(oc get serviceaccount "$SCALEOPNS" -n "$SCALEOPNS" -o jsonpath='{.secrets[0].name}' | grep "ibm-spectrum-scale-operator-token" ) ]; then
+    is_metrodr_setup
+    is_metrodr_setup_op=$?
+    if [[ $(echo $ocpversion | cut -d. -f1) -eq 4 && $(echo $ocpversion | cut -d. -f2) -eq 12 && "$is_metrodr_setup_op" -eq 1 ]]; then
+        if [ "$(oc get serviceaccount "$SCALEOPNS" -n "$SCALEOPNS" -o jsonpath='{.secrets[*].name}' | grep "ibm-spectrum-scale-operator-token" )" ]; then
             print info "${CHECK_PASS} token secret is present in service account for scale"
         else
-            print error "${CHECK_FAIL} token secret is not present in service account for scale"
+            print error "${CHECK_FAIL} token secret is not present in service account for scale.\nPlease refer to the workaround to add token secret in scale SA present in this doc : https://www.ibm.com/docs/en/sfhs/2.7.x?topic=system-prerequisites-prechecks and retry again"
         fi
     else
         print info "Skipping this test as its is not a metrodr setup having OCP version 4.12"
