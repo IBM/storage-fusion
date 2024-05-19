@@ -11,9 +11,9 @@ if [ -n "$HUB" ]
    if [ -n "$AMQ_VER" ]
      then
         KFK_VER=""
-        [[ $AMQ_VER == 2.6* ]] && KFK_VER=3.6.0
-        [[ $AMQ_VER == 2.5* ]] && KFK_VER=3.5.0
-        [[ $AMQ_VER == 2.4* ]] && KFK_VER=3.4.0
+        [[ $AMQ_VER == 2.6* ]] && KFK_VER=3.6.0 && PR_VER=3.6
+        [[ $AMQ_VER == 2.5* ]] && KFK_VER=3.5.0 && PR_VER=3.5
+        [[ $AMQ_VER == 2.4* ]] && KFK_VER=3.4.0 && PR_VER=3.4
         OLD_VER=$(oc -n $BR_NS get kafka guardian-kafka-cluster -o custom-columns=:spec.kafka.version --no-headers)
         if [[ -z "$KFK_VER" ]] 
          then
@@ -24,7 +24,9 @@ if [ -n "$HUB" ]
          else
             echo "Setting Kafka version $KFK_VER for AMQ $AMQ_VER"
             PATCH='{"spec":{"kafka":{"version":"'${KFK_VER}'"}}}'
-            echo oc -n $BR_NS patch kafka guardian-kafka-cluster -p "$PATCH" --type=merge
+            oc -n $BR_NS patch kafka guardian-kafka-cluster -p "$PATCH" --type=merge
+
+            PATCH='{"spec":{"kafka":{"config":{"inter.broker.protocol.version":"'${PR_VER}'"}}}}'
             oc -n $BR_NS patch kafka guardian-kafka-cluster -p "$PATCH" --type=merge
         fi
      else
