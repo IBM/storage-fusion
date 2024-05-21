@@ -32,7 +32,6 @@ if [ -n "$HUB" ]
      else
         echo "WARNING: No successful installation of AMQ found"
    fi
-    
  else
    BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace)
    if [ -n "$BR_NS" ]
@@ -41,8 +40,6 @@ if [ -n "$HUB" ]
      else
         echo "WARNING: No Backup and Restore installation found. Exiting" 
         exit 1
-fi
-
-  oc rollout status -n $BR_NS deployment transaction-manager application-controller
+   fi
 fi
 
