@@ -942,18 +942,21 @@ function verify_CSI_configmap_present(){
     isfversion=$(oc get csv -n $FUSIONNS | grep isf-operator | awk '{print $1}' | grep "2.6.1" | wc -l)
     is_metrodr_setup
     is_metrodr_setup_op=$?
-    if [ "$is_metrodr_setup_op" -eq 1 ] && [ "$isfversion" -eq 1 ]; then
-        # 2.6.1 metrodr setup
-        # check for CSI configmap
+    if [ "$is_metrodr_setup_op" -eq 1 ]; then
+        if [ "$isfversion" -eq 1 ]; then
+            print info "It is a metrodr setup of version 2.6.1"
             check=$(oc get configmap -n "$SCALECSINS" ibm-spectrum-scale-csi-config -o json | jq '.data."VAR_DRIVER_DISCOVER_CG_FILESET"' | grep "DISABLED")
             if [ $? -eq 0 ]; then
-		        print info "${CHECK_PASS} CSI Configmap with required values present on 2.6.1 metrodr setup"
+		print info "${CHECK_PASS} CSI Configmap with required values present on 2.6.1 metrodr setup"
             else
                 print error "${CHECK_FAIL} CSI Configmap with required values not present on 2.6.1 MetroDR setup. \nPlease refer to the workaround to create CSI Configmap present in this doc : https://www.ibm.com/docs/en/sfhs/2.7.x?topic=system-prerequisites-prechecks and retry again."
-	        fi
+	    fi
+        else
+                print info "Skipping this test as it is a metrodr setup not having 2.6.1 version"
+        fi
     else
         # MetroDR setup is not present, skip CSI configmap verification
-        print info "Skipping CSI configmap verification as it is not a metroDR 2.6.1 setup"
+        print info "Skipping CSI configmap verification as it is not a metroDR setup"
     fi
 }
 
