@@ -89,6 +89,8 @@ oc -n "${ISF_NS}" get ip
 echo "Fusion CSVs:"
 oc -n "${ISF_NS}" get csv
 
+oc -n "$NAMESPACE" label dataprotectionagent --all uninstalling=true --overwrite
+oc -n "$NAMESPACE" label dataprotectionserver --all uninstalling=true --overwrite
 CONNECTION=$(oc -n "$NAMESPACE" get cm guardian-configmap -o custom-columns="CONN:data.connectionName" --no-headers)
 if [ -n "$CONNECTION" ]
   then
