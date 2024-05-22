@@ -71,12 +71,3 @@ oc set data -n $BR_NS cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cp/fbr/guar
 echo Updating CSV $DM_CSV...
 oc patch csv -n $BR_NS $DM_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:36df2a2cacd66f5cf8c01297728cb59dabc013d3c8d0b4eae3d8e1770f3839ec"}]'
 
-ISF_CSV=$(oc get csv -n $ISF_NS | grep "isf-operator.v2.7.2" | awk '{print $1}')
-if [[ -z ${ISF_CSV} ]]; then
-    echo "Cannot find the isf-operator.v2.7.2"
-    exit 1
-fi
-echo "Saving original to isf-operator.v2.7.2-original.yaml"
-oc get csv -n $ISF_NS ${ISF_CSV} -o yaml > isf-operator.v2.7.2-original.yaml
-echo "Updating HCI csv ${ISF_CSV}"
-oc patch csv -n $ISF_NS $ISF_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/4/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/isf/isf-application-operator@sha256:2d9b28574cb4a46ee2ff96b487d56bb395e90c8bfbbe10f0932f88ac51ece376"}]'
