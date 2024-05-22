@@ -91,6 +91,7 @@ oc -n "${ISF_NS}" get csv
 
 oc -n "$NAMESPACE" label dataprotectionagent --all uninstalling=true --overwrite
 oc -n "$NAMESPACE" label dataprotectionserver --all uninstalling=true --overwrite
+oc -n "$ISF_NS" label fusionserviceinstances ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance uninstalling=true --overwrite
 CONNECTION=$(oc -n "$NAMESPACE" get cm guardian-configmap -o custom-columns="CONN:data.connectionName" --no-headers)
 if [ -n "$CONNECTION" ]
   then
