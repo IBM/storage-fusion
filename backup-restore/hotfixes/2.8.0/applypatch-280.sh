@@ -43,3 +43,13 @@ if [ -n "$HUB" ]
    fi
 fi
 
+echo "Saving original guardian-configmap yaml"
+oc get configmap  -n $BR_NS guardian-configmap -o yaml > guardian-configmap-original.yaml
+echo Updating default data mover pod resource settings...
+oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodCPURequest='0.1'
+oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodCPURequestRes='0.1'
+oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodEphemeralStorageRequest='400Mi'
+oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodEphemeralStorageRequestRes='400Mi'
+oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodMemoryRequest='4000Mi'
+oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodMemoryRequestRes='4000Mi'
+
