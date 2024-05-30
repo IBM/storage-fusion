@@ -1,0 +1,1786 @@
+{
+  "project": "hci",
+  "release_version": "2.8.0",
+  "build_id": "2.8.0-linux.amd64",
+  "date": "2024-05-10T11:28:44+00:00",
+  "internal": [
+    {
+      "image_name": "baas-minio",
+      "digest": "sha256:07d8b6a01f4bee6a45cedebaa345b1a15f87900f1fb09df52a287d6fcec1cb73",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "callhomeclient",
+      "digest": "sha256:2b7140f52386002da74875ce7760d4a5be72c37ad9bb0a84c32f2884e5842e09",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "eventmanager",
+      "digest": "sha256:d6997d0f6c073944389e1c9fc615f9a11376d6b848ef0000cb0fd276b479aff2",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "eventmanager-snmp3",
+      "digest": "sha256:0bc3d1a4d25db452227fb891abc7438da21609b96842bd58c45f9a511beb3257",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "fusion-ui",
+      "digest": "sha256:dcc86f4cd51925877c66e44271c28311b1649bb697395b7e64f9253b2099b93f",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-application-operator",
+      "digest": "sha256:795a6abb8c841efd5293358b00312a582f6e2ea910074c54dc58f76b5b3f6555",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-cns-operator",
+      "digest": "sha256:28f64c008ce5fded8bbb95e56f80333ed89cb2d502e8582a1c866ab2d0b22352",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-compute-fw-updater",
+      "digest": "sha256:46772cc8b5eeb45b960daf9d72f67a365adfa7151314e7c04132ac761cd9e79c",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-compute-operator",
+      "digest": "sha256:414275e851972db2b7172642f7f7827c42da14914061bd5d82ea0584e6ce7fc8",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-data-protection-operator",
+      "digest": "sha256:5acbd4ee0aff33053a1e8a786a96292dfca39098b61e5b231242070bd8553d4d",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-hcp-manager",
+      "digest": "sha256:15fc12eb2f8344de67518e07e55d46259ddd2963e4a9d88b4a66407f43c9bd2b",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-ics-operator",
+      "digest": "sha256:67f8da5349d0f2aa17b874bd07bd4a809e8ebd3701254898c74285e555db3d5c",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-management-consoleplugin",
+      "digest": "sha256:ddbab64895bea43b0fa1fc3cbb39d3ac2a12f23b041db70793696d3822bb3153",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-metrodr-operator",
+      "digest": "sha256:9eeb4cb669f3b8de80314559d3eafbe1df8612e0c2feaab5f44c775fc8ca9037",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-network-fw-updater",
+      "digest": "sha256:36573fa4d7148c27e1439bd47b0d46c0a67b7540b7730a830ded43a119adcbbe",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-network-operator",
+      "digest": "sha256:0720e3752bd56041cc1c79ea67950eb8a48a426bd16c9617e955b3bafc573fae",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-node-exporter",
+      "digest": "sha256:1421db12c2e2f88669cc5b1de0cb1847af1169857b1067e1e6d41b4734f04a0f",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-prereq-operator",
+      "digest": "sha256:2b268186247f569a4214952e295506eeda6245b7b69b771325643104a4338ca4",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-proxy",
+      "digest": "sha256:b41277caa4f7bc9bb222055bcd0f2e2d09ca3830819b151128f499b5fcade5d7",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-serviceability-operator",
+      "digest": "sha256:91646fb97674a70fa14dd55ecc15f9b5b685d0cb3296b59209a9ff508c27c24b",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-snmp-exporter",
+      "digest": "sha256:7f6d7b61f2b27fd9904faab82c434c7e10843b0e5feb13b52d7b14841598eff8",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-storage-operator",
+      "digest": "sha256:ec5bd09be714e679dbc46cfbe9168289d4e092f0b63fd7196a7ca13da94a426d",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-storage-services",
+      "digest": "sha256:de446606a148b97acb73eb92262f48ff1fe484609f2e2cd670cab1ce481adb4e",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-ui-operator",
+      "digest": "sha256:19d8f12e6270c5db014f3e4ed110668cdda82f3c3c33c490b5ee966b733d66c5",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-update-operator",
+      "digest": "sha256:8cafe62bbfff7a29e55149f6ea5655d88fb7b1652130e653e1708e6851d7a07e",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-utils",
+      "digest": "sha256:183e290ca3aafab96adf514470b0138f67f302435f63f11796f73ee7a8b5d5db",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "logcollector",
+      "digest": "sha256:374673f8598fb2b91be2a98d0ac1414be9397707cd8bfe42ffa9d88bef4ab324",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ramen-operator",
+      "digest": "sha256:f5297738aed6f296f08d845469786959c33f57c0b336c1154f01776ab8ba9239",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-validate-entitlement",
+      "digest": "sha256:1a0dbf7c537f02dc0091e3abebae0ccac83da6aa147529f5de49af0f23cd9e8e",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp/isf",
+      "prod_location": "cp.icr.io/cp/isf",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-operator-bundle",
+      "digest": "sha256:e92a433ea39e128c51204f482168b5d39cf34bd1df21173df70cea8418c72e9c",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-operator-catalog",
+      "digest": "sha256:94f3aca20f9b240c25229b72c35ba8ef6931bd0e35a047f5619eaf7ee3b78070",
+      "service": "fusion",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "staging_location": "stg.icr.io/cp",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "idp-server-operator-catalog",
+      "digest": "sha256:5462246b796dd0c6e729c8802491b7cd5bb59cb98476ab118bee6a1f520c5c2d",
+      "service": "backup-restore-agent",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-datamover",
+      "digest": "sha256:76c3f168faec35d1cf7c56010646b731123ba123abb1a60427409edd13ec6b70",
+      "service": "backup-restore-agent",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-kubevirt-velero-plugin",
+      "digest": "sha256:9f6d83593f5053c1ece1619243c88ff7fa4a5e3a6a1f9b4df944b45d73211f3e",
+      "service": "backup-restore-agent",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-transaction-manager",
+      "digest": "sha256:f09efb569de67917d41a6b3f374dcee4703f859787513ca452a2c5ad965d3f58",
+      "service": "backup-restore-agent",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-dm-operator",
+      "digest": "sha256:35562a8b290b600c626d81b1e573931d33f2e15e2b0a9d46cd3fb59e23ce0ae8",
+      "service": "backup-restore-agent",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-dm-operator-bundle",
+      "digest": "sha256:938433010f4ed3b71e7eaba41020c5114604ce0d77300aa3efbf2c5fe5465095",
+      "service": "backup-restore-agent",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "idp-server-operator-catalog",
+      "digest": "sha256:5462246b796dd0c6e729c8802491b7cd5bb59cb98476ab118bee6a1f520c5c2d",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-application-service",
+      "digest": "sha256:4af659712ed613d110383f4ac43a102ba887795763f312a8bf8db835653b5cf9",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-backup-location",
+      "digest": "sha256:62658a1735311606d584857f902f2c4a423f1c3e85b2ea289ae54727193cd825",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-backup-policy",
+      "digest": "sha256:89e21c7425ea72aef2f3f8e53c36a74d8becb561d3b1e3476b75e22004dd6d49",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-backup-service",
+      "digest": "sha256:56e4119fc3ca89fe8a1c2babffaaabf3d91aeecc8076023347a5381c607d4ae3",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-job-manager",
+      "digest": "sha256:d5eb66db95e62170874e2d0f3ec5e097819596768f90f650013a2456a0fc83b7",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-transaction-manager",
+      "digest": "sha256:f09efb569de67917d41a6b3f374dcee4703f859787513ca452a2c5ad965d3f58",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-datamover",
+      "digest": "sha256:76c3f168faec35d1cf7c56010646b731123ba123abb1a60427409edd13ec6b70",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-kubevirt-velero-plugin",
+      "digest": "sha256:9f6d83593f5053c1ece1619243c88ff7fa4a5e3a6a1f9b4df944b45d73211f3e",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-dm-operator",
+      "digest": "sha256:35562a8b290b600c626d81b1e573931d33f2e15e2b0a9d46cd3fb59e23ce0ae8",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-dp-operator",
+      "digest": "sha256:faec1b7a85aaab714716a850ac4109d6b0079e6214f3e06b1d8a91cd5b73fa5f",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "idp-agent-operator",
+      "digest": "sha256:3a927d363fccfca3ca75023d2c94ed923e6e86828a7d086d790e999b0f0e1ff1",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "idp-server-operator",
+      "digest": "sha256:50f119e4ae22cc21a4b9b7fe5d3b1da4b8352c2d4635b58bbe5956ae62b36d22",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-mongo-operator",
+      "digest": "sha256:006765a2a3a5451b8eebdc8e0ec10a4384124e99f7099f281ab9f04b13d9e357",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-redis-operator",
+      "digest": "sha256:cb698d0f89bf3c04191dd1902dc1e29269544e7720987aa557fb6b6130d11e0e",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-dm-operator-bundle",
+      "digest": "sha256:938433010f4ed3b71e7eaba41020c5114604ce0d77300aa3efbf2c5fe5465095",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-dp-operator-bundle",
+      "digest": "sha256:a8fbec8721edb951d02566369df74eea161ad859b3e28d9e44ce7b642fb104d1",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "idp-agent-operator-bundle",
+      "digest": "sha256:a4528ccd64f63e64326dd519fbec19625933f61e150ad3a6f7ba9bcd5a9dcbe2",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-mongo-operator-bundle",
+      "digest": "sha256:79a86e9c1160463045fe03f54d8f87b0f7b6e6293a2900d437e8138ab1ff7481",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-redis-operator-bundle",
+      "digest": "sha256:ec8bd43483d77e6b0b41daf777d8dbbd83e54fee233e3a7faa714cbf6da1b3f6",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "fbr-mongo-exporter",
+      "digest": "sha256:21aeeb051009d7784be0e0a8e86440dca26ac2ef57ffc461611de0414f1bb676",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "fbr-mongo",
+      "digest": "sha256:73a3b08cd819a2175ae3308dcb72fa07518d0417071f79196338f636219127f4",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "fbr-redis",
+      "digest": "sha256:2131345868484fe9540746c9e4a4a2a9b71dbbb80de5916d74604f2bfc4ec0f5",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-operator",
+      "digest": "sha256:d44f11cc61f410dd20d7bb52ac28eebc80f928eede9be434c270a7ad5648b626",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-daemon",
+      "digest": "sha256:8d0e78cc97ae6d23ea0585e98a43d32c52c4717ff426c5eeff6ad122b735c571",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/erasure-code",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-daemon",
+      "digest": "sha256:65a1b65e4076ac7be840904a6a1d59eb74849cda58a1a4a59b2f9a8de94652de",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/data-management",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-daemon",
+      "digest": "sha256:0a6c1c0c588168bde48c82ae0ab2ad0ab51429680840dca90f19b24fcbfc3c2c",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/data-access",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-core-init",
+      "digest": "sha256:089718b2d96d909b86bf19448c4d86f31a3877eb450d465d830e55133415015d",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-gui",
+      "digest": "sha256:93288c812f0bace075eb785f519d6d7f684bdb33407c44a93b53df9abdd16e0a",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "postgres",
+      "digest": "sha256:bbd7346fab25b7e0b25f214829d6ebfb78ef0465059492e46dee740ce8fcd844",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ubi-minimal",
+      "digest": "sha256:bc552efb4966aaa44b02532be3168ac1ff18e2af299d0fe89502a1d9fabafbc5",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-pmcollector",
+      "digest": "sha256:07a9e951ab315724ca39e332a7559ca98519442b0669241fd97ffdb3a0381667",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-monitor",
+      "digest": "sha256:3f41d20e7beaf757778d8650172adf8456569607dab3479eb4524407ed2e4a13",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-grafana-bridge",
+      "digest": "sha256:a6ca689d8205f17bb278910c521842f98ced8537aba55b287792a91269bf2f41",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-coredns",
+      "digest": "sha256:88cbfe40fd302a6467cb7e852b298f6c8d8659782ab313706d491d3ddf172a6e",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-must-gather",
+      "digest": "sha256:eab5b2e72579b96f2cfc04162e4dd6ace7eb3570f2f08dca552c045ea29faa3d",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-ganesha",
+      "digest": "sha256:2adb24635e4c67ce940c79f611c08b3518004259f825cb7f719e262d18242728",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-stunnel",
+      "digest": "sha256:c55b0718d6bdc1b5995517e205cd0c2993d735a532b6358663e15207c6c6a7f3",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-pmsensors",
+      "digest": "sha256:7befbffc26148c416bf6cb6e3c3174231c8748e4bfd8371acd3b94606b22f5bc",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "csi-snapshotter",
+      "digest": "sha256:1a29ab1e4ecdc33a84062cec757620d9787c28b28793202c5b78ae097c3dee27",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/csi",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "csi-attacher",
+      "digest": "sha256:d69cc72025f7c40dae112ff989e920a3331583497c8dfb1600c5ae0e37184a29",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/csi",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "csi-provisioner",
+      "digest": "sha256:de79c8bbc271622eb94d2ee8689f189ea7c1cb6adac260a421980fe5eed66708",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/csi",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "livenessprobe",
+      "digest": "sha256:5baeb4a6d7d517434292758928bb33efc6397368cbb48c8a4cf29496abf4e987",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/csi",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "csi-node-driver-registrar",
+      "digest": "sha256:c53535af8a7f7e3164609838c4b191b42b2d81238d75c1b2a2b582ada62a9780",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/csi",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "csi-resizer",
+      "digest": "sha256:4c148bbdf883153bc72d321be4dc55c33774a6d98b2b3e0c2da6ae389149a9b7",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/csi",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-csi-driver",
+      "digest": "sha256:b2bc343eadbc11d9ed74a8477d2cd0a7a8460a72203d3f6236d4662e68df1166",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/spectrum/scale/csi",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-csi-operator",
+      "digest": "sha256:bd264199ac10d574163bfa32bb88844fd786ee6f794a56e235591d2f051c7807",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-scale-operator",
+      "digest": "sha256:d44f11cc61f410dd20d7bb52ac28eebc80f928eede9be434c270a7ad5648b626",
+      "service": "cnsa",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-data-foundation-catalog",
+      "digest": "sha256:0f07924bda0913e1e5527a283dbc7100544a9cedb016326cce162c3edbc55d43",
+      "service": "datafoundation",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-data-foundation-catalog",
+      "digest": "sha256:6d633cc7e0ddac0b1a204473203f5452e4c536a001234542db4b636ae1d52376",
+      "service": "datafoundation",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isf-data-foundation-catalog",
+      "digest": "sha256:269ef0dddc3b75da1785ca332232982dec63268d00d2eb5e3df142ca29e2c809",
+      "service": "datafoundation",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-discover-operator-catalog",
+      "digest": "sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "ibm-spectrum-discover-operator",
+      "digest": "sha256:883e872eb8db38d2a9efe92774f85dcebefb73fad5898f5b1c4eb10abc9c0ec1",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "mo-ubi-init",
+      "digest": "sha256:f6b999c28a6df5af37daf03c089b13d62113fc742559775fb53fcc77c675062f",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "metaocean-api",
+      "digest": "sha256:2ab22daed5d6653af2360fa5cd0ae5544d3fd4be2b88c88cc62c67a004aa8b25",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "auth",
+      "digest": "sha256:edcca3f95371e01305ed0c3a4a789e286dacfd1aee4bec4f5148c485622d2f9b",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "backup-restore",
+      "digest": "sha256:29bc0266143f4ca411c92de40ff0847f9e2a7000fa8806ed22d8f4e059d41fa3",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "connmgr",
+      "digest": "sha256:3d9a958e6115a69a2ae350f5add160ea0e5af0b2b72df2c6a1d1efd2138cd768",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "connmgr-scheduler",
+      "digest": "sha256:22358c8582247772891a94f898292ed2c3bfdcc4a2d2ddf87402042702793840",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "moconsumer",
+      "digest": "sha256:4ac4a1f744e222c8dbf8927608447fa419acf14957e3e80e2391c4207811d5ff",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "mo-agent-extract",
+      "digest": "sha256:c0ec37fd8675fbdb60fe6c8ea78fe04a9329974a7aaba6b76c2894bd1a7d5839",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "db-schema",
+      "digest": "sha256:cda67b4ea1607a50d5f6c482a81de733e31c4025de59c46ad04306ac95ba8145",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "db2whrest",
+      "digest": "sha256:000cdbcc7f7a8e74b434354dbdba6248952323388ade21e1444a35d898e12c8c",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "import-tags-app",
+      "digest": "sha256:f7f230f472e75024a5b741e14c22e2e53bbe1e05f7b70f0c7272d8b66280f4a8",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "keystone",
+      "digest": "sha256:11c6c81531b4502644df3365a86a0c7fcc4d0091b422e6e6855b9890b2530941",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "policyengine",
+      "digest": "sha256:8d5dcf15d944e8e561448eab005f1bb86bcb38839ee5c6bee0533ecdf85271f0",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "moproducer",
+      "digest": "sha256:1487d22955d6101886a4aa36032432e9728f9964ae6ae4858e7ba4b7730cd2fe",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "reports",
+      "digest": "sha256:623202e5f48c14d79ad8da72bc1d71bece4422599cebf53aa5b1d36f4d6762cd",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "sdmonitor",
+      "digest": "sha256:8864f8dc2c9085b7a5ff3bf084c36c6507b20273f8f85a0de5d4d80bf02176b8",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "tikaserver",
+      "digest": "sha256:e27f40b8b97131cfbf42e55fec26a606cd7b23ae18987d03219c32182286439b",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "uifrontend",
+      "digest": "sha256:17f4ddb8bdb0700c927edc0ad6de96da8cd4bb00aa84f323b4a34cae0c57daeb",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "uibackend",
+      "digest": "sha256:3f1dd85cc3db8d9eb1efe7c5c076cec94cb2000222c34bf5544019d7cf0f28f2",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "wkc-connector",
+      "digest": "sha256:45a074fe4e9508a053c6201e582d78c3d5bf39f17c09a24b221cc23643ffaab3",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "scaleafmdatamover",
+      "digest": "sha256:5228a5852ac75b7bb96bc04ae9f280c242e9a6b6e7853cf24e6ed1592ec3812b",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "scaleilmdatamover",
+      "digest": "sha256:42364443197a76ef8ee82eef90689be265d4743e7f8b43b63d77cdf0e79cc9c7",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "isd-proxy",
+      "digest": "sha256:f9965aaa14dc35e4a185f44d42d8fb199f6dd78597ca924b5c1a622ad46e4413",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "must-gather",
+      "digest": "sha256:822f77e3d6dbbbe6243316dd544961c2b9584c06d56e18a841a5010c649e39b7",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "import-service",
+      "digest": "sha256:b45238c1ab0a4b13d2d2aece23a1884339f731339ce5d0f814cd513387175ea5",
+      "service": "discover",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/ibm-spectrum-discover",
+      "ocp_version": "all"
+    }
+  ],
+  "external": [
+    {
+      "service": "fusion",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:767682dd3bd65651a8204c9fb732b9c48b99127189992b43abc6ecce027f4589",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/rhel9/redis-7@sha256:33d868f8832be3dbe73adaf77e394646c8eda91af9bfb79d5e800c755925878c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "quay.io/minio/minio@sha256:a9cec9ed5bda5b4e1b2153823e01b309965b9de7ed6eb7f098d45592eecdfc78",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel9-operator@sha256:c110028aaef4adefbc4d2e4a91847bd27e7cebf3a6fe2bc8b7a3a7c54ef22c09",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel9@sha256:06482afcea65eff184901c63cbe9fc6e5b3172d23857301ad4e7b4daf362e79c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel9@sha256:32309eaa2e565b349f2806c6bc6f834876a64cd106e48044e982ed6925d5c6bf",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a731786db7f7bc7a4137309a16a7d27acbb9fd21c5731602e2ccaadc58155805",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:bf7bbc0987b7514ab15f3e20f1b432ee19d09f83c8072900b8718e158f78a5f6",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.access.redhat.com/ubi8/openjdk-11@sha256:d9739b266415be7c915daf3c61f8f1cc4e14d0b237a0ab664693bc2e0d3577e4",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/amq-streams/bridge-rhel8@sha256:f01c27ecb802e10d332939a4e1e5e95cd3bff8e98e7f1e7ca3a1ae8310f882f6",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/amq-streams/drain-cleaner-rhel8@sha256:a97f9c87850281745232911dce051053f36b018ce60e196cadfc7240ad327d87",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/amq-streams/kafka-33-rhel8@sha256:f7996a1c1de4f86cd962bc4b315d3abc1e8b48f754a276f74f4bfea9bf185ec3",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/amq-streams/kafka-34-rhel8@sha256:308371218c18c558e2fc473d3b2bdf0daae6e895700f262178a915501c6820b2",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/amq-streams/strimzi-operator-bundle@sha256:6283f4d952d50595eff4f7566686f951eeaa5e4c780e8daa857e56f007f8bbad",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:70d07d41a9d4c7fd937e5fb851feb4fba41ca71f976afb1dd4b1808ab05992ef",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-kubevirt-velero-plugin-rhel8@sha256:83d3af278b688f3cb05e041bf9e9833ae45178ed0df51be91bedcf0adb46bc84",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-operator-bundle@sha256:0db380188e152ed09fba18d7875f0cfde2313ade9f3ba44aecb78159c29e58a0",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:b97c0cff796021f8acfebfc02491bc44e2377c33763f64864f832873f5b4362d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:e1d27db49d01121775e3d24d512ef385a613570046cb1910e7154c583cb87d8d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:3eb617c3679cd7a3db139f102c912b5102f6acc35d46ae832272a151ceae7a55",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:4daa41ceba8a4419da18efbd06db36756836d3bcb44d3455e26b67aaadfe109c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-csi-rhel8@sha256:55becde464fcf2d9d4a91dd223fe78671bdbdd0aab886158e0d2728df7c51601",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-gcp-rhel8@sha256:f73bce763d903d97888a2b03d24911f2de20470a8359a0179768b007e8bc194d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-microsoft-azure-rhel8@sha256:e895300b9704b20d1c4dfcae15d24fb1570e9dc71ae6bdf600c5c8bca8869664",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:76e39de8a06c63c94eae699c867e1e43c46d3d947a7a002396f4a47b0dd6d8ea",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:9f1539e642fb9d27ce1dd9b95120744b43ce47124026f425d6d392a4dd00bd6c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-restic-restore-helper-rhel8@sha256:284477d88de05b30f957000f9fd3b41b247792feb18a77d2ee327024a2b7c345",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:0adc4747dca25bf9e0ca5dcc5ae909b34be097542b2cc7ce1c28ce79f6a79a1d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:14830f5f09a590333c35ab5db6a3d2799c9e5904c5b81bd3bd78d587682b2d84",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-volume-snapshot-mover-rhel8@sha256:46e038cd5b7f4de2f608e406b9cf79c6f0895153e4cb1dace301a9b31f55750d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/redhat/redhat-operator-index:v4.12",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/rhel9/redis-7@sha256:33d868f8832be3dbe73adaf77e394646c8eda91af9bfb79d5e800c755925878c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "quay.io/minio/minio@sha256:a9cec9ed5bda5b4e1b2153823e01b309965b9de7ed6eb7f098d45592eecdfc78",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel9-operator@sha256:c110028aaef4adefbc4d2e4a91847bd27e7cebf3a6fe2bc8b7a3a7c54ef22c09",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel9@sha256:06482afcea65eff184901c63cbe9fc6e5b3172d23857301ad4e7b4daf362e79c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel9@sha256:32309eaa2e565b349f2806c6bc6f834876a64cd106e48044e982ed6925d5c6bf",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel9@sha256:98264ebcc6950f6f240a547740260e9755ef757cec336ab6b5e8bba4d75e9502",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "icr.io/cpopen/idp-server-operator-bundle@sha256:aadfc6b18c33ed632f660ec5df9e1bf7ed866359737f61ffe27bc308e9816567",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/rhel9/redis-7@sha256:33d868f8832be3dbe73adaf77e394646c8eda91af9bfb79d5e800c755925878c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "quay.io/minio/minio@sha256:a9cec9ed5bda5b4e1b2153823e01b309965b9de7ed6eb7f098d45592eecdfc78",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/kafka-36-rhel8@sha256:99d804bbfd32d006c58dec2e4b78b501834d62f5958c68774b233dd412163456",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:5059b9ac793f91de2606ef724a2bb7d6518e75a053cc662665459eafa5f4d074",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/bridge-rhel8@sha256:297394056547efd07ccecaa5a4056accf9f9e9613811154a49fdeaefa147aa9a",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel9-operator@sha256:c110028aaef4adefbc4d2e4a91847bd27e7cebf3a6fe2bc8b7a3a7c54ef22c09",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel9@sha256:06482afcea65eff184901c63cbe9fc6e5b3172d23857301ad4e7b4daf362e79c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel9@sha256:32309eaa2e565b349f2806c6bc6f834876a64cd106e48044e982ed6925d5c6bf",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a731786db7f7bc7a4137309a16a7d27acbb9fd21c5731602e2ccaadc58155805",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:bf7bbc0987b7514ab15f3e20f1b432ee19d09f83c8072900b8718e158f78a5f6",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.access.redhat.com/ubi8/openjdk-11@sha256:d9739b266415be7c915daf3c61f8f1cc4e14d0b237a0ab664693bc2e0d3577e4",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/bridge-rhel8@sha256:f01c27ecb802e10d332939a4e1e5e95cd3bff8e98e7f1e7ca3a1ae8310f882f6",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/drain-cleaner-rhel8@sha256:a97f9c87850281745232911dce051053f36b018ce60e196cadfc7240ad327d87",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/kafka-33-rhel8@sha256:f7996a1c1de4f86cd962bc4b315d3abc1e8b48f754a276f74f4bfea9bf185ec3",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/kafka-34-rhel8@sha256:308371218c18c558e2fc473d3b2bdf0daae6e895700f262178a915501c6820b2",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/strimzi-operator-bundle@sha256:6283f4d952d50595eff4f7566686f951eeaa5e4c780e8daa857e56f007f8bbad",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:70d07d41a9d4c7fd937e5fb851feb4fba41ca71f976afb1dd4b1808ab05992ef",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-kubevirt-velero-plugin-rhel8@sha256:83d3af278b688f3cb05e041bf9e9833ae45178ed0df51be91bedcf0adb46bc84",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-operator-bundle@sha256:0db380188e152ed09fba18d7875f0cfde2313ade9f3ba44aecb78159c29e58a0",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:b97c0cff796021f8acfebfc02491bc44e2377c33763f64864f832873f5b4362d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:e1d27db49d01121775e3d24d512ef385a613570046cb1910e7154c583cb87d8d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:3eb617c3679cd7a3db139f102c912b5102f6acc35d46ae832272a151ceae7a55",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:4daa41ceba8a4419da18efbd06db36756836d3bcb44d3455e26b67aaadfe109c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-csi-rhel8@sha256:55becde464fcf2d9d4a91dd223fe78671bdbdd0aab886158e0d2728df7c51601",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-gcp-rhel8@sha256:f73bce763d903d97888a2b03d24911f2de20470a8359a0179768b007e8bc194d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-microsoft-azure-rhel8@sha256:e895300b9704b20d1c4dfcae15d24fb1570e9dc71ae6bdf600c5c8bca8869664",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:76e39de8a06c63c94eae699c867e1e43c46d3d947a7a002396f4a47b0dd6d8ea",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:9f1539e642fb9d27ce1dd9b95120744b43ce47124026f425d6d392a4dd00bd6c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-restic-restore-helper-rhel8@sha256:284477d88de05b30f957000f9fd3b41b247792feb18a77d2ee327024a2b7c345",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:0adc4747dca25bf9e0ca5dcc5ae909b34be097542b2cc7ce1c28ce79f6a79a1d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:14830f5f09a590333c35ab5db6a3d2799c9e5904c5b81bd3bd78d587682b2d84",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-volume-snapshot-mover-rhel8@sha256:46e038cd5b7f4de2f608e406b9cf79c6f0895153e4cb1dace301a9b31f55750d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/redhat/redhat-operator-index:v4.12",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/rhel9/redis-7@sha256:33d868f8832be3dbe73adaf77e394646c8eda91af9bfb79d5e800c755925878c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "quay.io/minio/minio@sha256:a9cec9ed5bda5b4e1b2153823e01b309965b9de7ed6eb7f098d45592eecdfc78",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/kafka-36-rhel8@sha256:99d804bbfd32d006c58dec2e4b78b501834d62f5958c68774b233dd412163456",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:5059b9ac793f91de2606ef724a2bb7d6518e75a053cc662665459eafa5f4d074",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/bridge-rhel8@sha256:297394056547efd07ccecaa5a4056accf9f9e9613811154a49fdeaefa147aa9a",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel9-operator@sha256:c110028aaef4adefbc4d2e4a91847bd27e7cebf3a6fe2bc8b7a3a7c54ef22c09",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel9@sha256:06482afcea65eff184901c63cbe9fc6e5b3172d23857301ad4e7b4daf362e79c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel9@sha256:32309eaa2e565b349f2806c6bc6f834876a64cd106e48044e982ed6925d5c6bf",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel9@sha256:98264ebcc6950f6f240a547740260e9755ef757cec336ab6b5e8bba4d75e9502",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-operator-bundle@sha256:22d1ac29ae9c3b35e4f850cf26cdcbdf61d5630a1a9aeed079c2dc8f46bb7434",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:09c0be21e3280937698857f6ce146026d7b3247bfdaa6c55d4cb7d265705b2d2",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/amq-streams/strimzi-operator-bundle@sha256:047e4137fc7e7ada11d55e07f4c3688d58a5b8d6cf8eebd23d2cc64a509ddfb6",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "icr.io/cpopen/idp-server-operator-bundle@sha256:aadfc6b18c33ed632f660ec5df9e1bf7ed866359737f61ffe27bc308e9816567",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u@sha256:793e05f77076e8e1e055c738e90c9706d582c7da286e908955504842f844ce06",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.restricted@sha256:afd250032aef39549f43d992a487a9d7b004f074e2cce3d8aadf6a8f327cecfb",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.db2wh@sha256:0886ee44e500e571ffcb47a82701b616da94feb9ff9eb2c0582a0852c30194fa",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.dv.api@sha256:621f1226c0041ec8961a219e804abb6b45a0b9332a9dc2dcdb216549035ee9b5",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.dv.caching@sha256:86be7fd023978bfaa922da408d457d864a0ad353d18cd07770f28a5b924fe41b",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.dv.utils@sha256:79258a4b20e4063109e943c7f0aedb513bb837ddcd7dfb2ce72e9d1d598b2bb9",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/etcd@sha256:d1dd2eae940427ff7bcd40506cc2181f3fc7826d48dbbb3a4bc3349a2d8c2f93",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.logstreaming.fluentd@sha256:55fbd2c1938cb0f735e32a8385748b702c38c3e41c83cb44e8b3d5e41b685269",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.hurricane@sha256:c28133ed6c25c163b5c63957773f7ff3375874f7a40bec9d3579bfc1349a78eb",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.instdb@sha256:cf2f99358fb6beac6ca2f9553855b8f33d4cfcd7748bd191c66b725180722cab",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.instdb.restricted@sha256:a78c2c6f7b43e857554e1eed21a9d1fd41202559cb9e4231d975c48c0eb7075b",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.auxiliary.auth@sha256:90d80d10fa6573ea466512a3fc88c9f80ccb67f4d188206fa515b15993c56a96",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.mustgather@sha256:a8a5f6ab563a7fbd93f22ee2eda3a2250c297c67011a1aadb46d6c68482535a3",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.qrep@sha256:c1121abab93abee6cf1d27019a2ba4ac2b8f7ade980207713054b184812d6d65",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.rest@sha256:7cda76f07c2d6ced608befb3a4cf6f88c3318bb3a54d02e6b3c6c03f8abf92d2",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.update.image@sha256:68cac0eb685747dbad88cb160ea859298bd3a86c3d31a2ddd6b2da28180e56fc",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.tools@sha256:290532cb23d45a246dad7bca1aa761407480a3423f645800f5aa6ca1dedd863d",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.veleroplugin@sha256:01369d5f1da84f5ceb170c9bb9287e4fdac1dd39f30515b6a13ae37c1f38c559",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/db2u/db2u.watsonquery@sha256:e1c9542fd5a6ea90b7a265d823e348aaba669545f817f47ce7076dc5753963fe",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/cpopen/db2u-operator@sha256:03b322cd5e248a1b4d4d18eb7fad9debb687a8e93132fd50ef2db8dc10ae1f02",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/cpopen/db2u-day2-operator@sha256:cd26af5b0edb41f548c2857541df1e5d424d01b98e2516fd93698a091e8ba62c",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:70d07d41a9d4c7fd937e5fb851feb4fba41ca71f976afb1dd4b1808ab05992ef",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "registry.redhat.io/amq-streams/kafka-33-rhel8@sha256:f7996a1c1de4f86cd962bc4b315d3abc1e8b48f754a276f74f4bfea9bf185ec3",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "registry.redhat.io/amq-streams/kafka-34-rhel8@sha256:308371218c18c558e2fc473d3b2bdf0daae6e895700f262178a915501c6820b2",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "registry.redhat.io/amq-streams/bridge-rhel8@sha256:f01c27ecb802e10d332939a4e1e5e95cd3bff8e98e7f1e7ca3a1ae8310f882f6",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "registry.access.redhat.com/ubi8/openjdk-11@sha256:d9739b266415be7c915daf3c61f8f1cc4e14d0b237a0ab664693bc2e0d3577e4",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/cpopen/ibm-spectrum-discover-operator-bundle@sha256:91712012f83e5475ddb725e7bf3d0450b748a14b9d82a8c4515136137cc4209e",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "icr.io/cpopen/ibm-operator-catalog@sha256:5d606e4eb2b875e0b975f892e80343105ea5fb0d67f96e1400d77a715f6df72a",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:767682dd3bd65651a8204c9fb732b9c48b99127189992b43abc6ecce027f4589",
+      "ocp_version": "all"
+    },
+    {
+      "service": "discover",
+      "image_name": "registry.redhat.io/redhat/redhat-operator-index:v4.12",
+      "ocp_version": "all"
+    }
+  ]
+}
