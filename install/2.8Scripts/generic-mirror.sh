@@ -19,8 +19,12 @@ cat <<EOF
 Usage: $(basename "${BASH_SOURCE[0]}") error <args>
 
 Prerequisites Required:
-    Minimum Skopeo version should be 1.14
-    jq to be installed
+    - Docker or Podman should be installed
+    - jq to be installed
+    - Skopeo should be installed with minimum version of 1.14
+    - oc cli should be installed in mirroring host
+    - oc-mirror utility with 4.15v or latest should be installed if redhat images are going to be mirrored
+    - For tag based mirroring without self-signed certificate using Docker, insecure registry need to be setup, follow https://www.oreilly.com/library/view/kubernetes-in-the/9781492043270/app03.html
 
 Available options:
     -ps    : Mandatory PULL-SECRET file path.
