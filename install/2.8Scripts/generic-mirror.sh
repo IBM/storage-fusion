@@ -21,7 +21,7 @@ Usage: $(basename "${BASH_SOURCE[0]}") error <args>
 Prerequisites Required:
     - Docker or Podman should be installed
     - jq to be installed
-    - Skopeo should be installed with minimum version of 1.14
+    - Skopeo should be installed with minimum version of 1.13
     - oc cli should be installed in mirroring host
     - oc-mirror utility with 4.15v or latest should be installed if redhat images are going to be mirrored
     - For tag based mirroring without self-signed certificate using Docker, insecure registry need to be setup, follow https://www.oreilly.com/library/view/kubernetes-in-the/9781492043270/app03.html
@@ -187,8 +187,8 @@ function repo_login() {
     DECODED_AUTH_VALUE=$(jq -r ".auths[\"$LOGIN_SRC_REG\"].auth" ${PULL_SECRET} | base64 -d)
     USERNAME=$(echo $DECODED_AUTH_VALUE | cut -d':' -f1)
     PASSWORD=$(echo $DECODED_AUTH_VALUE | cut -d':' -f2)
-    echo "$CTOOL login $SKIPPODTLS -u $USERNAME -p $PASSWORD $LOGIN_SRC_REG"
-    $CTOOL login $SKIPPODTLS -u $USERNAME -p $PASSWORD $LOGIN_SRC_REG
+    echo "$CTOOL login $SKIPPODTLS -u $USERNAME -p $PASSWORD $LOGIN_SRC_REG 2>&1"
+    $CTOOL login $SKIPPODTLS -u $USERNAME -p $PASSWORD $LOGIN_SRC_REG 2>&1
     if [[ $? -eq 0 ]] ; then
       print info "Login success to ${LOGIN_SRC_REG}"
     else

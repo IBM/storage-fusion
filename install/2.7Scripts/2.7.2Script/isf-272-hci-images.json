@@ -707,26 +707,6 @@
       "ocp_version": "all"
     },
     {
-      "image_name": "ibm-spectrum-scale-daemon",
-      "digest": "sha256:476239363bf644f141612d7a718848d4a5e1e67d1ef1d1a0228deb1330f25d01",
-      "service": "cnsa",
-      "ga": "true",
-      "art_location": "",
-      "entitled": "true",
-      "prod_location": "cp.icr.io/cp/spectrum/scale/data-management",
-      "ocp_version": "all"
-    },
-    {
-      "image_name": "ibm-spectrum-scale-daemon",
-      "digest": "sha256:39f62297f1d79f7e0e7fe83ab934db926db3189d0550bdc0a65f3d853752f135",
-      "service": "cnsa",
-      "ga": "true",
-      "art_location": "",
-      "entitled": "true",
-      "prod_location": "cp.icr.io/cp/spectrum/scale/data-access",
-      "ocp_version": "all"
-    },
-    {
       "image_name": "ibm-spectrum-scale-core-init",
       "digest": "sha256:f85a1e4153aa9ef91c895a3e5f73b76903e760a26c75a3ecf077b71e6d381906",
       "service": "cnsa",
