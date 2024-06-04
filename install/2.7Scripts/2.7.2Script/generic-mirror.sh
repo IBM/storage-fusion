@@ -19,7 +19,7 @@ cat <<EOF
 Usage: $(basename "${BASH_SOURCE[0]}") error <args>
 
 Prerequisites Required:
-    Minimum Skopeo version should be 1.14
+    Minimum Skopeo version should be 1.13
     jq to be installed
 
 Available options:
@@ -157,17 +157,12 @@ function repo_login() {
     print info "Using podman as container tool."
     CTOOL=podman
   fi
-  if [[ $LOCAL_ISF_REGISTRY == *":"* ]] ; then
-    LOCAL_ISF_REGISTRY_NOPORT=${LOCAL_ISF_REGISTRY%%:*}
-  else
-    LOCAL_ISF_REGISTRY_NOPORT=""
-  fi
-  for LOGIN_SRC_REG in ${IBM_REGISTRY} ${REDHAT_REGISTRY} ${QUAY_REGISTRY} ${LOCAL_ISF_REGISTRY} ${LOCAL_ISF_REGISTRY_NOPORT}
+  for LOGIN_SRC_REG in ${IBM_REGISTRY} ${REDHAT_REGISTRY} ${QUAY_REGISTRY} ${LOCAL_ISF_REGISTRY}
   do
     DECODED_AUTH_VALUE=$(jq -r ".auths[\"$LOGIN_SRC_REG\"].auth" ${PULL_SECRET} | base64 -d)
     USERNAME=$(echo $DECODED_AUTH_VALUE | cut -d':' -f1)
     PASSWORD=$(echo $DECODED_AUTH_VALUE | cut -d':' -f2)
-    $CTOOL login -u $USERNAME -p $PASSWORD $LOGIN_SRC_REG
+    $CTOOL login -u $USERNAME -p $PASSWORD $LOGIN_SRC_REG 2>&1
     if [[ $? -eq 0 ]] ; then
       print info "Login success to ${LOGIN_SRC_REG}"
     else
