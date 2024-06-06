@@ -1359,6 +1359,11 @@
       "ocp_version": "all"
     },
     {
+      "service": "backup-restore-agent",
+      "image_name": "icr.io/cpopen/idp-server-operator-bundle@sha256:563b30a7072c6f7b734a67607b2cffa314ccf41312635ee2e0e45c706febad13",
+      "ocp_version": "all"
+    },
+    {
       "service": "backup-restore-server",
       "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
       "ocp_version": "all"

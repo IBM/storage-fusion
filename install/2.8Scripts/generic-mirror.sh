@@ -73,7 +73,9 @@ Examples for only validation:
 
 NOTE: 
 - If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file
-- The Input values like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY are based on mirroring in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
+- For the required Pull-secret registries & input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY of respective images are based on mirroring steps in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.8.x?topic=installation-mirroring-your-images-enterprise-registry .
+- This script doesn't fully validate the OCP, Redhat, Data Foundation and Data cataloging images .
+- While installing Backup & Restore or Data cataloging service make sure to add the Redhat ImageContentSourcePolicy, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.8.x?topic=registry-mirroring-red-hat-operator-images-enterprise . For other ImageContentSourcePolicies & CatalogSources please refer https://www.ibm.com/docs/en/sfhs/2.8.x?topic=installation-mirroring-your-images-enterprise-registry .
 
 EOF
     exit 1
@@ -455,7 +457,7 @@ function mirror_megabom_external_images() {
     if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GUARDIAN}
       if [[ $CATALOGMIRROR != "-catalogmirror" ]] ; then
-        if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${INT_SERVICE[i]}" = "backup-restore-server" ]] ; then
+        if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${EXT_SERVICE[i]}" = "backup-restore-server" ]] ; then
           if [[ ${EXT_IMAGE[i]} = *"ose-kube-rbac-proxy"* ]] ; then
             DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
             if [[ $DEST_TAG_SELF_CERT = "-dest_as_tag_with_selfsigned_cert" ]] || [[ $DEST_TAG = "-dest_as_tag" ]] ; then
@@ -774,7 +776,7 @@ function validate_images() {
     if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GUARDIAN}
       if [[ $CATALOGMIRROR != "-catalogmirror" ]] ; then
-        if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${INT_SERVICE[i]}" = "backup-restore-server" ]] ; then
+        if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${EXT_SERVICE[i]}" = "backup-restore-server" ]] ; then
           if [[ ${EXT_IMAGE[i]} = *"ose-kube-rbac-proxy"* ]] ; then
             DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
             if [[ $DEST_TAG_SELF_CERT = "-dest_as_tag_with_selfsigned_cert" ]] || [[ $DEST_TAG = "-dest_as_tag" ]] ; then
