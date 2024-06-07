@@ -334,16 +334,16 @@ function verify_mmhealth_summary() {
 	while IFS= read -r line
 	do
 		comp=$(echo $line|awk '{print $1}')
-		failed=$(echo $line|awk '{print $3}')
-		degraded=$(echo $line|awk '{print $4}')
-		if [ ${failed} -ne 0 ]; then
-			print error "${CHECK_FAIL} ${failed} failed $comp found."
-			unhealthy=1
-		fi
-		if [ ${degraded} -ne 0 ]; then
+                failed=$(echo $line|awk '{print $3}')
+                degraded=$(echo $line|awk '{print $4}')
+                if [ "$failed" = "0" ]; then
+                        print error "${CHECK_FAIL} ${failed} failed $comp found."
+                        unhealthy=1
+                fi
+                if [ "${degraded}" = "0" ]; then
                         print error "${CHECK_FAIL} ${degraded} degraded $comp found."
-			unhealthy=1
-		fi
+                        unhealthy=1
+                fi
 	done <<< $(cat "${TEMP_MMHEALTH_FILE}")
 	if [ $unhealthy  -eq 0 ]; then
 		print info "${CHECK_PASS} All of IBM Storage Scale components are healthy."
