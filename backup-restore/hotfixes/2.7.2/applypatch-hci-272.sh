@@ -68,6 +68,7 @@ oc get csv -n $BR_NS ${DM_CSV} -o yaml > guardian-dm-operator.v2.7.2-original.ya
 oc get configmap  -n $BR_NS guardian-dm-image-config -o yaml > guardian-dm-image-config-original.yaml
 echo Updating data mover image...
 oc set data -n $BR_NS cm/guardian-dm-image-config DM_IMAGE=icr.io/cpopen/guardian-datamover@sha256:2a6f1c3f07afc4cdf1cf988ec2d168302b96cd463992e719a3367bca697ee05a
+oc delete pod -n $BR_NS --selector control-plane=controller-manager
 echo Updating CSV $DM_CSV...
 oc patch csv -n $BR_NS $DM_CSV  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:36df2a2cacd66f5cf8c01297728cb59dabc013d3c8d0b4eae3d8e1770f3839ec"}]'
 
