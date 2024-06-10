@@ -467,6 +467,16 @@
       "ocp_version": "all"
     },
     {
+      "image_name": "guardian-backup-location",
+      "digest": "sha256:7abd42c19eea0e23618fd84d3e1335b51b959d232f88ea1db2a0c2391bc241c3",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
       "image_name": "guardian-backup-policy",
       "digest": "sha256:27d7d914a3036824473d863d4010c107088ab344a935dd38216b2a13617a7bf6",
       "service": "backup-restore-server",
@@ -487,6 +497,16 @@
       "ocp_version": "all"
     },
     {
+      "image_name": "guardian-backup-service",
+      "digest": "sha256:54820def941c9ebfde1acca54368b9bc7cd34fedfa94151deb8a6766aeedc505",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
       "image_name": "guardian-job-manager",
       "digest": "sha256:3085e2a95da5bd629790e7fc201fefe5fec4cfb32712a0327b5a00d831181ad7",
       "service": "backup-restore-server",
@@ -499,6 +519,16 @@
     {
       "image_name": "guardian-transaction-manager",
       "digest": "sha256:1a2e5341561d92a94c08253f5eb0ecceabd427c19cb8d4e46c9da29ec796709e",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "true",
+      "prod_location": "cp.icr.io/cp/fbr",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-transaction-manager",
+      "digest": "sha256:f7e325d1a051dfacfe18139e46a668359a9c11129870a4b2c4b3c2fdaec615eb",
       "service": "backup-restore-server",
       "ga": "true",
       "art_location": "",
@@ -537,6 +567,16 @@
       "ocp_version": "all"
     },
     {
+      "image_name": "guardian-datamover",
+      "digest": "sha256:2a6f1c3f07afc4cdf1cf988ec2d168302b96cd463992e719a3367bca697ee05a",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "false",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
       "image_name": "guardian-kubevirt-velero-plugin",
       "digest": "sha256:658800c2056900ec63dd5bb1ebbc4d2286f38793d8d137c6fa8fb24534a104d2",
       "service": "backup-restore-server",
@@ -549,6 +589,16 @@
     {
       "image_name": "guardian-dm-operator",
       "digest": "sha256:088003fc656f27805eedde4c2a31d08f27d5ec1b4aa12d37064012a406e4202e",
+      "service": "backup-restore-server",
+      "ga": "true",
+      "art_location": "",
+      "entitled": "false",
+      "prod_location": "icr.io/cpopen",
+      "ocp_version": "all"
+    },
+    {
+      "image_name": "guardian-dm-operator",
+      "digest": "sha256:36df2a2cacd66f5cf8c01297728cb59dabc013d3c8d0b4eae3d8e1770f3839ec",
       "service": "backup-restore-server",
       "ga": "true",
       "art_location": "",
@@ -704,26 +754,6 @@
       "art_location": "",
       "entitled": "true",
       "prod_location": "cp.icr.io/cp/spectrum/scale/erasure-code",
-      "ocp_version": "all"
-    },
-    {
-      "image_name": "ibm-spectrum-scale-daemon",
-      "digest": "sha256:476239363bf644f141612d7a718848d4a5e1e67d1ef1d1a0228deb1330f25d01",
-      "service": "cnsa",
-      "ga": "true",
-      "art_location": "",
-      "entitled": "true",
-      "prod_location": "cp.icr.io/cp/spectrum/scale/data-management",
-      "ocp_version": "all"
-    },
-    {
-      "image_name": "ibm-spectrum-scale-daemon",
-      "digest": "sha256:39f62297f1d79f7e0e7fe83ab934db926db3189d0550bdc0a65f3d853752f135",
-      "service": "cnsa",
-      "ga": "true",
-      "art_location": "",
-      "entitled": "true",
-      "prod_location": "cp.icr.io/cp/spectrum/scale/data-access",
       "ocp_version": "all"
     },
     {
@@ -1376,6 +1406,11 @@
     {
       "service": "backup-restore-agent",
       "image_name": "registry.redhat.io/redhat/redhat-operator-index:v4.12",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
+      "image_name": "icr.io/cpopen/idp-server-operator-bundle@sha256:563b30a7072c6f7b734a67607b2cffa314ccf41312635ee2e0e45c706febad13",
       "ocp_version": "all"
     },
     {
