@@ -7,7 +7,7 @@ This script does the mirroring and validation of both HCI & SDS Images.
 - jq to be installed
 - Skopeo should be installed with minimum version of 1.13
 - oc cli should be installed in mirroring host
-- oc-mirror utility with 4.15v or latest should be installed if redhat or DataFoundation images of 4.15v are going to be mirrored
+- To mirror Redhat or DataFoundation images of 4.15v please refer the 1st KC Note in 1st point Procedure https://ibmdocs-test.dcs.ibm.com/docs/en/sfhs/2.8.x?topic=registry-mirroring-red-hat-operator-images-enterprise#tasktask_vpk_nbw_stb__steps__1
 - For tag based mirroring without self-signed certificate using Docker, insecure registry need to be setup, follow https://www.oreilly.com/library/view/kubernetes-in-the/9781492043270/app03.html
 
 Ensure all the required repository auths are added in the pull-secret.json file.
