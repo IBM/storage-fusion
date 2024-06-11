@@ -3,9 +3,7 @@
 This script does the mirroring and validation of both HCI & SDS Images.
 
 ### Prerequisites Required:
-- Docker or Podman should be installed
-- Skopeo should be installed with minimum version of 1.13 (If planned to mirror Data Cataloging images)
-- oc-mirror utility should be installed if Redhat or Data Foundation images are going to be mirrored
+- Please refer the "Before you begin" section in IBM Knowledge centre for prerequisites https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry#tasktask_htj_h1w_stb__prereq__1
 
 ### USAGE
 To use this script, follow the below steps:
