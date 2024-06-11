@@ -195,8 +195,11 @@ print_heading "Delete any existing guardiancopyrestores CRs"
 oc delete guardiancopyrestores -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardianmongoes CRs"
 oc delete guardianmongoes -n "${NAMESPACE}" --all --timeout=60s
-
-## err_exit "REMOVE THIS"
+print_heading "Delete any existing kafkatopics CRs"
+oc delete  kafkatopics -n "${NAMESPACE}" --all --timeout=60s
+KT=$(oc -n "${NAMESPACE}" get kafkatopics -o custom-columns="NAME:metadata.name" --no-headers)
+[ -n "$KT" ] && oc -n "${NAMESPACE}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' kafkatopics $KT
+oc delete  kafkatopics -n "${NAMESPACE}" --all --timeout=60s
 
 remove_fsi ()
 {
