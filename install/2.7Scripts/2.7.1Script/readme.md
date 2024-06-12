@@ -1,14 +1,14 @@
 # generic-mirror.sh
 
-This script only does mirroring and validation of HCI Images.
+This script only does mirroring and validation of only HCI Images.
 
-To execute the script, ensure you have either Docker or Podman on your mirroring host and Skopeo version should be minimum of 1.14 .
-
-Ensure all the required repository auths are added in the pull-secret.json file.
+### Prerequisites Required:
+- Please refer the "Before you begin" section in IBM Knowledge centre for prerequisites https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry#tasktask_htj_h1w_stb__prereq__1
 
 ### USAGE
 To use this script, follow the below steps:
 - Download the `generic-mirror.sh` and `isf-271-images.json` files to a single directory(Preferred to create a new directory).
+- Also add your `pull-secret` file to the same direcory.
 - Navigate to that directory and make the script executable `chmod +x generic-mirror.sh`.
 - Execute the script by following the sample commands below.
 
@@ -29,12 +29,10 @@ To use this script, follow the below steps:
 -validate : Optional VALIDATE_IMAGES, to only validate the mirrored images, should be used only with any/some of the -all/-ocp/-redhat/-fusion/-gdp/-df/-br/-dcs.
 ```
 
-### NOTE"
-```
-- This Script supports only single repo mirroring & validation, for multirepo please execute this script twice with appropriate options
-```
-
 ### Syntax to execute the generic-mirror.sh script
+
+1. ### For Mirroring
+
 - To Mirror All The HCI Images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
 ```
 nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -all &
@@ -44,6 +42,8 @@ nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_RE
 ```
 nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -ocp -redhat -fusion -gdp -df -br -dcs &
 ```
+
+2. ### For Validation
 
 - To only Validate All The Images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, FUSION DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
 ```
@@ -56,6 +56,9 @@ nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_RE
 ```
 
 ### Example commands to execute the generic-mirror.sh script
+
+1. ### For Mirroring
+
 - Sample Command to Mirror all the images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
 ```
 nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all &
@@ -101,6 +104,8 @@ nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -l
 nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -dcs &
 ```
 
+2. ### For Only Validation
+
 - Sample Command to only validate all the HCI images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING):
 ```
 nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all -validate &
@@ -112,6 +117,11 @@ nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -l
 ```
 
 ### NOTE
-- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file
-- For the required Pull-secret registries & input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY of respective images are based on steps in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
-- For the locations of ImageContentSourcePolicy & CatalogSource which are obtained while mirroring, please refer the respective sections in the IBM Knowledge centre https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry.
+- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file .
+- For the required Pull-secret registries & input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY of respective images are based on mirroring steps in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details .
+  - "Download pull-secret.txt" section https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
+  - "See the following sample values" section under 1st point Procedure https://www.ibm.com/docs/en/sfhs/2.7.x?topic=registry-mirroring-storage-fusion-hci-images#tasksf_mirror_scale_images__steps__1 .
+- This Script supports only single repo mirroring & validation, for multirepo please execute this script twice with appropriate options
+- This script doesn't fully validate the OCP, Redhat and Data Foundation images .
+- While installing Backup & Restore or Data cataloging service make sure to add the Redhat ImageContentSourcePolicy, please refer the 6th point Procedure section in IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=registry-mirroring-red-hat-operator-images-enterprise . 
+- For applying other ImageContentSourcePolicies & CatalogSources during installation, please refer the respective mirroring sections https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
