@@ -19,8 +19,7 @@ cat <<EOF
 Usage: $(basename "${BASH_SOURCE[0]}") error <args>
 
 Prerequisites Required:
-    Minimum Skopeo version should be 1.14
-    jq to be installed
+    - Please refer the "Before you begin" section in IBM Knowledge centre for prerequisites https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry#tasktask_htj_h1w_stb__prereq__1
 
 Available options:
     -ps    : Mandatory PULL-SECRET file path.
@@ -58,8 +57,14 @@ Example for only validation:
     nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all -validate &
 
 NOTE: 
-- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file
-- The Input values like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY are based on mirroring in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
+- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file .
+- For the required Pull-secret registries & input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY of respective images are based on mirroring steps in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details .
+  - "Download pull-secret.txt" section https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
+  - "See the following sample values" section under 1st point Procedure https://www.ibm.com/docs/en/sfhs/2.7.x?topic=registry-mirroring-storage-fusion-hci-images#tasksf_mirror_scale_images__steps__1 .
+- This Script supports only single repo mirroring & validation, for multirepo please execute this script twice with appropriate options
+- This script doesn't fully validate the OCP, Redhat and Data Foundation images .
+- While installing Backup & Restore or Data cataloging service make sure to add the Redhat ImageContentSourcePolicy, please refer the 6th point Procedure section in IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=registry-mirroring-red-hat-operator-images-enterprise . 
+- For applying other ImageContentSourcePolicies & CatalogSources during installation, please refer the respective mirroring sections https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
 
 EOF
     exit 1
@@ -157,12 +162,7 @@ function repo_login() {
     print info "Using podman as container tool."
     CTOOL=podman
   fi
-  if [[ $LOCAL_ISF_REGISTRY == *":"* ]] ; then
-    LOCAL_ISF_REGISTRY_NOPORT=${LOCAL_ISF_REGISTRY%%:*}
-  else
-    LOCAL_ISF_REGISTRY_NOPORT=""
-  fi
-  for LOGIN_SRC_REG in ${IBM_REGISTRY} ${REDHAT_REGISTRY} ${QUAY_REGISTRY} ${LOCAL_ISF_REGISTRY} ${LOCAL_ISF_REGISTRY_NOPORT}
+  for LOGIN_SRC_REG in ${IBM_REGISTRY} ${REDHAT_REGISTRY} ${QUAY_REGISTRY} ${LOCAL_ISF_REGISTRY}
   do
     DECODED_AUTH_VALUE=$(jq -r ".auths[\"$LOGIN_SRC_REG\"].auth" ${PULL_SECRET} | base64 -d)
     USERNAME=$(echo $DECODED_AUTH_VALUE | cut -d':' -f1)
@@ -377,7 +377,7 @@ function mirror_megabom_external_images() {
     fi
     if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GUARDIAN}
-      if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${INT_SERVICE[i]}" = "backup-restore-server" ]] ; then
+      if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${EXT_SERVICE[i]}" = "backup-restore-server" ]] ; then
         if [[ ${EXT_IMAGE[i]} = *"ose-kube-rbac-proxy"* ]] ; then
           DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
           IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
@@ -578,7 +578,7 @@ function validate_images() {
     fi
     if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GUARDIAN}
-      if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${INT_SERVICE[i]}" = "backup-restore-server" ]] ; then
+      if [[ "${EXT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${EXT_SERVICE[i]}" = "backup-restore-server" ]] ; then
         if [[ ${EXT_IMAGE[i]} = *"ose-kube-rbac-proxy"* ]] ; then
           DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
           IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
