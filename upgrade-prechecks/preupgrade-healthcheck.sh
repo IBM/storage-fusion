@@ -912,7 +912,7 @@ function verify_pid_limit(){
     print info "Verify PID Limit"
     rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
     flag=0
-    while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers |awk '{print $1}')"
+    while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers | grep -iv 'NotReady' | awk '{print $1}')"
     while IFS= read -r line
     do
         pidvalue=$(oc debug node/$line -- chroot /host grep podPidsLimit /etc/kubernetes/kubelet.conf 2>/dev/null |awk '{ print $2}'|tr -d ,)
