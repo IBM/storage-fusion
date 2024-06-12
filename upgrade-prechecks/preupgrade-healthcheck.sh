@@ -674,11 +674,10 @@ function isAuthCorrect () {
 #clusters-scale-414        scale-414-7eec1c0e-n9gmj        2d15h   Running   True
 function get_virtual_machines () {
   vms=$(oc get virtualmachine -A 2>&1 >> /dev/null)
-  if [[ "${vms}" == "No resources found" ]]; then
+  if [[ $? -ne 0 ]] || [[ "${vms}" == "No resources found" ]];then
     print info "${CHECK_PASS} There are no virtual machines on this cluster, so there is no need to continue this check."
     return 0
   fi
-
 	nonMigratableVM=0
 	#vms=$(oc get virtualmachine -A|awk '{print $1 $2}')
 	#echo $vm
@@ -773,7 +772,7 @@ function verify_nodes_hw(){
       #check only configured nodes, not discovered one
       configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].ocpNodeName )
       if [[ "${configuredNode}" == null ]]; then
-        print error "$monitoringCRD is not part of OCP yet."
+        print info "${CHECK_UNKNOW} $monitoringCRD is not part of OCP yet."
       else
         nodeHwStatus=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].nodeMonStatus.state)
         if ! [ "$nodeHwStatus" = "\"Succeeded\"" ]; then
