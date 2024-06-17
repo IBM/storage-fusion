@@ -19,12 +19,7 @@ cat <<EOF
 Usage: $(basename "${BASH_SOURCE[0]}") error <args>
 
 Prerequisites Required:
-    - Docker or Podman should be installed
-    - jq to be installed
-    - Skopeo should be installed with minimum version of 1.13
-    - oc cli should be installed in mirroring host
-    - To mirror Redhat or DataFoundation images of 4.15v please refer the 1st KC Note in 1st point Procedure https://ibmdocs-test.dcs.ibm.com/docs/en/sfhs/2.8.x?topic=registry-mirroring-red-hat-operator-images-enterprise#tasktask_vpk_nbw_stb__steps__1
-    - For tag based mirroring without self-signed certificate using Docker, insecure registry need to be setup, follow https://www.oreilly.com/library/view/kubernetes-in-the/9781492043270/app03.html
+    - Please refer the "Before you begin" section in IBM Knowledge centre for prerequisites https://www.ibm.com/docs/en/sfhs/2.8.x?topic=installation-mirroring-your-images-enterprise-registry#tasktask_htj_h1w_stb__prereq__1
 
 Available options:
     -ps    : Mandatory PULL-SECRET file path.
@@ -72,10 +67,15 @@ Examples for only validation:
     - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -dest_as_tag -all -validate &
 
 NOTE: 
-- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file
-- For the required Pull-secret registries & input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY of respective images are based on mirroring steps in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.8.x?topic=installation-mirroring-your-images-enterprise-registry .
-- This script doesn't fully validate the OCP, Redhat, Data Foundation and Data cataloging images .
-- While installing Backup & Restore or Data cataloging service make sure to add the Redhat ImageContentSourcePolicy, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.8.x?topic=registry-mirroring-red-hat-operator-images-enterprise . For other ImageContentSourcePolicies & CatalogSources please refer https://www.ibm.com/docs/en/sfhs/2.8.x?topic=installation-mirroring-your-images-enterprise-registry .
+- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file .
+- For the required Pull-secret registries & input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY of respective images are based on mirroring steps in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details .
+  - "Download pull-secret.txt" section https://www.ibm.com/docs/en/sfhs/2.8.x?topic=installation-mirroring-your-images-enterprise-registry .
+  - "See the following sample values" section under 1st point Procedure https://www.ibm.com/docs/en/sfhs/2.8.x?topic=registry-mirroring-storage-fusion-hci-images#tasksf_mirror_scale_images__steps__1 .
+- This Script supports only single repo mirroring & validation, for multirepo please execute this script twice with appropriate options
+- For mirroring 4.15 Redhat or Data Foundation images, please refer the 1st Note point in Procedure section's 1st point in IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.8.x?topic=registry-mirroring-red-hat-operator-images-enterprise#tasktask_vpk_nbw_stb__steps__1 .
+- This script doesn't fully validate the OCP, Redhat, Data Cataloging and Data Foundation images .
+- While installing Backup & Restore or Data cataloging service make sure to add the Redhat ImageContentSourcePolicy, please refer the 6th point Procedure section in IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.8.x?topic=registry-mirroring-red-hat-operator-images-enterprise . 
+- For applying other ImageContentSourcePolicies & CatalogSources during installation, please refer the respective mirroring sections https://www.ibm.com/docs/en/sfhs/2.8.x?topic=installation-mirroring-your-images-enterprise-registry .
 
 EOF
     exit 1
