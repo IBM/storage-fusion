@@ -1009,8 +1009,8 @@ echo "REPO_PREFIX: $REPO_PREFIX"
 [[  -z "$PULL_SECRET" ]] && usage
 
 if [[  -z "$ISF_VERSION" ]] ; then
-	print info "No $ISF_VERSION -isf is provided, using 2.7.2 as default"
-	ISF_VERSION="2.7.2"
+	print info "No $ISF_VERSION -isf is provided, using 2.8.0 as default"
+	ISF_VERSION="2.8.0"
 else
   ISF_VERSION=$ISF_VERSION
 fi
