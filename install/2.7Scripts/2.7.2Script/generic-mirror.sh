@@ -19,8 +19,7 @@ cat <<EOF
 Usage: $(basename "${BASH_SOURCE[0]}") error <args>
 
 Prerequisites Required:
-    Minimum Skopeo version should be 1.13
-    jq to be installed
+    - Please refer the "Before you begin" section in IBM Knowledge centre for prerequisites https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry#tasktask_htj_h1w_stb__prereq__1
 
 Available options:
     -ps    : Mandatory PULL-SECRET file path.
@@ -58,10 +57,14 @@ Example for only validation:
     nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all -validate &
 
 NOTE: 
-- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file
-- For the required Pull-secret registries & input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY of respective images are based on mirroring steps in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
-- This script doesn't fully validate the OCP, Redhat and Data Foundation images.
-- While installing Backup & Restore or Data cataloging service make sure to add the Redhat ImageContentSourcePolicy, please refer the IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=registry-mirroring-red-hat-operator-images-enterprise . For other ImageContentSourcePolicies & CatalogSources please refer https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
+- If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file .
+- For the required Pull-secret registries & input details like LOCAL_ISF_REGISTRY & LOCAL_ISF_REPOSITORY of respective images are based on mirroring steps in the IBM Knowledge centre, please refer the IBM Knowledge centre for more details .
+  - "Download pull-secret.txt" section https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
+  - "See the following sample values" section under 1st point Procedure https://www.ibm.com/docs/en/sfhs/2.7.x?topic=registry-mirroring-storage-fusion-hci-images#tasksf_mirror_scale_images__steps__1 .
+- This Script supports only single repo mirroring & validation, for multirepo please execute this script twice with appropriate options
+- This script doesn't fully validate the OCP, Redhat and Data Foundation images .
+- While installing Backup & Restore or Data cataloging service make sure to add the Redhat ImageContentSourcePolicy, please refer the 6th point Procedure section in IBM Knowledge centre for more details https://www.ibm.com/docs/en/sfhs/2.7.x?topic=registry-mirroring-red-hat-operator-images-enterprise . 
+- For applying other ImageContentSourcePolicies & CatalogSources during installation, please refer the respective mirroring sections https://www.ibm.com/docs/en/sfhs/2.7.x?topic=installation-mirroring-your-images-enterprise-registry .
 
 EOF
     exit 1
@@ -164,7 +167,7 @@ function repo_login() {
     DECODED_AUTH_VALUE=$(jq -r ".auths[\"$LOGIN_SRC_REG\"].auth" ${PULL_SECRET} | base64 -d)
     USERNAME=$(echo $DECODED_AUTH_VALUE | cut -d':' -f1)
     PASSWORD=$(echo $DECODED_AUTH_VALUE | cut -d':' -f2)
-    $CTOOL login -u $USERNAME -p $PASSWORD $LOGIN_SRC_REG 2>&1
+    $CTOOL login -u $USERNAME -p $PASSWORD $LOGIN_SRC_REG
     if [[ $? -eq 0 ]] ; then
       print info "Login success to ${LOGIN_SRC_REG}"
     else
