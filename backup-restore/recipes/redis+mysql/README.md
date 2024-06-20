@@ -1,4 +1,4 @@
-If customer has multiple db like redis(1 instance), mysql(more than 1 instances) in same namespace, so for backup and restore we have combined the recipe for both db. 
+This is a sample recipe which provides a backup and restore workflow for an application that has two data sources to demonstrate how the sequences for the resources and PVCs for each data source are combined in a single recipe. In this example, we are using a Redis and MySQL database instances. Use this recipe as a template for applications with multiple database engine types. 
 
 ## How to deploy: 
 
