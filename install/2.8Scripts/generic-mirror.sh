@@ -398,18 +398,18 @@ function mirror_internal_images() {
             IMAGE_URL="docker://${TARGET_PATH}/${DEST_FOLDER}/${INT_IMAGE[i]}@${DIGEST[i]}"
           fi
         fi
-        echo "retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
-        retry_command "skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
-        if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
+        echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
+        retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
+        if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
       fi
     fi
     if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GUARDIAN}
       if [[ $CATALOGMIRROR != "-catalogmirror" ]] ; then
         if [[ "${INT_SERVICE[i]}" = "backup-restore-agent" ]] || [[ "${INT_SERVICE[i]}" = "backup-restore-server" ]] ; then
-          echo "retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
-          retry_command "skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
-          if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
+          echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
+          retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
+          if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
         fi
       fi
     fi
@@ -418,17 +418,17 @@ function mirror_internal_images() {
       if [[ $CATALOGMIRROR != "-catalogmirror" ]] ; then
         if [[ "${INT_SERVICE[i]}" = "fusion" ]] ; then
           if [[ ${INT_IMAGE[i]} = "isf-operator-software-catalog" ]] ; then
-            echo -e "retry_command skopeo copy --insecure-policy --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION} docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION} $SKIPTLS\n" >> ${MIRROR_LOG}
-            retry_command "skopeo copy --insecure-policy --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION} docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION} $SKIPTLS"
-            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION} docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION} $SKIPTLS"; failedtocopy=1; fi
+            echo -e "retry_command skopeo copy --insecure-policy --preserve-digests --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION} docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION} $SKIPTLS\n" >> ${MIRROR_LOG}
+            retry_command "skopeo copy --insecure-policy --preserve-digests --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION} docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION} $SKIPTLS"
+            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION} docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION} $SKIPTLS"; failedtocopy=1; fi
           elif [[ ${INT_IMAGE[i]} = "isf-operator-catalog" ]] ; then
-            echo -e "retry_command skopeo copy --insecure-policy --all docker://$IMG_LOC/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 docker://\$TARGET_PATH/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 $SKIPTLS\n" >> ${MIRROR_LOG}
-            retry_command "skopeo copy --insecure-policy --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 $SKIPTLS"
-            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 $SKIPTLS"; failedtocopy=1; fi
+            echo -e "retry_command skopeo copy --insecure-policy --preserve-digests --all docker://$IMG_LOC/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 docker://\$TARGET_PATH/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 $SKIPTLS\n" >> ${MIRROR_LOG}
+            retry_command "skopeo copy --insecure-policy --preserve-digests --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 $SKIPTLS"
+            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all docker://${IMG_LOC}/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 docker://${TARGET_PATH}/${INT_IMAGE[i]}:${ISF_VERSION}-linux.amd64 $SKIPTLS"; failedtocopy=1; fi
           else
-            echo "retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
-            retry_command "skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
-            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
+            echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
+            retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
+            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
           fi
         fi
       fi
@@ -449,9 +449,9 @@ function mirror_megabom_external_images() {
     if [[ $GDP_IMAGES = "-gdp" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
       MIRROR_LOG=${GDP}
       if [[ "${EXT_SERVICE[i]}" = "cnsa" ]] ; then
-        echo "retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
-        retry_command "skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
-        if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
+        echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
+        retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
+        if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
       fi
     fi
     if [[ $GUARDIAN_IMAGES = "-br" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
@@ -464,9 +464,9 @@ function mirror_megabom_external_images() {
               DEST_IMAGE=$(echo "${DEST_IMAGE}" | sed 's/@sha256//')
             fi
             IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
-            echo "retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
-            retry_command "skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
-            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
+            echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
+            retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
+            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
           fi
           if [[ ${EXT_IMAGE[i]} = *"redis-7"* ]] ; then
             DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
@@ -474,13 +474,13 @@ function mirror_megabom_external_images() {
               DEST_IMAGE=$(echo "${DEST_IMAGE}" | sed 's/@sha256//')
             fi
             IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
-            echo "retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
-            retry_command "skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
-            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
+            echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
+            retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
+            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
           fi
-          echo "retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
-          retry_command "skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
-          if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
+          echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
+          retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
+          if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
         fi
       fi
     fi
@@ -493,18 +493,18 @@ function mirror_megabom_external_images() {
             if [[ $DEST_TAG_SELF_CERT = "-dest_as_tag_with_selfsigned_cert" ]] || [[ $DEST_TAG = "-dest_as_tag" ]] ; then
               SRC_IMAGE=$(echo "${SRC_IMAGE}" | sed 's/@sha256//')
             fi
-            echo "retry_command skopeo copy --all --preserve-digests $SOURCE_IMAGE docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE $SKIPTLS" >> ${MIRROR_LOG}
-            retry_command "skopeo copy --all --preserve-digests $SOURCE_IMAGE docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE $SKIPTLS"
-            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests $SOURCE_IMAGE docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE $SKIPTLS"; failedtocopy=1; fi
+            echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE $SKIPTLS" >> ${MIRROR_LOG}
+            retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE $SKIPTLS"
+            if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)openshift4-$SRC_IMAGE $SKIPTLS"; failedtocopy=1; fi
           fi
           DEST_IMAGE=$(echo "${EXT_IMAGE[i]}" | sed 's|[^/]*/|/|')
           if [[ $DEST_TAG_SELF_CERT = "-dest_as_tag_with_selfsigned_cert" ]] || [[ $DEST_TAG = "-dest_as_tag" ]] ; then
             DEST_IMAGE=$(echo "${DEST_IMAGE}" | sed 's/@sha256//')
           fi
           IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
-          echo "retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
-          retry_command "skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
-          if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
+          echo "retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS" >> ${MIRROR_LOG}
+          retry_command "skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"
+          if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --insecure-policy --preserve-digests --all $SOURCE_IMAGE $IMAGE_URL $SKIPTLS"; failedtocopy=1; fi
         fi
       fi
     fi
@@ -515,31 +515,31 @@ function mirror_submariner_images () {
   # Hard Coding the copy commands for submariner images
   # Can be removed if the images are added to the megabom
   print info "EXECUTING mirror_submariner_images()"
-  echo "skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS" >> "$FUSION"
-  echo "retry_command skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS" >> "$FUSION"
-  retry_command "skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS"; failedtocopy=1; fi
-  echo "retry_command skopeo copy --all docker://quay.io/submariner/submariner-gateway:0.16.3 docker://$TARGET_PATH/submariner/submariner-gateway:0.16.3 $SKIPTLS" >> "$FUSION"
-  retry_command "skopeo copy --all docker://quay.io/submariner/submariner-gateway:0.16.3 docker://$TARGET_PATH/submariner/submariner-gateway:0.16.3 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS"; failedtocopy=1; fi
-  echo "retry_command skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3 $SKIPTLS" >> "$FUSION"
-  retry_command "skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3 $SKIPTLS"; failedtocopy=1; fi
-  echo "retry_command skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3 $SKIPTLS" >> "$FUSION"
-  retry_command "skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3 $SKIPTLS"; failedtocopy=1; fi
-  echo "retry_command skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3 $SKIPTLS" >> "$FUSION"
-  retry_command "skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3 $SKIPTLS"; failedtocopy=1; fi
-  echo "retry_command skopeo copy --all docker://quay.io/submariner/nettest:0.16.3 docker://$TARGET_PATH/submariner/nettest:0.16.3 $SKIPTLS" >> "$FUSION"
-  retry_command "skopeo copy --all docker://quay.io/submariner/nettest:0.16.3 docker://$TARGET_PATH/submariner/nettest:0.16.3 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all docker://quay.io/submariner/nettest:0.16.3 docker://$TARGET_PATH/submariner/nettest:0.16.3 $SKIPTLS"; failedtocopy=1; fi
-  echo "retry_command skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.13.1 $SKIPTLS" >> "$FUSION"
-  retry_command "skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.13.1 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.13.1 $SKIPTLS"; failedtocopy=1; fi
-  echo "retry_command skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.13.1 $SKIPTLS" >> "$FUSION"
-  retry_command "skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.13.1 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.13.1 $SKIPTLS"; failedtocopy=1; fi
+  echo "skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS" >> "$FUSION"
+  echo "retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS" >> "$FUSION"
+  retry_command "skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS"
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS"; failedtocopy=1; fi
+  echo "retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-gateway:0.16.3 docker://$TARGET_PATH/submariner/submariner-gateway:0.16.3 $SKIPTLS" >> "$FUSION"
+  retry_command "skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-gateway:0.16.3 docker://$TARGET_PATH/submariner/submariner-gateway:0.16.3 $SKIPTLS"
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-operator:0.16.3 docker://$TARGET_PATH/submariner/submariner-operator:0.16.3 $SKIPTLS"; failedtocopy=1; fi
+  echo "retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3 $SKIPTLS" >> "$FUSION"
+  retry_command "skopeo copy --all --preserve-digests docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3 $SKIPTLS"
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/lighthouse-agent:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-agent:0.16.3 $SKIPTLS"; failedtocopy=1; fi
+  echo "retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3 $SKIPTLS" >> "$FUSION"
+  retry_command "skopeo copy --all --preserve-digests docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3 $SKIPTLS"
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/lighthouse-coredns:0.16.3 docker://$TARGET_PATH/submariner/lighthouse-coredns:0.16.3 $SKIPTLS"; failedtocopy=1; fi
+  echo "retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3 $SKIPTLS" >> "$FUSION"
+  retry_command "skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3 $SKIPTLS"
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/submariner-route-agent:0.16.3 docker://$TARGET_PATH/submariner/submariner-route-agent:0.16.3 $SKIPTLS"; failedtocopy=1; fi
+  echo "retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/nettest:0.16.3 docker://$TARGET_PATH/submariner/nettest:0.16.3 $SKIPTLS" >> "$FUSION"
+  retry_command "skopeo copy --all --preserve-digests docker://quay.io/submariner/nettest:0.16.3 docker://$TARGET_PATH/submariner/nettest:0.16.3 $SKIPTLS"
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests docker://quay.io/submariner/nettest:0.16.3 docker://$TARGET_PATH/submariner/nettest:0.16.3 $SKIPTLS"; failedtocopy=1; fi
+  echo "retry_command skopeo copy --all --preserve-digests docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.13.1 $SKIPTLS" >> "$FUSION"
+  retry_command "skopeo copy --all --preserve-digests docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.13.1 $SKIPTLS"
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$TARGET_PATH/kubebuilder/kube-rbac-proxy:v0.13.1 $SKIPTLS"; failedtocopy=1; fi
+  echo "retry_command skopeo copy --all --preserve-digests docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.13.1 $SKIPTLS" >> "$FUSION"
+  retry_command "skopeo copy --all --preserve-digests docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.13.1 $SKIPTLS"
+  if [[ $? -ne 0 ]] ; then print error "Failed to copy retry_command skopeo copy --all --preserve-digests docker://gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1 docker://$LOCAL_ISF_REGISTRY/$NAMESPACE/$(echo $REPO_PREFIX)kubebuilder-kube-rbac-proxy:v0.13.1 $SKIPTLS"; failedtocopy=1; fi
 }
 
 function mirror_ocp_images() {
