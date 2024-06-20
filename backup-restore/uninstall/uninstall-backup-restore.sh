@@ -81,6 +81,7 @@ print_heading()
 }
 
 ISF_NS=$(oc get spectrumfusion -A --no-headers | cut -d" " -f1)
+[ -z "$ISF_NS" ] && ISF_NS=$(oc get subs  -o custom-columns=:metadata.namespace,:spec.name -A | grep "isf-operator$"  | cut -d" " -f1)
 [ -z "$ISF_NS" ] &&  ISF_NS=ibm-spectrum-fusion-ns
 export ISF_NS
 
@@ -274,10 +275,11 @@ if [ -z "$INSTS" ]
      echo "==== Deleting Fusion control plane recipe"
      oc -n "$ISF_NS" delete recipes.spp-data-protection.isf.ibm.com fusion-control-plane
      echo "==== Deleting cluster role bindings and crds"
-     ROLES=$(oc get clusterrole --ignore-not-found | grep -iE "guardian|ibm-backup-restore|dataprotectionagent|dataprotectionserver" | cut -d" " -f1)
+     ROLES=$(oc get clusterrole --ignore-not-found | grep -iE "guardian|ibm-backup-restore|dataprotectionagent|dataprotectionserver|ibm-datamover" | cut -d" " -f1)
      [ -n "$ROLES" ] && oc delete clusterrole $ROLES --timeout=60s
-     BINDINGS=$(oc get clusterrolebinding --ignore-not-found | grep -iE "guardian|ibm-backup-restore|dataprotectionagent|dataprotectionserver" | cut -d" " -f1)
+     BINDINGS=$(oc get clusterrolebinding --ignore-not-found | grep -iE "guardian|ibm-backup-restore|dataprotectionagent|dataprotectionserver|ibm-datamover" | cut -d" " -f1)
      [ -n "$BINDINGS" ] && oc delete clusterrolebinding $BINDINGS --timeout=60s
+     oc delete scc ibm-datamover --timeout=60s
      CRDS=$(oc get crd -o name | grep -E 'guardian.*ibm.com|dataprotectionserver.*.ibm.com|dataprotectionagent.*.ibm.com')
      [ -n "$CRDS" ]  && oc delete $CRDS --timeout=60s
  else
