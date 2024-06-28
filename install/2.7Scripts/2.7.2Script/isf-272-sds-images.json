@@ -1076,26 +1076,6 @@
     },
     {
       "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:e1d27db49d01121775e3d24d512ef385a613570046cb1910e7154c583cb87d8d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:14830f5f09a590333c35ab5db6a3d2799c9e5904c5b81bd3bd78d587682b2d84",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:4daa41ceba8a4419da18efbd06db36756836d3bcb44d3455e26b67aaadfe109c",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:9f1539e642fb9d27ce1dd9b95120744b43ce47124026f425d6d392a4dd00bd6c",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
       "image_name": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a731786db7f7bc7a4137309a16a7d27acbb9fd21c5731602e2ccaadc58155805",
       "ocp_version": "all"
     },
@@ -1106,172 +1086,12 @@
     },
     {
       "service": "backup-restore-agent",
-      "image_name": "registry.access.redhat.com/ubi8/openjdk-11@sha256:d9739b266415be7c915daf3c61f8f1cc4e14d0b237a0ab664693bc2e0d3577e4",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/amq-streams/bridge-rhel8@sha256:f01c27ecb802e10d332939a4e1e5e95cd3bff8e98e7f1e7ca3a1ae8310f882f6",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/amq-streams/drain-cleaner-rhel8@sha256:a97f9c87850281745232911dce051053f36b018ce60e196cadfc7240ad327d87",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/amq-streams/kafka-33-rhel8@sha256:f7996a1c1de4f86cd962bc4b315d3abc1e8b48f754a276f74f4bfea9bf185ec3",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/amq-streams/kafka-34-rhel8@sha256:308371218c18c558e2fc473d3b2bdf0daae6e895700f262178a915501c6820b2",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/amq-streams/strimzi-operator-bundle@sha256:6283f4d952d50595eff4f7566686f951eeaa5e4c780e8daa857e56f007f8bbad",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:70d07d41a9d4c7fd937e5fb851feb4fba41ca71f976afb1dd4b1808ab05992ef",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-kubevirt-velero-plugin-rhel8@sha256:83d3af278b688f3cb05e041bf9e9833ae45178ed0df51be91bedcf0adb46bc84",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-operator-bundle@sha256:0db380188e152ed09fba18d7875f0cfde2313ade9f3ba44aecb78159c29e58a0",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:b97c0cff796021f8acfebfc02491bc44e2377c33763f64864f832873f5b4362d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:e1d27db49d01121775e3d24d512ef385a613570046cb1910e7154c583cb87d8d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:3eb617c3679cd7a3db139f102c912b5102f6acc35d46ae832272a151ceae7a55",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:4daa41ceba8a4419da18efbd06db36756836d3bcb44d3455e26b67aaadfe109c",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-csi-rhel8@sha256:55becde464fcf2d9d4a91dd223fe78671bdbdd0aab886158e0d2728df7c51601",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-gcp-rhel8@sha256:f73bce763d903d97888a2b03d24911f2de20470a8359a0179768b007e8bc194d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-microsoft-azure-rhel8@sha256:e895300b9704b20d1c4dfcae15d24fb1570e9dc71ae6bdf600c5c8bca8869664",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:76e39de8a06c63c94eae699c867e1e43c46d3d947a7a002396f4a47b0dd6d8ea",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:9f1539e642fb9d27ce1dd9b95120744b43ce47124026f425d6d392a4dd00bd6c",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-restic-restore-helper-rhel8@sha256:284477d88de05b30f957000f9fd3b41b247792feb18a77d2ee327024a2b7c345",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:0adc4747dca25bf9e0ca5dcc5ae909b34be097542b2cc7ce1c28ce79f6a79a1d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:14830f5f09a590333c35ab5db6a3d2799c9e5904c5b81bd3bd78d587682b2d84",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/oadp/oadp-volume-snapshot-mover-rhel8@sha256:46e038cd5b7f4de2f608e406b9cf79c6f0895153e4cb1dace301a9b31f55750d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-agent",
-      "image_name": "registry.redhat.io/redhat/redhat-operator-index:v4.12",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
       "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
       "ocp_version": "all"
     },
     {
       "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/kafka-33-rhel8@sha256:f7996a1c1de4f86cd962bc4b315d3abc1e8b48f754a276f74f4bfea9bf185ec3",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/kafka-34-rhel8@sha256:308371218c18c558e2fc473d3b2bdf0daae6e895700f262178a915501c6820b2",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:70d07d41a9d4c7fd937e5fb851feb4fba41ca71f976afb1dd4b1808ab05992ef",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/bridge-rhel8@sha256:f01c27ecb802e10d332939a4e1e5e95cd3bff8e98e7f1e7ca3a1ae8310f882f6",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/drain-cleaner-rhel8@sha256:a97f9c87850281745232911dce051053f36b018ce60e196cadfc7240ad327d87",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:e1d27db49d01121775e3d24d512ef385a613570046cb1910e7154c583cb87d8d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:14830f5f09a590333c35ab5db6a3d2799c9e5904c5b81bd3bd78d587682b2d84",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:4daa41ceba8a4419da18efbd06db36756836d3bcb44d3455e26b67aaadfe109c",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:9f1539e642fb9d27ce1dd9b95120744b43ce47124026f425d6d392a4dd00bd6c",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
       "ocp_version": "all"
     },
     {
@@ -1286,122 +1106,7 @@
     },
     {
       "service": "backup-restore-server",
-      "image_name": "registry.access.redhat.com/ubi8/openjdk-11@sha256:d9739b266415be7c915daf3c61f8f1cc4e14d0b237a0ab664693bc2e0d3577e4",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/bridge-rhel8@sha256:f01c27ecb802e10d332939a4e1e5e95cd3bff8e98e7f1e7ca3a1ae8310f882f6",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/drain-cleaner-rhel8@sha256:a97f9c87850281745232911dce051053f36b018ce60e196cadfc7240ad327d87",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/kafka-33-rhel8@sha256:f7996a1c1de4f86cd962bc4b315d3abc1e8b48f754a276f74f4bfea9bf185ec3",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/kafka-34-rhel8@sha256:308371218c18c558e2fc473d3b2bdf0daae6e895700f262178a915501c6820b2",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/strimzi-operator-bundle@sha256:6283f4d952d50595eff4f7566686f951eeaa5e4c780e8daa857e56f007f8bbad",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:70d07d41a9d4c7fd937e5fb851feb4fba41ca71f976afb1dd4b1808ab05992ef",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-kubevirt-velero-plugin-rhel8@sha256:83d3af278b688f3cb05e041bf9e9833ae45178ed0df51be91bedcf0adb46bc84",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-operator-bundle@sha256:0db380188e152ed09fba18d7875f0cfde2313ade9f3ba44aecb78159c29e58a0",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:b97c0cff796021f8acfebfc02491bc44e2377c33763f64864f832873f5b4362d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-rhel8-operator@sha256:e1d27db49d01121775e3d24d512ef385a613570046cb1910e7154c583cb87d8d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:3eb617c3679cd7a3db139f102c912b5102f6acc35d46ae832272a151ceae7a55",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8@sha256:4daa41ceba8a4419da18efbd06db36756836d3bcb44d3455e26b67aaadfe109c",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-csi-rhel8@sha256:55becde464fcf2d9d4a91dd223fe78671bdbdd0aab886158e0d2728df7c51601",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-gcp-rhel8@sha256:f73bce763d903d97888a2b03d24911f2de20470a8359a0179768b007e8bc194d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-for-microsoft-azure-rhel8@sha256:e895300b9704b20d1c4dfcae15d24fb1570e9dc71ae6bdf600c5c8bca8869664",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:76e39de8a06c63c94eae699c867e1e43c46d3d947a7a002396f4a47b0dd6d8ea",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-plugin-rhel8@sha256:9f1539e642fb9d27ce1dd9b95120744b43ce47124026f425d6d392a4dd00bd6c",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-restic-restore-helper-rhel8@sha256:284477d88de05b30f957000f9fd3b41b247792feb18a77d2ee327024a2b7c345",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:0adc4747dca25bf9e0ca5dcc5ae909b34be097542b2cc7ce1c28ce79f6a79a1d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-velero-rhel8@sha256:14830f5f09a590333c35ab5db6a3d2799c9e5904c5b81bd3bd78d587682b2d84",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/oadp/oadp-volume-snapshot-mover-rhel8@sha256:46e038cd5b7f4de2f608e406b9cf79c6f0895153e4cb1dace301a9b31f55750d",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
       "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
-      "ocp_version": "all"
-    },
-    {
-      "service": "backup-restore-server",
-      "image_name": "registry.redhat.io/redhat/redhat-operator-index:v4.12",
       "ocp_version": "all"
     },
     {
@@ -1512,11 +1217,6 @@
     {
       "service": "discover",
       "image_name": "icr.io/cpopen/ibm-operator-catalog@sha256:056db327f51ccc094e72f56d24ed0fc0c333369c33e80624f2bdccf7ca813435",
-      "ocp_version": "all"
-    },
-    {
-      "service": "discover",
-      "image_name": "registry.redhat.io/amq-streams/strimzi-rhel8-operator@sha256:70d07d41a9d4c7fd937e5fb851feb4fba41ca71f976afb1dd4b1808ab05992ef",
       "ocp_version": "all"
     },
     {
