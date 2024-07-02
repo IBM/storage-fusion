@@ -1,0 +1,91 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: redis-mysql-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: redis-mysql
+  groups:
+    - name: redis-volumes
+      type: volume
+      labelSelector: fusion-label=redis
+    - name: mysql-volumes
+      type: volume
+      labelSelector: fusion-label=mysql
+    - name: remaining-app-volumes
+      type: volume     
+      labelSelector: fusion-label!=mysql, fusion-label!=redis        
+    - name: all-resources
+      type: resource
+      excludedResourceTypes:
+        - pods
+        - replicasets
+    - name: deployment-resources
+      type: resource
+      includedResourceTypes: 
+        - deployment
+      backupRef: all-resources      
+  hooks:
+  - name: mysql-deployment-check
+    type: check
+    namespace: ${GROUP.all-resources.namespace}
+    selectResource: deployment
+    labelSelector: fusion-label=mysql
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mysql-pod-exec
+    type: exec
+    namespace: ${GROUP.all-resources.namespace}
+    labelSelector: app=mysql
+    timeout: 60
+    onError: fail
+    ops:
+    - name: "flush-tables-with-read-lock"
+      command: >
+        ["/bin/bash", "-c", "mysql --user=root --password=$MYSQL_ROOT_PASSWORD -e 'FLUSH TABLES WITH READ LOCK;'"] 
+      container: mysql  
+  - name: redis-deployment-check 
+    type: check
+    namespace: ${GROUP.all-resources.namespace}
+    selectResource: deployment
+    labelSelector: fusion-label=redis
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: redis-pod-exec
+    type: exec
+    namespace: ${GROUP.all-resources.namespace}
+    labelSelector: app=redis
+    timeout: 300
+    onError: fail
+    ops:
+    - name: "bgsave"
+      command: >
+        ["/bin/bash", "-c", "redis-cli bgsave; while [\"$(redis-cli INFO persistence | grep rdb_bgsave_in_progress | tr -d '\r' | rev | cut -c 1)\" -ne 0 ]; do echo \"Sleeping for a millisecond\"; sleep 0.001; done;"]
+      container: redis
+  workflows:
+  - name: backup
+    sequence:
+    - group: all-resources
+    - hook: redis-pod-exec/bgsave
+    - group: redis-volumes
+    - hook: mysql-pod-exec/flush-tables-with-read-lock
+    - group: mysql-volumes
+    - group: remaining-app-volumes
+  - name: restore
+    sequence:
+    - group: redis-volumes
+    - group: mysql-volumes
+    - group: remaining-app-volumes    
+    - group: deployment-resources
+    - hook: redis-deployment-check/replicasReady
+    - hook: mysql-deployment-check/replicasReady
