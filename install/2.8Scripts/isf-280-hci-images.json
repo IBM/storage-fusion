@@ -1184,6 +1184,11 @@
     },
     {
       "service": "backup-restore-agent",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-agent",
       "image_name": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a731786db7f7bc7a4137309a16a7d27acbb9fd21c5731602e2ccaadc58155805",
       "ocp_version": "all"
     },
@@ -1215,6 +1220,11 @@
     {
       "service": "backup-restore-server",
       "image_name": "quay.io/minio/minio@sha256:a9cec9ed5bda5b4e1b2153823e01b309965b9de7ed6eb7f098d45592eecdfc78",
+      "ocp_version": "all"
+    },
+    {
+      "service": "backup-restore-server",
+      "image_name": "registry.redhat.io/openshift4/ose-kube-rbac-proxy@sha256:63482c91717cb5acdf2734bce6ebadd43c6159c6116b6a2a581f4135873ad0dd",
       "ocp_version": "all"
     },
     {
