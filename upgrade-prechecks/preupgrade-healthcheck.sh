@@ -1188,9 +1188,9 @@ elif [[ $# -eq 1 && "$1" == "healthcheck" ]]; then
 	print_section "CRDs count"
 	get_crd_count
 	print_section "NTP servers from nodes"
-	#get_chrony_list
+	get_chrony_list
 	print_section "PDBs with zero disruption allowed"
-	#verify_pdb
+	verify_pdb
 	print_section "ETCD health"
 	check_etcd_status
 	print_section "Log collector PVC usage"
