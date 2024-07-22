@@ -1184,7 +1184,7 @@ elif [[ $# -eq 1 && "$1" == "postcheck" ]]; then
         print_footer
 elif [[ $# -eq 1 && "$1" == "healthcheck" ]]; then
         print_header
-#	preupgrade_checks
+        preupgrade_checks
 	print_section "CRDs count"
 	get_crd_count
 	print_section "NTP servers from nodes"
