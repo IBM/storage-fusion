@@ -16,21 +16,44 @@
 
 # It has the following prechecks:
 # API accessibility
-# access from nodes to Quay.io and IBM registries (icr.io and cp.icr.io)
-# pull access from one of the node for OCP release image and IDF entitlement validation image
-# machine config pool
-# nodes status
-# cluster operators
-# catalog sources
-# Fusion operators
-# services health
-# Scale
-# Backup and Restore
-# VirtualMachine PVCs accessmode
-# Nodes hardware health
-# Switch, vlan and link health
-# pid limit on all nodes
-# CSI configmap verification on 2.6.1 Metrodr setup
+# Cluster operators
+# Nodes being ready
+# Nodes not being under maintenance
+# Machine config pools
+# Catalog sources
+# Access to RH quay registry
+# Validation of image pull from Quay
+# Validate any failing pods in cluster
+# DNS access for nodes
+# Fusion:
+#  Switch:
+#   i.      Links are healthy
+#   ii.      Switches are healthy
+#   iii.      Fusion VLANs are healthy
+#  Node hardware:
+#   i.      Health
+#   ii.      FW level is latest or not
+#  Virtualisation:
+#   i.      If VMs are migratable
+#  Fusion Operator status
+#  Access to IBM registry
+#  Entitlement validation for Fusion HCI
+#  BnR:
+#   i.      Operators health
+#   ii.      Pod status
+#   iii.      PVC being bound
+#  DCS:
+#   i.      Operators health
+#   ii.      Pod status
+#   iii.      PVC being bound
+#  Scale:
+#   i.      daemon pods
+#   ii.      operator pods
+#   iii.      dns pods
+#   iv.      csi pods
+#   v.      Scale cluster health
+#   vi.      Pidslimit
+#   vii.      Few metroDR checks
 
 # It has the following postchecks:
 # token secret validation in scale service account
@@ -98,6 +121,13 @@ function print_subsection() {
     echo ""
 }
 
+function usage() {
+	print error "${CHECK_FAIL} Incorrect parameter usage. Following options are supported."
+	echo "For prechecks: ./preupgrade_healthcheck.sh"
+	echo "For postchecks: ./preupgrade_healthcheck.sh postcheck"
+	echo "For system health: ./preupgrade_healthcheck.sh healthcheck"
+	exit 1
+}
 
 function print() {
         case "$1" in
@@ -686,10 +716,15 @@ function get_virtual_machines () {
 	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get virtualmachine -A |grep -v NAME |awk '{print $1,$2}')"
   while IFS= read -r line
     do
+      volClaim=""
       ns=$(echo $line |awk '{print $1}')
       vm=$(echo $line |awk '{print $2}')
       dvName=$(oc get virtualmachine -n $ns  $vm -o json|jq '.spec.template.spec.volumes[0].dataVolume.name' | tr -d '"')
-      volClaim=$(oc get datavolume -n $ns  $dvName -o json| jq '.status.claimName' | tr -d '"')
+      if [[ $dvName != "null" ]]; then
+      		volClaim=$(oc get datavolume -n $ns  $dvName -o json| jq '.status.claimName' | tr -d '"')
+      else
+		volClaim=$(oc get virtualmachine -n $ns  $vm -o json|jq '.spec.template.spec.volumes[0].persistentVolumeClaim.claimName' | tr -d '"')
+      fi
       am=$(oc -n $ns get pvc $volClaim  -o json|jq '.spec.accessModes[]' | tr -d '"' )
       echo $am|grep -q "ReadWriteMany"
       if [[ $? -ne 0 ]]; then
@@ -910,6 +945,14 @@ verify_vlan
 
 function verify_pid_limit(){
     print info "Verify PID Limit"
+    oc -n $FUSIONNS get fusionserviceinstance odfmanager >> /dev/null
+    if [[ $? -eq 0 ]]; then
+	mode=$(oc get fusionserviceinstance odfmanager -n ibm-spectrum-fusion-ns -o json| jq '.spec.parameters[]|select (.name|IN("backingStorageType")).value' | sed -e 's/^"//' -e 's/"$//')
+	if [[ $mode == "Provider" ]]; then
+		print info "${CHECK_UNKNOWN} No need to check pidslimit on system with ODF provider mode storage"
+		return
+	fi
+    fi
     rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
     flag=0
     while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers | grep -iv 'NotReady' | awk '{print $1}')"
@@ -972,10 +1015,120 @@ function verify_token_secret_present(){
     fi
 }
 
-rm -f ${REPORT} > /dev/null
+# Verify critical events in OCP
+function verify_events() {
+	count=$(oc get events -A | awk '$3 == "Critical"; {OFS='\t'print $1 $2 $3 $4 $5}'|wc -l)
+	if [[ $count -eq 0 ]]; then
+		print info "${CHECK_UNKNOW} No critical events found"
+	else
+		oc get events -A | awk '$3 == "Critical"; {OFS='\t'print $1 $2 $3 $4 $5}'
+	fi
+}
 
-if [ $# -eq 0 ]; then
-        print_header
+# List firing alerts of type critical
+function verify_alerts() {
+	count=$(oc -n openshift-monitoring exec -c prometheus prometheus-k8s-0 -- curl -s   'http://localhost:9090/api/v1/alerts' |jq '.data.alerts[]| select((.state|IN("firing")) and (.labels.severity|IN("critical")))' | wc -l)
+	if [[ $count -eq 0 ]]; then
+		print info "${CHECK_UNKNOW} No critical alerts firing"
+	else
+		oc -n openshift-monitoring exec -c prometheus prometheus-k8s-0 -- curl -s   'http://localhost:9090/api/v1/alerts' |jq '.data.alerts[]| select((.state|IN("firing")) and (.labels.severity|IN("critical")))|.labels.alertname,.annotations.description'
+	fi
+}
+
+
+## Get CRDs
+function get_crd_count() {
+	print info "Get total CRDs count in system"
+	count=$(oc get crd -A --no-headers|wc -l)
+	if [[ $count > 400 && $count -lt 475 ]]; then
+		print warn "${CHECK_UNKNOW} CRD count is $count which on higher side, perform housekeeping by removing operators that are not in use"
+	elif [[ $count -ge 475 ]]; then
+		print warn "${CHECK_ERROR} CRD count $count is high, perform housekeeping by removing operators that are not in use. If CRD count reaches 512, you'll experience throttling in system"
+	else
+		print info "${CHECK_PASS} CRD count $count is moderate."
+	fi
+}
+
+## Get NTP server
+function get_chrony_list() {
+	print info "Verify NTP servers on nodes"
+  	ntpStatus=0
+  	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+  	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers | grep -v "NotReady" )"
+  	while IFS= read -r line
+    	do
+      		nodeName=$(echo $line |awk '{print $1}')
+      		oc debug nodes/${nodeName} -- chroot /host chronyc sources|grep -v "would violate PodSecurity"
+    	done < ${TEMP_MMHEALTH_FILE}
+  	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+function verify_pdb() {
+	pdbs=""
+	found=0
+	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+        while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get pdb --no-headers -A)"
+	while IFS= read -r line
+        do
+                pdb=$(echo $line | awk '{print $2}')
+		ns=$(echo $line | awk '{print $1}')
+		max=$(oc -n $ns get pdb $pdb -o json | jq '.spec.maxUnavailable')
+		if [[ $max != "null" ]]; then
+			max=$(oc -n $ns get pdb $pdb -o json | jq '.spec.maxUnavailable')
+			if [[ $max != *"%"* && $max -eq 0 ]]; then
+				pdbs="$pdbs":::::::"$ns":"$pdb"
+				found+=1
+			fi
+		fi
+	done < ${TEMP_MMHEALTH_FILE}
+	if [[ $found -gt 0 ]]; then
+		print warn "${CHECK_UNKNOW} There are PDBs present that do not allow any disruption. These can interfere with pod eviction and node draining:"
+		echo "$pdbs"
+	else
+		print info "${CHECK_PASS} No PDBs with maxUnavailable=0 present."
+	fi
+        rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+}
+
+function check_etcd_status() {
+    local ETCD_QUERIES="
+        etcdctl member list -w table && \\
+        etcdctl endpoint health --cluster && \\
+        etcdctl endpoint health -w table && \\
+        etcdctl endpoint status -w table --cluster
+    "
+    local ETCD_POD=$(oc get pods -n openshift-etcd \
+        -l app=etcd \
+        --no-headers \
+        | head -n1 \
+        | awk '{print $1;}')
+
+    oc exec -n openshift-etcd \
+        -c etcdctl \
+        "$ETCD_POD" -- /bin/bash -c "$ETCD_QUERIES"
+}
+
+function logcollector_pvc() {
+	oc project $FUSIONNS >> /dev/null
+	lcpod=$(oc get po |grep logcollector|grep -v NAME|tail -1|awk '{print $1}')
+        used=$(oc rsh $lcpod df -h /logs|tail -1| awk '{print $5}'|cut -f 1 -d '%')
+	if [[ $used -ge 80 ]]; then
+		print error "${CHECK_FAIL} log collector pvc is used($used%) more than 80%, delete old collections"
+	else
+		print info "${CHECH_PASS} log collector pvc has sufficient spac, however deleting old collections is always recommended"
+	fi
+}
+
+function list_failing_pods() {
+	count=$(oc get pods -A |grep -v Completed | awk '$5 > 0; {OFS='\t'print $1 $2 $3 $4 $5}'|wc -l)
+        if [[ $count -eq 0 ]]; then
+                print info "${CHECK_UNKNOW} No pods are restarting"
+        else
+                oc get pods -A |grep -v Completed | awk '$5 > 0; {OFS='\t'print $1 $2 $3 $4 $5}'
+        fi	
+}
+
+function preupgrade_checks() {
         print_section "API access"
         verify_api_access
         print_section "Registry access"
@@ -1002,7 +1155,7 @@ if [ $# -eq 0 ]; then
         verify_scale_health
         print_section "VMs migration"
         verify_livemigratable_vms
-        print_section "Pods with imagepullbackoff across cluster"
+        print_section "Pods with imagepullbackoff across cluster"	
         verify_imagepullbackoff_pods
         print_section "Nodes hardware status"
         verify_nodes_hw
@@ -1014,14 +1167,41 @@ if [ $# -eq 0 ]; then
         verify_pid_limit
         print_section "Verify Presence of CSI Configmap"
         verify_CSI_configmap_present
+}
+
+rm -f ${REPORT} > /dev/null
+
+if [ $# -eq 0 ]; then
+        print_header
+	preupgrade_checks
         print_footer
-elif [ "$1" == "postcheck" ]; then
+elif [[ $# -eq 1 && "$1" == "postcheck" ]]; then
         print_header
         print_section "API access"
         verify_api_access
         print_section "verify token secret in Scale service account"
         verify_token_secret_present
         print_footer
+elif [[ $# -eq 1 && "$1" == "healthcheck" ]]; then
+        print_header
+#	preupgrade_checks
+	print_section "CRDs count"
+	get_crd_count
+	print_section "NTP servers from nodes"
+	#get_chrony_list
+	print_section "PDBs with zero disruption allowed"
+	#verify_pdb
+	print_section "ETCD health"
+	check_etcd_status
+	print_section "Log collector PVC usage"
+	logcollector_pvc
+	print_section "Frequent pod restarts"
+	list_failing_pods
+	print_section "Critical events"
+	verify_events
+	print_section "Critical alerts"
+	verify_alerts
+        print_footer
 else
-        print error "${CHECK_FAIL} No Proper argument provided.If you want to run prechecks, do not pass any argument. For postchecks pass the argument 'postcheck'"
+ usage	
 fi
