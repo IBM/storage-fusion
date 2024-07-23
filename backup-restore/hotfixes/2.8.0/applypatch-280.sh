@@ -45,13 +45,9 @@ fi
 
 oc get deployment -n $BR_NS transaction-manager -o yaml > transaction-manager-deployment.save.yaml
 echo "Saved transaction-manager deployment"
-oc get deployment -n $BR_NS application-controller -o yaml > application-controller-deployment.save.yaml
-echo "Saved application-controller deployment"
 
 echo "Patching transaction-manager deployment..."
 oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:943da8464f58fff9ad3cde21be3eafe8ff238ec3e0f4d336e2c46ce398829e4d"}]}}}}'
-echo "Patching application-controller deployment..."
-oc patch deployment/application-controller -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"application-controller","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:943da8464f58fff9ad3cde21be3eafe8ff238ec3e0f4d336e2c46ce398829e4d"}]}}}}'
 
 echo "Saving original guardian-configmap yaml"
 oc get configmap  -n $BR_NS guardian-configmap -o yaml > guardian-configmap-original.yaml
