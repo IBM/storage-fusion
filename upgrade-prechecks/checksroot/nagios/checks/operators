@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# description: Checks if there are operators in 'bad' state
+
+[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
+
+error=false
+
+if oc auth can-i get co >/dev/null 2>&1; then
+  bad_cluster_operators=$(oc get co --no-headers | grep -E -civ 'True.*False.*False')
+  if [[ ${bad_cluster_operators} -ge 1 ]]; then
+    BADCOPS=$(oc get co --no-headers | grep -E -iv 'True.*False.*False')
+    msg "Cluster Operators in Bad State (${bad_cluster_operators}):\n${RED}${BADCOPS}${NOCOLOR}"
+    errors=$(("${errors}" + 1))
+  fi
+  bad_operators=$(oc get csv -l \!olm.copiedFrom -A -o json | jq '.items[] | { name: .metadata.name, namespace: .metadata.namespace, phase: .status.phase } | select (.phase!="Succeeded")')
+  if [[ -n ${bad_operators} ]]; then
+    BADOPS=$(echo "${bad_operators}" | jq .)
+    msg "Operators in ${RED}Bad State${NOCOLOR}: ${BADOPS}"
+    errors=$(("${errors}" + 1))
+    error=true
+  fi
+  if [ ! -z "${ERRORFILE}" ]; then
+    echo $errors >${ERRORFILE}
+  fi
+  if [[ $error == true ]]; then
+    exit ${OCERROR}
+  else
+    exit ${OCOK}
+  fi
+
+else
+  msg "Couldn't get co, check permissions"
+  exit ${OCSKIP}
+fi
+exit ${OCUNKNOWNN}

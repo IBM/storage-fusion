@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# description: Show the ovs database chassis hostnames
+
+[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
+
+if oc auth can-i exec pod -n openshift-ovn-kubernetes >/dev/null 2>&1 && oc get ns openshift-ovn-kubernetes >/dev/null 2>&1; then
+  POD_NAME=$(oc -n openshift-ovn-kubernetes get pod -l app=ovnkube-master,component=network -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  
+  if [ -z "${POD_NAME}" ]; then
+    msg "No pods found with label app=ovnkube-master,component=network in namespace openshift-ovn-kubernetes"
+    exit ${OCSKIP}
+  fi
+
+  OVSHOSTNAMES=$(oc -n openshift-ovn-kubernetes exec pod/"${POD_NAME}" -c northd -- ovn-sbctl --no-leader-only list chassis | awk '/hostname/ { print $3 }' | sort -n)
+  
+  if [ -n "${OVSHOSTNAMES}" ]; then
+    msg "OVS hostnames:\n${OVSHOSTNAMES}"
+    exit ${OCINFO}
+  else
+    msg "Couldn't get ovs-hostnames, check permissions"
+    exit ${OCSKIP}
+  fi
+else
+  msg "Couldn't get ovs-hostnames, either the cluster is not using OVN, or the running user has insufficient permissions"
+  exit ${OCSKIP}
+fi
+
+exit ${OCUNKNOWN}

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# description: Show the pods running in the cluster
+
+[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
+
+if oc auth can-i get pods -A >/dev/null 2>&1; then
+  msg "Total pods: $(oc get pods -A --no-headers | wc -l)"
+  exit ${OCINFO}
+else
+  msg "Couldn't get pods, check permissions"
+  exit ${OCSKIP}
+fi
+exit ${OCUNKNOWN}
