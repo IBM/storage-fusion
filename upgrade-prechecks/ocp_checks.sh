@@ -32,10 +32,6 @@ SINGLE=0
 RESULTS_ONLY=0
 SCRIPT_PROVIDED=''
 RESTART_THRESHOLD=${RESTART_THRESHOLD:=10} #arbitray
-THRASHING_THRESHOLD=${THRASHING_THRESHOLD:=10}
-
-OCDEBUGIMAGE=${OCDEBUGIMAGE:=registry.redhat.io/rhel8/support-tools:latest}
-OSETOOLSIMAGE=${OSETOOLSIMAGE:=registry.redhat.io/openshift4/ose-tools-rhel8:latest}
 
 parse_params "$@"
 setup_colors

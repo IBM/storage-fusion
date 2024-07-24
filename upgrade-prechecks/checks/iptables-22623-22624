@@ -31,7 +31,7 @@ if oc auth can-i debug node >/dev/null 2>&1; then
     (
       ocdebugorwait # Pause for no OC debug running
       
-      OUTPUT=$(oc debug --image="${OCDEBUGIMAGE}" "${node}" -- chroot /host sh -c \
+      OUTPUT=$(oc debug "${node}" -- chroot /host sh -c \
         "iptables -C FORWARD -p tcp --dport 22623 -j REJECT --reject-with icmp-port-unreachable &>/dev/null || \
          iptables -C FORWARD -p tcp --dport 22624 -j REJECT --reject-with icmp-port-unreachable &>/dev/null || \
          iptables -C OUTPUT -p tcp --dport 22623 -j REJECT --reject-with icmp-port-unreachable &>/dev/null || \
