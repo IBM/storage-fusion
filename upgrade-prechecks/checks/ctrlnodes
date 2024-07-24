@@ -4,7 +4,7 @@
 [ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
 
 error=false
-errors=0  # Initialize the errors variable
+errors=0  
 
 if oc auth can-i get nodes >/dev/null 2>&1; then
   if [ $(is_sno) -eq 1 ]; then
@@ -14,7 +14,7 @@ if oc auth can-i get nodes >/dev/null 2>&1; then
   if [[ -n ${scheduable_controllers} ]]; then
     SCHEDCTRL=$(echo "${scheduable_controllers}" | jq '. | { name: .name }')
     msg "Controllers ${RED}Scheduable${NOCOLOR}: ${SCHEDCTRL}"
-    errors=$((errors + 1))  # Correct way to increment the errors variable
+    errors=$((errors + 1))  
     error=true
   fi
   if [ ! -z "${ERRORFILE}" ]; then

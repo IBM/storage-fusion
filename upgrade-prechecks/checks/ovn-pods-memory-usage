@@ -4,7 +4,7 @@
 [ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
 
 error=false
-errors=0  # Initialize the errors variable
+errors=0  
 
 if oc auth can-i adm top -A >/dev/null 2>&1; then
   LIMIT="${OVN_MEMORY_LIMIT:=5000}"
@@ -27,7 +27,7 @@ if oc auth can-i adm top -A >/dev/null 2>&1; then
   if [[ ${FLAG} -ne 0 ]]; then
     MESSAGE="${MESSAGE}For more information you can check the KCS https://access.redhat.com/solutions/6493321\n"
     msg "${MESSAGE}"
-    errors=$((errors + 1))  # Correct way to increment the errors variable
+    errors=$((errors + 1))
     error=true
   fi
 

@@ -4,6 +4,7 @@
 [ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
 
 error=false
+errors=0 
 
 if oc auth can-i get clusterversion >/dev/null 2>&1; then
   clusterversion_msgs=$(oc get clusterversion -o json | jq '.items[].status.conditions[] | select ((.status == "True") and (.type == "Failing") and (.message != null)) | { message: .message }')
@@ -18,7 +19,7 @@ if oc auth can-i get clusterversion >/dev/null 2>&1; then
     done
     IFS=${OLDIFS}
     msg "Clusterversion error status message: ${RED}${final}${NOCOLOR}"
-    errors=$(("${errors}" + 1))
+    errors=$((errors + 1))
     error=true
   fi
   if [ ! -z "${ERRORFILE}" ]; then

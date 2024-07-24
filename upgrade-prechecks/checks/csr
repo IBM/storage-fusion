@@ -11,7 +11,7 @@ if oc auth can-i get csr >/dev/null 2>&1; then
   if [[ ${pending_csr} -ge 1 ]]; then
     PCSR=$(oc get csr --no-headers | grep -i 'pending')
     msg "Pending CSRs (${pending_csr}): ${PCSR}"
-    errors=$(("${errors}" + 1))
+    errors=$((errors + 1))  
     error=true
   fi
   if [ ! -z "${ERRORFILE}" ]; then

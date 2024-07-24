@@ -1194,24 +1194,24 @@ elif [[ $# -eq 1 && "$1" == "postcheck" ]]; then
         verify_token_secret_present
         print_footer
 elif [[ $# -eq 1 && "$1" == "healthcheck" ]]; then
-        # print_header
-        # preupgrade_checks
-	# print_section "CRDs count"
-	# get_crd_count
-	# print_section "NTP servers from nodes"
-	# get_chrony_list
-	# print_section "PDBs with zero disruption allowed"
-	# verify_pdb
-	# print_section "ETCD health"
-	# check_etcd_status
-	# print_section "Log collector PVC usage"
-	# logcollector_pvc
-	# print_section "Frequent pod restarts"
-	# list_failing_pods
-	# print_section "Critical events"
-	# verify_events
-	# print_section "Critical alerts"
-	# verify_alerts
+        print_header
+        preupgrade_checks
+	print_section "CRDs count"
+	get_crd_count
+	print_section "NTP servers from nodes"
+	get_chrony_list
+	print_section "PDBs with zero disruption allowed"
+	verify_pdb
+	print_section "ETCD health"
+	check_etcd_status
+	print_section "Log collector PVC usage"
+	logcollector_pvc
+	print_section "Frequent pod restarts"
+	list_failing_pods
+	print_section "Critical events"
+	verify_events
+	print_section "Critical alerts"
+	verify_alerts
         print_section "OCP checks"
         run_ocp_checks
         print_footer
