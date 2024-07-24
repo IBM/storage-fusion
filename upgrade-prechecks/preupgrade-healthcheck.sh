@@ -483,6 +483,21 @@ function verify_mmhealth_details() {
         oc rsh $nodename mmhealth node show -N all
 }
 
+# Get Scale FS status
+function verify_scale_fs() {
+	print info "Verify IBM Storage Scale file system health"
+	nodename=$(oc get nodes |grep 'control'|grep 'Ready'|head -1|awk '{print $1}'|cut -d"." -f 1)
+        oc project $SCALENS
+        local count=$(oc rsh $nodename mmlsmount all | tr -dc '0-9')
+	local nodescount=$(oc get nodes --no-headers | wc -l)
+	if [[ $count -ne $nodescount ]]; then
+		print error "${CHECK_FAIL} number of nodes on which file system is mounted $count is not equal to total number of nodes in cluster $nodescount"
+		print info "If this is metro DR setup then number of nodes on which file system is mounted should be total number of nodes in both DR sites. If that is the case here, then you can ignoe this error." 
+	else
+		print info "${CHECK_PASS} File system is mounted on all nodes."
+	fi
+}
+
 # Verify Scale health
 function verify_scale_health () {
         oc get project |grep ibm-spectrum-scale-operator > /dev/null
@@ -499,6 +514,8 @@ function verify_scale_health () {
 	verify_scale_csi_pods
 	print_subsection
 	verify_mmhealth_summary
+	print_subsection
+	verify_scale_fs
 	#print_subsection
 	#verify_mmhealth_details
 }
