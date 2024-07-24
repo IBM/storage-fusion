@@ -13,6 +13,9 @@
 # Execute it from a bash shell where you have logged into HCI OpenShift API
 # Ensure jq is installed on that system
 # It is to be used for only online/connected installs of HCI
+# It generates o/p on console. Output should be reviewed closly to identify any errors and warnings.
+# No auto correction action is taken by this utility. It only lists issues or warnings from system.
+# Not all warnings are a problem. Some of those are mere observations for basic housekeeping.
 
 # It has the following prechecks:
 # API accessibility
@@ -28,11 +31,12 @@
 # Fusion:
 #  Switch:
 #   i.      Links are healthy
-#   ii.      Switches are healthy
-#   iii.      Fusion VLANs are healthy
+#   ii.     Switches are healthy
+#   iii.    Fusion VLANs are healthy
+#   iv.     Bond on switches and partner mac mismatch (To be implemented) 
 #  Node hardware:
-#   i.      Health
-#   ii.      FW level is latest or not
+#   i.      Hardware health
+#   ii.     FW level is latest or not
 #  Virtualisation:
 #   i.      If VMs are migratable
 #  Fusion Operator status
@@ -40,20 +44,30 @@
 #  Entitlement validation for Fusion HCI
 #  BnR:
 #   i.      Operators health
-#   ii.      Pod status
-#   iii.      PVC being bound
+#   ii.     Pod status
+#   iii.    PVC being bound
 #  DCS:
 #   i.      Operators health
-#   ii.      Pod status
-#   iii.      PVC being bound
+#   ii.     Pod status
+#   iii.    PVC being bound
 #  Scale:
 #   i.      daemon pods
-#   ii.      operator pods
-#   iii.      dns pods
-#   iv.      csi pods
+#   ii.     operator pods
+#   iii.    dns pods
+#   iv.     csi pods
 #   v.      Scale cluster health
-#   vi.      Pidslimit
-#   vii.      Few metroDR checks
+#   vi.     Pidslimit
+#   vii.    Few metroDR checks
+#  OCP: 
+#   i.      CRD count
+#   ii.     NTP status
+#   iii.    PDBs with zero disruption allowed
+#   iv.     etcd health
+#   v.      Log collector PVC usage
+#   vi.     Frequent pod restarts
+#   vii.    Critical events
+#   viii.   Critical alerts
+#   ix.     MTU
 
 # It has the following postchecks:
 # token secret validation in scale service account
@@ -94,6 +108,70 @@ NOSCHEDULEEFFECT="NoSchedule"
 
 #exec >>(tee ${REPORT}) 2>&1
 
+function help () {
+cat << EOF
+ 1. This utility will run a healthcheck on IBM Storage Fusion HCI system.
+ 2. Execute it from a bash shell where you have logged into HCI OpenShift API
+ 3. Ensure jq is installed on that system
+ 4. It is to be used for only online/connected installs of HCI
+ 5. It generates o/p on console. Output should be reviewed closly to identify any errors and warnings.
+ 6. No auto correction action is taken by this utility. It only lists issues or warnings from system.
+ 7. Not all warnings are a problem. Some of those are mere observations for basic housekeeping.
+
+ It has the following prechecks:
+ OCP:
+  i.       API accessibility
+  ii.      Cluster operators
+  iii.     Nodes being ready
+  iv.      Nodes not being under maintenance
+  v.       Machine config pools
+  vi.      Catalog sources
+  vii.     Access to RH quay registry
+  viii.    Validation of image pull from Quay
+  ix.      Validate any failing pods in cluster
+  x.       DNS access for nodes
+  xi.      CRD count
+  xii.     NTP status 
+  xiii.    PDBs with zero disruption allowed
+  xiv.     etcd health
+  xv.      Log collector PVC usage
+  xvi.     Frequent pod restarts
+  xvii.    Critical events
+  xviii.   Critical alerts
+  xix.     MTU
+  xx.      bonds and clag status on switches
+ Fusion:
+  Switch:
+   i.      Links are healthy
+   ii.      Switches are healthy
+   iii.      Fusion VLANs are healthy
+  Node hardware:
+   i.      Health
+   ii.      FW level is latest or not
+  Virtualisation:
+   i.      If VMs are migratable
+  Fusion Operator status
+  Access to IBM registry
+  Entitlement validation for Fusion HCI
+  BnR:
+   i.      Operators health
+   ii.      Pod status
+   iii.      PVC being bound
+  DCS:
+   i.      Operators health
+   ii.      Pod status
+   iii.      PVC being bound
+  Scale:
+   i.      daemon pods
+   ii.      operator pods
+   iii.      dns pods
+   iv.      csi pods
+   v.      Scale cluster health
+   vi.      Pidslimit
+   vii.      Few metroDR checks
+
+EOF
+}
 function print_header() {
     echo "======================================================================================"
     echo "Started healthcheck for IBM Storage Fusion HCI cluster at $(date +'%F %z %r')"
@@ -126,6 +204,7 @@ function usage() {
 	echo "For prechecks: ./preupgrade_healthcheck.sh"
 	echo "For postchecks: ./preupgrade_healthcheck.sh postcheck"
 	echo "For system health: ./preupgrade_healthcheck.sh healthcheck"
+	echo "For utility overview: ./preupgrade_healthcheck.sh help"
 	exit 1
 }
 
@@ -933,6 +1012,13 @@ function verify_vlan(){
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
 
+function verify_bonds() {
+	echo "Yet to be implemented. Check bonds on switch manually"
+	echo "net show clag"
+	echo "In above command's output, check for all nodes that are part of OCP cluster, partner mac is listed and is not empty"
+	echo "In above command's output, check for all nodes that are part of OCP cluster, there is no mismatch error is listed"
+}
+
 function verify_network_checks(){
 verify_nodes_dns
 print_subsection
@@ -941,6 +1027,8 @@ print_subsection
 verify_switches
 print_subsection
 verify_vlan
+print_subsection
+verify_bonds
 }
 
 function verify_pid_limit(){
@@ -1058,7 +1146,7 @@ function get_chrony_list() {
   	while IFS= read -r line
     	do
       		nodeName=$(echo $line |awk '{print $1}')
-      		oc debug nodes/${nodeName} -- chroot /host chronyc sources|grep -v "would violate PodSecurity"
+      		oc debug nodes/${nodeName} -- chroot /host chronyc sources
     	done < ${TEMP_MMHEALTH_FILE}
   	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
@@ -1128,6 +1216,39 @@ function list_failing_pods() {
         fi	
 }
 
+
+function verify_mtu() {
+	desiredBMMTU=$(oc get secret -n $FUSIONNS  userconfig-secret     -o json |jq '.data."userconfig_secret.json"'|sed -e 's/^"//' -e 's/"$//'|base64 -d| jq '.mtuCount')
+	if [[ $desiredBMMTU == "null" ]]; then
+		desiredBMMTU=1500
+	fi
+	bmmtu=0
+	provmtu=0
+	desiredProvMTU=9000
+  	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get nodes --no-headers | grep -v "NotReady" )"
+        while IFS= read -r line
+    	do
+      		nodeName=$(echo $line |awk '{print $1}')
+		provcount=$(oc debug nodes/${nodeName} -- chroot /host ip a |grep bond1|grep $desiredProvMTU |wc -l)
+                if [[ $? -ne 0 ]]; then
+        		provmtu=1
+        		print error "${CHECK_FAIL} Storage MTU is not configured correctly on $nodeName."
+      		else
+        		print info "${CHECK_PASS} Storage MTU is configured correctly on $nodeName."
+   	        fi
+		bmcount=$(oc debug nodes/${nodeName} -- chroot /host ip a |grep bond1|grep $desiredBMMTU |wc -l)
+                if [[ $? -ne 0 ]]; then
+        		bmmtu=1
+        		print error "${CHECK_FAIL} Bare metal MTU is not configured correctly on $nodeName."
+      		else
+        		print info "${CHECK_PASS} Bare metal MTU is configured correctly on $nodeName."
+   	        fi
+    	done < ${TEMP_MMHEALTH_FILE}
+  	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null	
+}
+
+
 function preupgrade_checks() {
         print_section "API access"
         verify_api_access
@@ -1184,7 +1305,7 @@ elif [[ $# -eq 1 && "$1" == "postcheck" ]]; then
         print_footer
 elif [[ $# -eq 1 && "$1" == "healthcheck" ]]; then
         print_header
-        preupgrade_checks
+	preupgrade_checks
 	print_section "CRDs count"
 	get_crd_count
 	print_section "NTP servers from nodes"
@@ -1201,7 +1322,11 @@ elif [[ $# -eq 1 && "$1" == "healthcheck" ]]; then
 	verify_events
 	print_section "Critical alerts"
 	verify_alerts
+	print_section "MTU"
+        verify_mtu
         print_footer
+elif [[ $# -eq 1 && "$1" == "help" ]]; then
+	help
 else
  usage	
 fi
