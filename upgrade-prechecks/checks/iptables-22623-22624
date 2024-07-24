@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# kb: https://access.redhat.com/solutions/5709711
+# description: Checks if the nodes iptables rules are blocking 22623/tcp or 22624/tcp
+
+#
+# To check if the rule exist, we use iptables -C, it returns 0 if the rule exist
+# and if it doesn't exist, it exits 1 with the following message:
+# "iptables: Bad rule (does a matching rule exist in that chain?)."
+#
+# To save cycles, we run every command in the same oc debug session.
+# We concatenate all commands with || meaning it will stop if
+# some command fails (returns 0, so if the rule exist)
+
+[ -z "${UTILSFILE}" ] && source "$(dirname "${0}")/../utils"
+
+tmperrorfile=$(mktemp)
+trap "rm -f ${tmperrorfile}" EXIT
+echo 0 >"${tmperrorfile}"
+
+if oc auth can-i debug node >/dev/null 2>&1; then
+  msg "Checking if ports 22623/tcp and 22624/tcp are blocked (${BLUE}using oc debug, it can take a while${NOCOLOR})"
+  
+  # Initialize parallel job counter
+  i=0
+  
+  for node in $(oc get nodes -o go-template='{{range .items}}{{$node := .}}{{range .status.conditions}}{{if eq .type "Ready"}}{{if eq .status "True"}}node/{{$node.metadata.name}}{{"\n"}}{{end}}{{end}}{{end}}{{end}}'); do
+    # See https://medium.com/@robert.i.sandor/getting-started-with-parallelization-in-bash-e114f4353691
+    ((i = i % PARALLELJOBS))
+    ((i++ == 0)) && wait
+
+    (
+      ocdebugorwait # Pause for no OC debug running
+      
+      OUTPUT=$(oc debug "${node}" -- chroot /host sh -c \
+        "iptables -C FORWARD -p tcp --dport 22623 -j REJECT --reject-with icmp-port-unreachable &>/dev/null || \
+         iptables -C FORWARD -p tcp --dport 22624 -j REJECT --reject-with icmp-port-unreachable &>/dev/null || \
+         iptables -C OUTPUT -p tcp --dport 22623 -j REJECT --reject-with icmp-port-unreachable &>/dev/null || \
+         iptables -C OUTPUT -p tcp --dport 22624 -j REJECT --reject-with icmp-port-unreachable &>/dev/null || \
+         echo 'allok'" 2>&1)
+
+      if [[ ${OUTPUT} =~ "allok" ]]; then
+        # Do nothing
+        :
+      elif [[ ${OUTPUT} =~ "Back-off" ]]; then
+        msg "${ORANGE}Error pulling the oc debug image in ${node}${NOCOLOR}"
+      elif [[ ${OUTPUT} =~ "unable to create" ]]; then
+        msg "${ORANGE}Unable to create debug pod in ${node}${NOCOLOR}"
+      else
+        msg "${RED}iptables rules for 22623/tcp or 22624/tcp found in ${node}${NOCOLOR}"
+        echo 1 >"${tmperrorfile}"
+      fi
+    ) &
+  done
+  wait
+  
+  if [ "$(cat "${tmperrorfile}")" -eq 1 ]; then
+    errors=$((errors + 1))
+    if [ -n "${ERRORFILE}" ]; then
+      echo "${errors}" >"${ERRORFILE}"
+    fi
+    exit ${OCERROR}
+  else
+    exit ${OCOK}
+  fi
+
+else
+  msg "Couldn't debug nodes, check permissions"
+  exit ${OCSKIP}
+fi
+exit ${OCUNKNOWN}

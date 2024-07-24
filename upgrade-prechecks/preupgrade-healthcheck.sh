@@ -18,6 +18,7 @@
 # Not all warnings are a problem. Some of those are mere observations for basic housekeeping.
 
 # It has the following prechecks:
+# OCP:
 # API accessibility
 # Cluster operators
 # Nodes being ready
@@ -28,6 +29,28 @@
 # Validation of image pull from Quay
 # Validate any failing pods in cluster
 # DNS access for nodes
+# CRD count
+# NTP status 
+# DBs with zero disruption allowed
+# etcd health
+# Log collector PVC usage
+# Frequent pod restarts
+# Critical events
+# Critical alerts
+# MTU
+# bonds and clag status on switches
+# chronyc 
+# clusterversion errors
+# pending csr
+# NoSchedule taint removed
+# workers entropy
+# iptables rules - 22623/tcp or 22624/tcp
+# memory usage of the OVN pods 
+# OVN pods thrashing
+# zombie processes exist on the hosts
+# MTU for interface
+# Locks on nodes
+
 # Fusion:
 #  Switch:
 #   i.      Links are healthy
@@ -140,6 +163,17 @@ cat << EOF
   xviii.   Critical alerts
   xix.     MTU
   xx.      bonds and clag status on switches
+  xxi.     chronyc 
+  xxii.    clusterversion errors
+  xxiii.   pending csr
+  xxiv.    NoSchedule taint removed
+  xxv.     workers entropy
+  xxvi.    iptables rules - 22623/tcp or 22624/tcp
+  xxvii.   memory usage of the OVN pods 
+  xxviii.  OVN pods thrashing
+  xxix.    zombie processes exist on the hosts
+  xxx.     MTU for interface
+  xxxi.    Locks on nodes
  Fusion:
   Switch:
    i.      Links are healthy
@@ -436,60 +470,17 @@ function verify_scale_csi_pods () {
 # Get Scale health summary
 function verify_mmhealth_summary() {
 	print info "Verify IBM Storage Scale health"
-	unhealthy=0
-	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 	nodename=$(oc get nodes |grep 'control'|grep 'Ready'|head -1|awk '{print $1}'|cut -d"." -f 1)
-	while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc -n $SCALENS rsh $nodename mmhealth cluster show|egrep 'NODE|GPFS|NETWORK|FILESYSTEM|DISK|FILESYSMGR|GUI|NATIVE_RAID|PERFMON|THRESHOLD|STRETCHCLUSTER')"
-	while IFS= read -r line
-	do
-		comp=$(echo $line|awk '{print $1}')
-		failed=$(echo $line|awk '{print $3}')
-		degraded=$(echo $line|awk '{print $4}')
-		if [ ${failed} -ne 0 ]; then
-			print error "${CHECK_FAIL} ${failed} failed $comp found."
-			unhealthy=1
-		fi
-		if [ ${degraded} -ne 0 ]; then
-                        print error "${CHECK_FAIL} ${degraded} degraded $comp found."
-			unhealthy=1
-		fi
-	done <<< $(cat "${TEMP_MMHEALTH_FILE}")
-	if [ $unhealthy  -eq 0 ]; then
-		print info "${CHECK_PASS} All of IBM Storage Scale components are healthy."
-	else
-		print error "${CHECK_UNKNOW} health summary:"
-		oc -n $SCALENS rsh $nodename mmhealth cluster show
-	fi
-	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+        oc project $SCALENS
+        oc -n $SCALENS rsh $nodename mmhealth cluster show
 }
 
 # Get Scale detailed status
 function verify_mmhealth_details() {
         print info "Verify IBM Storage Scale health"
-        unhealthy=0
-        rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-        while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc rsh control-1-ru2 mmhealth node show -N all)"
-        while IFS= read -r line
-        do
-                comp=$(echo $line|awk '{print $1}')
-                failed=$(echo $line|awk '{print $3}')
-                degraded=$(echo $line|awk '{print $4}')
-                if [ ${failed} -ne 0 ]; then
-                        print error "${CHECK_FAIL} ${failed} failed $comp found."
-                        unhealthy=1
-                fi
-                if [ ${degraded} -ne 0 ]; then
-                        print error "${CHECK_FAIL} ${degraded} degraded $comp found."
-                        unhealthy=1
-                fi
-        done <<< $(cat "${TEMP_MMHEALTH_FILE}")
-        if [ $unhealthy  -eq 0 ]; then
-                print info "${CHECK_PASS} All of IBM Storage Scale components are healthy."
-        else
-                print error "${CHECK_FAIL} health summary:"
-                oc rsh control-1-ru2 mmhealth cluster show
-        fi
-        rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
+        nodename=$(oc get nodes |grep 'control'|grep 'Ready'|head -1|awk '{print $1}'|cut -d"." -f 1)
+        oc project $SCALENS
+        oc rsh $nodename mmhealth node show -N all
 }
 
 # Verify Scale health
@@ -1248,6 +1239,16 @@ function verify_mtu() {
   	rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null	
 }
 
+function run_ocp_checks() {
+  local script_name="./ocp_checks.sh"
+  if [[ -x "$script_name" ]]; then
+    "$script_name"  
+  else
+    echo "Error: Script $script_name is not executable or not found."  
+    return 1
+  fi
+}
+
 
 function preupgrade_checks() {
         print_section "API access"
@@ -1324,6 +1325,8 @@ elif [[ $# -eq 1 && "$1" == "healthcheck" ]]; then
 	verify_alerts
 	print_section "MTU"
         verify_mtu
+        print_section "OCP checks"
+        run_ocp_checks 
         print_footer
 elif [[ $# -eq 1 && "$1" == "help" ]]; then
 	help
