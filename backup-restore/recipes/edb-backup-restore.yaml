@@ -1,3 +1,4 @@
+# This recipe has been tested and verified for compatibility with EDB Postgres versions 15 and 16.
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
 metadata:
