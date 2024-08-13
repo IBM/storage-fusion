@@ -1,0 +1,176 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: db2u-cluster-instance-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: db2uclusters-db2uinstance
+  groups:
+  - name: db2u-volumes
+    type: volume
+  - excludedResourceTypes:
+    - clusterserviceversions
+    - subscriptions.operators.coreos.com
+    - formations.db2u.databases.ibm.com
+    - db2uengines.db2u.databases.ibm.com
+    - db2uinstances.db2u.databases.ibm.com
+    - db2uclusters.db2u.databases.ibm.com
+    - pods
+    - replicasets
+    - statefulsets
+    name: db2u-resources
+    type: resource
+  - includedResourceTypes:
+    - operatorgroups
+    name: db2u-operatorgroups
+    type: resource
+  - includedResourceTypes:
+    - subscriptions.operators.coreos.com
+    name: db2u-subscriptions
+    type: resource
+  - includedResourceTypes:
+    - db2uinstances.db2u.databases.ibm.com
+    - db2uclusters.db2u.databases.ibm.com
+    name: db2u-db2uclusters-db2uinstances
+    type: resource
+  hooks:
+  - chks:
+    - condition: '{$.status.state} == {"Ready"}'
+      name: stateReady
+      onError: fail
+      timeout: 600
+    labelSelector: type=engine,component=db2wh,formation_type=db2wh
+    name: db2uengines-check
+    namespace: ${GROUP.db2u-volumes.namespace}
+    onError: fail
+    selectResource: db2u.databases.ibm.com/v1alpha1/db2uengines
+    timeout: 120
+    type: check
+  - chks:
+    - condition: '{$.spec.replicas} == {$.status.readyReplicas}'
+      name: replicasReady
+      onError: fail
+      timeout: 600
+    labelSelector: olm.owner.kind=ClusterServiceVersion
+    name: db2u-operator-check
+    namespace: ${GROUP.db2u-volumes.namespace}
+    onError: fail
+    selectResource: deployment
+    timeout: 120
+    type: check
+  - chks:
+    - condition: '{$.status.state} == {"Ready"}'
+      name: stateReady
+      onError: fail
+      timeout: 900
+    name: db2uinstances-check
+    labelSelector: for-backup=true
+    namespace: ${GROUP.db2u-volumes.namespace}
+    onError: fail
+    selectResource: db2u.databases.ibm.com/v1/db2uinstances
+    timeout: 800
+    type: check
+  - name: db2uclusters-check
+    labelSelector: for-backup=true
+    namespace: ${GROUP.db2u-volumes.namespace}
+    selectResource: db2u.databases.ibm.com/v1/db2uclusters
+    timeout: 800
+    type: check
+    chks:
+    - condition: '{$.status.state} == {"Ready"}'
+      name: stateReady
+      onError: fail
+      timeout: 900
+    onError: fail
+  - labelSelector: name=dashmpp-head-0
+    name: db2uclusters-db2uinstances-pod-exec
+    namespace: ${GROUP.db2u-volumes.namespace}
+    onError: fail
+    ops:
+    - command: |
+        ["/bin/bash", "-c", "manage_snapshots --action suspend --retry 3"]
+      container: db2u
+      name: suspend
+    - command: |
+        ["/bin/bash", "-c", "manage_snapshots --action resume --retry 3"]
+      container: db2u
+      name: resume
+    - command: |
+        ["/bin/bash", "-c", "manage_snapshots --action restore --retry 3"]
+      container: db2u
+      name: restore
+      timeout: 300
+    selectResource: pod
+    timeout: 300
+    type: exec
+  - labelSelector: control-plane=db2u-operator-manager
+    name: db2u-operator-manager-exec
+    namespace: ${GROUP.db2u-volumes.namespace}
+    onError: fail
+    ops:
+    - command: |
+        ["/bin/bash", "-c", "db2uclusters=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Accept: application/yaml' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${GROUP.db2u-volumes.namespace}/db2uclusters | grep '^    name: ' | tr -d ' ' | cut -c 6-); for db2ucluster in $db2uclusters; do curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${GROUP.db2u-volumes.namespace}/db2uclusters/$db2ucluster?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":\"true\"}}}'; done"]
+      container: manager
+      name: clusters-maintenance-mode-on
+    - command: |
+        ["/bin/bash", "-c", "db2uclusters=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Accept: application/yaml' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${GROUP.db2u-volumes.namespace}/db2uclusters | grep '^    name: ' | tr -d ' ' | cut -c 6-); for db2ucluster in $db2uclusters; do curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${GROUP.db2u-volumes.namespace}/db2uclusters/$db2ucluster?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":null}}}'; done"]
+      container: manager
+      name: clusters-maintenance-mode-off
+    - command: |
+        ["/bin/bash", "-c", "db2uinstances=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Accept: application/yaml' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${GROUP.db2u-volumes.namespace}/db2uinstances | grep '^    name: ' | tr -d ' ' | cut -c 6-); for db2uinstance in $db2uinstances; do curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${GROUP.db2u-volumes.namespace}/db2uinstances/$db2uinstance?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":\"true\"}}}'; done"]
+      container: manager
+      name: instances-maintenance-mode-on
+    - command: |
+        ["/bin/bash", "-c", "db2uinstances=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Accept: application/yaml' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${GROUP.db2u-volumes.namespace}/db2uinstances | grep '^    name: ' | tr -d ' ' | cut -c 6-); for db2uinstance in $db2uinstances; do curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${GROUP.db2u-volumes.namespace}/db2uinstances/$db2uinstance?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":null}}}'; done"]
+      container: manager
+      name: instances-maintenance-mode-off
+    - command: |
+        ["/bin/bash", "-c", "db2uengines=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Accept: application/yaml' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1alpha1/namespaces/${GROUP.db2u-volumes.namespace}/db2uengines | grep '^    name: ' | tr -d ' ' | cut -c 6-); for db2uengine in $db2uengines; do curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1alpha1/namespaces/${GROUP.db2u-volumes.namespace}/db2uengines/$db2uengine?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":\"true\"}}}'; done"]
+      container: manager
+      name: engines-maintenance-mode-on
+    - command: |
+        ["/bin/bash", "-c", "db2uengines=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Accept: application/yaml' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1alpha1/namespaces/${GROUP.db2u-volumes.namespace}/db2uengines | grep '^    name: ' | tr -d ' ' | cut -c 6-); for db2uengine in $db2uengines; do curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1alpha1/namespaces/${GROUP.db2u-volumes.namespace}/db2uengines/$db2uengine?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":null}}}'; done"]
+      container: manager
+      name: engines-maintenance-mode-off
+    - command: |
+        ["/bin/bash", "-c", "sleep 300"]
+      container: manager
+      name: sleep-5-minutes
+      timeout: 600
+    selectResource: pod
+    timeout: 120
+    type: exec
+  workflows:
+  - failOn: any-error
+    name: backup
+    sequence:
+    - hook: db2u-operator-manager-exec/instances-maintenance-mode-on
+    - hook: db2u-operator-manager-exec/engines-maintenance-mode-on
+    - hook: db2u-operator-manager-exec/clusters-maintenance-mode-on
+    - group: db2u-resources
+    - group: db2u-operatorgroups
+    - group: db2u-subscriptions
+    - group: db2u-db2uclusters-db2uinstances
+    - hook: db2uclusters-db2uinstances-pod-exec/suspend
+    - group: db2u-volumes
+    - hook: db2uclusters-db2uinstances-pod-exec/resume
+    - hook: db2u-operator-manager-exec/instances-maintenance-mode-off
+    - hook: db2u-operator-manager-exec/engines-maintenance-mode-off
+    - hook: db2u-operator-manager-exec/clusters-maintenance-mode-off
+  - failOn: any-error
+    name: restore
+    sequence:
+    - group: db2u-operatorgroups
+    - group: db2u-subscriptions
+    - group: db2u-volumes
+    - hook: db2u-operator-check/replicasReady
+    - group: db2u-resources
+    - hook: db2u-operator-manager-exec/sleep-5-minutes
+    - group: db2u-db2uclusters-db2uinstances
+    - hook: db2u-operator-manager-exec/instances-maintenance-mode-off
+    - hook: db2u-operator-manager-exec/engines-maintenance-mode-off
+    - hook: db2u-operator-manager-exec/clusters-maintenance-mode-off
+    - hook: db2uengines-check/stateReady
+    - hook: db2uinstances-check/stateReady
+    - hook: db2uclusters-check/stateReady
+    - hook: db2uclusters-db2uinstances-pod-exec/restore
