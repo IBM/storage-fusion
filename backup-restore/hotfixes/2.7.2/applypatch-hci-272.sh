@@ -48,10 +48,10 @@ if [ -n "$HUB" ]
 fi
 
 echo "Patching transaction-manager deployment..."
-oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:f7e325d1a051dfacfe18139e46a668359a9c11129870a4b2c4b3c2fdaec615eb"}]}}}}'
+oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:7e4fb3c05efc51a5d0c97c558568193782aeb548db4c469522f9d82ce014d8ec"}]}}}}'
 
 echo "Patching application-controller deployment..."
-oc patch deployment/application-controller -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"application-controller","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:f7e325d1a051dfacfe18139e46a668359a9c11129870a4b2c4b3c2fdaec615eb"}]}}}}'
+oc patch deployment/application-controller -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"application-controller","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:7e4fb3c05efc51a5d0c97c558568193782aeb548db4c469522f9d82ce014d8ec"}]}}}}'
 
 echo "Deployment rollout status..."
 if [ -n "$HUB" ]
