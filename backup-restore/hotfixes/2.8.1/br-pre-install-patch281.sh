@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script before installing Backup & Restore.
-# If you already tried installing Backup & Restore and it has failed due to OADP not isntalling correctly:
+# If you already tried installing Backup & Restore and it has failed due to OADP not installing correctly:
 #   1. Run this script.
 #   2. Uninstall/clean using https://github.com/IBM/storage-fusion/blob/master/backup-restore/uninstall/uninstall-backup-restore.sh
 # After running this script, Backup & restore should install fine.
