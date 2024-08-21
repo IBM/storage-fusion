@@ -19,6 +19,14 @@ if [ -n "$HUB" ]
    echo "Saved backup-location-deployment"
  else
    echo "This is spoke" 
+   BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace)
+   if [ -n "$BR_NS" ]
+     then
+        echo "This is spoke" 
+     else
+        echo "WARNING: No Successful Backup and Restore installation found. Exiting" 
+        exit 1
+   fi
 fi
 
 oc get deployment -n $BR_NS transaction-manager -o yaml > transaction-manager-deployment.save.yaml
