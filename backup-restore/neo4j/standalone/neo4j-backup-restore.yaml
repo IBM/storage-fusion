@@ -1,0 +1,55 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: neo4j-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: neo4j
+  groups:
+    - name: neo4j-volumes
+      type: volume
+    - name: neo4j-resources
+      type: resource
+      includedResourceTypes:
+        - deployments
+        - services
+        - configmaps
+  hooks:
+  - name: neo4j-deployment-check
+    type: check
+    namespace: ${GROUP.neo4j-resources.namespace}
+    selectResource: deployment
+    labelSelector: app=neo4j
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: neo4j-pod-exec
+    type: exec
+    namespace: ${GROUP.neo4j-resources.namespace}
+    labelSelector: app=neo4j
+    timeout: 120
+    onError: fail
+    ops:
+    - name: disable_write
+      command: "cypher-shell -u neo4j -p securepassword \"CALL dbms.setConfigValue('server.databases.default_to_read_only', 'true');\""
+      container: neo4j
+      timeout: 120 
+    - name: enable_write
+      command: "cypher-shell -u neo4j -p securepassword \"CALL dbms.setConfigValue('server.databases.default_to_read_only', 'false');\""
+      container: neo4j
+      timeout: 120          
+  workflows:
+  - name: backup
+    sequence:
+    - group: neo4j-resources
+    - hook: neo4j-pod-exec/disable_write
+    - group: neo4j-volumes
+    - hook: neo4j-pod-exec/enable_write
+  - name: restore
+    sequence:
+    - group: neo4j-volumes
+    - group: neo4j-resources
