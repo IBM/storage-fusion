@@ -60,6 +60,12 @@ echo oc -n $ISF_NS patch --type json --patch=\'[ { "op": "remove", "path": "/spe
 
 echo ""
 echo '===> Install Backup Restore now and come back here when it is done'
+BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2> /dev/null)
+while [ -z "$BR_NS" ]
+ do
+   sleep 2
+   BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2> /dev/null)
+done
 while [ "Completed" != "$(oc -n "$BR_NS" get dataprotectionagents -o custom-columns=:status.installStatus.status --no-headers 2> /dev/null)" ]
  do
    sleep 2
