@@ -14,7 +14,7 @@ NAMESPACE=$1
 export NEO4J_PASSWORD=$(kubectl get secrets neo4j-cluster-neo4j-secrets --namespace "$NAMESPACE" -o jsonpath='{.data.neo4j-password}' | base64 -d)
 
 
-# Run the kubectl command and filter the output to get the pod name
+# Run the kubectl command and filter the output to get the writer pod name
 output=$(kubectl run -it --rm cypher-shell \
             --image=neo4j:4.4.9-enterprise \
             --restart=Never \

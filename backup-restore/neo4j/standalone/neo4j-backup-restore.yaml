@@ -35,11 +35,11 @@ spec:
     onError: fail
     ops:
     - name: disable_write
-      command: "cypher-shell -u neo4j -p securepassword \"CALL dbms.setConfigValue('server.databases.default_to_read_only', 'true');\""
+      command: "PASSWORD=$(echo $NEO4J_AUTH | awk -F'/' '{print $2}'); cypher-shell -u neo4j -p $PASSWORD \"CALL dbms.setConfigValue('server.databases.default_to_read_only', 'true');\""
       container: neo4j
       timeout: 120 
     - name: enable_write
-      command: "cypher-shell -u neo4j -p securepassword \"CALL dbms.setConfigValue('server.databases.default_to_read_only', 'false');\""
+      command: "PASSWORD=$(echo $NEO4J_AUTH | awk -F'/' '{print $2}'); cypher-shell -u neo4j -p $PASSWORD \"CALL dbms.setConfigValue('server.databases.default_to_read_only', 'false');\""
       container: neo4j
       timeout: 120          
   workflows:
