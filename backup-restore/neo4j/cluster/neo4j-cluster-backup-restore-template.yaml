@@ -1,21 +1,21 @@
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
 metadata:
-  name: neo4j_cluster_backup_restore_recipe
+  name: neo4j-cluster-backup-restore-recipe
   namespace: ibm-spectrum-fusion-ns
 spec:
   appType: neo4j
   groups:
-    - name: neo4j_volumes
+    - name: neo4j-volumes
       type: volume
-    - name: neo4j_resources
+    - name: neo4j-resources
       type: resource
       excludedResourceTypes:
         - pods
   hooks:
-  - name: neo4j_core_statefulset_check
+  - name: neo4j-core-statefulset-check
     type: check
-    namespace: ${GROUP.neo4j_resources.namespace}
+    namespace: ${GROUP.neo4j-resources.namespace}
     selectResource: statefulset
     labelSelector: app.kubernetes.io/component=core
     timeout: 120
@@ -25,9 +25,9 @@ spec:
       timeout: 600
       onError: fail
       condition: "{$.spec.replicas} == {$.status.readyReplicas}"
-  - name: neo4j_replica_statefulset_check
+  - name: neo4j-replica-statefulset-check
     type: check
-    namespace: ${GROUP.neo4j_resources.namespace}
+    namespace: ${GROUP.neo4j-resources.namespace}
     selectResource: statefulset
     labelSelector: app.kubernetes.io/component=replica
     timeout: 120
@@ -37,31 +37,31 @@ spec:
       timeout: 600
       onError: fail
       condition: "{$.spec.replicas} == {$.status.readyReplicas}"      
-  - name: neo4j_pod_exec
+  - name: neo4j-pod-exec
     type: exec
-    namespace: ${GROUP.neo4j_resources.namespace}
+    namespace: ${GROUP.neo4j-resources.namespace}
     nameSelector: $REPLACE_WRITER_POD_NAME
     timeout: 120
     onError: fail
     ops:
-    - name: disable_write
+    - name: disable-write
       command: "cypher-shell -u neo4j -p $NEO4J_SECRETS_PASSWORD \"CALL dbms.setConfigValue('dbms.databases.default_to_read_only', 'true');\""
       container: neo4j-cluster-neo4j
       timeout: 120 
-    - name: enable_write
+    - name: enable-write
       command: "cypher-shell -u neo4j -p $NEO4J_SECRETS_PASSWORD \"CALL dbms.setConfigValue('dbms.databases.default_to_read_only', 'false');\""
       container: neo4j-cluster-neo4j
       timeout: 120          
   workflows:
   - name: backup
     sequence:
-    - group: neo4j_resources
-    - hook: neo4j_pod_exec/disable_write
-    - group: neo4j_volumes
-    - hook: neo4j_pod_exec/enable_write
+    - group: neo4j-resources
+    - hook: neo4j-pod-exec/disable-write
+    - group: neo4j-volumes
+    - hook: neo4j-pod-exec/enable-write
   - name: restore
     sequence:
-    - group: neo4j_volumes
-    - group: neo4j_resources
-    - hook: neo4j_core_statefulset_check/replicasReady
-    - hook: neo4j_replica_statefulset_check/replicasReady
+    - group: neo4j-volumes
+    - group: neo4j-resources
+    - hook: neo4j-core-statefulset-check/replicasReady
+    - hook: neo4j-replica-statefulset-check/replicasReady
