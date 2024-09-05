@@ -1,23 +1,23 @@
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
 metadata:
-  name: neo4j-backup-restore-recipe
+  name: neo4j_backup_restore_recipe
   namespace: ibm-spectrum-fusion-ns
 spec:
   appType: neo4j
   groups:
-    - name: neo4j-volumes
+    - name: neo4j_volumes
       type: volume
-    - name: neo4j-resources
+    - name: neo4j_resources
       type: resource
       includedResourceTypes:
         - deployments
         - services
         - configmaps
   hooks:
-  - name: neo4j-deployment-check
+  - name: neo4j_deployment_check
     type: check
-    namespace: ${GROUP.neo4j-resources.namespace}
+    namespace: ${GROUP.neo4j_resources.namespace}
     selectResource: deployment
     labelSelector: app=neo4j
     timeout: 120
@@ -27,9 +27,9 @@ spec:
       timeout: 600
       onError: fail
       condition: "{$.spec.replicas} == {$.status.readyReplicas}"
-  - name: neo4j-pod-exec
+  - name: neo4j_pod_exec
     type: exec
-    namespace: ${GROUP.neo4j-resources.namespace}
+    namespace: ${GROUP.neo4j_resources.namespace}
     labelSelector: app=neo4j
     timeout: 120
     onError: fail
@@ -45,11 +45,11 @@ spec:
   workflows:
   - name: backup
     sequence:
-    - group: neo4j-resources
-    - hook: neo4j-pod-exec/disable_write
-    - group: neo4j-volumes
-    - hook: neo4j-pod-exec/enable_write
+    - group: neo4j_resources
+    - hook: neo4j_pod_exec/disable_write
+    - group: neo4j_volumes
+    - hook: neo4j_pod_exec/enable_write
   - name: restore
     sequence:
-    - group: neo4j-volumes
-    - group: neo4j-resources
+    - group: neo4j_volumes
+    - group: neo4j_resources
