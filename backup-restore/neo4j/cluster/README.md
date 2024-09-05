@@ -10,7 +10,7 @@
     ```
         ./generate_recipe.sh $NEO4J_NAMESPACE
     ```
-3. Apply the recipe
+3. Apply the generated recipe
     ```
         oc apply -f neo4j-cluster-backup-restore.yaml
     ```    
