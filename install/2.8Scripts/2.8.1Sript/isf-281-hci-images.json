@@ -626,6 +626,16 @@
         "ocp_version": "all"
       },
       {
+        "image_name": "fbr-mongo",
+        "digest": "sha256:bab4b74158abc0ae89da6ce15d21c9f231f507db4d9d410e9fda32850c20ce81",
+        "service": "backup-restore-server",
+        "ga": "true",
+        "art_location": "",
+        "entitled": "false",
+        "prod_location": "icr.io/cpopen",
+        "ocp_version": "all"
+      },
+      {
         "image_name": "fbr-redis",
         "digest": "sha256:2131345868484fe9540746c9e4a4a2a9b71dbbb80de5916d74604f2bfc4ec0f5",
         "service": "backup-restore-server",
