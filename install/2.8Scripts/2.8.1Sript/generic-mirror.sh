@@ -30,7 +30,7 @@ Available options:
     -dest_as_tag : Optional destination as tag without selfsigned certificate option, which does tag based mirroring without selfsigned certificate.
     -dest_as_digest_with_selfsigned_cert : Optional(By default this option is used) destination as digest with selfsigned certificate option, which does digest based mirroring with selfsigned certificate.
     -dest_as_digest : Optional destination as digest without selfsigned certificate option, which does digest based mirroring without selfsigned certificate.
-    -ocpv  : Optional OCP_VERSION (eg: "4.14.14" or multiple versions like "4.14.14,4.15.2"), Required only if '-all' or '-ocp' or '-redhat' is used.
+    -ocpv  : Optional OCP_VERSION (eg: "4.14.14" or multiple versions like "4.14.24,4.15.12"), Required only if '-all' or '-ocp' or '-redhat' is used.
     -fdfv  : Optional FDF_VERSION (eg: "4.14" or multiple versions like "4.14,4.15"), Required only if '-all' or '-fdf' or '-redhat' is used.
     -all   : Optional ALL_IMAGES, which mirrors all the images(OCP, REDHAT, FUSION, GLOBAL DATA PLATFORM, DATA FOUNDATION, BACKUP & RESTORE and DATA CATALOGING).
     -ocp   : Optional OCP_IMAGES, which mirrors all the OCP images.
@@ -59,12 +59,12 @@ To only Validate the mirrored images:
         nohup ./generic-mirror.sh -ps "PATH_TO_THE_PULL_SECRET_FILE" -lreg "LOCAL_ISF_REGISTRY:<PORT>" -lrep "LOCAL_ISF_REPOSITORY" -ocpv "OCP_VERSION" -fdfv "FDF_VERSION" -dest_as_tag -all -validate &
 
 Examples for mirroring:
-    - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all &
-    - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -dest_as_tag_with_selfsigned_cert -all &
+    - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.14.24" -all &
+    - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.14.24" -dest_as_tag_with_selfsigned_cert -all &
 
 Examples for only validation:
-    - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -all -validate &
-    - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.12.42" -dest_as_tag -all -validate &
+    - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.14.24" -all -validate &
+    - nohup ./generic-mirror.sh -ps ./pull-secret.json -lreg "registryhost.com:443" -lrep "fusion-mirror" -ocpv "4.14.24" -dest_as_tag -all -validate &
 
 NOTE: 
 - If port is used in LOCAL_ISF_REGISTRY(-lreg) make sure to add that entry in your pull-secret file .
@@ -205,12 +205,12 @@ function get_image_list_json() {
   # get the megabom from a json file
   print info "EXECUTING get_image_list_json()"
   if [[ $PRODUCT = "sds" ]] ; then
-    IMAGE_LIST_JSON=./isf-280-sds-images.json
+    IMAGE_LIST_JSON=./isf-281-sds-images.json
   else
-    IMAGE_LIST_JSON=./isf-280-hci-images.json
+    IMAGE_LIST_JSON=./isf-281-hci-images.json
   fi
   if [[ $? -ne 0 ]] ; then
-		print error "Please make sure isf-280-hci-images.json & isf-280-sds-images.json files are in this folder"
+		print error "Please make sure isf-281-hci-images.json & isf-281-sds-images.json files are in this folder"
 		exit 1
 	fi
 }
@@ -235,7 +235,7 @@ function get_megabom_images() {
   EXT_PARENT_LOC=($(jq -r '.external[]."parent_location"' $IMAGE_LIST_JSON))
   EXT_OCP_VER=($(jq -r '.external[]."ocp_version"' $IMAGE_LIST_JSON))
   if [[ $? -ne 0 ]] ; then
-    print error "Please make sure isf-272-hci-images.json & isf-272-sds-images.json files are in this folder"
+    print error "Please make sure isf-281-hci-images.json or isf-281-sds-images.json files are in this folder"
     exit 1
   fi
 }
@@ -276,26 +276,52 @@ function get_kc_df_images() {
   IFS=',' read -ra FDF_ARRAY <<< "$FDF_VERSION"
   for FDFV in "${FDF_ARRAY[@]}"
   do
-    cat <<EOF > imageset-config-df.yaml
-    kind: ImageSetConfiguration
-    apiVersion: mirror.openshift.io/v1alpha2
-    storageConfig:
-      registry:
-        imageURL: "$TARGET_PATH/isf-df-metadata:latest"
-        skipTLS: true
-    mirror:
-      operators:
-        - catalog: icr.io/cpopen/isf-data-foundation-catalog:v${FDFV}
-          packages:
-            - name: "mcg-operator"
-            - name: "ocs-operator"
-            - name: "odf-csi-addons-operator"
-            - name: "odf-multicluster-orchestrator"
-            - name: "odf-operator"
-            - name: "odr-cluster-operator"
-            - name: "odr-hub-operator"
-            - name: "ocs-client-operator"
+    if [[ ${FDFV} != "4.16" ]]; then
+      cat <<EOF > imageset-config-df.yaml
+      kind: ImageSetConfiguration
+      apiVersion: mirror.openshift.io/v1alpha2
+      storageConfig:
+        registry:
+          imageURL: "$TARGET_PATH/isf-df-metadata:latest"
+          skipTLS: true
+      mirror:
+        operators:
+          - catalog: icr.io/cpopen/isf-data-foundation-catalog:v${FDFV}
+            packages:
+              - name: "mcg-operator"
+              - name: "ocs-operator"
+              - name: "odf-csi-addons-operator"
+              - name: "odf-multicluster-orchestrator"
+              - name: "odf-operator"
+              - name: "odr-cluster-operator"
+              - name: "odr-hub-operator"
+              - name: "ocs-client-operator"
 EOF
+    else
+      cat <<EOF > imageset-config-df.yaml
+      kind: ImageSetConfiguration
+      apiVersion: mirror.openshift.io/v1alpha2
+      storageConfig:
+        registry:
+          imageURL: "$TARGET_PATH/isf-df-metadata:latest"
+          skipTLS: true
+      mirror:
+        operators:
+          - catalog: icr.io/cpopen/isf-data-foundation-catalog:v${FDFV}
+            packages:
+              - name: "mcg-operator"
+              - name: "ocs-operator"
+              - name: "odf-csi-addons-operator"
+              - name: "odf-multicluster-orchestrator"
+              - name: "odf-operator"
+              - name: "odr-cluster-operator"
+              - name: "odr-hub-operator"
+              - name: "ocs-client-operator"
+              - name: "odf-prometheus-operator"
+              - name: "recipe"
+              - name: "rook-ceph-operator"
+EOF
+    fi
     print info "executing get_kc_df_images for v${FDFV}"
     print info "imageset-config-df.yaml contents are:"
     cat imageset-config-df.yaml
@@ -572,10 +598,10 @@ function data_cataloging_catalog_mirror() {
       skipTLS: true
   mirror:
     operators:
-      - catalog: "oci:///tmp/dcs_catalog"
+      - catalog: "icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619"
         packages:
           - name: "ibm-spectrum-discover-operator"
-      - catalog: icr.io/cpopen/ibm-operator-catalog:latest
+      - catalog: ${TARGET_PATH}/cpopen/ibm-operator-catalog:latest
         packages:
           - name: "db2u-operator"
             channels:
@@ -600,25 +626,27 @@ function data_cataloging_catalog_mirror() {
       - name: icr.io/db2u/db2u.tools@sha256:290532cb23d45a246dad7bca1aa761407480a3423f645800f5aa6ca1dedd863d
       - name: icr.io/db2u/db2u.veleroplugin@sha256:01369d5f1da84f5ceb170c9bb9287e4fdac1dd39f30515b6a13ae37c1f38c559
       - name: icr.io/db2u/db2u.watsonquery@sha256:e1c9542fd5a6ea90b7a265d823e348aaba669545f817f47ce7076dc5753963fe
+      - name: icr.io/cpopen/db2u-operator@sha256:53fd3b91a651238bc60f339882b9967b6e11acdfd078d6d1115c76e8bf065813
+      - name: icr.io/cpopen/db2u-day2-operator@sha256:058b45bf2a6bdf88878387190a0fb2e7eaaf1f0cd407d239f5dcb9f45de1542f
 EOF
 
-  print info "retry_command skopeo --override-os=linux copy docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 oci:///tmp/dcs_catalog --format v2s2 $SKIPTLS" >> ${MIRROR_LOG}
-  retry_command "skopeo --override-os=linux copy docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 oci:///tmp/dcs_catalog --format v2s2 $SKIPTLS"
-  if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo --override-os=linux copy docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 oci:///tmp/dcs_catalog --format v2s2 $SKIPTLS"; failedtocopy=1; fi
+  # print info "retry_command skopeo --override-os=linux copy docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 oci:///tmp/dcs_catalog --format v2s2 $SKIPTLS" >> ${MIRROR_LOG}
+  # retry_command "skopeo --override-os=linux copy docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 oci:///tmp/dcs_catalog --format v2s2 $SKIPTLS"
+  # if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo --override-os=linux copy docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 oci:///tmp/dcs_catalog --format v2s2 $SKIPTLS"; failedtocopy=1; fi
   if [[ $DEST_TAG_SELF_CERT = "-dest_as_tag_with_selfsigned_cert" ]] || [[ $DEST_TAG = "-dest_as_tag" ]] ; then
-    print info "retry_command skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 $SKIPTLS" >> ${MIRROR_LOG}
-    retry_command "skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 $SKIPTLS"
-    if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 $SKIPTLS"; failedtocopy=1; fi
-    print info "retry_command skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 docker://${TARGET_PATH}/ibm-operator-catalog:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 $SKIPTLS" >> ${MIRROR_LOG}
-    retry_command "skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 docker://${TARGET_PATH}/ibm-operator-catalog:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 $SKIPTLS"
-    if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 docker://${TARGET_PATH}/ibm-operator-catalog:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 $SKIPTLS"; failedtocopy=1; fi
+    print info "retry_command skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 $SKIPTLS" >> ${MIRROR_LOG}
+    retry_command "skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 $SKIPTLS"
+    if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 $SKIPTLS"; failedtocopy=1; fi
+    print info "retry_command skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:58846e7b7d3d05125c8f67b3be2ae9b8112346f732cebc5dcafb9191ae61bedf docker://${TARGET_PATH}/cpopen/ibm-operator-catalog:latest $SKIPTLS" >> ${MIRROR_LOG}
+    retry_command "skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:58846e7b7d3d05125c8f67b3be2ae9b8112346f732cebc5dcafb9191ae61bedf docker://${TARGET_PATH}/cpopen/ibm-operator-catalog:latest $SKIPTLS"
+    if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:58846e7b7d3d05125c8f67b3be2ae9b8112346f732cebc5dcafb9191ae61bedf docker://${TARGET_PATH}/cpopen/ibm-operator-catalog:latest $SKIPTLS"; failedtocopy=1; fi
   else
-    print info "retry_command skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 $SKIPTLS" >> ${MIRROR_LOG}
-    retry_command "skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 $SKIPTLS"
-    if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15 $SKIPTLS"; failedtocopy=1; fi
-    print info "retry_command skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 docker://${TARGET_PATH}/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 $SKIPTLS" >> ${MIRROR_LOG}
-    retry_command "skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 docker://${TARGET_PATH}/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 $SKIPTLS"
-    if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo --override-os=linux copy --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 docker://${TARGET_PATH}/ibm-operator-catalog@sha256:3c30eb3b87363563d8e8769fbfc97faceb11fa269064ac51381e90e826623ac4 $SKIPTLS"; failedtocopy=1; fi
+    print info "retry_command skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 $SKIPTLS" >> ${MIRROR_LOG}
+    retry_command "skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 $SKIPTLS"
+    if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo copy --preserve-digests --alll docker://icr.io/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 docker://${TARGET_PATH}/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619 $SKIPTLS"; failedtocopy=1; fi
+    print info "retry_command skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:58846e7b7d3d05125c8f67b3be2ae9b8112346f732cebc5dcafb9191ae61bedf docker://${TARGET_PATH}/cpopen/ibm-operator-catalog:latest $SKIPTLS" >> ${MIRROR_LOG}
+    retry_command "skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:58846e7b7d3d05125c8f67b3be2ae9b8112346f732cebc5dcafb9191ae61bedf docker://${TARGET_PATH}/cpopen/ibm-operator-catalog:latest $SKIPTLS"
+    if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command skopeo copy --preserve-digests --all docker://icr.io/cpopen/ibm-operator-catalog@sha256:58846e7b7d3d05125c8f67b3be2ae9b8112346f732cebc5dcafb9191ae61bedf docker://${TARGET_PATH}/cpopen/ibm-operator-catalog:latest $SKIPTLS"; failedtocopy=1; fi
   fi
 
   cat << EOF > registries_dcs.conf
@@ -639,7 +667,7 @@ cat ./imagesetconfiguration_dcs.yaml
 print info "registries_dcs.conf contents are:"
 cat ./registries_dcs.conf
 print info "retry_command oc mirror --config ./imagesetconfiguration_dcs.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history --oci-registries-config ./registries_dcs.conf $SKIPOCMIRRORTLS" >> ${MIRROR_LOG}
-retry_command "oc mirror --config ./imagesetconfiguration_dcs.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history --oci-registries-config ./registries_dcs.conf $SKIPOCMIRRORTLS"
+retry_command "oc mirror --config ./imagesetconfiguration_dcs.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history --rebuild-catalogs false --oci-registries-config ./registries_dcs.conf $SKIPOCMIRRORTLS"
 if [[ $? -ne 0 ]] ; then print error "Failed to execute retry_command oc mirror --config ./imagesetconfiguration_dcs.yaml docker://${TARGET_PATH} --dest-skip-tls --ignore-history --oci-registries-config ./registries_dcs.conf $SKIPOCMIRRORTLS"; failedtocopy=1; fi
 }
 
@@ -935,9 +963,9 @@ function validate_images() {
   if [[ $DISCOVER_IMAGES = "-dcs" ]] || [[ $ALL_IMAGES = "-all" ]] ; then
     MIRROR_LOG=${DISCOVER}
     if [[ $DEST_TAG_SELF_CERT = "-dest_as_tag_with_selfsigned_cert" ]] || [[ $DEST_TAG = "-dest_as_tag" ]] ; then
-      DEST_IMAGE=/cpopen/ibm-spectrum-discover-operator-catalog:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15
+      DEST_IMAGE=/cpopen/ibm-spectrum-discover-operator-catalog:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619
     else
-      DEST_IMAGE=/cpopen/ibm-spectrum-discover-operator-catalog@sha256:c2538264cb1882b1c98fea5ef162f198ce38ed8c940e82e3b9db458a9a46cb15
+      DEST_IMAGE=/cpopen/ibm-spectrum-discover-operator-catalog@sha256:e99cd9c968fcf04e4c91f6869b6a952bd6cd725f44361f1c6331f194f449b619
     fi
     IMAGE_URL="docker://${TARGET_PATH}${DEST_IMAGE}"
     echo "skopeo inspect $IMAGE_URL $SKIPTLS 2>&1"
@@ -1015,8 +1043,8 @@ echo "REPO_PREFIX: $REPO_PREFIX"
 [[  -z "$PULL_SECRET" ]] && usage
 
 if [[  -z "$ISF_VERSION" ]] ; then
-	print info "No $ISF_VERSION -isf is provided, using 2.8.0 as default"
-	ISF_VERSION="2.8.0"
+	print info "No $ISF_VERSION -isf is provided, using 2.8.1 as default"
+	ISF_VERSION="2.8.1"
 else
   ISF_VERSION=$ISF_VERSION
 fi
