@@ -1,7 +1,7 @@
 # Before applying this recipe
   # 1. export MYSQL_ROOT_PASSWORD=<replace_mysql_root_password>
   # 2. Labels the resources which will help in to select resources while taking backup i.e run ./scripts/labels.sh
-  # 3. Update the clusterrole transaction-manager-ibm-backup-restore as need to check the status of custom resource innodbcluster.mysql.oracle.com (i.e. ONLINE)
+  # 3. Update the clusterrole transaction-manager-ibm-backup-restore where the restore will happen as need to check the status of custom resource innodbcluster.mysql.oracle.com (i.e. ONLINE)
   #    oc get clusterrole transaction-manager-ibm-backup-restore -o json | jq '.rules += [{"verbs":["get","list"],"apiGroups":["mysql.oracle.com"],"resources":["innodbclusters"]}]' | oc apply -f -
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
@@ -13,8 +13,6 @@ spec:
   groups:
     - name: mysql-volumes
       type: volume
-      includedNamespaces:
-        - mysql-operator
     - name: mysql-operator-crds
       type: resource
       includedResourceTypes:
@@ -22,21 +20,11 @@ spec:
       includeClusterResources: true  
       labelSelector: custom-label=mysql-operator-crd    
     - name: mysql-operator-resources
-      type: resource
-      includedNamespaces:
-        - mysql-operator
-      includedResourceTypes:
-        - serviceaccount
-        - deployment
-        - clusterkopfpeering.zalando.org
-        - clusterroles        
-        - clusterrolebindings        
+      type: resource       
       includeClusterResources: true   
       labelSelector: custom-label=mysql-operator                      
     - name: mysql-innodbcluster-resources
       type: resource
-      includedNamespaces:
-        - mysql-operator
       includedResourceTypes:
         - role
         - rolebinding
@@ -44,14 +32,10 @@ spec:
       labelSelector: custom-label=mysql-innodbcluster  
     - name: mysql-innodbcluster
       type: resource
-      includedNamespaces:
-        - mysql-operator
       includedResourceTypes:
         - innodbcluster.mysql.oracle.com    
     - name: secrets-innodbcluster-backup
       type: resource
-      includedNamespaces:
-        - mysql-operator
       includedResourceTypes:  
         - secrets
       labelSelector: custom-label=mysql-innodbcluster-post      
@@ -62,7 +46,7 @@ spec:
   hooks:
   - name: mysql-operator-deployment-check
     type: check
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-operator-resources.namespace}
     selectResource: deployment
     labelSelector: app.kubernetes.io/name=mysql-operator
     timeout: 120
@@ -74,7 +58,7 @@ spec:
       condition: "{$.spec.replicas} == {$.status.readyReplicas}" 
   - name: mysql-innodbcluster-check
     type: check
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-innodbcluster.namespace}
     selectResource: statefulset
     labelSelector: app.kubernetes.io/name=mysql-innodbcluster
     timeout: 120
@@ -86,7 +70,7 @@ spec:
       condition: "{$.spec.replicas} == {$.status.readyReplicas}"
   - name: mysql-innodbcluster-pod-check
     type: check
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-innodbcluster.namespace}
     selectResource: pod
     nameSelector: mysql-c1.*
     timeout: 120
@@ -98,7 +82,7 @@ spec:
       condition: "{$.status.phase} == {\"Running\"}"                 
   - name: mysql-backup-pod-exec
     type: exec
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-innodbcluster.namespace}
     labelSelector: mysql.oracle.com/cluster-role=PRIMARY
     singlePodOnly: true
     ops:
@@ -108,12 +92,12 @@ spec:
       container: mysql   
   - name: mysql-operator-deployment-scale
     type: scale
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-operator-resources.namespace}
     selectResource: deployment
     nameSelector: mysql-operator       
   - name: mysql-operator-pod-exec
     type: exec
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-operator-resources.namespace}
     labelSelector: name=mysql-operator
     singlePodOnly: true
     ops:    
@@ -123,13 +107,13 @@ spec:
       container: mysql-operator   
   - name: mysql-operator-pod-post-exec
     type: exec
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-operator-resources.namespace}
     labelSelector: name=mysql-operator
     singlePodOnly: true
     ops:
     - name: reboot-innodbcluster-cluster
       command: >
-        ["/bin/bash", "-c", "MYSQL_ROOT_PASSWORD=$(curl -k -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" https://kubernetes.default.svc/api/v1/namespaces/mysql-operator/secrets/mysql-c1-root-user-creds |  grep -o '\"rootPassword\": \".*\"' | awk -F'\"' '{print $4}' | base64 --decode); mysqlsh --uri=root:$MYSQL_ROOT_PASSWORD@mysql-c1-instances.mysql-operator.svc.cluster.local:3306 --execute=\"dba.rebootClusterFromCompleteOutage();\""]
+        ["/bin/bash", "-c", "MYSQL_ROOT_PASSWORD=$(curl -k -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" https://kubernetes.default.svc/api/v1/namespaces/mysql-operator/secrets/mysql-c1-root-user-creds |  grep -o '\"rootPassword\": \".*\"' | awk -F'\"' '{print $4}' | base64 --decode); mysqlsh --uri=root:$MYSQL_ROOT_PASSWORD@mysql-c1-instances.mysql-operator.svc.cluster.local:3306 --js --execute=\"dba.rebootClusterFromCompleteOutage();\""]
       container: mysql-operator 
     - name: scale-router-replica
       command: >
@@ -137,7 +121,7 @@ spec:
       container: mysql-operator                     
   - name: mysql-router-pod-check
     type: check
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-operator-resources.namespace}
     selectResource: pod
     labelSelector: app.kubernetes.io/name=mysql-router
     timeout: 120
@@ -149,7 +133,7 @@ spec:
       condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
   - name: innodbcluster-online-check
     type: check
-    namespace: mysql-operator
+    namespace: ${GROUP.mysql-innodbcluster.namespace}
     selectResource: mysql.oracle.com/v2/innodbclusters
     nameSelector: mysql-c1
     timeout: 120
@@ -184,7 +168,7 @@ spec:
     - hook: mysql-operator-deployment-scale/sync
     - hook: mysql-operator-deployment-scale/up
     - hook: mysql-operator-deployment-scale/sync
-    - hook: mysql-operator-deployment-check/replicasReady    
+    - hook: mysql-operator-deployment-check/replicasReady
     - hook: mysql-operator-pod-post-exec/reboot-innodbcluster-cluster
     - hook: mysql-operator-pod-post-exec/scale-router-replica
     - hook: mysql-router-pod-check/podReady
