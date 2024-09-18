@@ -32,4 +32,22 @@ else
     echo "ERROR: Failed to save original guardian-configmap. skipped updates"
 fi
 
+if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > guardian-dm-image-config-original.yaml)
+ then
+    echo "Scaling down guardian-dm-controller-manager deployment..."
+    oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
+    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cp/fbr/guardian-datamover@sha256:b051b665b42ce81ab543558b8f7c2ddf36dfc7a95df887ef8583da2912849c5e
+    echo "Scaling up guardian-dm-controller-manager deployment..."
+    oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
+else
+    echo "ERROR: Failed to save original configmap guardian-dm-image-config. skipped updates"
+fi
 
+echo "Patching dbr-controller deployment..."
+echo "Scaling down dbr-controller deployment..."
+oc scale deployment dbr-controller -n "$BR_NS" --replicas=0
+oc patch deployment/dbr-controller -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"dbr-controller","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:656433641ceda21ee45469500b2b7040983c48d1e3ee50f809be5ab6f3ab527d"}]}}}}'
+oc set resources deployment dbr-controller  -n "$BR_NS" --limits memory=3Gi
+echo "Scaling up dbr-controller deployment..."
+oc scale deployment dbr-controller -n "$BR_NS" --replicas=1
+echo "Verify that guardian-dm-controller-manager and dbr-controller pods in $BR_NS namespace are running"
