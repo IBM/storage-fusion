@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run this script to update default datamover pod resource limit on spoke cluster.
+# Run this script on hub and spoke clusters to apply the latest hotfixes for 2.8.1 release.
 
 LOG=/tmp/br-post-install-patch281_$$_log.txt
 exec &> >(tee -a $LOG)
