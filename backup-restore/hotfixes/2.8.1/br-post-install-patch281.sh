@@ -18,6 +18,7 @@ BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata
 
 if (oc -n "$BR_NS" get csv ibm-dataprotectionagent.v2.8.1 -o yaml > ibm-dataprotectionagent.v2.8.1-csv-original.yaml)
    then
+      echo "Saved original configuration and images to ibm-dataprotectionagent.v2.8.1-csv-original.yaml. Use it to revert changes made by this patch."
       oc -n "$BR_NS" annotate --overwrite=true clusterserviceversion ibm-dataprotectionagent.v2.8.1 operatorframework.io/properties='{"properties":[{"type":"olm.gvk","value":{"group":"dataprotectionagent.idp.ibm.com","kind":"DataProtectionAgent","version":"v1"}},{"type":"olm.package","value":{"packageName":"ibm-dataprotectionagent","version":"2.8.1"}},{"type":"olm.package.required","value":{"packageName":"guardian-dm-operator","versionRange":"\u003e=2.8.0-1"}},{"type":"olm.package.required","value":{"packageName":"redhat-oadp-operator","versionRange":"\u003e=1.1.0 \u003c1.5.0"}},{"type":"olm.package.required","value":{"packageName":"guardian-dm-operator","versionRange":"\u003e=2.8.0-1"}},{"type":"olm.package.required","value":{"packageName":"redhat-oadp-operator","versionRange":"\u003e=1.1.0 \u003c1.5.0"}}]}'
   else
     echo "ERROR: Failed to save original ibm-dataprotectionagent.v2.8.1 csv. Skipped Patch."
@@ -50,7 +51,8 @@ oc patch deployment/dbr-controller -n $BR_NS -p '{"spec":{"template":{"spec":{"c
 oc set resources deployment dbr-controller  -n "$BR_NS" --limits memory=3Gi
 echo "Scaling up dbr-controller deployment..."
 oc scale deployment dbr-controller -n "$BR_NS" --replicas=1
-echo "Verify that guardian-dm-controller-manager and dbr-controller pods in $BR_NS namespace are running"
+echo "Patching transaction-manager deployment..."
+oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:656433641ceda21ee45469500b2b7040983c48d1e3ee50f809be5ab6f3ab527d"}]}}}}'
 
 if (oc get deployment -n $BR_NS backuppolicy-deployment -o yaml > backuppolicy-deployment.save.yaml)
   then
@@ -79,3 +81,10 @@ if (oc get deployment -n $BR_NS backup-location-deployment -o yaml > backup-loca
 else
     echo "ERROR: Failed to save original backup-location-deployment. Skipped updates."
 fi
+echo "Please verify that these pods in $BR_NS namespace have successfully restarted after hotfix update:"
+echo "     guardian-dm-controller-manager"
+echo "     dbr-controller"
+echo "     transaction-manager"
+echo "     backup-location-deployment"
+echo "     backuppolicy-deployment"
+
