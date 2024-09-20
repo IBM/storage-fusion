@@ -51,3 +51,31 @@ oc set resources deployment dbr-controller  -n "$BR_NS" --limits memory=3Gi
 echo "Scaling up dbr-controller deployment..."
 oc scale deployment dbr-controller -n "$BR_NS" --replicas=1
 echo "Verify that guardian-dm-controller-manager and dbr-controller pods in $BR_NS namespace are running"
+
+if (oc get deployment -n $BR_NS backuppolicy-deployment -o yaml > backuppolicy-deployment.save.yaml)
+  then
+    echo "Creating backup-policy service account..."
+    oc create sa backup-policy -n $BR_NS
+
+    echo "Creating backup-policy-role cluster role..."
+    oc create clusterrole backup-policy-role --verb=get --resource=configmaps
+
+    echo "Creating backup-policy-rolebinding cluster role binding..."
+    oc adm policy add-cluster-role-to-user backup-policy-role -z backup-policy  -n $BR_NS --rolebinding-name=backup-policy-rolebinding
+
+    echo "Patching backuppolicy-deployment service account..."
+    oc patch deployment backuppolicy-deployment -n $BR_NS -p '{"spec":{"template":{"spec":{"serviceAccountName":"backup-policy"}}}}'
+
+    echo "Patching backuppolicy-deployment image..."
+    oc patch deployment backuppolicy-deployment -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"backuppolicy-container","image":"cp.icr.io/cp/fbr/guardian-backup-policy@sha256:f7bcf21292258b1e2299a58bccc53886548fd05d5ab714756f4e364195085a5b"}]}}}}'
+else
+    echo "ERROR: Failed to save original backuppolicy-deployment. Skipped updates."
+fi
+
+if (oc get deployment -n $BR_NS backup-location-deployment -o yaml > backup-location-deployment.save.yaml)
+  then
+    echo "Patching backup-location-deployment image..."
+    oc patch deployment backup-location-deployment -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"backup-location-container","image":"cp.icr.io/cp/fbr/guardian-backup-location@sha256:b0e2cb55082192780bd6ad02fe19c71d478b213817c64689562869256110af3b"}]}}}}'
+else
+    echo "ERROR: Failed to save original backup-location-deployment. Skipped updates."
+fi
