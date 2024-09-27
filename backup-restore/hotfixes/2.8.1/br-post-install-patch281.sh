@@ -37,7 +37,7 @@ if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > guardian-dm-
  then
     echo "Scaling down guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
-    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cp/fbr/guardian-datamover@sha256:b051b665b42ce81ab543558b8f7c2ddf36dfc7a95df887ef8583da2912849c5e
+    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cpopen/guardian-datamover@sha256:b74504fec29de130ada1262d2fc3587660176f32526968e6efb68766d2d97e7c
     echo "Scaling up guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
 else
