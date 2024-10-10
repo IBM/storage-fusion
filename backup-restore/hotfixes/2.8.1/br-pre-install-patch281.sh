@@ -9,6 +9,22 @@ LOG=/tmp/br-pre-install-patch281_$$_log.txt
 exec &> >(tee -a $LOG)
 echo "Logging output in $LOG"
 
+OC_VERSION=$(oc version | awk  '/^Server Version:/ { print $NF }')
+if [ -z "$OC_VERSION" ]
+ then
+   echo "ERROR: Could not determine OCP version. Exiting"
+   exit
+fi
+
+
+OCP416=$(oc version | awk  '/^Server Version:/ { print ($NF >= 4.16) ? "true" : "false" }')
+
+if [ "$OCP416" == "true" ]
+ then
+   echo "Backup Restore 2.8.1 not Supported on OCP version 4.16 or higher. Hence this patch is not Applicable."
+   exit
+fi
+
 BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2> /dev/null)
 ISF_CR=$(oc get spectrumfusion -A -o custom-columns=NS:metadata.name --no-headers)
 ISF_NS=$(oc get spectrumfusion -A -o custom-columns=NS:metadata.namespace --no-headers)
@@ -55,7 +71,7 @@ echo "Restarting isf-prereq-operator"
 oc -n "$ISF_NS" rollout restart deployment isf-prereq-operator-controller-manager
 oc -n "$ISF_NS" rollout status deployment isf-prereq-operator-controller-manager
 echo ""
-echo ' **** IMPORTANT: Execute following (Only) after Backup & Restore installation is complete ****'
+echo ' **** IMPORTANT: Execute following when this script is done ****'
 echo oc -n $ISF_NS patch --type json --patch=\'[ { "op": "remove", "path": "/spec/configuration/services/skipOnBoardingServices" } ]\' spectrumfusion "$ISF_CR"
 
 echo ""
