@@ -3,7 +3,7 @@
 
 LOG=/tmp/br-post-install-patch281_$$_log.txt
 exec &> >(tee -a $LOG)
-echo "Logging output in $LOG"
+echo "Writing output of br-post-install-patch281.sh script to $LOG"
 
 # Check for Backup & Restore namespace
 #BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2> /dev/null)
@@ -23,6 +23,13 @@ if (oc -n "$BR_NS" get csv ibm-dataprotectionagent.v2.8.1 -o yaml > ibm-dataprot
   else
     echo "ERROR: Failed to save original ibm-dataprotectionagent.v2.8.1 csv. Skipped Patch."
 fi
+
+if (oc -n "$BR_NS" get csv ibm-backup-restore guardian-dm-operator.v2.8.1 -o yaml > ibm-backup-restore guardian-dm-operator.v2.8.1-original.yaml)
+   then
+      echo "Saved original configuration and images to guardian-dm-operator.v2.8.1-original.yaml. Use it to revert changes made by this patch."
+   else
+      echo "ERROR: Failed to save original guardian-dm-operator.v2.8.1 csv. Skipped Patch."
+fi
     
 if (oc get configmap -n "$BR_NS" guardian-configmap -o yaml > guardian-configmap-original.yaml)
  then
@@ -37,7 +44,8 @@ if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > guardian-dm-
  then
     echo "Scaling down guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
-    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cpopen/guardian-datamover@sha256:b74504fec29de130ada1262d2fc3587660176f32526968e6efb68766d2d97e7c
+    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cpopen/guardian-datamover@sha256:68ed9b6cb91c7d864fac08c34b7de4f33c22bfcd59fe30fd1e94020084fb6bab
+    oc patch csv -n $BR_NS guardian-dm-operator.v2.8.1 --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"cp.icr.io/cpopen/guardian-dm-operator@sha256:7c47c304c669494d5134954390c531ef332092565170e8886a74a7a6948ba871"}]'
     echo "Scaling up guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
 else
