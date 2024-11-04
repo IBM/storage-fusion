@@ -135,6 +135,12 @@ EOF
       sleep 5
       UNFINISHED=$(oc -n "$ISF_NS" get fdbr -o custom-columns=NAME:metadata.name,STATUS:status.phase --no-headers | grep -ivE "$IGNORE_DBR_STATES" )
     done
+
+    BACKUPREPOSITORIES=$(oc -n "$NAMESPACE" get backuprepositories.velero.io -o name --no-headers)
+    for BACKUPREPO in ${BACKUPREPOSITORIES[@]}; do
+        echo "$BACKUPREPO"
+        oc delete -n "$NAMESPACE" "$BACKUPREPO"
+    done
 fi
 
 oc -n "$ISF_NS" patch --type json configmap isf-data-protection-config -p '[{"op": "replace", "path": "/data/Mode", "value": "DisableWebhook"}]'
