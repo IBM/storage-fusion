@@ -90,9 +90,18 @@ oc -n "${ISF_NS}" get ip
 echo "Fusion CSVs:"
 oc -n "${ISF_NS}" get csv
 
-oc -n "$NAMESPACE" label dataprotectionagent --all uninstalling=true --overwrite
-oc -n "$NAMESPACE" label dataprotectionserver --all uninstalling=true --overwrite
-oc -n "$ISF_NS" label fusionserviceinstances ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance uninstalling=true --overwrite
+add_lables()
+{
+   oc -n "$1" label $2 $3 uninstalling=true --overwrite 2>/dev/null
+   oc -n "$1" label $2 $3 uninstall-date="$(date -u +%F-%H-%M-%S-%Z)" --overwrite 2>/dev/null
+   oc -n "$1" label $2 $3 uninstall-user="$USER" --overwrite 2>/dev/null
+   oc -n "$1" label $2 $3 uninstall-host="$(hostname -f)" --overwrite 2>/dev/null
+}
+
+add-lables "$NAMESPACE" dataprotectionagent --all
+add_lables "$NAMESPACE" dataprotectionserver --all
+add_lables "$ISF_NS" fusionserviceinstances 'ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance'
+
 CONNECTION=$(oc -n "$NAMESPACE" get cm guardian-configmap -o custom-columns="CONN:data.connectionName" --no-headers)
 if [ -n "$CONNECTION" ]
   then
@@ -198,6 +207,9 @@ print_heading "Delete any existing guardianmongoes CRs"
 oc delete guardianmongoes -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing kafkatopics CRs"
 oc delete  kafkatopics -n "${NAMESPACE}" --all --timeout=60s
+# remove velero backuprepositories so that velero doesn't think repositories still exist on reinstall
+print_heading "Removing Velero BackupRepositories CRs"
+oc delete backuprepository.velero.io -n "${NAMESPACE}" --all --timeout=60s
 KT=$(oc -n "${NAMESPACE}" get kafkatopics -o custom-columns="NAME:metadata.name" --no-headers)
 [ -n "$KT" ] && oc -n "${NAMESPACE}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' kafkatopics $KT
 oc delete  kafkatopics -n "${NAMESPACE}" --all --timeout=60s
