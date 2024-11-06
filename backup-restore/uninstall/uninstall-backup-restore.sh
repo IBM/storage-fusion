@@ -98,7 +98,7 @@ add_lables()
    oc -n "$1" label $2 $3 uninstall-host="$(hostname -f)" --overwrite 2>/dev/null
 }
 
-add-lables "$NAMESPACE" dataprotectionagent --all
+add_lables "$NAMESPACE" dataprotectionagent --all
 add_lables "$NAMESPACE" dataprotectionserver --all
 add_lables "$ISF_NS" fusionserviceinstances 'ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance'
 
