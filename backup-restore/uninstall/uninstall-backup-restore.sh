@@ -206,13 +206,13 @@ oc delete guardiancopyrestores -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardianmongoes CRs"
 oc delete guardianmongoes -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing kafkatopics CRs"
-oc delete  kafkatopics -n "${NAMESPACE}" --all --timeout=60s
+oc delete  kafkatopics.kafka.strimzi.io -n "${NAMESPACE}" --all --timeout=60s
 # remove velero backuprepositories so that velero doesn't think repositories still exist on reinstall
 print_heading "Removing Velero BackupRepositories CRs"
 oc delete backuprepository.velero.io -n "${NAMESPACE}" --all --timeout=60s
 KT=$(oc -n "${NAMESPACE}" get kafkatopics -o custom-columns="NAME:metadata.name" --no-headers)
-[ -n "$KT" ] && oc -n "${NAMESPACE}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' kafkatopics $KT
-oc delete  kafkatopics -n "${NAMESPACE}" --all --timeout=60s
+[ -n "$KT" ] && oc -n "${NAMESPACE}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' kafkatopics.kafka.strimzi.io $KT
+oc delete  kafkatopics.kafka.strimzi.io -n "${NAMESPACE}" --all --timeout=60s
 
 remove_fsi ()
 {
