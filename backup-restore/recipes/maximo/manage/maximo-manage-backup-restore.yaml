@@ -101,7 +101,6 @@ spec:
     timeout: 180
     type: exec
   workflows:
-  workflows:
   - name: backup
     sequence:
     - group: maximo-manage-resources

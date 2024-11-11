@@ -134,7 +134,6 @@ fi
 # Create local recipe
 # ========================================================================================================================
 
-echo -e "\n=== Creating recipe from template ==="
 export MAS_INSTANCE_ID
 recipe_name="maximo-manage-backup-restore.yaml"
 echo -e "\n=== Creating recipe from template ==="
