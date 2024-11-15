@@ -62,6 +62,14 @@ oc scale deployment dbr-controller -n "$BR_NS" --replicas=1
 echo "Patching transaction-manager deployment..."
 oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:656433641ceda21ee45469500b2b7040983c48d1e3ee50f809be5ab6f3ab527d"}]}}}}'
 
+if [[ -z "$SKIP_MINIO" ]];
+  then
+    echo "Saving old guardian-minio image to old-minio-image.txt"
+    oc get statefulset guardian-minio -n $BR_NS -o jsonpath="{.spec.template.spec.containers[0].image}" >> old-minio-image.txt  
+    echo "Updating statefulset/guardian-minio image to quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3"
+    oc set image statefulset/guardian-minio -n $BR_NS minio=quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3
+fi
+
 if (oc get deployment -n $BR_NS backuppolicy-deployment -o yaml > backuppolicy-deployment.save.yaml)
   then
     echo "Creating backup-policy service account..."
