@@ -54,15 +54,15 @@ spec:
     ops:
     - name: "suspend"
       command: >
-        ["/usr/bin/ksh", "-lc", "manage_snapshots --action suspend --retry 3"]
+        ["manage_snapshots --action suspend --retry 3"]
       container: db2u
     - name: "resume"
       command: >
-        ["/usr/bin/ksh", "-lc", "manage_snapshots --action resume --retry 3"]
+        ["manage_snapshots --action resume --retry 3"]
       container: db2u
     - name: "restore"
       command: >
-        ["/usr/bin/ksh", "-lc", "manage_snapshots --action restore --retry 3"]
+        ["manage_snapshots --action restore --retry 3"]
       container: db2u
       timeout: 300
   - name: db2u-operator-manager-exec
