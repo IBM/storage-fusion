@@ -3,6 +3,7 @@
 # Default value for CORE_NAMESPACE (set later based on MAS_INSTANCE_ID)
 CORE_NAMESPACE=""
 DEFAULT_REPORTING_OPERATOR="dro"
+DEFAULT_REPORTING_NAMESPACE="redhat-marketplace"
 CUSTOM_CERTS=false
 
 usage() {
@@ -13,7 +14,19 @@ usage() {
   echo "  -n CORE_NAMESPACE    Specify the CORE namespace (default: mas-<MAS_INSTANCE_ID>-core)"
   echo "  --mas-instance-id MAS_INSTANCE_ID    Specify the MAS Instance ID (Required)"
   echo "  --reporting-operator REPORTING_OPERATOR Specify the Reporting Operator (default: $DEFAULT_REPORTING_OPERATOR)"
+  echo "  --reporting-operator-ns REPORTING_OPERATOR_NAMESPACE Specify the Reporting Operator NAMESPACE (default: $DEFAULT_REPORTING_NAMESPACE)"
   echo "  --custom-certs  Allow script to label custom cert (default: false)"
+}
+
+yq_validate() {
+  #Validate if yq is installed, required for 
+  if command -v yq &> /dev/null
+  then
+      :
+  else
+      echo "yq is not installed"
+      exit 1
+  fi
 }
 
 #Handling options specified in command line
@@ -34,6 +47,10 @@ while [[ "$1" != "" ]]; do
     --reporting-operator )
       shift
       REPORTING_OPERATOR=$1
+      ;;
+    --reporting-operator-ns )
+      shift
+      REPORTING_OPERATOR_NAMESPACE=$1
       ;;
     --custom-certs)
       CUSTOM_CERTS=true
@@ -66,6 +83,10 @@ fi
 
 # Check if REPORTING_OPERATOR is set, otherwise use the default value
 REPORTING_OPERATOR=${REPORTING_OPERATOR:-$DEFAULT_REPORTING_OPERATOR}
+
+
+# Check if REPORTING_OPERATOR is set, otherwise use the default value
+REPORTING_OPERATOR_NAMESPACE=${REPORTING_OPERATOR_NAMESPACE:-$DEFAULT_REPORTING_NAMESPACE}
 
 # Add labels to application
 # ========================================================================================================================
@@ -154,3 +175,27 @@ if [[ -f $recipe_name ]]; then
 else
   echo "Template Recipe YAML file not found. Make sure to cd to maximo/core"
 fi
+
+local_recipe="maximo-core-backup-restore-local.yaml"
+#Add JDBC resource type if found
+if [[ -n $JDBC_CFG ]]; then
+  awk '{gsub(/#IfDb2Uncomment/, ""); print}' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
+fi
+
+#Add Kafka resource type if found
+if [[ -n $KAFKA_CFG ]]; then
+  awk '{gsub(/#IfKafkaUncomment/, ""); print}' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
+fi
+
+#Add ObjectStorage resource type if found
+if [[ -n $OBJECT_STORAGE_CFG ]]; then
+  awk '{gsub(/#IfObjectStorageUncomment/, ""); print}' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
+fi
+
+#Add WatsonStudio resource type if found
+if [[ -n $WATSON_STUDIO_CFG ]]; then
+  awk '{gsub(/#IfWatsonStudioUncomment/, ""); print}' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
+fi
+
+#Remove all lines that contain comments from local recipe
+awk '!/#/' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
