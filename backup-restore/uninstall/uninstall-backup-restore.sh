@@ -101,6 +101,7 @@ add_lables()
 add_lables "$NAMESPACE" dataprotectionagent --all
 add_lables "$NAMESPACE" dataprotectionserver --all
 add_lables "$ISF_NS" fusionserviceinstances 'ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance'
+add_lables "$NAMESPACE" namespace "$NAMESPACE"
 
 CONNECTION=$(oc -n "$NAMESPACE" get cm guardian-configmap -o custom-columns="CONN:data.connectionName" --no-headers)
 if [ -n "$CONNECTION" ]
@@ -298,6 +299,9 @@ if [ -z "$INSTS" ]
    echo "==== Other copies of Backup & Restore exist in following namespaces"
    oc get dataprotectionagent,dataprotectionserver -A --no-headers| cut -d" " -f1
 fi
+#Delete namespace again just in case it was recreated in the meantime
+echo "oc delete namespace ${NAMESPACE}"
+oc delete namespace "${NAMESPACE}"
 
 echo "Fusion Installplans:"
 oc -n "${ISF_NS}" get ip
