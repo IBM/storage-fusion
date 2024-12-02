@@ -211,7 +211,7 @@ oc delete  kafkatopics.kafka.strimzi.io -n "${NAMESPACE}" --all --timeout=60s
 # remove velero backuprepositories so that velero doesn't think repositories still exist on reinstall
 print_heading "Removing Velero BackupRepositories CRs"
 oc delete backuprepository.velero.io -n "${NAMESPACE}" --all --timeout=60s
-KT=$(oc -n "${NAMESPACE}" get kafkatopics -o custom-columns="NAME:metadata.name" --no-headers)
+KT=$(oc -n "${NAMESPACE}" get kafkatopics.kafka.strimzi.io -o custom-columns="NAME:metadata.name" --no-headers)
 [ -n "$KT" ] && oc -n "${NAMESPACE}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' kafkatopics.kafka.strimzi.io $KT
 oc delete  kafkatopics.kafka.strimzi.io -n "${NAMESPACE}" --all --timeout=60s
 
