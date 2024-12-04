@@ -59,3 +59,10 @@ oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodEphemeralStorageReque
 oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodMemoryRequest='4000Mi'
 oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodMemoryRequestRes='4000Mi'
 
+if [[ -z "$SKIP_MINIO" ]];
+  then
+    echo "Saving old guardian-minio image to old-minio-image.txt"
+    oc get statefulset guardian-minio -n $BR_NS -o jsonpath="{.spec.template.spec.containers[0].image}" >> old-minio-image.txt
+    echo "Updating statefulset/guardian-minio image to quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3"
+    oc set image statefulset/guardian-minio -n $BR_NS minio=quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3
+fi
