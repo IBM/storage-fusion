@@ -42,6 +42,14 @@ if [ -n "$HUB" ]
   then
     echo "Apply patches to hub..."
 
+   if (oc get deployment -n $BR_NS job-manager -o yaml > job-manager-deployment.save.yaml)
+      then
+        echo "Patching job-manager-deployment image..."
+        oc patch deployment job-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"job-manager","image":"cp.icr.io/cp/fbr/guardian-job-manager@sha256:5a99629999105bdc83862f4bf37842b8004dfb3db9eea20b07ab7e39e95c8edc"}]}}}}'
+    else
+        echo "ERROR: Failed to save original job-manager-deployment. Skipped updates."
+    fi
+
     if (oc get deployment -n $BR_NS backup-location-deployment -o yaml > backup-location-deployment.save.yaml)
       then
         echo "Patching backup-location-deployment image..."
