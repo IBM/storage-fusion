@@ -4,7 +4,7 @@
 # Version 12-11-2024
 
 mkdir -p /tmp/br-post-install-patch-282
-if [ "$?" -ne 0 ] 
+if [ "$?" -eq 0 ]
 then DIR=/tmp/br-post-install-patch-282
 else DIR=/tmp
 fi
