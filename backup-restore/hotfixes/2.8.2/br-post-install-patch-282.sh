@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.8.2 release.
-# Refer to https://supportcontent.ibm.com/support/pages/ibm-storage-fusion-282-hotfix for additional information.
-# Version 12-11-2024
+# Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
+# Version 12-13-2024
 
 mkdir -p /tmp/br-post-install-patch-282
 if [ "$?" -eq 0 ]
@@ -112,17 +112,29 @@ fi
 
 
 echo "Saving old guardian-minio image to old-minio-image.txt"
-oc get statefulset guardian-minio -n $BR_NS -o jsonpath="{.spec.template.spec.containers[0].image}" >> old-minio-image.txt
+oc get statefulset guardian-minio -n $BR_NS -o jsonpath="{.spec.template.spec.containers[0].image}" > $DIR/old-minio-image.txt
 echo "Updating statefulset/guardian-minio image to quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3"
 oc set image statefulset/guardian-minio -n $BR_NS minio=quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3
+
+if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > $DIR/guardian-dm-image-config-original.yaml)
+ then
+    echo "Scaling down guardian-dm-controller-manager deployment..."
+    oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
+    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cpopen/guardian-datamover@sha256:c3bf9eda73aedaa8dd853424bfb30fc11cbcb53898a4375529f1126e1a18b5bf
+    echo "Scaling up guardian-dm-controller-manager deployment..."
+    oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
+else
+    echo "ERROR: Failed to save original configmap guardian-dm-image-config. skipped updates"
+fi
 
 echo "Please verify that these pods in $BR_NS namespace have successfully restarted after hotfix update:"
 echo "     guardian-minio"
 echo "     transaction-manager"
 if [ -n "$HUB" ]
   then
-    echo "     job-manager"
     echo "     backup-location-deployment"
     echo "     backuppolicy-deployment"
     echo "     backup-service"
+    echo "     guardian-dm-controller-manager"
+    echo "     job-manager"
 fi
