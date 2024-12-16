@@ -115,6 +115,8 @@ echo "Saving old guardian-minio image to old-minio-image.txt"
 oc get statefulset guardian-minio -n $BR_NS -o jsonpath="{.spec.template.spec.containers[0].image}" > $DIR/old-minio-image.txt
 echo "Updating statefulset/guardian-minio image to quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3"
 oc set image statefulset/guardian-minio -n $BR_NS minio=quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3
+oc delete pod -n $BR_NS -l app.kubernetes.io/component=minio
+oc rollout status -n $BR_NS --watch --timeout=600s statefulset/guardian-minio
 
 if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > $DIR/guardian-dm-image-config-original.yaml)
  then
