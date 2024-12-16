@@ -59,6 +59,7 @@ oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodEphemeralStorageReque
 oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodMemoryRequest='4000Mi'
 oc set data -n $BR_NS cm/guardian-configmap datamoverJobpodMemoryRequestRes='4000Mi'
 
+SKIP_MINIO="true"
 if [[ -z "$SKIP_MINIO" ]];
   then
     echo "Saving old guardian-minio image to old-minio-image.txt"

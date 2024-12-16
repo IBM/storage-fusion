@@ -86,6 +86,7 @@ oc scale deployment dbr-controller -n "$BR_NS" --replicas=1
 echo "Patching transaction-manager deployment..."
 oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:be77eecb921b2e905e8ea5e0f6ca9b5b6bec76dc4b6cdde223e54e6c42840e97"}]}}}}'
 
+SKIP_MINIO="true"
 if [[ -z "$SKIP_MINIO" ]];
   then
     echo "Saving old guardian-minio image to old-minio-image.txt"
