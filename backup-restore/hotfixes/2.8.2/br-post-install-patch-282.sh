@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.8.2 release.
 # Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
-# Version 12-13-2024
+# Version 12-16-2024
 
 mkdir -p /tmp/br-post-install-patch-282
 if [ "$?" -eq 0 ]
@@ -115,6 +115,7 @@ echo "Saving old guardian-minio image to old-minio-image.txt"
 oc get statefulset guardian-minio -n $BR_NS -o jsonpath="{.spec.template.spec.containers[0].image}" > $DIR/old-minio-image.txt
 echo "Updating statefulset/guardian-minio image to quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3"
 oc set image statefulset/guardian-minio -n $BR_NS minio=quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3
+oc delete pod guardian-minio-0 -n $BR_NS
 
 if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > $DIR/guardian-dm-image-config-original.yaml)
  then
