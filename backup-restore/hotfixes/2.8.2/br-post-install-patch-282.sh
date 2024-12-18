@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.8.2 release.
 # Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
-# Version 12-16-2024
+# Version 12-17-2024
 
 mkdir -p /tmp/br-post-install-patch-282
 if [ "$?" -eq 0 ]
@@ -121,7 +121,7 @@ if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > $DIR/guardia
  then
     echo "Scaling down guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
-    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cpopen/guardian-datamover@sha256:c3bf9eda73aedaa8dd853424bfb30fc11cbcb53898a4375529f1126e1a18b5bf
+    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=icr.io/cpopen/guardian-datamover@sha256:c3bf9eda73aedaa8dd853424bfb30fc11cbcb53898a4375529f1126e1a18b5bf
     echo "Scaling up guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
 else

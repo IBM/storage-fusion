@@ -68,7 +68,7 @@ if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > guardian-dm-
  then
     echo "Scaling down guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
-    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cpopen/guardian-datamover@sha256:c875806495327dc719337584c608ba6bb5a0902ee1e89990a6f1b47666655bad
+    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=icr.io/cpopen/guardian-datamover@sha256:c875806495327dc719337584c608ba6bb5a0902ee1e89990a6f1b47666655bad
     oc patch csv -n $BR_NS guardian-dm-operator.v2.8.1 --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"cp.icr.io/cpopen/guardian-dm-operator@sha256:a879a312b153e4eeb7eb334a39f753e4e7c331bce8e176d5e1d20159e32a55a3"}]'
     echo "Scaling up guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
