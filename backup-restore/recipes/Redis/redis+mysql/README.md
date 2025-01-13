@@ -5,9 +5,9 @@ This is a sample recipe which provides a backup and restore workflow for an appl
 1. oc new-project combined
 2. Clone this project
     ```
-    git clone git@github.ibm.com:ProjectAbell/workload-squad.git
+    git clone https://github.com/IBM/storage-fusion.git
     ```
-2. cd usecases/mobily 
+2. cd storage-fusion/backup-restore/recipes/Redis/redis+mysql
 3. Deploy redis
     ```
     oc apply -f image-based/deploy-redis.yaml
@@ -22,11 +22,7 @@ This is a sample recipe which provides a backup and restore workflow for an appl
 
 ## Preparation for Fusion Backup & Restore
 
-1. Need to provide the label to few resources for recipe execution. 
-    So we provided below script to label the resources.
-    ```
-    usecases/mobily/update_labels.sh
-    ```
+1. Need to label few resources for recipe execution. So we provided `update_labels.sh` script to label the resources.
 2. Run the update_labels.sh to add lables to deployment and related pvc.
    For example , 
    1. To add the label to redis deployment and pod 
