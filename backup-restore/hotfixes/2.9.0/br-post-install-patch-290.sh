@@ -78,8 +78,10 @@ EOF
         if [[ "$PATCH" == "HCI" ]]; then
             echo "Patching HCI clusterserviceversion/isf-operator.v2.9.0..."
             oc patch csv -n ${ISF_NS} isf-operator.v2.9.0  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/1/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:d6f1081340eed3b18e714acd86e4cc406b9c43ba92705cad76c7688c6d325581"}]'
+        elif [[ "$PATCH" == "SDS" ]]; then
             echo "Patching SDS clusterserviceversion/isf-operator.v2.9.0..."
             oc patch csv -n ${ISF_NS} isf-operator.v2.9.0  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/1/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:8d0d7ef3064271b948a4b9a3b05177ae959613a0b353062a286edb972112cfc4"}]'
+        else
             echo "ERROR: Unknown patch location. Skipped updates"
         fi
     else
@@ -100,6 +102,7 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     then
         echo "Patching deployment/transaction-manager image..."
         oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:6a14aaf9d146c66585f33e2a326c0125417b68e372ac0f59cd23271cf62d2055"}]}}}}'
+    else
         echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
     fi
 fi
