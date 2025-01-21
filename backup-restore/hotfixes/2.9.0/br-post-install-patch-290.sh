@@ -56,24 +56,8 @@ if [ -z "$BR_NS" ]
     echo "ERROR: No B&R installation found. Exiting."
     exit 1
 fi
-AGENTCSV=$(oc -n "$BR_NS" get csv -o name | grep ibm-dataprotectionagent)
-VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-headers)
-if [ -z "$VERSION" ] 
- then
-    echo "ERROR: Could not get B&R version. Exiting"
-    exit 1
-fi
-if [[ $VERSION != 2.9.0* ]]
- then
-    echo "ERROR: This patch applies to B&R version 2.9.0 only. You have $VERSION"
-    exit 1
-fi
 
-if [ -n "$HUB" ]
-  then
-    echo "Apply patches to hub..."
-    
-    FSIROLETOADD=$(cat <<EOF
+FSIROLETOADD=$(cat <<EOF
 - apiGroups:
   - service.isf.ibm.com
   resources:
@@ -94,26 +78,34 @@ EOF
         if [[ "$PATCH" == "HCI" ]]; then
             echo "Patching HCI clusterserviceversion/isf-operator.v2.9.0..."
             oc patch csv -n ${ISF_NS} isf-operator.v2.9.0  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/1/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:d6f1081340eed3b18e714acd86e4cc406b9c43ba92705cad76c7688c6d325581"}]'
-        elif [[ "$PATCH" == "SDS" ]]; then
             echo "Patching SDS clusterserviceversion/isf-operator.v2.9.0..."
             oc patch csv -n ${ISF_NS} isf-operator.v2.9.0  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/1/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:8d0d7ef3064271b948a4b9a3b05177ae959613a0b353062a286edb972112cfc4"}]'
-        else
             echo "ERROR: Unknown patch location. Skipped updates"
         fi
     else
         echo "ERROR: Failed to save original clusterserviceversion/isf-operator.v2.9.0. Skipped updates."
     fi
-fi
 
-if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
+AGENTCSV=$(oc -n "$BR_NS" get csv -o name | grep ibm-dataprotectionagent)
+VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-headers)
+if [ -z "$VERSION" ] 
   then
-    echo "Patching deployment/transaction-manager image..."
-    oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:6a14aaf9d146c66585f33e2a326c0125417b68e372ac0f59cd23271cf62d2055"}]}}}}'
-else
-    echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
+    echo "ERROR: Could not get B&R version. Skipped updates"
+elif [[ $VERSION != 2.9.0* ]]; then
+    echo "This patch applies to B&R version 2.9.0 only, you have $VERSION. Skipped updates"
 fi
 
+if [[ "$VERSION" == 2.9.0* ]]; then
+    if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
+    then
+        echo "Patching deployment/transaction-manager image..."
+        oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:6a14aaf9d146c66585f33e2a326c0125417b68e372ac0f59cd23271cf62d2055"}]}}}}'
+        echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
+    fi
+fi
 
 echo "Please verify that these pods have successfully restarted after hotfix update in their corresponding namespace:"
 printf "  %-25s: %s\n" "$ISF_NS" "isf-data-protection-operator-controller-manager"
-printf "  %-25s: %s\n" "$BR_NS" "transacation-manager"
+if [[ "$VERSION" == 2.9.0* ]]; then
+    printf "  %-25s: %s\n" "$BR_NS" "transacation-manager"
+fi
