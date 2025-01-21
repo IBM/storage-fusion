@@ -122,7 +122,7 @@ if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > $DIR/guardia
     echo "Scaling down guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
     oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=icr.io/cpopen/guardian-datamover@sha256:2daed935e3365fc5de19c8095ae4ce048f7deacad77c93eec49aab9935d73123
-    oc patch csv -n ibm-backup-restore guardian-dm-operator.v2.8.2 --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:f6f6c31f6529a41fcbc23f3ce0cec8580c66b9d0735dd62c357f5fa9bec61e38"}]'
+    oc patch csv -n ibm-backup-restore guardian-dm-operator.v2.8.2 --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:ef5095ae54a7140e51b17f02b0b591fc0736e28cca66d9f69199df997b74eb98"}]'
     echo "Scaling up guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
 else
