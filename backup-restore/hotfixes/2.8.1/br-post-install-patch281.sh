@@ -48,7 +48,7 @@ if (oc -n "$BR_NS" get csv ibm-dataprotectionagent.v2.8.1 -o yaml > ibm-dataprot
     echo "ERROR: Failed to save original ibm-dataprotectionagent.v2.8.1 csv. Skipped Patch."
 fi
 
-if (oc -n "$BR_NS" get csv ibm-backup-restore guardian-dm-operator.v2.8.1 -o yaml > ibm-backup-restore guardian-dm-operator.v2.8.1-original.yaml)
+if (oc -n "$BR_NS" get csv guardian-dm-operator.v2.8.1 -o yaml > ibm-backup-restore guardian-dm-operator.v2.8.1-original.yaml)
    then
       echo "Saved original configuration and images to guardian-dm-operator.v2.8.1-original.yaml. Use it to revert changes made by this patch."
    else
