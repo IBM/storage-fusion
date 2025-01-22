@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.8.2 release.
 # Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
-# Version 12-17-2024
+# Version 01-22-2025
 
 mkdir -p /tmp/br-post-install-patch-282
 if [ "$?" -eq 0 ]
@@ -117,11 +117,19 @@ echo "Updating statefulset/guardian-minio image to quay.io/minio/minio@sha256:ea
 oc set image statefulset/guardian-minio -n $BR_NS minio=quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3
 oc delete pod guardian-minio-0 -n $BR_NS
 
+if (oc -n "$BR_NS" get csv guardian-dm-operator.v2.8.2 -o yaml > $DIR/guardian-dm-operator.v2.8.2-original.yaml)
+   then
+      echo "Saved original configuration of guardian-dm-operator to $DIR/guardian-dm-operator.v2.8.2-original.yaml."
+   else
+      echo "ERROR: Failed to save original guardian-dm-operator.v2.8.2 csv. Skipped Patch."
+fi
+
 if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > $DIR/guardian-dm-image-config-original.yaml)
  then
     echo "Scaling down guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
-    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=icr.io/cpopen/guardian-datamover@sha256:c3bf9eda73aedaa8dd853424bfb30fc11cbcb53898a4375529f1126e1a18b5bf
+    oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=icr.io/cpopen/guardian-datamover@sha256:8617945fbbcf13c8ec15eccf85a18ed3aecd7432cff8380a06bc9ce3ab5d406b
+    oc patch csv -n $BR_NS guardian-dm-operator.v2.8.2 --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:ef5095ae54a7140e51b17f02b0b591fc0736e28cca66d9f69199df997b74eb98"}]'
     echo "Scaling up guardian-dm-controller-manager deployment..."
     oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
 else
