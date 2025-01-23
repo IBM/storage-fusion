@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.8.2 release.
 # Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
-# Version 01-22-2025
+# Version 01-23-2025
 
 mkdir -p /tmp/br-post-install-patch-282
 if [ "$?" -eq 0 ]
@@ -52,7 +52,7 @@ if [ -n "$HUB" ]
    if (oc get deployment -n $BR_NS job-manager -o yaml > $DIR/job-manager-deployment.save.yaml)
       then
         echo "Patching job-manager-deployment image..."
-        oc patch deployment job-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"job-manager","image":"cp.icr.io/cp/fbr/guardian-job-manager@sha256:5a99629999105bdc83862f4bf37842b8004dfb3db9eea20b07ab7e39e95c8edc"}]}}}}'
+        oc patch deployment job-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"job-manager-container","image":"cp.icr.io/cp/fbr/guardian-job-manager@sha256:5a99629999105bdc83862f4bf37842b8004dfb3db9eea20b07ab7e39e95c8edc"}]}}}}'
     else
         echo "ERROR: Failed to save original job-manager-deployment. Skipped updates."
     fi
@@ -146,4 +146,15 @@ if [ -n "$HUB" ]
     echo "     backup-service"
     echo "     guardian-dm-controller-manager"
     echo "     job-manager"
+    echo "                                   "
+    echo "Previous version of this script incorrectly patched job-manager by adding a second container named ‘job-manager’ instead of updating image of container named ‘job-manager-container'"
+    echo " Check number of containers in job-manager pod: oc get pod -n ibm-backup-restore | grep job-manager"
+    echo "      job-manager-557fdf847f-cpqpw   2/2     Running"
+    echo "If it has two containers, edit job-manager deployment and remove this sub-section under spec.template.spec.containers"
+    echo "- name: job-manager" 
+    echo "  image: '...'"
+    echo "  resources: {}"
+    echo "  terminationMessagePath: '...'"
+    echo "  imagePullPolicy: '...' " 
+   
 fi
