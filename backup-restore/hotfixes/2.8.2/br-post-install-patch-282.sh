@@ -88,7 +88,7 @@ if [ -n "$HUB" ]
     if (oc get deployment -n $BR_NS backup-service -o yaml > $DIR/backup-service-deployment.save.yaml)
       then
         echo "Patching backup-service image..."
-        oc patch deployment backup-service -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"backup-service","image":"cp.icr.io/cp/fbr/guardian-backup-service@sha256:742367383260fa25fdf1a7cf94a78267361519720869bb6cceac7476b5d5fab3"}]}}}}'
+        oc patch deployment backup-service -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"backup-service","image":"cp.icr.io/cp/fbr/guardian-backup-service@sha256:e26efc87da06657c54aedc7f048855adf8c1fc76c6f3bd35dfa2e545caadbe98"}]}}}}'
     else
         echo "ERROR: Failed to save original backup-service deployment. Skipped updates."
     fi
