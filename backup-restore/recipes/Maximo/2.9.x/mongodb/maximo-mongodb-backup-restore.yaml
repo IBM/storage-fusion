@@ -1,0 +1,97 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-mongodb-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: mongodb
+  groups:
+    - name: mongodb-volumes
+      type: volume
+    - name: mongodb-crds
+      type: resource
+      includeClusterResources: true
+      includedResourceTypes:
+        - customresourcedefinitions
+      labelSelector: mongodb-custom-label=manual
+    - name: mongodb-resources
+      type: resource
+      excludedResourceTypes:
+        - pods
+        - statefulsets
+        - mongodbcommunity.mongodbcommunity.mongodb.com
+        - grafanadashboards.integreatly.org
+        - grafanadashboards.grafana.integreatly.org
+    - name: mongodbcommunity
+      type: resource
+      includedResourceTypes:
+        - mongodbcommunity.mongodbcommunity.mongodb.com
+  hooks:
+  - name: mongodb-operator-check
+    type: check
+    namespace: ${GROUP.mongodb-volumes.namespace}
+    selectResource: deployment
+    labelSelector: owner=mongodb
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mongodb-instance-check
+    type: check
+    namespace: ${GROUP.mongodb-volumes.namespace}
+    selectResource: mongodbcommunity.mongodb.com/v1/mongodbcommunity
+    nameSelector: mas-mongo-ce
+    timeout: 120
+    onError: fail
+    chks:
+    - name: phaseRunning
+      timeout: 180
+      onError: fail
+      condition: "{$.status.phase} == {\"Running\"}"
+  - name: mongodb-pod-exec
+    labelSelector: app=mas-mongo-ce-svc
+    timeout: 300
+    namespace: ${GROUP.mongodb-volumes.namespace}
+    onError: fail
+    ops:
+      - command: >
+          ["/bin/bash", "-c", "PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"db.fsyncLock()\" || echo \"Not Master\""]
+        container: mongod
+        timeout: 300
+        name: fsyncLock
+        onError: fail
+      - command: >
+          ["/bin/bash", "-c", "PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"db.fsyncUnlock()\" || echo \"Not Master\""]
+        container: mongod
+        timeout: 300
+        name: fsyncUnlock
+        onError: fail
+      - command: >
+          ["/bin/bash", "-c", "export DB=mas_${MAS_INSTANCE_ID}_core; export PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates  --eval \"db = connect('mongodb://localhost/admin?tls=true&tlsAllowInvalidCertificates=true'); db.auth('admin', process.env.PASSWORD); mydb = db.getSiblingDB(process.env.DB); printjson(mydb.OauthClient.drop());\" || echo \"Not Master\""]
+        container: mongod
+        timeout: 300
+        name: dropCollection
+        onError: fail
+    selectResource: pod
+    type: exec
+  workflows:
+  - name: backup
+    sequence:
+    - group: mongodb-crds
+    - group: mongodb-resources
+    - group: mongodbcommunity
+    - hook: mongodb-pod-exec/fsyncLock
+    - group: mongodb-volumes
+    - hook: mongodb-pod-exec/fsyncUnlock
+  - name: restore
+    sequence:
+    - group: mongodb-volumes
+    - group: mongodb-crds
+    - group: mongodb-resources
+    - hook: mongodb-operator-check/replicasReady
+    - group: mongodbcommunity
+    - hook: mongodb-instance-check/phaseRunning
+    - hook: mongodb-pod-exec/dropCollection
