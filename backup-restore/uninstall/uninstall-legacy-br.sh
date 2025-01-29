@@ -222,8 +222,14 @@ oc -n "${FUSION_NS}" wait --for=condition=ready "$PREREQ_POD" --timeout=300s
 
 SF_CR_FILE=/tmp/sf_${START_TIME}_$$.yaml
 oc -n "${FUSION_NS}" get "$SF_CR" -o yaml | awk '{ if ($0 == "status:") {exit} else {print $0}}' | grep -Ev '^  uid:|^  resourceVersion:|^  generation:|^  creationTimestamp:' > $SF_CR_FILE
-oc -n "${FUSION_NS}" delete "$SF_CR"
-oc apply -f $SF_CR_FILE
+if [ -r "$SF_CR_FILE" ] && [ -s "$SF_CR_FILE" ]
+ then
+   echo "Recreating $SF_CR"
+   oc -n "${FUSION_NS}" delete "$SF_CR"
+   oc apply -f "$SF_CR_FILE"
+ else
+   echo "Error: Could not clear status in $SF_CR. $SF_CR_FILE is not accessible or empty."
+fi
 
 echo "Fusion Installplans:"
 oc -n "${FUSION_NS}" get ip
