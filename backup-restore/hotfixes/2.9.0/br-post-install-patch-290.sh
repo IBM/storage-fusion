@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.0 release.
 # Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
-# Version 01-17-2024
+# Version 02-04-2025
 
 patch_usage() {
   echo "Usage: $0 (-hci |-sds | -help)"
@@ -101,14 +101,48 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
     then
         echo "Patching deployment/transaction-manager image..."
-        oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:6a14aaf9d146c66585f33e2a326c0125417b68e372ac0f59cd23271cf62d2055"}]}}}}'
+        oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:0eaa0aca6f1decf69be3bb7d4fcc60a8c00a4ee18592452d85869c70d690c0cc"}]}}}}'
     else
         echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
+    fi
+
+    if (oc -n "$BR_NS" get csv guardian-dm-operator.v2.9.0 -o yaml > $DIR/guardian-dm-operator.v2.9.0-original.yaml)
+    then
+      echo "Saved original configuration of guardian-dm-operator to $DIR/guardian-dm-operator.v2.9.0-original.yaml."
+    else
+      echo "ERROR: Failed to save original guardian-dm-operator.v2.9.0 csv. Skipped Patch."
+    fi
+
+    if (oc get configmap -n "$BR_NS" guardian-dm-image-config -o yaml > $DIR/guardian-dm-image-config-original.yaml)
+    then
+      echo "Scaling down guardian-dm-controller-manager deployment..."
+      oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
+      oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=icr.io/cpopen/guardian-datamover@sha256:1c8af5f70feda2d0074b90cc5fdeb53409718691530e7d64e8d8a3574cc0befa
+      oc patch csv -n $BR_NS guardian-dm-operator.v2.9.0 --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:736babab4ab22bf3d2bdf6ea54100031a3e800cea9bf2226a6c1a80a69206ea6"}]'
+      echo "Scaling up guardian-dm-controller-manager deployment..."
+      oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
+    else
+      echo "ERROR: Failed to save original configmap guardian-dm-image-config. skipped updates"
+    fi
+
+    if [ -n "$HUB" ]
+    then
+      echo "Apply patches to hub..."
+
+      if (oc get deployment -n $BR_NS job-manager -o yaml > $DIR/job-manager-deployment.save.yaml)
+      then
+        echo "Patching job-manager-deployment image..."
+        oc patch deployment job-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"job-manager-container","image":"cp.icr.io/cp/bnr/guardian-job-manager@sha256:8daeb9bf614d8e72aeded5f0e17e1a93bc5c071638e6adff1c28c30650ff26e0"}]}}}}'
+      else
+        echo "ERROR: Failed to save original job-manager-deployment. Skipped updates."
+      fi
     fi
 fi
 
 echo "Please verify that these pods have successfully restarted after hotfix update in their corresponding namespace:"
 printf "  %-25s: %s\n" "$ISF_NS" "isf-data-protection-operator-controller-manager"
 if [[ "$VERSION" == 2.9.0* ]]; then
-    printf "  %-25s: %s\n" "$BR_NS" "transacation-manager"
+    printf "  %-25s: %s\n" "$BR_NS" "transaction-manager"
+    printf "  %-25s: %s\n" "$BR_NS" "guardian-dm-controller-manager"
+    printf "  %-25s: %s\n" "$BR_NS" "job-manager if HUB cluster"
 fi
