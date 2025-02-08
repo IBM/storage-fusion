@@ -15,6 +15,7 @@ Backup
     `oc apply -f maximo-amq-streams-backup-restore-local.yaml`
 
 Note: Following steps needs to be made on Hub cluster
+
 4. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 5. From Fusion Console, associate the backup policy to the AMQ Streams application. 
 6. Retrieve the Policy Assignment Name:

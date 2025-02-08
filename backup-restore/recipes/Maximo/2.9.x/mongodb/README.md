@@ -21,6 +21,7 @@ Backup
     `oc apply -f maximo-mongodb-backup-restore-local.yaml`
 
 Note: Following steps needs to be made on Hub cluster
+
 5. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 6. From Fusion Console, associate the backup policy to the MongoDB application. 
 7.  Retrieve the Policy Assignment Name:

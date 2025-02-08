@@ -78,11 +78,15 @@ fi
 # Add labels to application
 # ========================================================================================================================
 
+# Check if Grafana Dashboard exists
+GRAFANAV4_DASHBOARD=$(oc get -n $OPTIMIZER_NAMESPACE grafanadashboards.integreatly.org -o custom-columns=NAME:.metadata.name --no-headers 2>/dev/null)
+GRAFANAV5_DASHBOARD=$(oc get -n $OPTIMIZER_NAMESPACE grafanadashboards.grafana.integreatly.org -o custom-columns=NAME:.metadata.name --no-headers 2>/dev/null)
+
 #Label all required resources for MAS Optimizer
 echo "=== Adding labels to resources ==="
 oc label -n $OPTIMIZER_NAMESPACE optimizerapp $MAS_INSTANCE_ID for-backup=true 
 oc label -n $OPTIMIZER_NAMESPACE optimizerworkspaces ${MAS_INSTANCE_ID}-${MAS_WORKSPACE_ID} for-backup=true
-oc label -n $OPTIMIZER_NAMESPACE operatorgroup.operators.coreos.com mas-${MAS_INSTANCE_ID}-optimizer-operator-group for-backup=true
+oc label -n $OPTIMIZER_NAMESPACE $(oc get -n $OPTIMIZER_NAMESPACE operatorgroups.operators.coreos.com -o name) for-backup=true
 oc label -n $OPTIMIZER_NAMESPACE subscription.operators.coreos.com ibm-mas-optimizer for-backup=true
 oc label -n $OPTIMIZER_NAMESPACE secret ibm-entitlement for-backup=true
 
@@ -97,7 +101,7 @@ oc get -n $OPTIMIZER_NAMESPACE --show-labels optimizerworkspaces ${MAS_INSTANCE_
 oc get -n $OPTIMIZER_NAMESPACE --show-labels secret ibm-entitlement
 
 echo -e "\n=== OperatorGroup/Subscriptions ==="
-oc get -n $OPTIMIZER_NAMESPACE --show-labels operatorgroup.operators.coreos.com mas-${MAS_INSTANCE_ID}-optimizer-operator-group
+oc get -n $OPTIMIZER_NAMESPACE operatorgroup.operators.coreos.com -l for-backup=true --show-labels
 oc get -n $OPTIMIZER_NAMESPACE --show-labels subscription.operators.coreos.com ibm-mas-optimizer
 
 echo -e "\n=== Secrets ==="
@@ -106,7 +110,6 @@ oc get -n $OPTIMIZER_NAMESPACE --show-labels secret ibm-entitlement
 # Create local recipe
 # ========================================================================================================================
 
-echo -e "\n=== Creating recipe from template ==="
 export MAS_INSTANCE_ID
 recipe_name="maximo-optimizer-backup-restore.yaml"
 echo -e "\n=== Creating recipe from template ==="
@@ -116,3 +119,20 @@ if [[ -f $recipe_name ]]; then
 else
   echo "Template Recipe YAML file not found. Make sure to cd to maximo/optimizer"
 fi
+
+
+local_recipe="maximo-optimizer-backup-restore-local.yaml"
+# Validate if Grafanav4 Dashboard exists
+if [[ -n $GRAFANAV4_DASHBOARD ]]; then
+  awk '{gsub(/#IfGrafanaUncomment/, ""); print}' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
+  awk '{gsub(/#IfGrafanav4Uncomment/, ""); print}' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
+fi
+
+# Validate if Grafanav5 Dashboard exists
+if [[ -n $GRAFANAV5_DASHBOARD ]]; then
+  awk '{gsub(/#IfGrafanaUncomment/, ""); print}' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
+  awk '{gsub(/#IfGrafanav5Uncomment/, ""); print}' $local_recipe > temp.yaml && mv temp.yaml $local_recipe
+fi
+
+#Remove all lines that contain comments from local recipe
+awk '!/#/' $local_recipe > temp.yaml && mv temp.yaml $local_recipe

@@ -27,6 +27,11 @@ spec:
     type: resource
     includedResourceTypes:
       - operatorgroups.operators.coreos.com
+  #IfGrafanaUncomment- name: maximo-optimizer-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
   - name: restore-maximo-optimizer-subscriptions
     backupRef: maximo-optimizer-resources
     type: resource
@@ -92,12 +97,14 @@ spec:
     sequence:
     - group: maximo-optimizer-resources
     - group: maximo-optimizer-volumes
+    #IfGrafanaUncomment- group: maximo-optimizer-dashboards
   - name: restore
     sequence:
     - group: maximo-optimizer-volumes
     - group: restore-maximo-optimizer-secrets
     - group: restore-maximo-optimizer-operatorgroups
     - group: restore-maximo-optimizer-subscriptions
+    #IfGrafanaUncomment- group: maximo-optimizer-dashboards
     - hook: maximo-optimizer-ibm-mas-operator-check/replicasReady
     - hook: maximo-optimizer-ibm-truststore-mgr-controller-manager-check/replicasReady
     - group: restore-maximo-optimizer-optimizerapps-optimizerworkspaces

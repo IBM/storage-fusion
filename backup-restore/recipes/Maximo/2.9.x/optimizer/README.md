@@ -24,6 +24,7 @@ Backup
     `oc apply -f maximo-optimizer-backup-restore-local.yaml`
 
 Note: Following steps needs to be made on Hub cluster
+
 5. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 6. From Fusion Console, associate the backup policy to the Optimizer application. 
 7. Retrieve the Policy Assignment Name:
@@ -45,6 +46,7 @@ Restore
 Restore Maximo Suite ([Core](../core/README.md)) and its prerequisites <br>
 
 **Optional:** <br>
+[Grafana](https://ibm-mas.github.io/ansible-devops/roles/grafana/): You must install same version (v4 or v5) as in source cluster if you were previously using Grafana <br>
 Restore [DB2](../db2u/README.md) namespace if configured in source cluster <br>
 
 ### Steps for Maximo Optimizer namespace restore
