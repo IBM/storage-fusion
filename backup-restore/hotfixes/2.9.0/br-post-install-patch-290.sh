@@ -150,7 +150,8 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     oc patch dataprotectionagent dpagent --namespace "$BR_NS" --type='json' -p='[{"op": "replace", "path": "/spec/datamoverConfiguration/datamoverPodConfig/podResources/cpuLimit", "value":"'${CPULIMIT}'"}]'
     let CPULIMIT=$CPULIMIT-1
     oc patch dataprotectionagent dpagent --namespace "$BR_NS" --type='json' -p='[{"op": "replace", "path": "/spec/datamoverConfiguration/datamoverPodConfig/podResources/cpuLimit", "value":"'${CPULIMIT}'"}]'
-    
+    # node-agent pod must restart to pickup the change
+    oc delete pod -l name=node-agent --namespace "$BR_NS"
 
     if [ -n "$HUB" ]
     then
