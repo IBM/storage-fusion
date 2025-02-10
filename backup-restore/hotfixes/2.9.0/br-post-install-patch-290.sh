@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.0 release.
-# Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
+# Refer to https://www.ibm.com/support/pages/node/7181447 for additional information.
 # Version 02-04-2025
 
 patch_usage() {
