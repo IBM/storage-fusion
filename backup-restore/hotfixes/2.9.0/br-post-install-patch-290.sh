@@ -11,6 +11,14 @@ patch_usage() {
   echo "  -help  Display usage"
 }
 
+# Returns:
+# 0 if configmap node-agent-config exists
+# 1 if configmap node-agent-config does not exist
+testNodeAgentConfigMap() {
+    oc get configmap node-agent-config --namespace $1 2>/dev/null | grep -q "^node-agent-config"
+    echo $?
+}
+
 PATCH=
 if [[ "$#" -ne 1 ]]; then
     patch_usage
@@ -124,6 +132,25 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     else
       echo "ERROR: Failed to save original configmap guardian-dm-image-config. skipped updates"
     fi
+
+    # ensure configmap node-agent-config exists
+    NODEAGENTCONFIGFOUND=$(testNodeAgentConfigMap "$BR_NS")
+    # if node-agent-config is not found, create it with default values
+    if [ $NODEAGENTCONFIGFOUND -eq 1 ]; then
+      echo "ConfigMap node-agent-config not found, creating it."
+      oc create configmap node-agent-config --namespace "$BR_NS"
+      oc set data configmap/node-agent-config node-agent-config\.json='{"loadConcurrency":{"globalConfig":5},"podResources":{"cpuRequest":"2","cpuLimit":"4","memoryRequest":"4Gi","memoryLimit":"16Gi","ephemeralStorageRequest":"5Gi","ephemeralStorageLimit":"5Gi"}}'
+    fi 
+    
+    # force a reconcile by the the dataprotection agent to any custom settings in the DataProtectionAgent
+    # the reconcile only occurs when a field in the datamoverPodResources is updated, edit a field and then put back as is
+    # if field isn't changed, then no reconcile occurs
+    CPULIMIT=$(oc get dataprotectionagent dpagent --namespace "$BR_NS" -o jsonpath="{.spec.datamoverConfiguration.datamoverPodConfig.podResources.cpuLimit}")
+    let CPULIMIT=$CPULIMIT+1
+    oc patch dataprotectionagent dpagent --namespace "$BR_NS" --type='json' -p='[{"op": "replace", "path": "/spec/datamoverConfiguration/datamoverPodConfig/podResources/cpuLimit", "value":"'${CPULIMIT}'"}]'
+    let CPULIMIT=$CPULIMIT-1
+    oc patch dataprotectionagent dpagent --namespace "$BR_NS" --type='json' -p='[{"op": "replace", "path": "/spec/datamoverConfiguration/datamoverPodConfig/podResources/cpuLimit", "value":"'${CPULIMIT}'"}]'
+    
 
     if [ -n "$HUB" ]
     then
