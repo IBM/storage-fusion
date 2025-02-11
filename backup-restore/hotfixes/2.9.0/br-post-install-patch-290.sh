@@ -139,7 +139,7 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     if [ $NODEAGENTCONFIGFOUND -eq 1 ]; then
       echo "ConfigMap node-agent-config not found, creating it."
       oc create configmap node-agent-config --namespace "$BR_NS"
-      oc set data configmap/node-agent-config node-agent-config\.json='{"loadConcurrency":{"globalConfig":5},"podResources":{"cpuRequest":"2","cpuLimit":"4","memoryRequest":"4Gi","memoryLimit":"16Gi","ephemeralStorageRequest":"5Gi","ephemeralStorageLimit":"5Gi"}}'
+      oc set data --namespace "$BR_NS" configmap/node-agent-config node-agent-config\.json='{"loadConcurrency":{"globalConfig":5},"podResources":{"cpuRequest":"2","cpuLimit":"4","memoryRequest":"4Gi","memoryLimit":"16Gi","ephemeralStorageRequest":"5Gi","ephemeralStorageLimit":"5Gi"}}'
     fi 
     
     # force a reconcile by the the dataprotection agent to any custom settings in the DataProtectionAgent
