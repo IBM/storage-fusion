@@ -18,7 +18,7 @@ skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/gu
 
 skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/guardian-datamover@sha256:1c8af5f70feda2d0074b90cc5fdeb53409718691530e7d64e8d8a3574cc0befa docker://$TARGET_PATH/guardian-datamover@sha256:1c8af5f70feda2d0074b90cc5fdeb53409718691530e7d64e8d8a3574cc0befa
 
-skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:0eaa0aca6f1decf69be3bb7d4fcc60a8c00a4ee18592452d85869c70d690c0cc docker://$TARGET_PATH/guardian-transaction-manager@sha256:0eaa0aca6f1decf69be3bb7d4fcc60a8c00a4ee18592452d85869c70d690c0cc
+skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:3e28cda75450285980a2f3ad61fba8c12786c908cd743bba70f056793b050d43 docker://$TARGET_PATH/guardian-transaction-manager@sha256:3e28cda75450285980a2f3ad61fba8c12786c908cd743bba70f056793b050d43
 
 skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:d6f1081340eed3b18e714acd86e4cc406b9c43ba92705cad76c7688c6d325581 docker://$TARGET_PATH/isf-data-protection-operator@sha256:d6f1081340eed3b18e714acd86e4cc406b9c43ba92705cad76c7688c6d325581
 
