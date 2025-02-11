@@ -85,14 +85,12 @@ if (oc get csv -n $ISF_NS isf-operator.v2.9.0 -o yaml > $DIR/isf-operator.v2.9.0
   then
     echo "Scaling down isf-data-protection-operator-controller-manager deployment..."
     oc scale deployment -n $ISF_NS isf-data-protection-operator-controller-manager --replicas=0
-
+    index=$(oc get csv -n $ISF_NS isf-operator.v2.9.0 -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
     if [[ "$PATCH" == "HCI" ]]; then
         echo "Patching HCI clusterserviceversion/isf-operator.v2.9.0..."
-        index=$(oc get csv -n $ISF_NS isf-operator.v2.9.0 -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
         oc patch csv -n ${ISF_NS} isf-operator.v2.9.0 --type='json' -p="[{\"op\":\"replace\", \"path\":\"/spec/install/spec/deployments/$index/spec/template/spec/containers/0/image\", \"value\":\"cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:d6f1081340eed3b18e714acd86e4cc406b9c43ba92705cad76c7688c6d325581\"}]"
     elif [[ "$PATCH" == "SDS" ]]; then
         echo "Patching SDS clusterserviceversion/isf-operator.v2.9.0..."
-        index=$(oc get csv -n $ISF_NS isf-operator.v2.9.0 -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
         oc patch csv -n ${ISF_NS} isf-operator.v2.9.0  --type='json' -p="[{\"op\":\"replace\", \"path\":\"/spec/install/spec/deployments/$index/spec/template/spec/containers/0/image\", \"value\":\"cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:8d0d7ef3064271b948a4b9a3b05177ae959613a0b353062a286edb972112cfc4\"}]"
     fi
 
