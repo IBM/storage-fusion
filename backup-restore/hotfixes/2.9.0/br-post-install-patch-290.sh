@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.0 release.
 # Refer to https://www.ibm.com/support/pages/node/7181447 for additional information.
-# Version 02-04-2025
+# Version 02-11-2025
 
 patch_usage() {
   echo "Usage: $0 (-hci |-sds | -help)"
@@ -37,6 +37,14 @@ LOG=$DIR/br-post-install-patch-290_$$_log.txt
 exec &> >(tee -a $LOG)
 echo "Writing output of br-post-install-patch-290.sh script to $LOG"
 
+check_cmd ()
+{
+   (type $1 > /dev/null) || echo "$1 command not found, install jq command to apply patch"
+}
+check_cmd oc
+check_cmd jq
+oc whoami > /dev/null || err_exit "Not logged in to your cluster"
+
 ISF_NS=$(oc get spectrumfusion -A -o custom-columns=NS:metadata.namespace --no-headers)
 if [ -z "$ISF_NS" ]; then
     echo "ERROR: No Successful Fusion installation found. Exiting."
@@ -67,26 +75,32 @@ FSIROLETOADD=$(cat <<EOF
   - list
   - watch
 EOF
-    )
-    echo "Patching isf-data-protection-operator-controller-manager clusterrole..."
-    CLUSTERROLE=`oc get clusterrolebinding -o wide | grep "${ISF_NS}/isf-data-protection-operator-controller-manager" | grep isf-operator.v2.9.0 | awk '{print $2}'`
-    oc get ${CLUSTERROLE} -o yaml > $DIR/clusterrole-isf-data-protection.save.yaml
-    echo -e "$(cat $DIR/clusterrole-isf-data-protection.save.yaml)\n${FSIROLETOADD}" | oc apply -f -
+)
+echo "Patching isf-data-protection-operator-controller-manager clusterrole..."
+CLUSTERROLE=`oc get clusterrolebinding -o wide | grep "${ISF_NS}/isf-data-protection-operator-controller-manager" | grep isf-operator.v2.9.0 | awk '{print $2}'`
+oc get ${CLUSTERROLE} -o yaml > $DIR/clusterrole-isf-data-protection.save.yaml
+echo -e "$(cat $DIR/clusterrole-isf-data-protection.save.yaml)\n${FSIROLETOADD}" | oc apply -f -
    
-    if (oc get csv -n $ISF_NS isf-operator.v2.9.0 -o yaml > $DIR/isf-operator.v2.9.0.save.yaml)
-      then
-        if [[ "$PATCH" == "HCI" ]]; then
-            echo "Patching HCI clusterserviceversion/isf-operator.v2.9.0..."
-            oc patch csv -n ${ISF_NS} isf-operator.v2.9.0  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/1/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:d6f1081340eed3b18e714acd86e4cc406b9c43ba92705cad76c7688c6d325581"}]'
-        elif [[ "$PATCH" == "SDS" ]]; then
-            echo "Patching SDS clusterserviceversion/isf-operator.v2.9.0..."
-            oc patch csv -n ${ISF_NS} isf-operator.v2.9.0  --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/1/spec/template/spec/containers/0/image", "value":"cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:8d0d7ef3064271b948a4b9a3b05177ae959613a0b353062a286edb972112cfc4"}]'
-        else
-            echo "ERROR: Unknown patch location. Skipped updates"
-        fi
-    else
-        echo "ERROR: Failed to save original clusterserviceversion/isf-operator.v2.9.0. Skipped updates."
+if (oc get csv -n $ISF_NS isf-operator.v2.9.0 -o yaml > $DIR/isf-operator.v2.9.0.save.yaml)
+  then
+    echo "Scaling down isf-data-protection-operator-controller-manager deployment..."
+    oc scale deployment -n $ISF_NS isf-data-protection-operator-controller-manager --replicas=0
+
+    if [[ "$PATCH" == "HCI" ]]; then
+        echo "Patching HCI clusterserviceversion/isf-operator.v2.9.0..."
+        index=$(oc get csv -n $ISF_NS isf-operator.v2.9.0 -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
+        oc patch csv -n ${ISF_NS} isf-operator.v2.9.0 --type='json' -p="[{\"op\":\"replace\", \"path\":\"/spec/install/spec/deployments/$index/spec/template/spec/containers/0/image\", \"value\":\"cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:d6f1081340eed3b18e714acd86e4cc406b9c43ba92705cad76c7688c6d325581\"}]"
+    elif [[ "$PATCH" == "SDS" ]]; then
+        echo "Patching SDS clusterserviceversion/isf-operator.v2.9.0..."
+        index=$(oc get csv -n $ISF_NS isf-operator.v2.9.0 -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
+        oc patch csv -n ${ISF_NS} isf-operator.v2.9.0  --type='json' -p="[{\"op\":\"replace\", \"path\":\"/spec/install/spec/deployments/$index/spec/template/spec/containers/0/image\", \"value\":\"cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:8d0d7ef3064271b948a4b9a3b05177ae959613a0b353062a286edb972112cfc4\"}]"
     fi
+
+    echo "Scaling up isf-data-protection-operator-controller-manager deployment..."
+    oc scale deployment -n $ISF_NS isf-data-protection-operator-controller-manager --replicas=1
+else
+    echo "ERROR: Failed to save original clusterserviceversion/isf-operator.v2.9.0. Skipped updates."
+fi
 
 AGENTCSV=$(oc -n "$BR_NS" get csv -o name | grep ibm-dataprotectionagent)
 VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-headers)
@@ -101,7 +115,7 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
     then
         echo "Patching deployment/transaction-manager image..."
-        oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:0eaa0aca6f1decf69be3bb7d4fcc60a8c00a4ee18592452d85869c70d690c0cc"}]}}}}'
+        oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:3e28cda75450285980a2f3ad61fba8c12786c908cd743bba70f056793b050d43"}]}}}}'
     else
         echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
     fi
