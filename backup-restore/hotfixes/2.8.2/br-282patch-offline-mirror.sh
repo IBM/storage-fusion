@@ -12,7 +12,7 @@ TARGET_PATH="$1"
 export TARGET_PATH
 set -e
 
-skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/guardian-dm-operator@sha256:ef5095ae54a7140e51b17f02b0b591fc0736e28cca66d9f69199df997b74eb98 docker://$TARGET_PATH/guardian-dm-operator@sha256:ef5095ae54a7140e51b17f02b0b591fc0736e28cca66d9f69199df997b74eb98
+skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/guardian-dm-operator@sha256:bb006547da80471302f6dee3189441053038a89e9614b21c414591185af2db43 docker://$TARGET_PATH/guardian-dm-operator@sha256:bb006547da80471302f6dee3189441053038a89e9614b21c414591185af2db43
 skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/guardian-datamover@sha256:8617945fbbcf13c8ec15eccf85a18ed3aecd7432cff8380a06bc9ce3ab5d406b docker://$TARGET_PATH/guardian-datamover@sha256:8617945fbbcf13c8ec15eccf85a18ed3aecd7432cff8380a06bc9ce3ab5d406b
 skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fbr/guardian-job-manager@sha256:5a99629999105bdc83862f4bf37842b8004dfb3db9eea20b07ab7e39e95c8edc docker://$TARGET_PATH/guardian-job-manager@sha256:5a99629999105bdc83862f4bf37842b8004dfb3db9eea20b07ab7e39e95c8edc
 skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fbr/guardian-backup-location@sha256:23483a114d14b1ca9c4335b2121c8e2e828646801640b80e4edce33f8fad2799 docker://$TARGET_PATH/guardian-backup-location@sha256:23483a114d14b1ca9c4335b2121c8e2e828646801640b80e4edce33f8fad2799
