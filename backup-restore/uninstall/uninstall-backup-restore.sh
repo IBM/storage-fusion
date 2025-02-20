@@ -12,19 +12,33 @@ echo "ARGUMENTS:" "$@"
 USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
        -u to uninstall a spoke installation before uninstalling hub 
        -f to delete CRs in Fusion namespace
-       -d to create DeleteBackupRequest to delete backups. Use this if you plan to uninstall Fusion
-          -d is effective only when -f is used as well"
-
-NAMESPACE=ibm-backup-restore
-FORCE=false
-SKIP=true
-SKIP_ISF_CRS=true
+       -d to create DeleteBackupRequest to delete backups. Use this only if you plan to uninstall Fusion
+          -d is effective only when -f is used as well
+          Deleting backups is extremely slow process. May take hours or days depeding on varions factors."
 
 err_exit()
 {
         echo "ERROR:" "$@" >&2
         exit 1
 }
+
+check_cmd ()
+{
+   (type "$1" > /dev/null) || err_exit "$1  command not found"
+}
+
+check_cmd oc
+check_cmd jq
+
+oc whoami > /dev/null || err_exit "Not logged in a cluster"
+
+NAMESPACE=$(oc get catsrc -A -o custom-columns=:metadata.namespace --no-headers --field-selector metadata.name=ibm-fusion-backup-restore-catalog)
+[ -z "$NAMESPACE" ] && NAMESPACE=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace)
+[ -z "$NAMESPACE" ] && NAMESPACE=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace)
+[ -z "$NAMESPACE" ] && NAMESPACE=ibm-backup-restore
+FORCE=false
+SKIP=true
+SKIP_ISF_CRS=true
 
 while getopts "dfub:" OPT
 do
@@ -50,22 +64,22 @@ do
   esac
 done
 
-
+CNT_NS=$(echo $NAMESPACE | wc -w)
+if  [ $CNT_NS -gt 1 ]
+ then
+        echo "ERROR:" "$CNT_NS candidate namespaces ' $NAMESPACE '. Use '-b' option" >&2
+        err_exit "$USAGE"
+fi
 if [ "$SKIP_ISF_CRS" == "true" ] && [ "$SKIP" == "false" ]
  then
      print_heading "Ignored -d as -f is not present. -d is application only if -f is used"
     SKIP=true
 fi
 
-check_cmd ()
-{
-   (type "$1" > /dev/null) || err_exit "$1  command not found"
-}
-
-check_cmd oc
-check_cmd jq
-
-oc whoami > /dev/null || err_exit "Not logged in a cluster"
+SERVER=$(oc whoami --show-server)
+CONSOLE_URL=$(oc whoami --show-console)
+echo "CLUSTER: $SERVER"
+echo "         $CONSOLE_URL"
 
 START_TIME=$(date +%s)
 
@@ -84,7 +98,10 @@ ISF_NS=$(oc get spectrumfusion -A --no-headers | cut -d" " -f1)
 [ -z "$ISF_NS" ] && ISF_NS=$(oc get subs  -o custom-columns=:metadata.namespace,:spec.name -A | grep "isf-operator$"  | cut -d" " -f1)
 [ -z "$ISF_NS" ] &&  ISF_NS=ibm-spectrum-fusion-ns
 export ISF_NS
+export NAMESPACE
 
+echo "Fusion Namespace: $ISF_NS"
+echo "Backup & Restore Namespace: $NAMESPACE"
 echo "Fusion Installplans:"
 oc -n "${ISF_NS}" get ip
 echo "Fusion CSVs:"
@@ -210,6 +227,7 @@ print_heading "Delete any existing kafkatopics CRs"
 oc delete  kafkatopics.kafka.strimzi.io -n "${NAMESPACE}" --all --timeout=60s
 # remove velero backuprepositories so that velero doesn't think repositories still exist on reinstall
 print_heading "Removing Velero BackupRepositories CRs"
+oc delete datauploads.velero.io -n "${NAMESPACE}" --all --timeout=60s
 oc delete backuprepository.velero.io -n "${NAMESPACE}" --all --timeout=60s
 KT=$(oc -n "${NAMESPACE}" get kafkatopics.kafka.strimzi.io -o custom-columns="NAME:metadata.name" --no-headers)
 [ -n "$KT" ] && oc -n "${NAMESPACE}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' kafkatopics.kafka.strimzi.io $KT
