@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.0 release.
 # Refer to https://www.ibm.com/support/pages/node/7181447 for additional information.
-# Version 02-11-2025
+# Version 02-27-2025
 
 patch_usage() {
   echo "Usage: $0 (-hci |-sds | -help)"
@@ -176,6 +176,15 @@ if [[ "$VERSION" == 2.9.0* ]]; then
       else
         echo "ERROR: Failed to save original job-manager-deployment. Skipped updates."
       fi
+
+      if (oc get deployment -n $BR_NS backup-service -o yaml > $DIR/backup-service-deployment.save.yaml)
+      then
+        echo "Patching backup-service-deployment image..."
+        oc patch deployment backup-service -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"backup-service","image":"cp.icr.io/cp/bnr/guardian-backup-service@sha256:b310c5128b6b655e884a9629da7361c80625dd76378cea52eb6b351b3a70c139"}]}}}}'
+      else
+        echo "ERROR: Failed to save original backup-service-deployment. Skipped updates."
+      fi
+
     fi
 fi
 
