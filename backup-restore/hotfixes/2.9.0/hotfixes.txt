@@ -1,0 +1,11 @@
+This hotfix fixes the following Backup & Restore issues:
+
+    1. Backup fails with error transferring data (BMYBR0009): more than one BackupRepository found for workload namespace.
+    2. Backup failure on OpenShift Container Platform 4.12.
+    3. DeleteBackupRequest fails if application CR is re-created by Service Protection recovery.
+    4. Job fails with DownloadRequest error from transaction-manager.
+    5. Failed job remains running until cancellation timeout.
+    6. Restore from 2.8 backup fails if application contains multiple namespaces.
+    7. Restore from 2.8 backup fails with SELinux extended attributes errors.
+    8. Unexpected failure: HTTP Error 403: Forbidden on restore.
+    9. Delete backup requests in Redundant state included in cleanup.
