@@ -137,7 +137,7 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     then
       echo "Scaling down guardian-dm-controller-manager deployment..."
       oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=0
-      oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=icr.io/cpopen/guardian-datamover@sha256:1c8af5f70feda2d0074b90cc5fdeb53409718691530e7d64e8d8a3574cc0befa
+      oc set data -n "$BR_NS" cm/guardian-dm-image-config DM_IMAGE=cp.icr.io/cpopen/guardian-datamover@sha256:4555ad7c0b4f95535a89cb9c6cd021f05d41a87aa1276d90e1e3a0b7b8d36799
       oc patch csv -n $BR_NS guardian-dm-operator.v2.9.0 --type='json' -p='[{"op":"replace", "path":"/spec/install/spec/deployments/0/spec/template/spec/containers/1/image", "value":"icr.io/cpopen/guardian-dm-operator@sha256:736babab4ab22bf3d2bdf6ea54100031a3e800cea9bf2226a6c1a80a69206ea6"}]'
       echo "Scaling up guardian-dm-controller-manager deployment..."
       oc scale deployment guardian-dm-controller-manager -n "$BR_NS" --replicas=1
