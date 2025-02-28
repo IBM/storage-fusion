@@ -18,7 +18,7 @@ skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr
 
 skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/guardian-dm-operator@sha256:736babab4ab22bf3d2bdf6ea54100031a3e800cea9bf2226a6c1a80a69206ea6 docker://$TARGET_PATH/cpopen/guardian-dm-operator@sha256:736babab4ab22bf3d2bdf6ea54100031a3e800cea9bf2226a6c1a80a69206ea6
 
-skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/guardian-datamover@sha256:1c8af5f70feda2d0074b90cc5fdeb53409718691530e7d64e8d8a3574cc0befa docker://$TARGET_PATH/cpopen/guardian-datamover@sha256:1c8af5f70feda2d0074b90cc5fdeb53409718691530e7d64e8d8a3574cc0befa
+skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cpopen/guardian-datamover@sha256:4555ad7c0b4f95535a89cb9c6cd021f05d41a87aa1276d90e1e3a0b7b8d36799 docker://$TARGET_PATH/cpopen/guardian-datamover@sha256:4555ad7c0b4f95535a89cb9c6cd021f05d41a87aa1276d90e1e3a0b7b8d36799
 
 skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:3e28cda75450285980a2f3ad61fba8c12786c908cd743bba70f056793b050d43 docker://$TARGET_PATH/cp/bnr/guardian-transaction-manager@sha256:3e28cda75450285980a2f3ad61fba8c12786c908cd743bba70f056793b050d43
 
