@@ -2,6 +2,7 @@ Backup
 ----
 
 ### Steps for Maximo Optimizer namespace backup
+For detailed information about IBM Fusion resources such as backup policy, recipes and backup storage location, please refer the [Backing up and restoring with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#taskt_backing_up_and_restoring_with_ibm_fusion__steps__1) section in MAS documentation <br>
 
 1. cd to `maximo/optimizer`
 2. Export Optimizer required variables, this can be achieving by sourcing the `maximo_env.sh`:
@@ -23,7 +24,8 @@ Backup
 
     `oc apply -f maximo-optimizer-backup-restore-local.yaml`
 
-Note: Following steps needs to be made on Hub cluster
+**Note:** Following steps needs to be made on Hub cluster
+
 5. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 6. From Fusion Console, associate the backup policy to the Optimizer application. 
 7. Retrieve the Policy Assignment Name:
@@ -42,13 +44,14 @@ Restore
 ----
 ### Prerequisite: 
 **Required:** <br>
-Restore Maximo Suite ([Core](../core/README.md)) and its prerequisites <br>
+1. Restore Maximo Application Suite with either [Suite](../suite/README.md) or [Core](../core/README.md) recipes and its optional prerequisites <br>
 
 **Optional:** <br>
-Restore [DB2](../db2u/README.md) namespace if configured in source cluster <br>
+2. [Grafana](https://ibm-mas.github.io/ansible-devops/roles/grafana/): You must install same version (v4 or v5) as in source cluster if you were previously using Grafana <br>
+3. Restore [DB2](../db2u/README.md) namespace if configured in source cluster <br>
 
 ### Steps for Maximo Optimizer namespace restore
 1. Before restoring application run the prerequisite script:
 
     `./scripts/restore-pre-req.sh`
-2. Start Optimizer namespace restore to same or alternate cluster.
+2. Start Optimizer namespace restore to same or alternate cluster. For detailed procedure on how to restore an application with IBM Fusion, please refer to detailed steps in [Restoring Maximo Application Suite with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#restore_mas_w_fusion__title__1)

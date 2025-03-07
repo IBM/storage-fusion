@@ -1,5 +1,6 @@
 Backup
 ----
+For detailed information about IBM Fusion resources such as backup policy, recipes and backup storage location, please refer the [Backing up and restoring with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#taskt_backing_up_and_restoring_with_ibm_fusion__steps__1) section in MAS documentation <br>
 
 ### Steps for Maximo Manage namespace backup
 
@@ -23,7 +24,8 @@ Backup
 
     `oc apply -f maximo-manage-backup-restore-local.yaml`
 
-Note: Following steps needs to be made on Hub cluster
+**Note:** Following steps needs to be made on Hub cluster
+
 5. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 6. From Fusion Console, associate the backup policy to the Manage application. 
 7. Retrieve the Policy Assignment Name:
@@ -42,15 +44,32 @@ Restore
 ----
 ### Prerequisite: 
 **Required:** <br>
-Restore Maximo Suite ([Core](../core/README.md)) and its prerequisites <br>
-[Enable the Openshift internal image registry](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=installing-enabling-openshift-internal-image-registry)
+1. Restore Maximo Application Suite with either [Suite](../suite/README.md) or [Core](../core/README.md) recipes and its optional prerequisites <br>
+2. [Enable the Openshift internal image registry](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=installing-enabling-openshift-internal-image-registry)
 
 **Optional:** <br>
-[Grafana](https://ibm-mas.github.io/ansible-devops/roles/grafana/): You must install same version (v4 or v5) as in source cluster if you were previously using Grafana <br>
-Restore [DB2](../db2u/README.md) namespace if configured in source cluster <br>
+3. [Grafana](https://ibm-mas.github.io/ansible-devops/roles/grafana/): You must install same version (v4 or v5) as in source cluster if you were previously using Grafana <br>
+4. Restore [DB2](../db2u/README.md) namespace if configured in source cluster <br>
 
 ### Steps for Maximo Manage namespace restore
 1. Before restoring application run the prerequisite script:
 
     `./scripts/restore-pre-req.sh`
-2. Start Manage namespace restore to same or alternate cluster.
+2. Start Manage namespace restore to same or alternate cluster. For detailed procedure on how to restore an application with IBM Fusion, please refer to detailed steps in [Restoring Maximo Application Suite with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#restore_mas_w_fusion__title__1)
+
+### Post Restore Task
+1. After Manage application is restored, you need to evaluate if there is a need to manually modify `mxe.doclink.path01` property. For same cluster restore this step migth be not needed. 
+2. From Manage application, on the left navigation, go to System Configuration > Platform Configuration > System Properties and search for `mxe.doclink.path01` property.
+3. If during restore, cluster domain changed (as during alternate cluster restore), make sure to match to current MAS Manage URL. 
+4. Save the modification made to this property. 
+5. Perform a live refresh (No downtime needed).
+
+e.g. On source cluster, domain was pointing to maximo-cluster-a so `mxe.doclink.path01` is as follows
+```
+/DOCLINKS=https://dev.manage.<MAS_INSTANCE_ID>.maximo-cluster-a/maximo/oslc/doclinks
+```
+
+During alternate cluster restore domain changed to maximo-cluster-b, so modification is needed to match new MAS Manage URL
+```
+/DOCLINKS=https://dev.manage.<MAS_INSTANCE_ID>.maximo-cluster-b/maximo/oslc/doclinks
+```
