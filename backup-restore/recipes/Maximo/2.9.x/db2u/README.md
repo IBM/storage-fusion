@@ -1,5 +1,6 @@
 Backup
 ----
+For detailed information about IBM Fusion resources such as backup policy, recipes and backup storage location, please refer the [Backing up and restoring with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#taskt_backing_up_and_restoring_with_ibm_fusion__steps__1) section in MAS documentation <br>
 
 ### Steps for Maximo Db2u namespace backup
 
@@ -13,7 +14,8 @@ Backup
 
     `oc apply -f maximo-db2-backup-restore-local.yaml`
 
-Note: Following steps needs to be made on Hub cluster
+**Note:** Following steps needs to be made on Hub cluster
+
 4. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 5. From Fusion Console, associate the backup policy to the Db2 application. 
 6. Retrieve the Policy Assignment Name:
@@ -33,12 +35,12 @@ Restore
 
 ### Prerequisite:
 **Required:** <br>
-RH [cert-manager](https://ibm-mas.github.io/ansible-devops/roles/cert_manager/)<br>
-Maximo [ibm-operator-catalog](https://ibm-mas.github.io/ansible-devops/roles/ibm_catalogs/) should also be installed in cluster
+1. RH [cert-manager](https://ibm-mas.github.io/ansible-devops/roles/cert_manager/)<br>
+2. Maximo [ibm-operator-catalog](https://ibm-mas.github.io/ansible-devops/roles/ibm_catalogs/) should also be installed in cluster
 
 ### Steps for Maximo Db2 namespace restore
 1. Before restoring application run the prerequisite script:
 
     `./scripts/restore-pre-req.sh`
 
-2. Start Db2u namespace restore to same or alternate cluster.
+2. Start Db2u namespace restore to same or alternate cluster. For detailed procedure on how to restore an application with IBM Fusion, please refer to detailed steps in [Restoring Maximo Application Suite with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#restore_mas_w_fusion__title__1)

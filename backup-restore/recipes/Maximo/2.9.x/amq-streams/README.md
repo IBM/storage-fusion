@@ -1,5 +1,6 @@
 Backup
 ----
+For detailed information about IBM Fusion resources such as backup policy, recipes and backup storage location, please refer the [Backing up and restoring with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#taskt_backing_up_and_restoring_with_ibm_fusion__steps__1) section in MAS documentation <br>
 
 ### Steps for Maximo AMQ-Streams namespace backup
 
@@ -14,7 +15,8 @@ Backup
 
     `oc apply -f maximo-amq-streams-backup-restore-local.yaml`
 
-Note: Following steps needs to be made on Hub cluster
+**Note:** Following steps needs to be made on Hub cluster
+
 4. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 5. From Fusion Console, associate the backup policy to the AMQ Streams application. 
 6. Retrieve the Policy Assignment Name:
@@ -34,10 +36,10 @@ Restore
 ### Prerequisite:
 
 **Required:** <br>
-RH [cert-manager](https://ibm-mas.github.io/ansible-devops/roles/cert_manager/)<br>
+1. RH [cert-manager](https://ibm-mas.github.io/ansible-devops/roles/cert_manager/)<br>
 
 ### Steps for Maximo AMQ Streams namespace restore
 1. Before restoring application run the prerequisite script:
 
     `./scripts/restore-pre-req.sh`
-2. Start AMQ Streams namespace restore to same or alternate cluster.
+2. Start AMQ Streams namespace restore to same or alternate cluster. For detailed procedure on how to restore an application with IBM Fusion, please refer to detailed steps in [Restoring Maximo Application Suite with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#restore_mas_w_fusion__title__1)

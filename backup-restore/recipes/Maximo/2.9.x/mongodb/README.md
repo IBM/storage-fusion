@@ -1,5 +1,14 @@
+Recipe Enhancement Available
+----
+
+If using MongoDB community edition and IBM SLS alongside Maximo, the prefered recipe is available at [suite](../suite/) directory. 
+This is a recipe enhancement that will take care of protecting the 3 namespaces e.g. (mongoce, ibm-sls, core) with a single recipe. 
+
+The recipe in this directory is also available to use but will require that MongoDB and IBM SLS namespaces to be backed up individually. 
+
 Backup
 ----
+For detailed information about IBM Fusion resources such as backup policy, recipes and backup storage location, please refer the [Backing up and restoring with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#taskt_backing_up_and_restoring_with_ibm_fusion__steps__1) section in MAS documentation <br>
 
 ### Steps for Maximo MongoDB namespace backup
 
@@ -20,7 +29,8 @@ Backup
 
     `oc apply -f maximo-mongodb-backup-restore-local.yaml`
 
-Note: Following steps needs to be made on Hub cluster
+**Note:** Following steps needs to be made on Hub cluster
+
 5. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 6. From Fusion Console, associate the backup policy to the MongoDB application. 
 7.  Retrieve the Policy Assignment Name:
@@ -39,14 +49,14 @@ Restore
 ----
 ### Prerequisite:
 **Required:** <br>
-RH [cert-manager](https://ibm-mas.github.io/ansible-devops/roles/cert_manager/)<br>
-Maximo [ibm-operator-catalog](https://ibm-mas.github.io/ansible-devops/roles/ibm_catalogs/) should also be installed in cluster
+1. RH [cert-manager](https://ibm-mas.github.io/ansible-devops/roles/cert_manager/)<br>
+2. Maximo [ibm-operator-catalog](https://ibm-mas.github.io/ansible-devops/roles/ibm_catalogs/) should also be installed in cluster
 
 **Optional:** <br>
-[Grafana](https://ibm-mas.github.io/ansible-devops/roles/grafana/): You must install same version (v4 or v5) as in source cluster if you were previously using Grafana
+3. [Grafana](https://ibm-mas.github.io/ansible-devops/roles/grafana/): You must install same version (v4 or v5) as in source cluster if you were previously using Grafana
 
 ### Steps for Maximo MongoDB namespace restore
 1. Before restoring application run the prerequisite script:
 
     `./scripts/restore-pre-req.sh`
-2. Start MongoDB namespace restore to same or alternate cluster.
+2. Start MongoDB namespace restore to same or alternate cluster. For detailed procedure on how to restore an application with IBM Fusion, please refer to detailed steps in [Restoring Maximo Application Suite with IBM Fusion](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=suite-backing-up-restoring-storage-fusion#restore_mas_w_fusion__title__1)
