@@ -31,7 +31,7 @@ Fusion Backup and Restore operator requieres AMQ-Streams operator for configurin
 
 ## Restore Prerequisite
 
-1. Before restoring applications, the following Maximo Ansible roles needs to be configured: `ibm_catalogs`, `cert_manager`, `dro`, `common-services`. Follow [IBM Maximo Procedure](https://ibm-mas.github.io/ansible-devops) on how to run this Ansible roles. 
+1. Before restoring applications, the following Maximo Ansible roles needs to be configured: `ibm_catalogs`, `cert_manager`, `dro`. Optionally, depending on the deployment or Maximo version you might need to include `grafana` or `common-services` (newer versions for Maximo does no longer require this role). Follow [IBM Maximo Procedure](https://ibm-mas.github.io/ansible-devops) on how to run this Ansible roles. 
 2. Change directory to the application you want to restore. 
 3. Before restore, run the prerequisite script to add resources permissions on target cluster. This is needed for custom CR check hooks.
 
@@ -67,7 +67,21 @@ cd to maximo/manage
 ## Scenarios
 Note: For detailed procedure, please review the README file on each individual application. 
 
+### Maximo Suite Backup and Restore
+Note: New recipe, preferred if using default MongoDB Community Edition and IBM SLS alongside Maximo Application Suite. <br>
+#### Backup
+1. Optional: If you have either [Db2](./db2u/README.md) instances and/or [AMQ-Streams](./amq-streams/README.md) Kafka cluster installed on cluster, follow the corresponding procedure to back up the applications where they were installed.
+2. Backup [Suite](./suite/README.md) application. During the backup of this namespace, IBM Fusion recipe will also take care of protecting `mongoce` and `sls` namespaces
+
+
+#### Restore
+1. Install required Maximo prerequisites for Core application on target cluster: [ibm-operator-catalog](https://ibm-mas.github.io/ansible-devops/roles/ibm_catalogs/), [cert-manager](https://ibm-mas.github.io/ansible-devops/roles/cert_manager/), [dro](https://ibm-mas.github.io/ansible-devops/roles/dro/)
+2. Optional: If you have either [Db2](./db2u/README.md) instances and/or [AMQ-Streams](./amq-streams/README.md) Kafka cluster installed on cluster, follow the corresponding procedure to back up the applications where they were installed.
+3. Restore [Suite](./suite/README.md) application. During the restore of this namespace, IBM Fusion recipe will also take care of restoring `mongoce` and `sls` namespaces
+
 ### Maximo Core Backup and Restore
+Note: If using default MongoDB Community Edition and IBM SLS alongside MAS,  **Maximo Suite Backup and Restore** scenario is preferred. <br>
+
 #### Backup
 1. Follow procedure to backup [MongoDb](./mongodb/README.md) application
 2. Follow procedure to backup [SLS](./sls/README.md) application.
@@ -80,21 +94,34 @@ Note: For detailed procedure, please review the README file on each individual a
 2. Follow procedure to restore [MongoDb](./mongodb/README.md) application
 3. Follow procedure to restore [SLS](./sls/README.md) application. 
 4. Optional: If you have either [Db2](./db2u/README.md) instances and/or [AMQ-Streams](./amq-streams/README.md) Kafka cluster installed on cluster, follow the corresponding procedure to back up the applications where they were installed.
-5. Restore **Core** application. 
+5. Restore [Core](./core/README.md) application. 
 
 ### Maximo Manage Backup and Restore
 #### Backup
-1. Follow **Maximo Core Backup** scenario
+1. Follow Maximo [Suite](./suite/README.md) Backup scenario or Maximo [Core](./core/README.md) Backup scenario.
 2. Backup [Manage](./manage/README.md) application.
 
 #### Restore
-1. Follow **Maximo Core Restore** scenario
-2. Restore [Manage](./manage/README.md) application. 
-3. Manually perform post restore tasks in Manage README
+1. Follow Maximo [Suite](./suite/README.md) Restore scenario or Maximo [Core](./core/README.md) Restore scenario
+2. Complete Manage prerequisites, including mandatory [Enabling the Openshift internal image registry](https://www.ibm.com/docs/en/masv-and-l/continuous-delivery?topic=installing-enabling-openshift-internal-image-registry) and optional dependencies. 
+3. Restore [Manage](./manage/README.md) application
+4. Manually perform post restore tasks in Manage [README](./manage/README.md)
 
+
+### Maximo Optimizer Backup and Restore
+#### Backup
+1. Follow Maximo [Suite](./suite/README.md) Backup scenario or Maximo [Core](./core/README.md) Backup scenario.
+2. Backup [Optimizer](./optimizer/README.md) application.
+3. Optional: If you have Manage installed follow Maximo [Manage](./manage/README.md) Backup Scenario
+
+#### Restore
+1. Follow Maximo [Suite](./suite/README.md) Restore scenario or Maximo [Core](./core/README.md) Restore scenario
+2. Restore [Optimizer](./optimizer/README.md) application.
+3. Optional: If you have Manage installed follow Maximo [Manage](./manage/README.md) Restore Scenario
 
 ----
 
 ## Fusion 2.9.0 recipe enhancements
 1. Fusion restore no longer needs sleeping steps when restoring Maximo Custom Resources (CR) which provides and improved restore performace. 
 2. Maximo recipes for SLS, Core and Manage now includes GrafanaDashboards if Grafana is installed on source cluster. 
+3. New recipe [suite](./suite/) that is able to restore multiple namespaces (`mongoce`, `sls`, `core`) with single recipe. 
