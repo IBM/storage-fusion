@@ -10,3 +10,4 @@ This hotfix fixes the following Backup & Restore issues:
     8.  Unexpected failure: HTTP Error 403: Forbidden on restore.
     9.  Delete backup requests in Redundant state included in cleanup.
     10. Backups not starting when backup status.totalBackupsCapacity is -1.
+    11. Service protection recipe incorrect on custom namespace installation.
