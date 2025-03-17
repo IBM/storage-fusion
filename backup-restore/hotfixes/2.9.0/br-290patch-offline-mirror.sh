@@ -12,7 +12,7 @@ TARGET_PATH="$1"
 export TARGET_PATH
 set -e
 
-skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/guardian-job-manager@sha256:8daeb9bf614d8e72aeded5f0e17e1a93bc5c071638e6adff1c28c30650ff26e0 docker://$TARGET_PATH/cp/bnr/guardian-job-manager@sha256:8daeb9bf614d8e72aeded5f0e17e1a93bc5c071638e6adff1c28c30650ff26e0
+skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/guardian-job-manager@sha256:7f31cb89d2279a3a54d85a23a4fd65c1745316c1d72c40ce8df32096469de47c docker://$TARGET_PATH/cp/bnr/guardian-job-manager@sha256:7f31cb89d2279a3a54d85a23a4fd65c1745316c1d72c40ce8df32096469de47c
 
 skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/guardian-backup-service@sha256:b310c5128b6b655e884a9629da7361c80625dd76378cea52eb6b351b3a70c139 docker://$TARGET_PATH/cp/bnr/guardian-backup-service@sha256:b310c5128b6b655e884a9629da7361c80625dd76378cea52eb6b351b3a70c139
 

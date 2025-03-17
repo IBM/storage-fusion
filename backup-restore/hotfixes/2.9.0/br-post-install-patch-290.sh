@@ -180,7 +180,7 @@ if [[ "$VERSION" == 2.9.0* ]]; then
       if (oc get deployment -n $BR_NS job-manager -o yaml > $DIR/job-manager-deployment.save.yaml)
       then
         echo "Patching job-manager-deployment image..."
-        oc patch deployment job-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"job-manager-container","image":"cp.icr.io/cp/bnr/guardian-job-manager@sha256:8daeb9bf614d8e72aeded5f0e17e1a93bc5c071638e6adff1c28c30650ff26e0"}]}}}}'
+        oc patch deployment job-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"job-manager-container","image":"cp.icr.io/cp/bnr/guardian-job-manager@sha256:7f31cb89d2279a3a54d85a23a4fd65c1745316c1d72c40ce8df32096469de47c"}]}}}}'
       else
         echo "ERROR: Failed to save original job-manager-deployment. Skipped updates."
       fi
