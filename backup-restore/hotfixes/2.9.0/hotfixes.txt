@@ -12,3 +12,4 @@ This hotfix fixes the following Backup & Restore issues:
     10. Backups not starting when backup status.totalBackupsCapacity is -1.
     11. Service protection recipe incorrect on custom namespace installation.
     12. Job manager error checking for idle jobs.
+    13. Error getting VirtualMachineSnapshot status.
