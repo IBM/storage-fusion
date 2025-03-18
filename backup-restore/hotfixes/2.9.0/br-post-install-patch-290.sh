@@ -73,6 +73,17 @@ if [ -z "$BR_NS" ]
     exit 1
 fi
 
+if [ -n "$HUB" ]
+    then
+      if (oc get recipes.spp-data-protection.isf.ibm.com fusion-control-plane -n $ISF_NS -o yaml > $DIR/fusion-control-plane-recipe.save.yaml)
+      then
+        echo "Patching fusion-control-plane recipe on hub ..."
+        oc patch recipes.spp-data-protection.isf.ibm.com fusion-control-plane -n $ISF_NS --type=merge -p '"spec": {"workflows": [{"failOn": "essential-error","name": "backup","sequence": [{"group": "bsl-secrets"},{"group": "connection-secrets"},{"group": "fusion-dp-crs"},{"group": "fusion-opt-crs"},{"group": "cluster-crs"},{"hook": "fbr-hooks/export-backup-inventory"},{"group": "add-mongo-inventory"}]},{"failOn": "essential-error","name": "restore","sequence": [{"hook": "isf-dp-operator-hook/disable-webhook"},{"hook": "fbr-hooks/deleteCRs"},{"hook": "isf-dp-operator-hook/quiesce-isf-dp-controller"},{"group": "bsl-secrets"},{"group": "connection-secrets"},{"group": "restore-fusion-opt-crs"},{"group": "restore-fusion-dp-crs"},{"group": "cluster-crs"},{"hook": "fbr-hooks/restore-backup-inventory"},{"hook": "isf-dp-operator-hook/unquiesce-isf-dp-controller"}]}]}'
+    else
+        echo "ERROR: Failed to save original fusion-control-plane recipe. Skipped updates."
+    fi
+fi
+
 FSIROLETOADD=$(cat <<EOF
 - apiGroups:
   - service.isf.ibm.com
@@ -168,15 +179,6 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     if [ -n "$HUB" ]
     then
       echo "Apply patches to hub..."
-
-      if (oc get recipes.spp-data-protection.isf.ibm.com fusion-control-plane -n $ISF_NS -o yaml > $DIR/fusion-control-plane-recipe.save.yaml)
-      then
-        echo "Patching fusion-control-plane recipe..."
-       oc patch recipes.spp-data-protection.isf.ibm.com fusion-control-plane -n $ISF_NS --type=merge -p '"spec": {"workflows": [{"failOn": "essential-error","name": "backup","priority": 0,"sequence": [{"group": "bsl-secrets"},{"group": "connection-secrets"},{"group": "fusion-dp-crs"},{"group": "fusion-opt-crs"},{"group": "cluster-crs"},{"hook": "fbr-hooks/export-backup-inventory"},{"group": "add-mongo-inventory"}]},{"failOn": "essential-error","name": "restore","priority": 0,"sequence": [{"hook": "isf-dp-operator-hook/disable-webhook"},{"hook": "fbr-hooks/deleteCRs"},{"hook": "isf-dp-operator-hook/quiesce-isf-dp-controller"},{"group": "bsl-secrets"},{"group": "connection-secrets"},{"group": "restore-fusion-opt-crs"},{"group": "restore-fusion-dp-crs"},{"group": "cluster-crs"},{"hook": "fbr-hooks/restore-backup-inventory"},{"hook": "isf-dp-operator-hook/unquiesce-isf-dp-controller"}]}]}'
-    else
-        echo "ERROR: Failed to save original fusion-control-plane recipe. Skipped updates."
-    fi
-
       if (oc get deployment -n $BR_NS job-manager -o yaml > $DIR/job-manager-deployment.save.yaml)
       then
         echo "Patching job-manager-deployment image..."
