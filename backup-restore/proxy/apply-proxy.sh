@@ -2,22 +2,28 @@
 # Run this script on hub and spoke clusters to apply cluster-wide proxy settings.
 
 usage() {
-  echo "Usage: $0 <proxy-url>"
+    echo "Usage: $0 <proxy-url>"
+}
+
+err_exit()
+{
+    echo "$@" >&2
+    exit 1
 }
 
 check_cmd ()
 {
-   (type $1 > /dev/null) || echo "$1 command not found, install $1 command to apply patch"
+   (type $1 > /dev/null) || err_exit "$1 command not found, install $1 command to apply patch"
 }
-
-check_cmd oc
-oc whoami > /dev/null || err_exit "Not logged in to your cluster"
 
 if [ "$#" -ne 1 ]; then
     usage
-    exit 0
+    exit 1
 fi
 PROXY_URL=$1
+
+check_cmd oc
+oc whoami > /dev/null || err_exit "Not logged in to your cluster"
 
 mkdir -p /tmp/br-apply-proxy
 if [ "$?" -eq 0 ]
@@ -37,6 +43,16 @@ fi
 
 if [ -z "$BR_NS" ]; then 
     echo "ERROR: No B&R installation found. Exiting."
+    exit 1
+fi
+
+AGENTCSV=$(oc -n "$BR_NS" get csv -o name | grep ibm-dataprotectionagent)
+VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-headers)
+if [ -z "$VERSION" ] ; then
+    echo "ERROR: Could not get B&R version."
+    exit 1
+elif [[ $VERSION == 2.7.* || $VERSION == 2.8.* ]]; then
+    echo "This script works for B&R version 2.9 and above, you have $VERSION."
     exit 1
 fi
 
