@@ -1,6 +1,15 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply cluster-wide proxy settings.
 
+mkdir -p /tmp/br-apply-proxy
+if [ "$?" -eq 0 ]
+then DIR=/tmp/br-apply-proxy
+else DIR=/tmp
+fi
+LOG=$DIR/apply-proxy_$$_log.txt
+exec &> >(tee -a $LOG)
+echo "Writing output of apply-proxy.sh script to $LOG"
+
 usage() {
     echo "Usage: $0 <proxy-url>"
 }
@@ -24,15 +33,6 @@ PROXY_URL=$1
 
 check_cmd oc
 oc whoami > /dev/null || err_exit "Not logged in to your cluster"
-
-mkdir -p /tmp/br-apply-proxy
-if [ "$?" -eq 0 ]
-then DIR=/tmp/br-apply-proxy
-else DIR=/tmp
-fi
-LOG=$DIR/apply-proxy_$$_log.txt
-exec &> >(tee -a $LOG)
-echo "Writing output of apply-proxy.sh script to $LOG"
 
 BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
 if [ -n "$BR_NS" ]; then
