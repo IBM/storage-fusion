@@ -176,6 +176,15 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     # node-agent pod must restart to pickup the change
     oc delete pod -l name=node-agent --namespace "$BR_NS"
 
+    # replace the velero image
+    if (oc --namespace "$BR_NS" get dpa velero -o yaml > $DIR/velero-original.yaml)
+      then
+        echo "Saved original OADP DataProtectionApplication configuration to $DIR/velero-original.yaml"
+        oc patch dataprotectionapplication.oadp.openshift.io velero --namespace "$BR_NS" --type='json' -p='[{"op": "replace", "path": "/spec/unsupportedOverrides/veleroImageFqin", "value":"cp.icr.io/cp/bnr/fbr-velero@sha256:99c8ccf942196d813dae94edcd18ff05c4c76bdee2ddd2cbbe2da3fa2810dd49"}]'
+        echo "Velero Deployement is restarting with replacement image"
+        oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
+    fi
+
     if [ -n "$HUB" ]
     then
       echo "Apply patches to hub..."

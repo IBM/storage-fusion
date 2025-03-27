@@ -13,3 +13,4 @@ This hotfix fixes the following Backup & Restore issues:
     11. Service protection recipe incorrect on custom namespace installation.
     12. Job manager error checking for idle jobs.
     13. Error getting VirtualMachineSnapshot status.
+    14. Datamover (type: kopia) pod does not start due to node addition or replacement due to pull policy Never. (Issue#: 44447, 46425)
