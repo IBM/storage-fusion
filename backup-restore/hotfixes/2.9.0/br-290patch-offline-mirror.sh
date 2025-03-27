@@ -27,3 +27,5 @@ skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fus
 skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:8d0d7ef3064271b948a4b9a3b05177ae959613a0b353062a286edb972112cfc4 docker://$TARGET_PATH/cp/fusion-sds/isf-data-protection-operator@sha256:8d0d7ef3064271b948a4b9a3b05177ae959613a0b353062a286edb972112cfc4
 
 skopeo copy --insecure-policy --preserve-digests --all docker://quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3 docker://$TARGET_PATH/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3
+
+skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/fbr-velero@sha256:99c8ccf942196d813dae94edcd18ff05c4c76bdee2ddd2cbbe2da3fa2810dd49
