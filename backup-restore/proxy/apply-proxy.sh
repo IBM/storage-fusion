@@ -59,12 +59,18 @@ fi
 if [ -n "$HUB" ]; then
     if (oc get deployment -n $BR_NS backup-location-deployment -o yaml > $DIR/backup-location-deployment.save.yaml); then
         echo "Applying proxy settings to backup-location-deployment..."
-        oc set env deployment backup-location-deployment -n $BR_NS http_proxy=$PROXY_URL
-        oc set env deployment backup-location-deployment -n $BR_NS https_proxy=$PROXY_URL
+        oc set env deployment backup-location-deployment -n $BR_NS http_proxy="$PROXY_URL" https_proxy="$PROXY_URL"
     else
         echo "ERROR: Failed to save original backup-location-deployment. Skipped updates."
     fi
 fi    
+
+if (oc get deployment transaction-manager -n $BR_NS -o yaml > $DIR/transaction-manager-deployment.save.yaml); then
+    echo "Applying proxy settings to transaction-manager..."
+  oc set env deployment transaction-manager -n $BR_NS http_proxy="$PROXY_URL" https_proxy="$PROXY_URL"
+else
+    echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
+fi
 
 if (oc get dpa velero -n $BR_NS -o yaml > $DIR/dpa-velero.save.yaml); then
     echo "Applying proxy settings to DataProtectionApplication velero resource..."
