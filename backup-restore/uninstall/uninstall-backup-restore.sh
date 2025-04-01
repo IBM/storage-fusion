@@ -226,9 +226,21 @@ oc delete guardianmongoes -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing kafkatopics CRs"
 oc delete  kafkatopics.kafka.strimzi.io -n "${NAMESPACE}" --all --timeout=60s
 # remove velero backuprepositories so that velero doesn't think repositories still exist on reinstall
-print_heading "Removing Velero BackupRepositories CRs"
+print_heading "Removing Velero CRs"
+oc delete backuprepositories.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete backups.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete backupstoragelocations.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete datadownloads.velero.io -n "${NAMESPACE}" --all --timeout=60s
 oc delete datauploads.velero.io -n "${NAMESPACE}" --all --timeout=60s
-oc delete backuprepository.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete deletebackuprequests.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete downloadrequests.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete podvolumebackups.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete podvolumerestores.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete restores.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete schedules.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete serverstatusrequests.velero.io -n "${NAMESPACE}" --all --timeout=60s
+oc delete volumesnapshotlocations.velero.io -n "${NAMESPACE}" --all --timeout=60s
+
 KT=$(oc -n "${NAMESPACE}" get kafkatopics.kafka.strimzi.io -o custom-columns="NAME:metadata.name" --no-headers)
 [ -n "$KT" ] && oc -n "${NAMESPACE}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' kafkatopics.kafka.strimzi.io $KT
 oc delete  kafkatopics.kafka.strimzi.io -n "${NAMESPACE}" --all --timeout=60s
