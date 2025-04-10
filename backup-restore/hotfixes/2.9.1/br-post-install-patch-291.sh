@@ -71,22 +71,20 @@ VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-he
 if [ -z "$VERSION" ] 
   then
     echo "ERROR: Could not get B&R version. Skipped updates"
+    exit 0
 elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
     echo "This patch applies to B&R version $EXPECTED_VERSION only, you have $VERSION. Skipped updates"
+    exit 0
 fi
 
-if [[ "$VERSION" == $EXPECTED_VERSION* ]]; then
-    if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
-    then
-        echo "Patching deployment/transaction-manager image..."
-        oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:b407e1c6585cc38938d52b750dddef57a97846edc4752b37da55014d1b9ef732
-        oc wait --namespace $BR_NS --for=jsonpath='{.status.readyReplicas}'=1 --timeout=65s deployment/transaction-manager
-    else
-        echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
-    fi
+if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
+then
+    echo "Patching deployment/transaction-manager image..."
+    oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:b407e1c6585cc38938d52b750dddef57a97846edc4752b37da55014d1b9ef732
+    oc rollout status --namespace $BR_NS --timeout=65s deployment/transaction-manager
+else
+    echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
 fi
 
 echo "Please verify that these pods have successfully restarted after hotfix update in their corresponding namespace:"
-if [[ "$VERSION" == $EXPECTED_VERSION* ]]; then
-    printf "  %-25s: %s\n" "$BR_NS" "transaction-manager"
-fi
+printf "  %-25s: %s\n" "$BR_NS" "transaction-manager"
