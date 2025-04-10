@@ -38,12 +38,26 @@ LOG=$DIR/br-post-install-patch-291_$$_log.txt
 exec &> >(tee -a $LOG)
 echo "Writing output of br-post-install-patch-291.sh script to $LOG"
 
+#check_cmd:
+# Returns:
+#   0 on finding the command
+#   1 if the command does not exist
 check_cmd ()
 {
-   (type $1 > /dev/null) || echo "$1 command not found, install jq command to apply patch"
+   type $1 > /dev/null
+   echo $?
 }
-check_cmd oc
-check_cmd jq
+
+REQUIREDCOMMANDS=("oc" "jq")
+echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
+for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
+    IS_COMMAND=$(check_cmd $COMMAND)
+    if [ $IS_COMMAND -ne 0 ]; then
+        echo "ERROR: $COMMAND command not found, install $COMMAND command to apply patch"
+        exit $IS_COMMAND
+    fi
+done
+
 oc whoami > /dev/null || err_exit "Not logged in to your cluster"
 
 ISF_NS=$(oc get spectrumfusion -A -o custom-columns=NS:metadata.namespace --no-headers)
