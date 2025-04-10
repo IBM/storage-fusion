@@ -28,4 +28,4 @@ skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fus
 
 skopeo copy --insecure-policy --preserve-digests --all docker://quay.io/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3 docker://$TARGET_PATH/minio/minio@sha256:ea15e53e66f96f63e12f45509d2d2d8fad774808debb490f48508b3130bd22d3
 
-skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/fbr-velero@sha256:99c8ccf942196d813dae94edcd18ff05c4c76bdee2ddd2cbbe2da3fa2810dd49
+skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/fbr-velero@sha256:99c8ccf942196d813dae94edcd18ff05c4c76bdee2ddd2cbbe2da3fa2810dd49 docker://$TARGET_PATH/cp/bnr/fbr-velero@sha256:99c8ccf942196d813dae94edcd18ff05c4c76bdee2ddd2cbbe2da3fa2810dd49
