@@ -58,7 +58,7 @@ for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
     fi
 done
 
-oc whoami > /dev/null || echo "Not logged in to your cluster" || exit 1
+oc whoami > /dev/null || ( echo "Not logged in to your cluster" ; exit 1)
 
 ISF_NS=$(oc get spectrumfusion -A -o custom-columns=NS:metadata.namespace --no-headers)
 if [ -z "$ISF_NS" ]; then
