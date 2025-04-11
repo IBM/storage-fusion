@@ -34,7 +34,7 @@ _configmap=operators-resources
 genrate_cm ()
 {
   NS="$1"
-  [ -z "$NS" ]  && echo "No namespace provided, returning" && return
+  [[ -z $NS ]]  && echo "No namespace provided, returning" && return
   for CSV_NAME in $(oc -n $NS get csv -o name)
   do
       STATUS=$(oc -n $NS get $CSV_NAME -o custom-columns=:status.phase --no-headers)
@@ -109,15 +109,14 @@ ver_greater_than_29 ()
 ISF_NS=$(oc get spectrumfusion -A -o custom-columns=:metadata.namespace --no-headers)
 if [ -z "$ISF_NS" ]
  then
-    err_exit "No Backup & Restore install found, skipping"
+    err_exit "No Fusion install found. Exiting"
  else
     echo "Fusion namespace: $ISF_NS"
     ISF_VERSION=$(oc -n $ISF_NS get spectrumfusion -o custom-columns=:status.isfVersion --no-headers)
     if ( ver_greater_than_29 $ISF_VERSION )
      then
-        echo "Backup & Restore already at 2.10 or higher. Skipping FUSION"
+        echo "Fusion is already at 2.10 or higher. Skipping Fusion"
      else
-       true
        genrate_cm "$ISF_NS"
     fi
 fi
@@ -126,7 +125,7 @@ fi
 BR_NS=$(oc get dataprotectionagent -A -o custom-columns=:metadata.namespace --no-headers)
 if [ -z "$BR_NS" ]
  then
-    err_exit "No Backup & Restore install found, skipping"
+    echo "No Backup & Restore install found, skipping"
  else
     echo "Backup & Restore namespace: $BR_NS"
     BR_VERSION=$(oc -n $BR_NS get dataprotectionagent -o custom-columns=:status.installedVersion --no-headers)
@@ -134,7 +133,6 @@ if [ -z "$BR_NS" ]
      then
         echo "Backup & Restore already at 2.10 or higher. Skipping B&R"
      else
-       true
         genrate_cm "$BR_NS"
     fi
 fi
