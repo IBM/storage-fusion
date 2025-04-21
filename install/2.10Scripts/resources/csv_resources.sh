@@ -113,7 +113,7 @@ if [ -z "$ISF_NS" ]
  else
     echo "Fusion namespace: $ISF_NS"
     ISF_VERSION=$(oc -n $ISF_NS get spectrumfusion -o custom-columns=:status.isfVersion --no-headers)
-    if ( ver_greater_than_29 $ISF_VERSION )
+    if ( ver_greater_than_29 $ISF_VERSION ) && [ "$1" != "-f" ]
      then
         echo "Fusion is already at 2.10 or higher. Skipping Fusion"
      else
@@ -129,7 +129,7 @@ if [ -z "$BR_NS" ]
  else
     echo "Backup & Restore namespace: $BR_NS"
     BR_VERSION=$(oc -n $BR_NS get dataprotectionagent -o custom-columns=:status.installedVersion --no-headers)
-    if (ver_greater_than_29 $BR_VERSION)
+    if (ver_greater_than_29 $BR_VERSION) && [ "$1" != "-f" ]
      then
         echo "Backup & Restore already at 2.10 or higher. Skipping B&R"
      else
