@@ -100,5 +100,15 @@ else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
 fi
 
+if (oc get deployment -n $BR_NS ibm-dataprotectionserver-controller-manager -o yaml > $DIR/ibm-dataprotectionserver-controller-manager-deployment.save.yaml)
+then
+    echo "Patching deployment/ibm-dataprotectionserver-controller-manager image..."
+    oc set image deployment/ibm-dataprotectionserver-controller-manager --namespace $BR_NS manager=icr.io/cpopen/idp-server-operator@sha256:ec54933ec22c0b1175a1d017240401032caff5de0bdf99e7b5acea3a03686470
+    oc rollout status --namespace $BR_NS --timeout=65s deployment/ibm-dataprotectionserver-controller-manager
+else
+    echo "ERROR: Failed to save original ibm-dataprotectionserver-controller-manager deployment. Skipped updates."
+fi
+
 echo "Please verify that these pods have successfully restarted after hotfix update in their corresponding namespace:"
 printf "  %-25s: %s\n" "$BR_NS" "transaction-manager"
+printf "  %-25s: %s\n" "$BR_NS" "ibm-dataprotectionserver-controller-manager"
