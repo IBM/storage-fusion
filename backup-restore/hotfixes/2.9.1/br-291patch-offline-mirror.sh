@@ -13,13 +13,24 @@ export TARGET_PATH
 set -e
 
 TRANSACTIONMANAGER=guardian-transaction-manager@sha256:b407e1c6585cc38938d52b750dddef57a97846edc4752b37da55014d1b9ef732
+IDPSERVEROPERATOR=idp-server-operator@sha256:ec54933ec22c0b1175a1d017240401032caff5de0bdf99e7b5acea3a03686470
 
 declare -a IMAGES=(
   $TRANSACTIONMANAGER
+)
+
+declare -a CPOPENIMAGES=(
+  $IDPSERVEROPERATOR
 )
 
 for IMAGE in "${IMAGES[@]}"; do
   DESTINATION=docker://$TARGET_PATH/cp/bnr/$IMAGE
   echo -e "Copying\n Image: $IMAGE\n Destination: docker://$TARGET_PATH/cp/bnr/$IMAGE\n"
   skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/$IMAGE $DESTINATION
+done
+
+for CPOPENIMAGE in "${CPOPENIMAGES[@]}"; do
+  DESTINATION=docker://$TARGET_PATH/cp/bnr/$CPOPENIMAGE
+  echo -e "Copying\n Image: $CPOPENIMAGE\n Destination: docker://$TARGET_PATH/cp/bnr/$CPOPENIMAGE\n"
+  skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/$CPOPENIMAGE $DESTINATION
 done
