@@ -1,3 +1,4 @@
 This hotfix fixes the following Backup & Restore issues:
 
     1.  Restore fails with the error "failed to wait BackupRepository, errored early: more than one BackupRepository found" with kopia datamover (#45972). 
+    2.  Handle SSL handshake failures between micro-services (#47567).
