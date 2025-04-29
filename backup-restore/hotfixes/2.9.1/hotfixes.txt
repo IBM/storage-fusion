@@ -2,3 +2,5 @@ This hotfix fixes the following Backup & Restore issues:
 
     1.  Restore fails with the error "failed to wait BackupRepository, errored early: more than one BackupRepository found" with kopia datamover (#45972). 
     2.  Handle SSL handshake failures between micro-services (#47567).
+    3.  After a commit failure exception, the Transaction-Manager and DBR-Controller pods will no longer consume new kafka messages and jobs will not be processed until after a manual restart
+    4.  Jobs that hit a PartiallyFailed recipe step fail entirely and stop processing the remaining steps of the recipe
