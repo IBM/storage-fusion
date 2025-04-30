@@ -105,7 +105,7 @@ fi
 if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
   then
     echo "Patching transaction-manager image..."
-    oc patch deployment/transaction-manager -n $BR_NS -p '{"spec":{"template":{"spec":{"containers":[{"name":"transaction-manager","image":"cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:0ae46fc2f6e744f79f81005579f4dcb7c9981b201f239433bf1e132f9c89c8cd"}]}}}}'
+    oc set image deployment/transaction-manager -n $BR_NS transaction-manager=cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:135f97f33c2a8e56ce0c764daa37a6628dc4a2d02879ea1e98ff62ebac6b7802
 else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
 fi
