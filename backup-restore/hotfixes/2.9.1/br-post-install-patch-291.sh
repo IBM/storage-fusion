@@ -94,7 +94,7 @@ fi
 if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
 then
     echo "Patching deployment/transaction-manager image..."
-    oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c935e0c4a2d9b29c86bacc9322bbd6330a7a30fcb8ccfce2d068abf082d2805e
+    oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:f54cdc64c3acedb8ff8b1292d14f1e8c6b2af9c91feff35256a93d7567e03738
     oc rollout status --namespace $BR_NS --timeout=65s deployment/transaction-manager
 else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
@@ -118,7 +118,33 @@ else
     echo "ERROR: Failed to save original ibm-dataprotectionserver-controller-manager deployment. Skipped updates."
 fi
 
+
+if (oc --namespace "$BR_NS" get dpa velero -o yaml > $DIR/velero-original.yaml)
+then
+    echo "Saved original OADP DataProtectionApplication configuration to $DIR/velero-original.yaml"
+    oc patch dataprotectionapplication.oadp.openshift.io velero --namespace "$BR_NS" --type='json' -p='[{"op": "replace", "path": "/spec/unsupportedOverrides/veleroImageFqin", "value":"cp.icr.io/cp/bnr/fbr-velero@sha256:877df338898d3164ddc389b1a4079f56b5cbd5f88cfa31ef4e17da1e5b70868f"}]'
+    echo "Velero Deployement is restarting with replacement image"
+    oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
+fi
+
+TMROLETOADD=$(cat <<EOF
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumes
+  verbs:
+  - get
+  - patch
+EOF
+)
+echo "Patching transaction-manager-$BR_NS clusterrole..."
+TMCLUSTERROLE=transaction-manager-$BR_NS
+oc get clusterrole ${TMCLUSTERROLE} -o yaml > $DIR/clusterrole-$TMCLUSTERROLE.yaml
+echo -e "$(cat $DIR/clusterrole-$TMCLUSTERROLE.yaml)\n${TMROLETOADD}" | oc apply -f -
+
 echo "Please verify that these pods have successfully restarted after hotfix update in their corresponding namespace:"
 printf "  %-25s: %s\n" "$BR_NS" "transaction-manager"
 printf "  %-25s: %s\n" "$BR_NS" "dbr-controller"
 printf "  %-25s: %s\n" "$BR_NS" "ibm-dataprotectionserver-controller-manager"
+
+echo "Please verify that ClusterRole ${TMCLUSTERROLE} has 'get' and 'patch' permissions for persistentvolumes"
