@@ -1,0 +1,6 @@
+This hotfix records all hotfixes added after this file's creation:
+
+Note: This hotfix list was added after the initial hotfixes were created which are not recorded here.
+
+1. Fixes CVE-2025-43859 https://exchange.xforce.ibmcloud.com/vulnerabilities/409876 (Issue: #51017)
+2. Fixes hang and failure on Backup and Restore with the same locally named PersistentVolumeClaim in two or more namespaces. (Issue: #51176)
