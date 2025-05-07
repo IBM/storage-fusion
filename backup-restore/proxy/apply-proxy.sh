@@ -1,7 +1,8 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply cluster-wide proxy settings.
 # Usage: apply-proxy.sh <http-proxy-url> <https-proxy-url> <no-proxy-settings>
-# Example: apply-proxy.sh http://<my_proxy:my_port> https://<my_proxy:my_port> "localhost,.cluster.local,.svc,127.0.0.1,test.no-proxy.com"
+# See: https://docs.openshift.com/container-platform/4.17/networking/enable-cluster-wide-proxy.html
+# Example: apply-proxy.sh http://my_proxy:my_port https://my_proxy:my_port "localhost,.cluster.local,.svc,127.0.0.1,my_noproxy.com"
 
 mkdir -p /tmp/br-apply-proxy
 if [ "$?" -eq 0 ]
@@ -13,8 +14,8 @@ exec &> >(tee -a $LOG)
 echo "Writing output of apply-proxy.sh script to $LOG"
 
 usage() {
-    echo "Usage: $0 <http-proxy-url> <https-proxy-url> <no-proxy-setting>"
-    echo 'Example: apply-proxy.sh http://<my_proxy:my_port> https://<my_proxy:my_port> "localhost,.cluster.local,.svc,127.0.0.1,test.no-proxy.com"'
+    echo "Usage: $0 <http-proxy-url> <https-proxy-url> <no-proxy-settings>"
+    echo 'Example: apply-proxy.sh http://my_proxy:my_port https://my_proxy:my_port "localhost,.cluster.local,.svc,127.0.0.1,my_noproxy.com"'
 }
 
 err_exit()
