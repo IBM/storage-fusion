@@ -4,9 +4,9 @@ This hotfix fixes the following Backup & Restore issues:
     2.  Backup failure on OpenShift Container Platform 4.12. (Issue: #44943)
     3.  DeleteBackupRequest fails if application CR is re-created by Service Protection recovery. (Issue: #40487)
     4.  Job fails with DownloadRequest error from transaction-manager.
-    5.  Failed job remains running until cancellation timeout.
+    5.  Failed job remains running until cancellation timeout.(Issue: #45206)
     6.  Restore from 2.8 backup fails if application contains multiple namespaces. (Issue: #42635)
-    7.  Restore from 2.8 backup fails with SELinux extended attributes errors.
+    7.  Restore from 2.8 backup fails with SELinux extended attributes errors. (Issue: #45016)
     8.  Unexpected failure: HTTP Error 403: Forbidden on restore. (Issue: #46148)
     9.  Delete backup requests in Redundant state included in cleanup. (Issue: #46304)
     10. Backups not starting when backup status.totalBackupsCapacity is -1. (Issue: #46304)
