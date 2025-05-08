@@ -3,7 +3,7 @@ This hotfix fixes the following Backup & Restore issues:
     1.  Backup fails with error transferring data (BMYBR0009): more than one BackupRepository found for workload namespace. (Issues#: #45375, #45448)
     2.  Backup failure on OpenShift Container Platform 4.12. (Issue: #44943)
     3.  DeleteBackupRequest fails if application CR is re-created by Service Protection recovery. (Issue: #40487)
-    4.  Job fails with DownloadRequest error from transaction-manager.
+    4.  Job fails with DownloadRequest error from transaction-manager. (Issue: #45972)
     5.  Failed job remains running until cancellation timeout.(Issue: #45206)
     6.  Restore from 2.8 backup fails if application contains multiple namespaces. (Issue: #42635)
     7.  Restore from 2.8 backup fails with SELinux extended attributes errors. (Issue: #45016)
