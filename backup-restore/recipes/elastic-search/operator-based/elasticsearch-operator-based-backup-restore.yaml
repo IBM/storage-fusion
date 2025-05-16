@@ -1,7 +1,7 @@
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
 metadata:
-  name: elasticsearch-operator-based-recipe
+  name: elasticsearch-operator-based-backup-restore-recipe
   namespace: ibm-spectrum-fusion-ns
 spec:
   appType: elasticsearch

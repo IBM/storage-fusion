@@ -4,7 +4,7 @@
 
 1. Create the recipe 
 ```
-oc apply -f elasticsearch-recipe.yml
+oc apply -f elasticsearch-image-based-backup-restore.yaml
 ```
 
 2. Create backup policy from Fusion UI

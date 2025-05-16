@@ -11,8 +11,10 @@
     ```
 
 # Prepare for Backup and restore
+
+## BACKUP Steps
 ### Run the below steps where the elastic-search application present (either on HUB or on SPOKE)
-1. Run the below pre backup srcipt to prepare for backup 
+1. Run the below pre backup script to prepare for backup 
   ```
     ./scripts/pre-backup.sh 
   ```
@@ -20,12 +22,6 @@
 2. Apply the recipe 
   ```
     oc apply -f elasticsearch-operator-based-recipe.yaml
-  ```
-
-### Run these steps on Restore cluster
-1. Run the below pre restore srcipt to prepare for restore , run on the cluster where the restore will happen.
-  ```
-    ./scripts/pre-restore.sh 
   ```
 
 ### Run these steps on HUB cluster
@@ -54,3 +50,11 @@
 
 3. Now take the backup from fusion UI.
 
+
+## Restore Steps
+
+### Run these steps on Restore cluster
+1. Run the below pre restore srcipt to prepare for restore , run on the target cluster(where the restore will happen).
+  ```
+    ./scripts/pre-restore.sh 
+  ```
