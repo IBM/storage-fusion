@@ -12,7 +12,7 @@ TARGET_PATH="$1"
 export TARGET_PATH
 set -e
 
-TRANSACTIONMANAGER=guardian-transaction-manager@sha256:f54cdc64c3acedb8ff8b1292d14f1e8c6b2af9c91feff35256a93d7567e03738
+TRANSACTIONMANAGER=guardian-transaction-manager@sha256:d64c38811669c178aec9aa8b60f439de376e3a47ccb67d7f1e170e1834bb2172
 IDPSERVEROPERATOR=idp-server-operator@sha256:ec54933ec22c0b1175a1d017240401032caff5de0bdf99e7b5acea3a03686470
 FBRVELERO=fbr-velero@sha256:877df338898d3164ddc389b1a4079f56b5cbd5f88cfa31ef4e17da1e5b70868f
 
