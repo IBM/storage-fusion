@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.1 release.
 # Refer to https://www.ibm.com/support/pages/node/7230021 for additional information.
-# Version 05-01-2025
+# Version 05-16-2025
 
 patch_usage() {
   echo "Usage: $0 (-hci |-sds | -help)"
@@ -94,7 +94,7 @@ fi
 if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
 then
     echo "Patching deployment/transaction-manager image..."
-    oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:f54cdc64c3acedb8ff8b1292d14f1e8c6b2af9c91feff35256a93d7567e03738
+    oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:d64c38811669c178aec9aa8b60f439de376e3a47ccb67d7f1e170e1834bb2172
     oc rollout status --namespace $BR_NS --timeout=65s deployment/transaction-manager
 else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
