@@ -1,0 +1,157 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: elasticsearch-operator-based-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: elasticsearch
+  groups:
+  - name: elasticsearch-volumes
+    type: volume
+  - name: elasticsearch-resources
+    type: resource
+  - backupRef: elasticsearch-resources
+    includedResourceTypes:
+    - operatorgroups.operators.coreos.com
+    name: elasticsearch-operatorgroups
+    type: resource
+  - backupRef: elasticsearch-resources
+    includedResourceTypes:
+    - subscriptions.operators.coreos.com
+    labelSelector: for-fusion-backup=
+    name: elasticsearch-subscriptions
+    type: resource
+  - backupRef: elasticsearch-resources
+    includedResourceTypes:
+    - secrets
+    - configmaps
+    - roles
+    - rolebindings
+    name: elasticsearch-configurations
+    type: resource
+  - backupRef: elasticsearch-resources
+    includedResourceTypes:
+    - secret
+    labelSelector: eck.k8s.elastic.co/owner-kind=Elasticsearch
+    name: elasticsearch-user-secrets
+    restoreOverwriteResources: true
+    type: resource
+  - backupRef: elasticsearch-resources
+    includedResourceTypes:
+    - secret
+    labelSelector: for-fusion-backup=
+    name: elasticsearch-secrets-es-xpack-file-realm
+    restoreOverwriteResources: true
+    type: resource
+  - backupRef: elasticsearch-resources
+    includedResourceTypes:
+    - elasticsearches.elasticsearch.k8s.elastic.co
+    name: elasticsearch-instances
+    type: resource
+  - backupRef: elasticsearch-resources
+    includedResourceTypes:
+    - statefulsets
+    labelSelector: common.k8s.elastic.co/type=elasticsearch
+    name: elasticsearch-statefulsets
+    restoreOverwriteResources: true
+    type: resource  
+  - backupRef: elasticsearch-resources
+    includedResourceTypes:
+    - kibanas.kibana.k8s.elastic.co
+    - routes
+    name: kibanas-resources
+    type: resource      
+  hooks:
+  - labelSelector: control-plane=elastic-operator
+    name: elasticsearch-pod-exec
+    namespace: ${GROUP.elasticsearch-resources.namespace}
+    onError: fail
+    type: exec
+    ops:
+    - command: |
+        ["/bin/bash","-c","ELASTIC_SECRET=$(curl -k -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H 'Accept: application/json' https://kubernetes.default.svc/api/v1/namespaces/${GROUP.elasticsearch-resources.namespace}/secrets/${ELASTIC_INSTANCE}-es-elastic-user | grep '\"elastic\"' | sed -E 's/.*\"elastic\": *\"([^\"]+)\".*/\\1/' | base64 --decode) && for index in $(curl -k -u elastic:$ELASTIC_SECRET -s -X GET \"https://${ELASTIC_INSTANCE}-es-http:9200/_cat/indices?h=index\"); do curl -k -u elastic:$ELASTIC_SECRET -X PUT \"https://${ELASTIC_INSTANCE}-es-http:9200/$index/_settings\" -H 'Content-Type: application/json' -d '{\"settings\":{\"index.blocks.write\":true}}'; done && curl -k -u elastic:$ELASTIC_SECRET -X POST \"https://${ELASTIC_INSTANCE}-es-http:9200/_flush\""]
+      container: manager
+      name: block-write
+      inverseOp: unblock-write
+    - command: |
+        ["/bin/bash","-c","ELASTIC_SECRET=$(curl -k -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H 'Accept: application/json' https://kubernetes.default.svc/api/v1/namespaces/${GROUP.elasticsearch-resources.namespace}/secrets/${ELASTIC_INSTANCE}-es-elastic-user | grep '\"elastic\"' | sed -E 's/.*\"elastic\": *\"([^\"]+)\".*/\\1/' | base64 --decode) && for index in $(curl -k -u elastic:$ELASTIC_SECRET -s -X GET \"https://${ELASTIC_INSTANCE}-es-http:9200/_cat/indices?h=index\"); do curl -k -u elastic:$ELASTIC_SECRET -X PUT \"https://${ELASTIC_INSTANCE}-es-http:9200/$index/_settings\" -H 'Content-Type: application/json' -d '{\"settings\":{\"index.blocks.write\":false}}'; done"]
+      container: manager
+      name: unblock-write
+  - labelSelector: name=marketplace-operator
+    name: elasticsearch-subscription-install-plan
+    namespace: openshift-marketplace
+    onError: continue
+    ops:
+    - command: |
+        ["/bin/bash", "-c", "sleep 20; STARTING_CSV=$(curl -s -k -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Accept: application/json\" \"https://kubernetes.default.svc/apis/operators.coreos.com/v1alpha1/namespaces/${GROUP.elasticsearch-resources.namespace}/subscriptions/elasticsearch-eck-operator-certified\" | python3 -c \"import sys, json; print(json.load(sys.stdin)['spec']['startingCSV'])\"); while true; do INSTALLPLANS=$(curl -s -k -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Accept: application/json\" https://kubernetes.default.svc/apis/operators.coreos.com/v1alpha1/namespaces/${GROUP.elasticsearch-resources.namespace}/installplans); INSTALLPLAN_NAME=$(echo \"$INSTALLPLANS\" | python3 -c \"import sys, json; data=json.load(sys.stdin)['items']; sub=sys.argv[1]; print(next(item['metadata']['name'] for item in data if sub in item['spec'].get('clusterServiceVersionNames', [])))\" \"$STARTING_CSV\") && break; sleep 5; done; curl -k -X PATCH -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Content-Type: application/merge-patch+json\" -H \"Accept: application/json\" https://kubernetes.default.svc/apis/operators.coreos.com/v1alpha1/namespaces/${GROUP.elasticsearch-resources.namespace}/installplans/$INSTALLPLAN_NAME -d '{\"spec\":{\"approved\":true}}'" ]
+      container: marketplace-operator
+      name: approver
+      timeout: 350
+      onError: continue
+    selectResource: pod
+    timeout: 500
+    type: exec
+  - chks:
+    - condition: '{$.spec.replicas} == {$.status.readyReplicas}'
+      name: replicasReady
+      onError: fail
+      timeout: 600
+    labelSelector: olm.owner.kind=ClusterServiceVersion
+    name: elastic-operator-check
+    namespace: '${GROUP.elasticsearch-resources.namespace}'
+    onError: fail
+    selectResource: deployment
+    timeout: 650
+    type: check
+  - chks:
+    - condition: '{$.status.phase} == {"Ready"}'
+      name: phaseReady
+      onError: fail
+      timeout: 700
+    name: elasticsearch-check
+    nameSelector: ${ELASTIC_INSTANCE}
+    namespace: '${GROUP.elasticsearch-resources.namespace}'
+    onError: fail
+    selectResource: elasticsearch.k8s.elastic.co/v1/elasticsearches
+    timeout: 800
+    type: check
+  - chks:
+    - condition: '{$.status.health} == {"green"}'
+      name: phaseGreen
+      onError: fail
+      timeout: 700
+    name: elasticsearch-kibana-check
+    labelSelector: for-fusion-backup=
+    namespace: '${GROUP.elasticsearch-resources.namespace}'
+    onError: fail
+    selectResource: kibana.k8s.elastic.co/v1/kibanas
+    timeout: 800
+    type: check    
+  workflows:
+  - failOn: any-error
+    name: backup
+    priority: 0
+    sequence:
+    - hook: elasticsearch-pod-exec/block-write
+    - group: elasticsearch-volumes
+    - hook: elasticsearch-pod-exec/unblock-write
+    - group: elasticsearch-resources
+  - failOn: any-error
+    name: restore
+    priority: 0
+    sequence:
+    - group: elasticsearch-volumes
+    - group: elasticsearch-configurations
+    - group: elasticsearch-operatorgroups
+    - group: elasticsearch-subscriptions
+    - hook: elasticsearch-subscription-install-plan/approver
+    - hook: elastic-operator-check/replicasReady
+    - group: elasticsearch-instances
+    - group: elasticsearch-statefulsets
+    - group: elasticsearch-user-secrets
+    - group: elasticsearch-secrets-es-xpack-file-realm
+    - hook: elasticsearch-check/phaseReady
+    - hook: elasticsearch-pod-exec/unblock-write
+    - group: kibanas-resources
+    - hook: elasticsearch-kibana-check/phaseGreen
+
