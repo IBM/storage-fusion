@@ -13,7 +13,7 @@
 # Prepare for Backup and restore
 
 ## BACKUP Steps
-### Run the below steps where the elastic-search application present (either on HUB or on SPOKE)
+### Run the below steps where the elasticsearch application present (either on HUB or on SPOKE)
 1. Run the below pre backup script to prepare for backup 
   ```
     ./scripts/pre-backup.sh 
@@ -34,7 +34,7 @@
   ibm-spectrum-fusion-ns   elastic-system       ibm-s3                  00 0 1 * *    30          days
   ```
 
-2. Assign backup policy to elastic search application from Fusion UI
+2. Assign backup policy to elasticsearch application from Fusion UI
    Note: We have deployed elasticsearch cluster in "elastic-system" namespace. So, "elastic-system" is the application, which needs to be protected.
    From Fusion UI --> Backup & restore --> Backed up applications --> Project apps --> Select a cluster --> Select application --> Next --> Select a backup policy --> Assign
 ##### For example:  
