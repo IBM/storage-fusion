@@ -24,6 +24,7 @@
 FUSIONNS="ibm-spectrum-fusion-ns"
 APPLIANCEINFOCM="appliance-info"
 BASERACKUSERCONFSECRET="userconfig-secret"
+NMSTATESDIR="nmstates"
 
 function help () {
 cat << EOF
@@ -95,52 +96,20 @@ function get_base_ks_nodes(){
     basekscmname=$(echo $data|sed 's/\\"/"/g'| sed 's/^"//;s/"$//'|jq -r 'select(.rackType == "base") | .kickstartCM')
     baseksdata=$(oc -n $FUSIONNS get cm $basekscmname -o json|jq '.data."kickstart.json"')
     baseksnodes=$(echo $baseksdata|sed 's/\\"/"/g'|sed 's/\\n//g'|sed 's/^"//;s/"$//'|jq ".computeNodeIntegratedManagementModules")
-
+    echo ${baseksnodes}
 }
 
 # It iterates over all nodes of a given kickstart and generates nmstate for all nodes with desired IP management spec (DHCP|Static)
 function generate_nmstate() {
-    # Loop through the compute nodes and generate nmstate.yaml files
-    for node in $(jq -r '.computeNodeIntegratedManagementModules[].name' $json_file); do
- 	nmstate_file="nmstate-$node.yaml"
-
-  	# Extract the MAC addresses and interfaces for the compute node
-  	mac_addresses=$(jq -r --arg node "$node" '.computeNodeIntegratedManagementModules[] | select(.name == $node) | .networkInterfaces[] | select(.interfaceType == "baremetal") | .macAddress' $json_file)
-  	interfaceLeg1_values=$(jq -r --arg node "$node" '.computeNodeIntegratedManagementModules[] | select(.name == $node) | .networkInterfaces[] | select(.interfaceType == "baremetal") | .interfaceLeg1' $json_file)
-  	interfaceLeg2_values=$(jq -r --arg node "$node" '.computeNodeIntegratedManagementModules[] | select(.name == $node) | .networkInterfaces[] | select(.interfaceType == "baremetal") | .interfaceLeg2' $json_file)
-  	second_mac_address=$(echo "$mac_addresses" | tr ' ' ',')
-
-  	# Create the nmstate.yaml file
-  	cat <<EOF > "$nmstate_file"
-	apiVersion: agent-install.openshift.io/v1beta1
-	kind: NMStateConfig
-	metadata:
-  	  labels:
-            infraenvs.agent-install.openshift.io: gpu1
-          name: compute-$node
-          namespace: gpu1
-        spec:
-          config:
-            interfaces:
-            - ipv4:
-                dhcp: true
-                enabled: true
-            - ipv6:
-                enabled: false
-            link-aggregation:
-              mode: 802.3ad
-              options:
-                lacp_rate: "1"
-                miimon: "140"
-                xmit_hash_policy: "1"
-              ports:
-              - name: $(echo "$interfaceLeg1_values" | tr ' ' ',')
-              - name: $(echo "$interfaceLeg2_values" | tr ' ' ',')
-          interfaces:
-          - macAddress: $(echo "$mac_addresses" | tr ' ' ',')
-            name: $(echo "$interfaceLeg1_values" | tr ' ' ',')
-          - macAddress: $second_mac_address
-            name: $(echo "$interfaceLeg2_values" | tr ' ' ',')
-	EOF
-    done
+ echo "hi"
 }
+
+#### main
+rm -rf ${NMSTATESDIR} > /dev/null
+mkdir ${NMSTATESDIR}
+cd ${NMSTATESDIR}
+if [ $# -eq 0 ]; then
+        echo $(get_base_ks_nodes)
+else
+	help
+fi
