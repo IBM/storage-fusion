@@ -9,6 +9,8 @@
         sudo apt update
         sudo apt install jq
     ```
+2. If elasticsearch is not configured on cluster, then using operator hub it can be installed.
+![Operator Image](elasticsearch-operator.png)
 
 # Prepare for Backup and restore
 
