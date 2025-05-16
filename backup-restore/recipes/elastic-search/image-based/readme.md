@@ -1,4 +1,4 @@
-# Elastic Search Image based Backup and Restore 
+# ElasticSearch Image based Backup and Restore 
 
 ## Preparation for Backup & Restore
 
