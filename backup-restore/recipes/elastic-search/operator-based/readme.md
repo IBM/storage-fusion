@@ -58,3 +58,8 @@
   ```
     ./scripts/pre-restore.sh 
   ```
+
+
+#### Note:
+
+This recipe has been tested for these versions 2.16.1 and 3.0.0 of elasticsearch operator.
