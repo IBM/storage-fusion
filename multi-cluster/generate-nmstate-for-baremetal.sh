@@ -22,6 +22,8 @@
 # base HCI OCP cluster, in current directory.
 ##############################################################################
 FUSIONNS="ibm-spectrum-fusion-ns"
+APPLIANCEINFOCM="appliance-info"
+BASERACKUSERCONFSECRET="userconfig-secret"
 
 function help () {
 cat << EOF
@@ -62,27 +64,83 @@ function verify_api_access() {
 
 # Utility to query MTU value
 function get_mtu () {
-        mtu=$(oc -n ibm-spectrum-fusion-ns get secret userconfig-secret -o json | jq '.data."userconfig_secret.json"'|cut -d '"' -f 2|base64 -d|jq '.mtuCount')
-        return mtu
+        mtu=$(oc -n $FUSIONNS get secret $BASERACKUSERCONFSECRET -o json | jq '.data."userconfig_secret.json"'|cut -d '"' -f 2|base64 -d|jq '.mtuCount')
+        return $mtu
 }
 
-function is_vlan_over_bond(){
-    print info "Verify presence of CSI configmap if it is a 2.6.1 MetroDR setup before going for 2.7.1 upgrade"
-    isfversion=$(oc get csv -n $FUSIONNS | grep isf-operator | awk '{print $1}' | grep "2.6.1" | wc -l)
-    is_metrodr_setup
-    is_metrodr_setup_op=$?
-    if [ "$is_metrodr_setup_op" -eq 1 ] && [ "$isfversion" -eq 1 ]; then
-        # 2.6.1 metrodr setup
-        # check for CSI configmap
-            check=$(oc get configmap -n "$SCALECSINS" ibm-spectrum-scale-csi-config -o json | jq '.data."VAR_DRIVER_DISCOVER_CG_FILESET"' | grep "DISABLED")
-            if [ $? -eq 0 ]; then
-		        print info "${CHECK_PASS} CSI Configmap with required values present on 2.6.1 metrodr setup"
-            else
-                print error "${CHECK_FAIL} CSI Configmap with required values not present on 2.6.1 MetroDR setup. \nPlease refer to the workaround to create CSI Configmap present in this doc : https://www.ibm.com/docs/en/sfhs/2.7.x?topic=system-prerequisites-prechecks and retry again."
-	        fi
+# Get rackinfocm name from appliance info
+function get_rackinfocm_from_applianceinfocm () {
+    # Get appliance info cm value
+    local data=$(oc -n $FUSIONNS get cm $APPLIANCEINFOCM  -o json |jq '.data[]')
+    local baserackinfocmname=$(echo $data|sed 's/\\"/"/g'| sed 's/^"//;s/"$//'|jq -r 'select(.rackType == "base") | .rackInfoCM')
+    echo ${baserackinfocmname}
+}
+
+# Find is vlan over bond0 is used for br-ex or bond0
+function is_vlan_over_bond0 () {
+    # Get base rack's rackinfo cm name
+    local rackinfocmname=$(get_rackinfocm_from_applianceinfocm)
+    local baserackinfodata=$(oc -n $FUSIONNS get cm $baserackinfocmname -o json|jq '.data[]')
+    local vlanoverbond0=$(echo $baserackinfodata|sed 's/\\n//g'|sed 's/\\"/"/g'| sed 's/^"//;s/"$//'|jq ".rackInfo.vlanForBaremetalPrimaryInterface")
+    if [ -z "$vlanoverbond0" ]; then
+    	return false
     else
-        # MetroDR setup is not present, skip CSI configmap verification
-        print info "Skipping CSI configmap verification as it is not a metroDR 2.6.1 setup"
-    fi
+        return true
+   fi
 }
 
+# Gets list of nodes from base rack config map
+function get_base_ks_nodes(){
+    data=$(oc -n $FUSIONNS get cm $APPLIANCEINFOCM  -o json |jq '.data[]')
+    basekscmname=$(echo $data|sed 's/\\"/"/g'| sed 's/^"//;s/"$//'|jq -r 'select(.rackType == "base") | .kickstartCM')
+    baseksdata=$(oc -n $FUSIONNS get cm $basekscmname -o json|jq '.data."kickstart.json"')
+    baseksnodes=$(echo $baseksdata|sed 's/\\"/"/g'|sed 's/\\n//g'|sed 's/^"//;s/"$//'|jq ".computeNodeIntegratedManagementModules")
+
+}
+
+# It iterates over all nodes of a given kickstart and generates nmstate for all nodes with desired IP management spec (DHCP|Static)
+function generate_nmstate() {
+    # Loop through the compute nodes and generate nmstate.yaml files
+    for node in $(jq -r '.computeNodeIntegratedManagementModules[].name' $json_file); do
+ 	nmstate_file="nmstate-$node.yaml"
+
+  	# Extract the MAC addresses and interfaces for the compute node
+  	mac_addresses=$(jq -r --arg node "$node" '.computeNodeIntegratedManagementModules[] | select(.name == $node) | .networkInterfaces[] | select(.interfaceType == "baremetal") | .macAddress' $json_file)
+  	interfaceLeg1_values=$(jq -r --arg node "$node" '.computeNodeIntegratedManagementModules[] | select(.name == $node) | .networkInterfaces[] | select(.interfaceType == "baremetal") | .interfaceLeg1' $json_file)
+  	interfaceLeg2_values=$(jq -r --arg node "$node" '.computeNodeIntegratedManagementModules[] | select(.name == $node) | .networkInterfaces[] | select(.interfaceType == "baremetal") | .interfaceLeg2' $json_file)
+  	second_mac_address=$(echo "$mac_addresses" | tr ' ' ',')
+
+  	# Create the nmstate.yaml file
+  	cat <<EOF > "$nmstate_file"
+	apiVersion: agent-install.openshift.io/v1beta1
+	kind: NMStateConfig
+	metadata:
+  	  labels:
+            infraenvs.agent-install.openshift.io: gpu1
+          name: compute-$node
+          namespace: gpu1
+        spec:
+          config:
+            interfaces:
+            - ipv4:
+                dhcp: true
+                enabled: true
+            - ipv6:
+                enabled: false
+            link-aggregation:
+              mode: 802.3ad
+              options:
+                lacp_rate: "1"
+                miimon: "140"
+                xmit_hash_policy: "1"
+              ports:
+              - name: $(echo "$interfaceLeg1_values" | tr ' ' ',')
+              - name: $(echo "$interfaceLeg2_values" | tr ' ' ',')
+          interfaces:
+          - macAddress: $(echo "$mac_addresses" | tr ' ' ',')
+            name: $(echo "$interfaceLeg1_values" | tr ' ' ',')
+          - macAddress: $second_mac_address
+            name: $(echo "$interfaceLeg2_values" | tr ' ' ',')
+	EOF
+    done
+}
