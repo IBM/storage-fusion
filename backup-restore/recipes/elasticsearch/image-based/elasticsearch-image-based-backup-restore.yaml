@@ -1,0 +1,58 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: elasticsearch-image-based-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: elasticsearch-backup-restore
+  groups:
+  - name: elasticsearch-volumes
+    type: volume
+  - name: elasticsearch-resources
+    type: resource
+    excludedResourceTypes:
+    - pods
+  hooks:
+  - labelSelector: app=elasticsearch
+    name: elasticsearch-pod-exec
+    namespace: ${GROUP.elasticsearch-resources.namespace}
+    onError: fail
+    ops:
+    - command: |
+        ["/bin/bash", "-c", "curl -X PUT 'http://localhost:9200/_all/_settings' -H 'Content-Type: application/json' -d '{\"settings\":{\"index.blocks.write\":true}}' && curl -X POST 'http://localhost:9200/_flush'"]
+      container: elasticsearch
+      name: block-write
+      inverseOp: unblock-write
+    - command: |
+        ["/bin/bash", "-c", "curl -X PUT 'http://localhost:9200/_all/_settings' -H 'Content-Type: application/json' -d '{\"settings\":{\"index.blocks.write\":false}}'"]
+      container: elasticsearch
+      name: unblock-write
+    selectResource: pod
+    timeout: 300
+    type: exec
+  - chks:
+    - condition: '{$.spec.replicas} == {$.status.readyReplicas}'
+      name: replicasReady
+      onError: fail
+      timeout: 300
+    name: elasticsearch-statefulset-check
+    nameSelector: elasticsearch
+    namespace: ${GROUP.elasticsearch-resources.namespace}
+    onError: fail
+    selectResource: statefulset
+    timeout: 600
+    type: check
+  workflows:
+  - failOn: any-error
+    name: backup
+    sequence:
+    - hook: elasticsearch-pod-exec/block-write
+    - group: elasticsearch-volumes
+    - hook: elasticsearch-pod-exec/unblock-write
+    - group: elasticsearch-resources
+  - failOn: any-error
+    name: restore
+    sequence:
+    - group: elasticsearch-volumes
+    - group: elasticsearch-resources
+    - hook: elasticsearch-statefulset-check/replicasReady
