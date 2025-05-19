@@ -44,17 +44,21 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
     b. From Fusion Console, associate the backup policy to the Elasticsearch application. 
 
     c. Retrieve the Policy Assignment Name:
-
-        `oc get fpa -n ibm-spectrum-fusion-ns -o custom-columns=NAME:.metadata.name --no-headers`
+    ```
+      oc get fpa -n ibm-spectrum-fusion-ns -o custom-columns=NAME:.metadata.name --no-headers
+    ```  
 
     d.  Update policy assignments (fpa) with recipe name and namespace
 
-        `oc -n ibm-spectrum-fusion-ns patch fpa <policy-assignment-name> --type merge -p '{"spec":{"recipe":{"name":"elasticsearch-operator-based-backup-restore-recipe", "namespace":"ibm-spectrum-fusion-ns"}}}'`
-        ```
-        recipe:
-            name: elasticsearch-operator-based-backup-restore-recipe
-            namespace: ibm-spectrum-fusion-ns
-        ```
+    ```
+      oc -n ibm-spectrum-fusion-ns patch fpa <policy-assignment-name> --type merge -p '{"spec":{"recipe":{"name":"elasticsearch-operator-based-backup-restore-recipe", "namespace":"ibm-spectrum-fusion-ns"}}}'
+    ```  
+
+    ```
+      recipe:
+        name: elasticsearch-operator-based-backup-restore-recipe
+        namespace: ibm-spectrum-fusion-ns
+    ```
     e. Start backup from Fusion Console.
 
 ## Restore Prerequisite
