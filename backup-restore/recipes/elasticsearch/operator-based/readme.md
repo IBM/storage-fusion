@@ -26,7 +26,7 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
 ## Backup
 1. Clone [this](https://github.com/IBM/storage-fusion.git) repository in you local computer to use the pre-backup script.
 
-   cd to `elasticsearch/operator-based`
+   cd to **`backup-restore/recipes/elasticsearch/operator-based`**
 
 2. Run the pre-backup script on the cluster where the Elasticsearch application is present and follow along the prompts.
     ```
@@ -72,13 +72,13 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
 1. Start the restore from Fusion Console (HUB)
 2. If you want to restore without PVCs, then they can use below custom restore (CR), like below
     ```
-    apiVersion: data-protection.isf.ibm.com/v1alpha1
-    kind: Restore
-    metadata:
-    name: <custom restore name>
-    namespace: <restore CR namespace>
-    spec:
-    backup: <backup job name>
-    targetCluster: [<target cluster name>]     # optional for same cluster
-    skipExistingPVC: true
+      apiVersion: data-protection.isf.ibm.com/v1alpha1
+      kind: Restore
+      metadata:
+        name: <custom restore name>
+        namespace: <restore CR namespace>
+      spec:
+        backup: <backup job name>
+        targetCluster: [<target cluster name>]     # optional for same cluster
+        skipExistingPVC: true
     ```
