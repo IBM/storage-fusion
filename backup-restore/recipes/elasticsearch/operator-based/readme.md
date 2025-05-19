@@ -1,67 +1,69 @@
-## Pre-requisite
+# Using Elasticsearch Fusion Recipe
+Backup and restore demonstration of Elasticsearch (ECK) application using Fusion Recipes assumes
+1. The Elastic Cloud on Kubernetes (ECK) operator has been installed in a specific namespace via the OperatorHub.
+2. Two Custom Resources (CRs) have been created
+    - An Elasticsearch Cluster
+    - A Kibana instance
+
+
+Elasticsearch application backup and restore with Fusion
+----
+This recipe is verified for 2.16.1 and 3.0.0 of elasticsearch operator.
+
+## Backup Prerequisites
 1. Install jq
     #### For Mac
     ```
         brew install jq
     ```
-    ### For Linux
+    #### For Linux
     ```
         sudo apt update
         sudo apt install jq
     ```
-2. If elasticsearch is not configured on cluster, then using operator hub it can be installed.
-![Operator Image](elasticsearch-operator.png)
-
-# Prepare for Backup and restore
-
-## BACKUP Steps
-### Run the below steps where the elasticsearch application present (either on HUB or on SPOKE)
-1. Run the below pre backup script to prepare for backup 
-  ```
-    ./scripts/pre-backup.sh 
-  ```
-
-2. Apply the recipe 
-  ```
-    oc apply -f elasticsearch-operator-based-recipe.yaml
-  ```
-
-### Run these steps on HUB cluster
-1. Create backup policy from Fusion UI
-   From Fusion UI --> Backup & restore --> Policies --> Add policy --> (fill details) --> Create policy
-##### For example:    
-  ```
-  $ oc get fbp -A
-  NAMESPACE                NAME                 BACKUPSTORAGELOCATION   SCHEDULE      RETENTION   RETENTIONUNIT
-  ibm-spectrum-fusion-ns   elastic-system       ibm-s3                  00 0 1 * *    30          days
-  ```
-
-2. Assign backup policy to elasticsearch application from Fusion UI
-   Note: We have deployed elasticsearch cluster in "elastic-system" namespace. So, "elastic-system" is the application, which needs to be protected.
-   From Fusion UI --> Backup & restore --> Backed up applications --> Project apps --> Select a cluster --> Select application --> Next --> Select a backup policy --> Assign
-##### For example:  
-  ```
-  $ oc get fpa -A | grep elastic
-  NAMESPACE                NAME                    CLUSTER  APPLICATION   BACKUPPOLICY      RECIPE                      RECIPENAMESPACE         PHASE     LASTBACKUPTIMESTAMP   CAPACITY
-  ibm-spectrum-fusion-ns   <policy-assignment-name>         elastic-system  elastic-system   es-operator-based-recipe   ibm-spectrum-fusion-ns   Assigned  
-  ```
-  
-  ```
-    $ oc -n ibm-spectrum-fusion-ns patch policyassignment elastic-system-elastic-policy-apps.ocp4xdcd.cp.fyre.ibm.com --type merge -p '{"spec":{"recipe":{"name":"elasticsearch-operator-based-recipe", "namespace":"ibm-spectrum-fusion-ns"}}}'
-  ```
-
-3. Now take the backup from fusion UI.
+2. ECK operator is installed either on HUB or SPOKE.    
 
 
-## Restore Steps
+## Backup
+1. Clone [this](https://github.com/IBM/storage-fusion.git) repository in you local computer to use the pre-backup script.
 
-### Run these steps on Restore cluster
-1. Run the below pre restore srcipt to prepare for restore , run on the target cluster(where the restore will happen).
-  ```
-    ./scripts/pre-restore.sh 
-  ```
+   cd to `elasticsearch/operator-based`
 
+2. Run the pre-backup script on the cluster where the Elasticsearch application is present and follow along the prompts.
+    ```
+      ./scripts/pre-backup.sh 
+    ```
+3. Apply the recipe 
+    ```
+      oc apply -f elasticsearch-operator-based-recipe.yaml
+    ```
 
-#### Note:
+4. On HUB cluster
 
-This recipe has been tested for these versions 2.16.1 and 3.0.0 of elasticsearch operator.
+    a. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
+
+    b. From Fusion Console, associate the backup policy to the Elasticsearch application. 
+
+    c. Retrieve the Policy Assignment Name:
+
+        `oc get fpa -n ibm-spectrum-fusion-ns -o custom-columns=NAME:.metadata.name --no-headers`
+
+    d.  Update policy assignments (fpa) with recipe name and namespace
+
+        `oc -n ibm-spectrum-fusion-ns patch fpa <policy-assignment-name> --type merge -p '{"spec":{"recipe":{"name":"elasticsearch-operator-based-backup-restore-recipe", "namespace":"ibm-spectrum-fusion-ns"}}}'`
+        ```
+        recipe:
+            name: elasticsearch-operator-based-backup-restore-recipe
+            namespace: ibm-spectrum-fusion-ns
+        ```
+    e. Start backup from Fusion Console.
+
+## Restore Prerequisite
+
+1. Run the pre-restore script on the target cluster
+    ```
+      ./scripts/pre-restore.sh 
+    ```
+
+## Restore
+1. Start the restore from Fusion Console
