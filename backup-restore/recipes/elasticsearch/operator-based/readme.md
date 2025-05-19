@@ -5,10 +5,9 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
     - An Elasticsearch Cluster
     - A Kibana instance
 
+![ECK Operator](elasticsearch-operator.png)
 
-Elasticsearch application backup and restore with Fusion
-----
-This recipe is verified for 2.16.1 and 3.0.0 of elasticsearch operator.
+**Note:** This [recipe](elasticsearch-operator-based-backup-restore.yaml) is verified for 2.16.1 and 3.0.0 of elasticsearch operator.
 
 ## Backup Prerequisites
 1. Install jq
@@ -66,4 +65,16 @@ This recipe is verified for 2.16.1 and 3.0.0 of elasticsearch operator.
     ```
 
 ## Restore
-1. Start the restore from Fusion Console
+1. Start the restore from Fusion Console (HUB)
+2. If you want to restore without PVCs, then they can use below custom restore (CR), like below
+    ```
+    apiVersion: data-protection.isf.ibm.com/v1alpha1
+    kind: Restore
+    metadata:
+    name: <custom restore name>
+    namespace: <restore CR namespace>
+    spec:
+    backup: <backup job name>
+    targetCluster: [<target cluster name>]     # optional for same cluster
+    skipExistingPVC: true
+    ```
