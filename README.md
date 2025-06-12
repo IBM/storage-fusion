@@ -74,6 +74,12 @@ This repository will host  the following categories of artifacts that can be use
 * [Fusion Recipe Tips - How can I protect the OpenShift image registry using Fusion Recip](https://community.ibm.com/community/user/blogs/ashish-gupta/2024/04/17/fusion-recipe-tips-keeping-database-credentials-a?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
 
 * [Fusion Recipe Tips: Dynamic Recipe](https://community.ibm.com/community/user/blogs/ashish-gupta/2025/06/04/fusion-dynamic-recipe)
+  
+* [How to make use of Fusion Job hooks?](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/06/12/how-to-make-use-of-fusion-job-hooks)
+  
+* [Using Fusion Label and Annotation Hooks](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/06/12/using-fusion-label-and-annotation-hooks)
+  
+* [How to write Fusion Recipe Check Hook?](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/06/12/how-to-write-fusion-recipe-check-hook-condition-st)
 
 Watch out this space for tools where we can mirror images for IBM Spectrum Fusion and also validate the same.
 
