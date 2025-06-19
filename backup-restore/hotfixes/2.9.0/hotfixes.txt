@@ -15,3 +15,4 @@ This hotfix fixes the following Backup & Restore issues:
     13. Error getting VirtualMachineSnapshot status.
     14. Datamover (type: kopia) pod does not start due to node addition or replacement due to pull policy Never. (Issue#: 44447, 46425)
     15. Fixes duplicate BackupRepository error on backup or restore. (Issue: 45972)
+    16. Restic backups not being deleted after upgrade to 2.9 (Issue: 45990)
