@@ -1,0 +1,12 @@
+This hotfix fixes the following Backup & Restore issues:
+
+    1.  Restore fails with DataDownload (#53318)
+    2.  Restore - When kopia data movement of RBD conversion from block -> file's snapshot times out, it causes the node agent to crash (#53318).
+    3.  loadAffinity is ignored, datamover cleanup ignores ResourceQuota behavior requirements (#54239).
+    4.  Fusion exec hook cannot handle trailing newspaces (#54663)
+    5.  Consider skipping checks that does not have any instances in the cluster (#53766)
+    6.  Filesystem volumeMode rbd PVCs need 3 times PVC requested capacity and can cause cluster to run out of space if they are large (#54133)
+    7.  Backup fails when pvc is included in a volume group that was not included in the initial inventory (#53987)
+    8.  Soft-deleted BSLs with duplicate name as existing BSL causing restores to fail (#54478).
+    9.  isf-data-protection-operator-controller-manager does not stop reconcile loop for deletebackuprequest CR when backup has been deleted (#53321).
+    10. backupRef of child recipes is broken on restore with null pointer exception (#54742)
