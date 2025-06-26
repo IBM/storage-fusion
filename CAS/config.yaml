@@ -1,0 +1,21 @@
+console_url: "https://console-openshift-console..com"
+oc_username: "cluster-admin"
+oc_password: ""
+
+cas_url: "https://console-ibm-spectrum-fusion-ns.openshiftapps.com/"
+
+llm_provider_sequence: ["nvidia"]
+
+nvidia_llm_url: ""
+nvidia_model: "meta/llama3-8b-instruct"
+ngc_api_key: ""
+
+openai_api_key: "sk-proj-"
+
+ollama_host: "http://9.66.242.231:11434"
+ollama_model: "llama3"
+
+default_table: "<table name>"
+default_limit: 5
+enable_source: false
+enable_content_metadata: false
