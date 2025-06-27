@@ -1,0 +1,24 @@
+console_url: "https://console-openshift-console..com"
+oc_username: "cluster-admin"
+oc_password: ""
+
+cas_url: "https://console-ibm-fusion-ns.openshiftapps.com/"
+
+llm_provider_sequence: ["granite"]
+
+granite_llm_url: "http://localhost:8000"
+granite_llm_model: "ibm-granite/granite-vision-3.2-2b"
+
+nvidia_llm_url: ""
+nvidia_model: "meta/llama3-8b-instruct"
+ngc_api_key: ""
+
+openai_api_key: "sk-proj-"
+
+ollama_host: "localhost:11434"
+ollama_model: "llama3"
+
+default_table: "<table name>"
+default_limit: 5
+enable_source: false
+enable_content_metadata: false
