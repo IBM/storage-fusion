@@ -95,7 +95,7 @@ sudo mv oc /usr/local/bin/
 
 ```bash
 # Check Python version
-python --version  # Should be 3.8+
+python --version  # Should be 3.10+
 
 # Check OpenShift CLI
 oc version
@@ -179,13 +179,7 @@ export OPENAI_API_KEY="your-api-key"
 
 ```bash
 # Start with default configuration
-python chatbot.py
-
-# Use specific configuration file
-python chatbot.py --config prod.yaml
-
-# Show version information
-python chatbot.py --version
+python  cas_chatbot_cli.py -c config.yaml
 ```
 
 ### Interactive Commands
@@ -217,6 +211,15 @@ Find security incidents in the network logs
 
 ### LLM Provider Setup
 
+
+#### Granite Setup
+1. Get access to IBM watsonx Granite AI Foundation Models
+2. Configure endpoint:
+```yaml
+granite_llm_url: "http://localhost:8000"
+granite_llm_model: "ibm-granite/granite-vision-3.2-2b"
+```
+
 #### OpenAI Setup
 1. Get API key from [OpenAI Platform](https://platform.openai.com/api-keys)
 2. Add to configuration:
@@ -241,6 +244,8 @@ ollama_model: "llama2"
 nvidia_llm_url: "https://api.nvidia.com/llm"
 nvidia_model: "meta/llama2-70b"
 ```
+
+
 
 ### Custom Logging
 
@@ -345,7 +350,7 @@ python -m pytest tests/
 
 ```
 cas-chatbot/
-├── chatbot.py              # Main application
+├── cas_cli_chatbot.py      # Main application
 ├── config.yaml             # Default configuration
 ├── requirements.txt        # Python dependencies
 

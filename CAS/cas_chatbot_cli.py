@@ -430,11 +430,31 @@ class CASChatBot:
                     else:
                         console.print(f"[red]NVIDIA API call failed ({response.status_code}): {response.text}[/red]")
 
+                # === Granite ===
+                elif provider == "granite":
+                    response = requests.post(
+                    f"{self.config['llm_url']}/v1/chat/completions",
+                        headers={"Content-Type": "application/json"},
+                        json={"model": self.config['llm_model'], "messages": payload, "stream": False}
+                        )
+
+                    if response.ok:
+                        data = response.json()
+                        if "choices" in data:
+                            message = data["choices"][0]["message"]["content"]
+                            console.print(message)
+                            return
+                        else:
+                            console.print(
+                                f"[red]Unexpected response format from Granite:[/red] {json.dumps(data, indent=2)}")
+                else:
+                    console.print(f"[red]Granite API call failed ({response.status_code}): {response.text}[/red]")
+
             except Exception as e:
                 console.print(f"[red]Provider {provider} failed: {e}[/red]")
-                continue
+                    continue
 
-        console.print("[red]All LLM providers failed.[/red]")
+    console.print("[red]All LLM providers failed.[/red]")
 
 
     def display_help(self):
