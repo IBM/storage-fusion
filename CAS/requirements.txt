@@ -1,0 +1,19 @@
+# Core dependencies for CAS Enterprise Chatbot
+requests>=2.31.0
+PyYAML>=6.0
+prompt-toolkit>=3.0.36
+rich>=13.3.5
+openai>=1.3.0
+
+# Optional dependencies for enhanced features
+# These are built-in Python modules but listed for clarity
+# difflib - Built-in
+# argparse - Built-in
+# logging - Built-in
+# json - Built-in
+# datetime - Built-in
+# pathlib - Built-in
+# urllib.parse - Built-in
+# subprocess - Built-in
+# dataclasses - Built-in (Python 3.7+)
+# typing - Built-in (Python 3.5+)
