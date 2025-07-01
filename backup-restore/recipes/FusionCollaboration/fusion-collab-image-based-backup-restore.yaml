@@ -1,0 +1,64 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: fusion-collab-bnr-recipe
+spec:
+  appType: fusion-collab
+  groups:
+    - name: fusion-collab-volumes
+      type: volume
+    - name: fusion-collab-resources
+      excludedResourceTypes:
+      - events
+      - event.events.k8s.io
+      - replicaset
+      - pods
+      type: resource
+  hooks:
+  - name: mysql-pod-exec
+    type: exec
+    namespace: ${GROUP.fusion-collab-volumes.namespace}
+    labelSelector: tier=mysql
+    timeout: 60
+    onError: fail
+    ops:
+      - name: "flush-tables-with-read-lock"
+        command: >
+            ["/bin/bash", "-c", "mysql --user=root --password=$MYSQL_ROOT_PASSWORD -e 'FLUSH TABLES WITH READ LOCK;'"]
+        container: mysql
+  - name: fusion-collab-deployment-check
+    type: check
+    namespace: ${GROUP.fusion-collab-volumes.namespace}
+    labelSelector: tier=frontend
+    selectResource: deployment
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 120
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mysql-deployment-check
+    type: check
+    namespace: ${GROUP.fusion-collab-volumes.namespace}
+    labelSelector: tier=mysql
+    selectResource: deployment
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 120
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  workflows:
+    - name: backup
+      sequence:
+        - group: fusion-collab-resources
+        - hook: mysql-pod-exec/flush-tables-with-read-lock
+        - group: fusion-collab-volumes
+    - name: restore
+      sequence:
+        - group: fusion-collab-volumes
+        - group: fusion-collab-resources
+        - hook: fusion-collab-deployment-check/replicasReady
+        - hook: mysql-deployment-check/replicasReady

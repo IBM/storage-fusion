@@ -23,6 +23,7 @@ IBM Storage Fusion is available as two deployments, namely IBM Storage Fusion an
 This repository will host  the following categories of artifacts that can be used with IBM Storage Fusion and IBM Storage Fusion HCI
 
 - Fusion Backup and Restore Recipes
+- Reference Applications
 - Helpful Utilities and Scripts
 
 
