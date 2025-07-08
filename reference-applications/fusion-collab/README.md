@@ -109,7 +109,7 @@ Perform the following from the cluster infrastructure node or workstation with a
     envsubst < kustomization-template.yaml > kustomization.yaml
     ```
     If the Linux utility `envsubst` is not available the above environment variables (and SQL_PASSWORD) can be manually substituted by copying the `kustomization-template.yaml` to a new `kustomization.yaml` and directly editing the values in the `kustomization.yaml` file.
-- Apply kustomization to the target cluster
+- Apply `kustomization.yaml` to the target cluster
     ```bash
     oc kustomize ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-collab | oc apply -f -
     ```
@@ -230,6 +230,11 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
     ```bash
     APPLICATION_NAMESPACE=fusion-collab
     oc delete project ${APPLICATION_NAMESPACE}
+    ```
+- (Alternatively) Undeploy Fusion Collaboration application via `kustomize.yaml`
+    ```bash
+    WORKING_DIRECTORY=~/github.com
+    oc delete -k ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-collab
     ```
 - Validate Fusion Collaboration route is no longer accessible
     - Open Fusion Collaboration route in a browser tab
