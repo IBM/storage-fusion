@@ -14,7 +14,7 @@ patches:
    # Patch the PVC .spec.storageClassName with cluster/block storage class value
   - target:
       kind: PersistentVolumeClaim
-      name: wp-pv-claim
+      name: wordpress-pvc
     patch: |-
       - op: replace
         path: /spec/storageClassName
@@ -22,7 +22,7 @@ patches:
    # Patch the PVC .spec.storageClassName with cluster/block storage class value
   - target:
       kind: PersistentVolumeClaim
-      name: mysql-pv-claim
+      name: mysql-pvc
     patch: |-
       - op: replace
         path: /spec/storageClassName
@@ -30,7 +30,7 @@ patches:
    # Patch the route .spec.host with cluster/host value
   - target:
       kind: Route
-      name: wordpress
+      name: fusion-collab
     patch: |-
       - op: replace
         path: /spec/host
