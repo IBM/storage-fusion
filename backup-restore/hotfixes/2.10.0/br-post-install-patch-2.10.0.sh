@@ -1,35 +1,45 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.10.0 release.
 HOTFIX_NUMBER=1
+EXPECTED_VERSION=2.10.0
 
 patch_usage() {
-    echo "Usage: $0 (-hci |-sds | -help)"
+    echo "Usage: $0 < -hci | -sds | -help > [ -dryrun ]"
     echo "Options:"
-    echo "  -hci   Apply patch on HCI"
-    echo "  -sds   Apply patch on SDS"
-    echo "  -help  Display usage"
+    echo "  -hci     Apply patch on HCI"
+    echo "  -sds     Apply patch on SDS"
+    echo "  -help    Display usage"
+    echo "  -dryrun  Run without applying fixes"
 }
 
 PATCH=
-if [[ "$#" -ne 1 ]]; then
-    patch_usage
-    exit 0
-elif [[ "$1" == "-hci" ]]; then
-    PATCH="HCI"
-elif [[ "$1" == "-sds" ]]; then
-    PATCH="SDS"
-elif [[ "$1" == "-help" ]]; then
-    patch_usage
-    exit 0
-else
-    echo "Unknown option: $1"
-    patch_usage
-    exit 1
-fi
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -sds)
+        PATCH="SDS"
+        shift
+        ;;
+    -hci)
+        PATCH="HCI"
+        shift
+        ;;
+    -dryrun)
+        DRY_RUN="true"
+        shift
+        ;;
+    -help)
+        patch_usage
+        exit 0
+        ;;
+    *)
+        echo "Unknown option: $1"
+        patch_usage
+        exit 1
+        ;;
+    esac
+done
 
-EXPECTED_VERSION=2.10.0
-
-DRY_RUN=true # uncomment for dry run
+[ -z "$PATCH" ] && echo "-sds|-hci are required" && patch_usage && exit 1
 
 if (mkdir -p /tmp/br-post-install-patch-2.10.0); then
     DIR=/tmp/br-post-install-patch-2.10.0
@@ -60,7 +70,6 @@ update_hotfix_configmap() {
         [ -z "$DRY_RUN" ] && oc -n "$BR_NS" create configmap bnr-hotfixes --from-literal="${hotfix}"-applied-on="${applied_on}"
         [ -n "$DRY_RUN" ] && oc -n "$BR_NS" create configmap bnr-hotfixes --from-literal="${hotfix}"-applied-on="${applied_on}" --dry-run=client -o yaml >$DIR/bnr-hotfixes.patch.yaml
     fi
-
 }
 
 set_deployment_image() {
@@ -100,7 +109,6 @@ EOF
     oc get clusterrole backup-location-role-"${BR_NS}" -o yaml >$DIR/clusterrole-backup-location-role.save.yaml
     [ -z "$DRY_RUN" ] && echo -e "$(cat $DIR/clusterrole-backup-location-role.save.yaml)\n${BSL_ROLES}" | oc apply -f -
     [ -n "$DRY_RUN" ] && echo -e "$(cat $DIR/clusterrole-backup-location-role.save.yaml)\n${BSL_ROLES}" >$DIR/clusterrole-backup-location-role.patch.yaml
-
 }
 
 set_velero_image() {
@@ -184,31 +192,31 @@ if [ -n "$HUB" ]; then
 
     update_backuplocation_role
 
-    backuplocation_img=BACKUP-LOCATION-IMAGE
+    backuplocation_img=cp.icr.io/cp/bnr/guardian-backup-location@sha256:5efd82d5e568cc3cd17cc1fd931d4228f87804683cffc87d34c81eec73dd4986
     set_deployment_image backup-location-deployment backup-location-container "${backuplocation_img}"
 
-    backupservice_img=BACKUP-SERVICE-IMAGE
+    backupservice_img=cp.icr.io/cp/bnr/guardian-backup-service@sha256:2c8f3cd0fe7e2a5db9ba9fb5bb230266b960195ba76ebf0a9cf2cdb7e3c5ab98
     set_deployment_image backup-service backup-service ${backupservice_img}
 
-    backuppolicy_img=BACKUP-POLICY-IMAGE
+    backuppolicy_img=cp.icr.io/cp/bnr/guardian-backup-policy@sha256:7a6e5982598e093f6be50dbf89e7638ed67600403a7681e3fb328e27eab8360a
     set_deployment_image backuppolicy-deployment backuppolicy-container ${backuppolicy_img}
 
-    guardiandpoperator_img=GUARDIAN-DP-OPERATOR-IMAGE
+    guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:d715b6536156abb94607d9943d8a7ea3ac7c53ea2dfa35d536176c572f49468c
     set_deployment_image guardian-dp-operator-controller-manager manager ${guardiandpoperator_img}
-
 fi
 
-transactionmanager_img=TRANSACTION-MANAGER-IMAGE
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c6ee0b30aedc5dcc83c50df5d33ff3b7ca4cc086cb2ff984d10a190b1c5efc6f
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 
-velero_img=VELERO-IMAGE
+velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:d4e54c0e98983f78b4f022ae5fd9dc4f751d725b19d15d355e73055cfeec863d
 set_velero_image ${velero_img}
 
-[ "$PATCH" == "HCI" ] && isfdataprotection_img=ISF-DATA-PROTECTION-IMAGE-HCI
-[ "$PATCH" == "SDS" ] && isfdataprotection_img=ISF-DATA-PROTECTION-IMAGE-SDS
+[ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:74990bffe171264a3d08eab53398dd5e98491a24269642b38688d854c1549224
+[ "$PATCH" == "SDS" ] && isfdataprotection_img=icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:c060b4b34da3edc756dbc5f6d3f6afd8e895ece52dff3d4aad8965217365a966
 update_isf_operator_csv isf-operator.v2.10.0 "${isfdataprotection_img}"
 
-update_hotfix_configmap "hotfix-"${EXPECTED_VERSION}.${HOTFIX_NUMBER}
+hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
+update_hotfix_configmap ${hotfix}
 
 echo "Please verify that the pods for the following deployment have successfully restarted:"
 if [ -n "$HUB" ]; then
