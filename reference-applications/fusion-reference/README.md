@@ -1,38 +1,29 @@
 <!-- This should be the location of the title of the repository, normally the short name -->
-# Fusion Collaboration Reference Application
-The Fusion Collaboration reference application is a container-native application built on [WordPress](https://wordpress.org) that provides a common, extendible, multiple tier, multiple volume kubernetes application that can/should be leveraged to demostrate and highlight [IBM Fusion](https://www.ibm.com/docs/en/fusion-software/2.10.0) storage and resiliency capabilities and value.
+# Fusion Reference Application
+The Fusion Reference application is a container-native application built on [WordPress](https://wordpress.org) that provides a common, extendible, multiple tier, multiple volume kubernetes application that can/should be leveraged to demostrate and highlight [IBM Fusion](https://www.ibm.com/docs/en/fusion-software/2.10.0) storage and resiliency capabilities and value.
 
-## Architecture and Roadmap
-The Fusion Collaboration reference application is essentially a default/out of the box [WordPress 6.8.1](https://github.com/docker-library/wordpress) instance that consists of a UI/API frontend and SQL backend.
+## Architecture and Topology
+The Fusion Reference application is essentially a default/out of the box [WordPress 6.8.1](https://github.com/docker-library/wordpress) instance that consists of a UI/API frontend and SQL backend.
 
 The UI/API frontend includes the following Kubernetes resources:
 - `wordpress-pvc` PersistentVolumeClaim: Volume to persist wordpress content files
-- `fusion-collab` Deployment: `wordpress` image which manages and hosts web interface content 
-- `fusion-collab` Service: internal interface to the `fusion-collab` Deployment pod endpoint(s)
-- `fusion-collab` Route: external interface to the `fusion-collab` Service
+- `fusion-reference` Deployment: `wordpress` image which manages and hosts web interface content 
+- `fusion-reference` Service: internal interface to the `fusion-reference` Deployment pod endpoint(s)
+- `fusion-reference` Route: external interface to the `fusion-reference` Service
 
 The SQL backend includes the following Kubernetes resources:
-- `mysql-pass` Secret: configured credentials to enable the to `fusion-collab` Deployment pod(s) to access the mysql database instance
+- `mysql-pass` Secret: configured credentials to enable the to `fusion-reference` Deployment pod(s) to access the mysql database instance
 - `mysql-pvc` PersistentVolumeClaim: Volume to persist `wordpress` database instance and associated tables
 - `mysql` Deployment: `mysql` image which provides the `wordpress` database instance implementation 
-- `mysql` Service: internal interface to the `mysql` Deployment pod endpoint(s) accessed by the `fusion-collab` Deployment pod(s)
+- `mysql` Service: internal interface to the `mysql` Deployment pod endpoint(s) accessed by the `fusion-reference` Deployment pod(s)
 
 The current architecture is quickly [deployed](#deployment) yet complex enough with the multiple tiers and volumes that it encompasses and requires storage and resiliency orchestration features that begin to mirror customer application requirements.  Additionally, the user interface allows users to generate and validate application functionality and content directly without requiring additional tooling and/or interfaces.
 
-Looking forward, the Fusion Collaboration reference application is highly extendible and scalable.  The [WordPress](https://wordpress.org) editor dashboard, themes and extensive plugin community enables an administrator to quickly generate, manage and/or import an entire web site.  Ideally, future versions of the Fusion Collaboration reference application would be pre-published with [IBM Fusion](https://www.ibm.com/docs/en/fusion-software/2.10.0) Collaboration content, potentially including:
-- Details, Tutorials, Links and Status on:
-    - Storage and Resiliency Operator Subscriptions
-    - Storage Configuration
-    - Backup & Restore
-    - Regional Disaster Recovery
-    - Metro Disaster Recovery
-    - Content Aware Storage
-- IBM Fusion Blogs
-- IBM Fusion Chat
+The Fusion Reference application is highly extendible and scalable.  The [WordPress](https://wordpress.org) editor dashboard, themes and extensive plugin community enables an administrator to quickly generate, manage and/or import an entire web site.  
 
 ## Deployment
 ### Scope/Prerequisites/Assertions
-The documentation and instructions that follow are scoped to deployment, interaction, validation and resiliency of the Fusion Collaboration reference application.  The consumer must have cluster level/kubeadmin access credentials to the target cluster.  Additionally the consumer must of access to a cluster infrastructure node or workstation with access to the target cluster with `kubectl`/`oc` and `git` installed and be relatively comfortable interacting with the IBM Fusion Hub user interface and executing `kubectl`/`oc` and `git` commands.  
+The documentation and instructions that follow are scoped to deployment, interaction, validation and resiliency of the Fusion Reference application.  The consumer must have cluster level/kubeadmin access credentials to the target cluster.  Additionally the consumer must of access to a cluster infrastructure node or workstation with access to the target cluster with `kubectl`/`oc` and `git` installed and be relatively comfortable interacting with the IBM Fusion Hub user interface and executing `kubectl`/`oc` and `git` commands.  
 
 The following Openshift cluster requirements are asserted to have been completed following official Kubernetes and [IBM Fusion](https://www.ibm.com/docs/en/fusion-software/2.10.0) documentation:
 - Required ODF/FDF and/or Scale Operator Subscriptions are deployed to the target cluster
@@ -54,9 +45,9 @@ Perform the following from a cluster infrastructure node or workstation with acc
     KUBE_CREDENTIAL=<kubeadmin-password>
     oc login https://${CLUSTER_HOST_DOMAIN}:6443 -u ${KUBE_USER} -p ${KUBE_CREDENTIAL} --insecure-skip-tls-verify
     ```
-- Create target Fusion Collaboration project/namespace
+- Create target Fusion Reference project/namespace
     ```bash
-    APPLICATION_NAMESPACE=fusion-collab
+    APPLICATION_NAMESPACE=fusion-reference
     oc new-project ${APPLICATION_NAMESPACE}
     ```
 - Retrieve and set block storage class environment variable
@@ -79,7 +70,7 @@ Perform the following from a cluster infrastructure node or workstation with acc
     BLOCK_STORAGE_CLASS=<block-storage-class>
     ```
 
-### Deploy Fusion Collaboration Application
+### Deploy Fusion Reference Application
 Perform the following from the cluster infrastructure node or workstation with access to the target cluster.
 **NOTE:** Create a *working directory* to clone into
 
@@ -93,9 +84,9 @@ Perform the following from the cluster infrastructure node or workstation with a
     cd storage-fusion
     git remote add -f origin https://github.com/IBM/storage-fusion.git
     git config core.sparseCheckout true
-    echo "reference-appilcations/fusion-collab/" >> .git/info/sparse-checkout
+    echo "reference-appilcations/fusion-reference/" >> .git/info/sparse-checkout
     git pull origin ${GIT_BRANCH}
-    cd reference-applications/fusion-collab
+    cd reference-applications/fusion-reference
     ```
 - Create kustomization.yaml file
 
@@ -105,80 +96,83 @@ Perform the following from the cluster infrastructure node or workstation with a
     - WORKING_DIRECTORY
     ```bash
     SQL_PASSWORD=mypassword
-    cd ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-collab
+    cd ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-reference
     envsubst < kustomization-template.yaml > kustomization.yaml
     ```
     If the Linux utility `envsubst` is not available the above environment variables (and SQL_PASSWORD) can be manually substituted by copying the `kustomization-template.yaml` to a new `kustomization.yaml` and directly editing the values in the `kustomization.yaml` file.
 - Apply `kustomization.yaml` to the target cluster
     ```bash
-    oc kustomize ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-collab | oc apply -f -
+    oc kustomize ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-reference | oc apply -f -
     ```
     Expected output:
     ```bash
     secret/mysql-pass-7t7g9k6f85 created
-    service/fusion-collab created
+    service/fusion-reference created
     service/mysql created
     persistentvolumeclaim/mysql-pvc created
     persistentvolumeclaim/wordpress-pvc created
-    deployment.apps/fusion-collab created
+    deployment.apps/fusion-reference created
     deployment.apps/mysql created
-    route.route.openshift.io/fusion-collab created
-    recipe.spp-data-protection.isf.ibm.com/fusion-collab-bnr-recipe created
+    route.route.openshift.io/fusion-reference created
+    recipe.spp-data-protection.isf.ibm.com/fusion-reference-bnr-recipe created
     ```
 
-**NOTE:** From a kubernetes perspective, the reference application is deployed.  The `wordpress` image/container can take a minute or two to connect to the mysql image/container and create the required `wordpress` database instance and associated tables.  Once complete the `fusion-collab` Route is accessible via browser and additional web content can be generated/managed/reviewed.
+**NOTE:** From a kubernetes perspective, the reference application is deployed.  The `wordpress` image/container can take a minute or two to connect to the mysql image/container and create the required `wordpress` database instance and associated tables.  Once complete the `fusion-reference` Route is accessible via browser and additional web content can be generated/managed/reviewed.
 
-- Retrieve the `fusion-collab` Route
+- Retrieve the `fusion-reference` Route
     ```bash
-    oc get route -n ${APPLICATION_NAMESPACE} fusion-collab
+    oc get route -n ${APPLICATION_NAMESPACE} fusion-reference
     ```
     Expected output:
     ```bash
     NAME            HOST/PORT                PATH   SERVICES        PORT   TERMINATION   WILDCARD
-    fusion-collab   <cluster-host-domain>           fusion-collab   80                   None
+    fusion-reference   <cluster-host-domain>           fusion-reference   80                   None
     ```
 
-### Manage Content
-Perform the following steps from a workstation browser to complete the initialization of the Fusion Collaboration reference application.
+    **NOTE:** The underlying [WordPress](https://wordpress.org) can take a few minutes to fully initialize and connect to the SQL Backend database.  When accessing the Fusion Reference route via browser, the following response may be observed while initializing and connecting to the SQL Database:
+    ![Language Selection](./README-images/Database-Error.png)
 
-- Open browser tab to Fusion Collaboration route
+### Manage Content
+Perform the following steps from a workstation browser to complete the initialization of the Fusion Reference application.
+
+- Open browser tab to Fusion Reference route
 - Select prefered language
 
     ![Language Selection](./README-images/Language-Selection.png)
-- Complete and confirm *Welcome* form to initialize Fusion Collaboration
+- Complete and confirm *Welcome* form to initialize Fusion Reference
 
     ![Welcome Form](./README-images/Welcome-Form.png)
 
     ![Welcome Confirmation](./README-images/Welcome-Confirmation.png)
 
-- Log into Fusion Collaboration
+- Log into Fusion Reference
 
     ![Login](./README-images/Login.png)
 
-- (Optionally) Manage Content via Fusion Collaboration dashboard
+- (Optionally) Manage Content via Fusion Reference dashboard
 
     ![Content Dashboard](./README-images/Content-Dashboard.png)
 
-- (Optionally) Review Content via Fusion Collaboration site
+- (Optionally) Review Content via Fusion Reference site
 
     ![Site Content](./README-images/Site-Content.png)
 
 ## Backup and Restore
-The following steps are provided as a guide to documenting [IBM Fusion Backup & Restore](https://www.ibm.com/docs/en/fusion-software/2.10.0?topic=services-backup-restore) of the Fusion Collaboration reference application which requires [Custom Backup and Restore Workflows](https://www.ibm.com/docs/en/fusion-software/2.10.0?topic=restore-custom-backup-workflows) via Recipe orchestration.  The details are minimal for most steps that are fully documented either in external documentation or associated tutorials.
+The following steps are provided as a guide to documenting [IBM Fusion Backup & Restore](https://www.ibm.com/docs/en/fusion-software/2.10.0?topic=services-backup-restore) of the Fusion Reference application which requires [Custom Backup and Restore Workflows](https://www.ibm.com/docs/en/fusion-software/2.10.0?topic=restore-custom-backup-workflows) via Recipe orchestration.  The details are minimal for most steps that are fully documented either in external documentation or associated tutorials.
 
 **NOTE:** These steps are performed primarily from the IBM Fusion Hub user interface, however some steps require command access to the hub cluster via a cluster infrastructure node or workstation with access to the hub cluster.
 
 ### Backup with Recipe
 
-**Configure Fusion Collaboration namespace/application for Backup**
+**Configure Fusion Reference namespace/application for Backup**
 - Open a browser tab to IBM Fusion Hub route
     - Can be launched from the hub cluster Redhat Openshift console
 - Navigate to Applications
     - Located in the left hand naviation menu
-- Select Fusion Collaboration namespace/application
-    - Locate `fusion-collab` in the `Applications` table
+- Select Fusion Reference namespace/application
+    - Locate `fusion-reference` in the `Applications` table
 - Select Assign policies
-    - Click on the menu drop down for the `fusion-collab` item and click on `Assign policies`
+    - Click on the menu drop down for the `fusion-reference` item and click on `Assign policies`
 - Assign Backup Policy
     - Select a Backup Policy from the `Assign policies` table
     - Do not select to `Back up now`
@@ -192,29 +186,29 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
     KUBE_CREDENTIAL=<kubeadmin-password>
     oc login https://${CLUSTER_HOST_DOMAIN}:6443 -u ${KUBE_USER} -p ${KUBE_CREDENTIAL} --insecure-skip-tls-verify
     ```
-- Retrieve Fusion Collaboration application Policy Assignment
+- Retrieve Fusion Reference application Policy Assignment
     ```bash
-    oc get policyassignments.data-protection.isf.ibm.com -A | grep 'fusion-collab'
+    oc get policyassignments.data-protection.isf.ibm.com -A | grep 'fusion-reference'
     ```
-- Add Fusion Collaboration Recipe to Fusion Collaboration Policy Assignment
+- Add Fusion Reference Recipe to Fusion Reference Policy Assignment
     ```bash
-    POLICY_ASSIGNMENT_NAME=fusion-collab-wlp-automated-backup-policy-apps.rdr-blue-site-svl-1.cp.fyre.ibm.com
-    oc -n ibm-spectrum-fusion-ns patch policyassignment ${POLICY_ASSIGNMENT_NAME} --type merge -p '{"spec":{"recipe":{"name":"fusion-collab-bnr-recipe", "namespace":"fusion-collab", "apiVersion":"spp-data-protection.isf.ibm.com/v1alpha1"}}}'
+    POLICY_ASSIGNMENT_NAME=fusion-reference-wlp-automated-backup-policy-apps.rdr-blue-site-svl-1.cp.fyre.ibm.com
+    oc -n ibm-spectrum-fusion-ns patch policyassignment ${POLICY_ASSIGNMENT_NAME} --type merge -p '{"spec":{"recipe":{"name":"fusion-reference-bnr-recipe", "namespace":"fusion-reference", "apiVersion":"spp-data-protection.isf.ibm.com/v1alpha1"}}}'
     ```
 
-**Take a Fusion Collaboration namespace/application Backup**
+**Take a Fusion Reference namespace/application Backup**
 - Navigate to Backup & Restore/Backed up applications
     - Located in the left hand naviation menu
-- Select Fusion Collaboration namespace/application (fusion-collab)
-    - Locate `fusion-collab` in the `Backed up Applications` table
+- Select Fusion Reference namespace/application (fusion-reference)
+    - Locate `fusion-reference` in the `Backed up Applications` table
 - Submit Back up
-    - Click on the menu drop down for the `fusion-collab` item and click on `Back up now`
+    - Click on the menu drop down for the `fusion-reference` item and click on `Back up now`
     - Click on `Back up now` confirmation
 - Navigate to Jobs/Backups tab
     - Located in the left hand naviation menu
-- Select active/recent Fusion Collaboration backup
-    - Select most recent/top Fusion Collaboration backup in `Backups` table
-- Monitor/Review Fusion Collaboration backup job until completed
+- Select active/recent Fusion Reference backup
+    - Select most recent/top Fusion Reference backup in `Backups` table
+- Monitor/Review Fusion Reference backup job until completed
     - Review `Inventory`, `Sequence` and `Data transfer` dropdown and status
 
 ### Simulate Disaster 
@@ -226,18 +220,18 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
     KUBE_CREDENTIAL=<kubeadmin-password>
     oc login https://${CLUSTER_HOST_DOMAIN}:6443 -u ${KUBE_USER} -p ${KUBE_CREDENTIAL} --insecure-skip-tls-verify
     ```
-- Delete Fusion Collaboration namespace (fusion-collab)
+- Delete Fusion Reference namespace (fusion-reference)
     ```bash
-    APPLICATION_NAMESPACE=fusion-collab
+    APPLICATION_NAMESPACE=fusion-reference
     oc delete project ${APPLICATION_NAMESPACE}
     ```
-- (Alternatively) Undeploy Fusion Collaboration application via `kustomize.yaml`
+- (Alternatively) Undeploy Fusion Reference application via `kustomize.yaml`
     ```bash
     WORKING_DIRECTORY=~/github.com
-    oc delete -k ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-collab
+    oc delete -k ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-reference
     ```
-- Validate Fusion Collaboration route is no longer accessible
-    - Open Fusion Collaboration route in a browser tab
+- Validate Fusion Reference route is no longer accessible
+    - Open Fusion Reference route in a browser tab
     - Confirm `Application not available (503)
 
 ### Restore to Same Cluster/Same Namespace
@@ -247,22 +241,22 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
 - Navigate to Backup & Restore/Backed up applications
     - Located in the left hand naviation menu
 - Submit Restore
-    - Locate `fusion-collab` in the `Backed up Applications` table
-    - Click on the menu drop down for the `fusion-collab` item and click on `Restore`
+    - Locate `fusion-reference` in the `Backed up Applications` table
+    - Click on the menu drop down for the `fusion-reference` item and click on `Restore`
     - Select `Same Cluster`
     - Select `Use the same project the application is already using`, then `Next`
-    - Select most recent Fusion Collaboration backup, then `Next`, then `Restore` and confirm `Restore`
+    - Select most recent Fusion Reference backup, then `Next`, then `Restore` and confirm `Restore`
 - Navigate to Jobs/Restores tab
     - Located in the left hand naviation menu
-- Select active/recent Fusion Collaboration restore
-    - Select most recent/top Fusion Collaboration restore in `Restores` table
-- Monitor/Review Fusion Collaboration restore job until completed
+- Select active/recent Fusion Reference restore
+    - Select most recent/top Fusion Reference restore in `Restores` table
+- Monitor/Review Fusion Reference restore job until completed
     - Review `Inventory`, `Sequence` and `Data transfer` dropdown and status
 
 ### Validate Restored Content
 
-- Open browser to Fusion Collaboration route
-- Validate Fusion Collaboration Content has been restored
+- Open browser to Fusion Reference route
+- Validate Fusion Reference Content has been restored
 
     ![Content Dashboard](./README-images/Content-Dashboard.png)
 

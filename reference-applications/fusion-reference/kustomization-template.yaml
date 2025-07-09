@@ -1,5 +1,5 @@
 ---
-namespace: fusion-collab
+namespace: fusion-reference
 
 secretGenerator:
 - name: mysql-pass
@@ -8,7 +8,7 @@ secretGenerator:
 
 resources:
 - mysql.yaml
-- fusion-collab.yaml
+- fusion-reference.yaml
 
 patches:
    # Patch the PVC .spec.storageClassName with cluster/block storage class value
@@ -30,8 +30,8 @@ patches:
    # Patch the route .spec.host with cluster/host value
   - target:
       kind: Route
-      name: fusion-collab
+      name: fusion-reference
     patch: |-
       - op: replace
         path: /spec/host
-        value: fusion-collab-wp.${CLUSTER_HOST_DOMAIN}
+        value: fusion-reference-wp.${CLUSTER_HOST_DOMAIN}

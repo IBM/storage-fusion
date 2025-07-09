@@ -3,13 +3,13 @@ kind: Service
 metadata:
   name: mysql
   labels:
-    app: fusion-collab
+    app: fusion-reference
     tier: mysql
 spec:
   ports:
     - port: 3306
   selector:
-    app: fusion-collab
+    app: fusion-reference
     tier: mysql
   clusterIP: None
 ---
@@ -18,7 +18,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc
   labels:
-    app: fusion-collab
+    app: fusion-reference
     tier: mysql
 spec:
   accessModes:
@@ -34,19 +34,19 @@ kind: Deployment
 metadata:
   name: mysql
   labels:
-    app: fusion-collab
+    app: fusion-reference
     tier: mysql
 spec:
   selector:
     matchLabels:
-      app: fusion-collab
+      app: fusion-reference
       tier: mysql
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: fusion-collab
+        app: fusion-reference
         tier: mysql
     spec:
       containers:
