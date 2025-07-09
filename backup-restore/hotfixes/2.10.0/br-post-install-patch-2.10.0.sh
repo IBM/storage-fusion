@@ -212,7 +212,7 @@ velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:d4e54c0e98983f78b4f022ae5fd9dc4f75
 set_velero_image ${velero_img}
 
 [ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:74990bffe171264a3d08eab53398dd5e98491a24269642b38688d854c1549224
-[ "$PATCH" == "SDS" ] && isfdataprotection_img=icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:c060b4b34da3edc756dbc5f6d3f6afd8e895ece52dff3d4aad8965217365a966
+[ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:c060b4b34da3edc756dbc5f6d3f6afd8e895ece52dff3d4aad8965217365a966
 update_isf_operator_csv isf-operator.v2.10.0 "${isfdataprotection_img}"
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"

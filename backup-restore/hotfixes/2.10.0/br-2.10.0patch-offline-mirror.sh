@@ -19,7 +19,7 @@ TRANSACTIONMANAGER=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c6ee0b30
 FBRVELERO=cp.icr.io/cp/bnr/fbr-velero@sha256:d4e54c0e98983f78b4f022ae5fd9dc4f751d725b19d15d355e73055cfeec863d
 
 ISFDATAPROTECTION_HCI=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:74990bffe171264a3d08eab53398dd5e98491a24269642b38688d854c1549224
-ISFDATAPROTECTION_SDS=icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:c060b4b34da3edc756dbc5f6d3f6afd8e895ece52dff3d4aad8965217365a966
+ISFDATAPROTECTION_SDS=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:c060b4b34da3edc756dbc5f6d3f6afd8e895ece52dff3d4aad8965217365a966
 
 
 declare -a IMAGES=(
