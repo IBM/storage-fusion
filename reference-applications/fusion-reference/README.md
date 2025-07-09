@@ -18,6 +18,7 @@ The SQL backend includes the following Kubernetes resources:
 - `mysql` Service: internal interface to the `mysql` Deployment pod endpoint(s) accessed by the `fusion-reference` Deployment pod(s)
 
 The current architecture is quickly [deployed](#deployment) yet complex enough with the multiple tiers and volumes that it encompasses and requires storage and resiliency orchestration features that begin to mirror customer application requirements.  Additionally, the user interface allows users to generate and validate application functionality and content directly without requiring additional tooling and/or interfaces.
+    ![Component Topology](./README-images/Component-Topology.png)
 
 The Fusion Reference application is highly extendible and scalable.  The [WordPress](https://wordpress.org) editor dashboard, themes and extensive plugin community enables an administrator to quickly generate, manage and/or import an entire web site.  
 
@@ -130,7 +131,7 @@ Perform the following from the cluster infrastructure node or workstation with a
     ```
 
     **NOTE:** The underlying [WordPress](https://wordpress.org) can take a few minutes to fully initialize and connect to the SQL Backend database.  When accessing the Fusion Reference route via browser, the following response may be observed while initializing and connecting to the SQL Database:
-    ![Language Selection](./README-images/Database-Error.png)
+    ![Database-Error](./README-images/Database-Error.png)
 
 ### Manage Content
 Perform the following steps from a workstation browser to complete the initialization of the Fusion Reference application.
