@@ -41,14 +41,14 @@ Perform the following from a cluster infrastructure node or workstation with acc
 
 - Login into target cluster
     ```bash
-    CLUSTER_HOST_DOMAIN=<host-domain>
-    KUBE_USER=kubeadmin
-    KUBE_CREDENTIAL=<kubeadmin-password>
+    export CLUSTER_HOST_DOMAIN=<host-domain>
+    export KUBE_USER=kubeadmin
+    export KUBE_CREDENTIAL=<kubeadmin-password>
     oc login https://${CLUSTER_HOST_DOMAIN}:6443 -u ${KUBE_USER} -p ${KUBE_CREDENTIAL} --insecure-skip-tls-verify
     ```
 - Create target Fusion Reference project/namespace
     ```bash
-    APPLICATION_NAMESPACE=fusion-reference
+    export APPLICATION_NAMESPACE=fusion-reference
     oc new-project ${APPLICATION_NAMESPACE}
     ```
 - Retrieve and set block storage class environment variable
@@ -68,7 +68,7 @@ Perform the following from a cluster infrastructure node or workstation with acc
     ```
     Typically choose block storage class defined as `ocs-storagecluster-ceph-rbd` or `ibm-spectrum-fusion-mgmt-sc`
     ```bash
-    BLOCK_STORAGE_CLASS=<block-storage-class>
+    export BLOCK_STORAGE_CLASS=<block-storage-class>
     ```
 
 ### Deploy Fusion Reference Application
@@ -77,8 +77,8 @@ Perform the following from the cluster infrastructure node or workstation with a
 
 - Clone Directory of `storage-fusion` github repository
     ```bash
-    WORKING_DIRECTORY=~/github.com
-    GIT_BRANCH=master
+    export WORKING_DIRECTORY=~/github.com
+    export GIT_BRANCH=master
     mkdir -p ${WORKING_DIRECTORY}
     cd ${WORKING_DIRECTORY}
     git init storage-fusion
@@ -96,7 +96,7 @@ Perform the following from the cluster infrastructure node or workstation with a
     - BLOCK_STORAGE_CLASS
     - WORKING_DIRECTORY
     ```bash
-    SQL_PASSWORD=mypassword
+    export SQL_PASSWORD=mypassword
     cd ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-reference
     envsubst < kustomization-template.yaml > kustomization.yaml
     ```
@@ -182,9 +182,9 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
 **Add Recipe Reference Policy Assignment**
 - Login into target cluster
     ```bash
-    CLUSTER_HOST_DOMAIN=<host-domain>
-    KUBE_USER=kubeadmin
-    KUBE_CREDENTIAL=<kubeadmin-password>
+    export CLUSTER_HOST_DOMAIN=<host-domain>
+    export KUBE_USER=kubeadmin
+    export KUBE_CREDENTIAL=<kubeadmin-password>
     oc login https://${CLUSTER_HOST_DOMAIN}:6443 -u ${KUBE_USER} -p ${KUBE_CREDENTIAL} --insecure-skip-tls-verify
     ```
 - Retrieve Fusion Reference application Policy Assignment
@@ -193,7 +193,7 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
     ```
 - Add Fusion Reference Recipe to Fusion Reference Policy Assignment
     ```bash
-    POLICY_ASSIGNMENT_NAME=fusion-reference-wlp-automated-backup-policy-apps.rdr-blue-site-svl-1.cp.fyre.ibm.com
+    export POLICY_ASSIGNMENT_NAME=fusion-reference-wlp-automated-backup-policy-apps.rdr-blue-site-svl-1.cp.fyre.ibm.com
     oc -n ibm-spectrum-fusion-ns patch policyassignment ${POLICY_ASSIGNMENT_NAME} --type merge -p '{"spec":{"recipe":{"name":"fusion-reference-bnr-recipe", "namespace":"fusion-reference", "apiVersion":"spp-data-protection.isf.ibm.com/v1alpha1"}}}'
     ```
 
@@ -216,19 +216,19 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
 
 - Login into target cluster
     ```bash
-    CLUSTER_HOST_DOMAIN=<host-domain>
-    KUBE_USER=kubeadmin
-    KUBE_CREDENTIAL=<kubeadmin-password>
+    export CLUSTER_HOST_DOMAIN=<host-domain>
+    export KUBE_USER=kubeadmin
+    export KUBE_CREDENTIAL=<kubeadmin-password>
     oc login https://${CLUSTER_HOST_DOMAIN}:6443 -u ${KUBE_USER} -p ${KUBE_CREDENTIAL} --insecure-skip-tls-verify
     ```
 - Delete Fusion Reference namespace (fusion-reference)
     ```bash
-    APPLICATION_NAMESPACE=fusion-reference
+    export APPLICATION_NAMESPACE=fusion-reference
     oc delete project ${APPLICATION_NAMESPACE}
     ```
 - (Alternatively) Undeploy Fusion Reference application via `kustomize.yaml`
     ```bash
-    WORKING_DIRECTORY=~/github.com
+    export WORKING_DIRECTORY=~/github.com
     oc delete -k ${WORKING_DIRECTORY}/storage-fusion/reference-applications/fusion-reference
     ```
 - Validate Fusion Reference route is no longer accessible
