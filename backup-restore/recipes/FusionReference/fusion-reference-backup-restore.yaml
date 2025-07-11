@@ -1,13 +1,13 @@
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
 metadata:
-  name: fusion-collab-bnr-recipe
+  name: fusion-reference-bnr-recipe
 spec:
-  appType: fusion-collab
+  appType: fusion-reference
   groups:
-    - name: fusion-collab-volumes
+    - name: fusion-reference-volumes
       type: volume
-    - name: fusion-collab-resources
+    - name: fusion-reference-resources
       excludedResourceTypes:
       - events
       - event.events.k8s.io
@@ -17,7 +17,7 @@ spec:
   hooks:
   - name: mysql-pod-exec
     type: exec
-    namespace: ${GROUP.fusion-collab-volumes.namespace}
+    namespace: ${GROUP.fusion-reference-volumes.namespace}
     labelSelector: tier=mysql
     timeout: 60
     onError: fail
@@ -26,9 +26,9 @@ spec:
         command: >
             ["/bin/bash", "-c", "mysql --user=root --password=$MYSQL_ROOT_PASSWORD -e 'FLUSH TABLES WITH READ LOCK;'"]
         container: mysql
-  - name: fusion-collab-deployment-check
+  - name: fusion-reference-deployment-check
     type: check
-    namespace: ${GROUP.fusion-collab-volumes.namespace}
+    namespace: ${GROUP.fusion-reference-volumes.namespace}
     labelSelector: tier=frontend
     selectResource: deployment
     timeout: 120
@@ -40,7 +40,7 @@ spec:
       condition: "{$.spec.replicas} == {$.status.readyReplicas}"
   - name: mysql-deployment-check
     type: check
-    namespace: ${GROUP.fusion-collab-volumes.namespace}
+    namespace: ${GROUP.fusion-reference-volumes.namespace}
     labelSelector: tier=mysql
     selectResource: deployment
     timeout: 120
@@ -53,12 +53,12 @@ spec:
   workflows:
     - name: backup
       sequence:
-        - group: fusion-collab-resources
+        - group: fusion-reference-resources
         - hook: mysql-pod-exec/flush-tables-with-read-lock
-        - group: fusion-collab-volumes
+        - group: fusion-reference-volumes
     - name: restore
       sequence:
-        - group: fusion-collab-volumes
-        - group: fusion-collab-resources
-        - hook: fusion-collab-deployment-check/replicasReady
+        - group: fusion-reference-volumes
+        - group: fusion-reference-resources
+        - hook: fusion-reference-deployment-check/replicasReady
         - hook: mysql-deployment-check/replicasReady
