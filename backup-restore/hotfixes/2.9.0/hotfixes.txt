@@ -16,3 +16,5 @@ This hotfix fixes the following Backup & Restore issues:
     14. Datamover (type: kopia) pod does not start due to node addition or replacement due to pull policy Never. (Issue#: 44447, 46425)
     15. Fixes duplicate BackupRepository error on backup or restore. (Issue: 45972)
     16. Restic backups not being deleted after upgrade to 2.9 (Issue: 45990)
+    17. Check if snapshot exists during DBR processing so that it does not fail (Issue: 54282)
+    18. BackupRepository ownerReference should be Velero BSL (Issue: 51400, 55073)
