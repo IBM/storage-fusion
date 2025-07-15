@@ -132,9 +132,17 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
     then
         echo "Patching deployment/transaction-manager image..."
-        oc set image deployment/transaction-manager -n $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:2779a318879421575560b7e8ab0278e9bb022c62d0c239903e1bfaef7415d13b
+        oc set image deployment/transaction-manager -n $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:124346800f9988b6c20d7fed5fae4c3a2728df8348cd96120b1eac1e71e641f0
     else
         echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
+    fi
+
+    if (oc get deployment -n $BR_NS dbr-controller -o yaml > $DIR/dbr-controller-deployment.save.yaml)
+    then
+        echo "Patching deployment/dbr-controller image..."
+        oc set image deployment/dbr-controller -n $BR_NS dbr-controller=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:124346800f9988b6c20d7fed5fae4c3a2728df8348cd96120b1eac1e71e641f0
+    else
+        echo "ERROR: Failed to save original dbr-controller deployment. Skipped updates."
     fi
 
     if (oc -n "$BR_NS" get csv guardian-dm-operator.v2.9.0 -o yaml > $DIR/guardian-dm-operator.v2.9.0-original.yaml)
@@ -211,6 +219,7 @@ echo "Please verify that these pods have successfully restarted after hotfix upd
 printf "  %-25s: %s\n" "$ISF_NS" "isf-data-protection-operator-controller-manager"
 if [[ "$VERSION" == 2.9.0* ]]; then
     printf "  %-25s: %s\n" "$BR_NS" "transaction-manager"
+    printf "  %-25s: %s\n" "$BR_NS" "dbr-controller"
     printf "  %-25s: %s\n" "$BR_NS" "guardian-dm-controller-manager"
     printf "  %-25s: %s\n" "$BR_NS" "job-manager if HUB cluster"
 fi
