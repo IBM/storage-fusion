@@ -169,7 +169,7 @@ BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadat
 if [ -n "$BR_NS" ]; then
     HUB=true
 else
-    BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2 >/dev/null)
+    BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
 fi
 
 if [ -z "$BR_NS" ]; then
