@@ -86,20 +86,21 @@ Note: newer releases of Fusion automatically apply the recipes it finds in
 the project without requiring a patch to each PolicyAssignment.
 
 3) Restore steps for Domino Data Labs on a fresh cluster
-   0) restore Fusion catalog (Fusion service restore)
-   1) restore domino-cluster project (the one using this custom recipe for
+   1) restore Fusion catalog (Fusion service restore)
+   2) restore domino-cluster project (the one using this custom recipe for
       cluster-scope resources)
-   2) restore domino-system
-   3) restore domino-platform
-   4) restore domino-compute, but do not restore the shared and blob PVCs
+   3) restore domino-system
+   4) restore domino-platform
+   5) restore domino-compute, but do not restore the shared and blob PVCs
       (they must be created by the domino install script to point to the same
        PV that the PVC in the domino-platform is using, otherwise you will
        have two versions of the blob and shared file systems that will cause
        file-not-found issues between workspaces versus UI uploads)
-   5) Label namespaces and nodes accordingly for your environment
-   6) Delete CertificateRequests for hephaestus*-tls in domino-compute NS
-   7) Execute agent installer with helm --sync flag
-   8) Restart Domino
+   6) Label namespaces and nodes accordingly for your environment
+   7) Delete CertificateRequests for hephaestus*-tls in domino-compute NS
+   8) Execute agent installer with helm --sync flag (this will also delete
+      your hephaestus TLS secrets which is why we had to clear previous reqs)
+   9) Restart Domino
 
 Backup recipe execution: 43 seconds
 -----------------------------------
