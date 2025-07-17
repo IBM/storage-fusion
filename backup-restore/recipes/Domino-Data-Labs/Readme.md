@@ -13,8 +13,7 @@ This recipe only needs to be utilized by one unique namespace. In the following
 example, I create a new project named "domino-cluster" and register this recipe
 to that project's Fusion PolicyAssignments.
 
-1) Recipe YAML:
----------------
+# 1) Recipe YAML
 ```
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
@@ -61,8 +60,7 @@ spec:
     - group: domino-cluster-included-resources
 ```
 
-2) Steps:
----------
+# 2) Steps
 ```
    oc new-project domino-cluster
    oc apply -f domino-cluster-recipe.yaml
@@ -87,8 +85,7 @@ spec:
 Note: newer releases of Fusion automatically apply the recipes it finds in
 the project without requiring a patch to each PolicyAssignment.
 
-3) Restore steps for Domino Data Labs on a fresh cluster
---------------------------------------------------------
+# 3) Restore steps for Domino Data Labs on a fresh cluster
    1) restore Fusion catalog (Fusion service restore)
    2) restore domino-cluster project (the one using this custom recipe for
       cluster-scope resources)
@@ -105,8 +102,7 @@ the project without requiring a patch to each PolicyAssignment.
       your hephaestus TLS secrets which is why we had to clear previous reqs)
    9) Restart Domino
 
-Backup recipe execution: 43 seconds
------------------------------------
+# Backup recipe execution: 43 seconds
 ```
 2025-07-17 09:00:02 [INFO]: === Backup & recipe validation ===
 2025-07-17 09:00:02 [INFO]: App namespace: ibm-spectrum-fusion-ns name: domino-cluster
@@ -129,8 +125,7 @@ Details: name: domino-cluster-recipe, namespace: domino-cluster, app_type: fusio
 2025-07-17 09:00:43 [INFO]: === Post recipe execution ===
 ```
 
-Restore recipe execution: 29 seconds
-------------------------------------
+# Restore recipe execution: 29 seconds
 ```
 2025-07-17 09:03:55 [INFO]: === Restore & recipe validation ===
 2025-07-17 09:04:11 [INFO]: Creating namespace: domino-cluster with labels: {'kubernetes.io/metadata.name': 'domino-cluster', 'pod-security.kubernetes.io/audit': 'restricted', 'pod-security.kubernetes.io/audit-version': 'latest', 'pod-security.kubernetes.io/warn': 'restricted', 'pod-security.kubernetes.io/warn-version': 'latest'} and annotations: {'openshift.io/description': '', 'openshift.io/display-name': '', 'openshift.io/requester': 'system:admin', 'openshift.io/sa.scc.mcs': 's0:c28,c12', 'openshift.io/sa.scc.supplemental-groups': '1000780000/10000', 'openshift.io/sa.scc.uid-range': '1000780000/10000'}
