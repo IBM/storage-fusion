@@ -14,6 +14,7 @@ example, I create a new project named "domino-cluster" and register this recipe
 to that project's Fusion PolicyAssignments.
 
 1) Recipe YAML:
+---------------
 ```
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
@@ -61,6 +62,7 @@ spec:
 ```
 
 2) Steps:
+---------
 ```
    oc new-project domino-cluster
    oc apply -f domino-cluster-recipe.yaml
@@ -86,6 +88,7 @@ Note: newer releases of Fusion automatically apply the recipes it finds in
 the project without requiring a patch to each PolicyAssignment.
 
 3) Restore steps for Domino Data Labs on a fresh cluster
+--------------------------------------------------------
    1) restore Fusion catalog (Fusion service restore)
    2) restore domino-cluster project (the one using this custom recipe for
       cluster-scope resources)
