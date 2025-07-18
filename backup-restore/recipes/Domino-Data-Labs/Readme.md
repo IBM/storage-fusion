@@ -100,7 +100,9 @@ the project without requiring a patch to each PolicyAssignment.
        file-not-found issues between workspaces versus UI uploads)
    6) Label namespaces and nodes accordingly for your environment
    7) Delete CertificateRequests for hephaestus*-tls in domino-compute NS
-   8) Execute agent installer with helm --sync flag
+   8) Execute fleetcommand-agent-install.sh adding --sync flag to pod manifest:
+      The --sync flag on agent install will cause the Helm charts to resync:
+      python -m fleetcommand_agent run -f /app/install/domino.yml --sync
    9) Restart Domino using restart script here (this will also delete your
       hephaestus TLS secrets which is why we had to clear previous reqs)
       https://support.domino.ai/support/s/article/Restart-Script
