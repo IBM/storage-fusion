@@ -98,9 +98,10 @@ the project without requiring a patch to each PolicyAssignment.
        file-not-found issues between workspaces versus UI uploads)
    6) Label namespaces and nodes accordingly for your environment
    7) Delete CertificateRequests for hephaestus*-tls in domino-compute NS
-   8) Execute agent installer with helm --sync flag (this will also delete
-      your hephaestus TLS secrets which is why we had to clear previous reqs)
-   9) Restart Domino
+   8) Execute agent installer with helm --sync flag
+   9) Restart Domino using restart script here (this will also delete your
+      hephaestus TLS secrets which is why we had to clear previous reqs)
+      https://support.domino.ai/support/s/article/Restart-Script
 
 # Backup recipe execution: 43 seconds
 ```
