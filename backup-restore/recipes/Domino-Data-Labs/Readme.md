@@ -5,6 +5,7 @@ resources, namely:
   - ClusterRoles
   - ClusterRoleBindings
   - CustomResourceDefinitions
+  - IngressClasses
   - SecurityContextConstraints
 
 Note: we also exclude certain resources to not bloat the backup.
@@ -44,6 +45,7 @@ spec:
     - clusterroles
     - clusterrolebindings
     - customresourcedefinitions.apiextensions.k8s.io
+    - ingressclasses.networking.k8s.io
     - securitycontextconstraints.security.openshift.io
     name: domino-cluster-included-resources
     type: resource
