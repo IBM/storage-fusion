@@ -35,7 +35,7 @@ genrate_cm ()
 {
   NS="$1"
   [[ -z $NS ]]  && echo "No namespace provided, returning" && return
-  for CSV_NAME in $(oc -n $NS get csv -o name)
+  for CSV_NAME in $(oc -n $NS get csv -o name | grep -E "isf-operator|guardian|amqstreams|ibm-dataprotection|oapd|redis")
   do
       STATUS=$(oc -n $NS get $CSV_NAME -o custom-columns=:status.phase --no-headers)
       if [ "$STATUS" == "Pending" ] 
