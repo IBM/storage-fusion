@@ -14,9 +14,11 @@ set -e
 
 
 FBRVELERO=fbr-velero@sha256:910ffee32ec4121df8fc2002278f971cd6b0d923db04d530f31cf5739e08e24c
+TRANSACTIONMANAGER=guardian-transaction-manager@sha256:62c62ec0cd03945bcbc408faa62338e65476617c427373fd609e4809605127a3
 
 declare -a IMAGES=(
   $FBRVELERO
+  $TRANSACTIONMANAGER
 )
 
 for IMAGE in "${IMAGES[@]}"; do
