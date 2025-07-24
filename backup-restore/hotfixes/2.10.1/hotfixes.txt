@@ -3,3 +3,4 @@ This hotfix fixes the following Backup & Restore issues:
     1. During backup nil pointer exception in node-agent causes pod to crash and backup to fail. (Issue: 56437)
     2. Reducing Datamover Resource Usage - Updates to loadAffinity settings in DPA to more accurately 
        set limit of concurrent DataUploads/DataDownloads allowed to be active a at time. (Issue: 57072)
+    3. Missing Namespace Custom Labels During Restore. (Issue: 57207)
