@@ -1,5 +1,5 @@
 ---
-namespace: fusion-reference
+namespace: ${APPLICATION_NAMESPACE}
 
 secretGenerator:
 - name: mysql-pass
@@ -34,4 +34,4 @@ patches:
     patch: |-
       - op: replace
         path: /spec/host
-        value: fusion-reference-wp.${CLUSTER_HOST_DOMAIN}
+        value: fusion-reference-${APPLICATION_NAMESPACE}.${CLUSTER_HOST_DOMAIN}

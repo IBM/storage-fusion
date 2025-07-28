@@ -20,7 +20,7 @@ The SQL backend includes the following Kubernetes resources:
 The current architecture is quickly [deployed](#deployment) yet complex enough with the multiple tiers and volumes that it encompasses and requires storage and resiliency orchestration features that begin to mirror customer application requirements.  Additionally, the user interface allows users to generate and validate application functionality and content directly without requiring additional tooling and/or interfaces.
     ![Component Topology](./README-images/Component-Topology.png)
 
-The Fusion Reference application is highly extendible and scalable.  The [WordPress](https://wordpress.org) editor dashboard, themes and extensive plugin community enables an administrator to quickly generate, manage and/or import an entire web site.  
+The Fusion Reference application can be deployed multiple times in a single cluster and is highly extendible and scalable.  The [WordPress](https://wordpress.org) editor dashboard, themes and extensive plugin community enables an administrator to quickly generate, manage and/or import an entire web site.  
 
 ## Deployment
 ### Scope/Prerequisites/Assertions
@@ -34,6 +34,7 @@ The following Openshift cluster requirements are asserted to have been completed
 - Image repository is available or global pull secret is configured with credentials to access/pull the following images from docker image repository
     - `docker.io/library/wordpress:6.8.1-apache`
     - `docker.io/library/mysql:8.0`
+**NOTE:** A deployment of the Fusion Reference application is contained in single application namespace identiried by the `APPLICATION_NAMESPACE` environment variable.  Consequently, the Fusion Reference application can be deployed multiple times in a single cluster by simply modifying the `APPLICATION_NAMESPACE` environment variable as defined in the following deployment steps.
 
 ### Prepare Target Cluster
 Perform the following from a cluster infrastructure node or workstation with access to the target cluster.
@@ -93,6 +94,7 @@ Perform the following from the cluster infrastructure node or workstation with a
 
     The following environment variables should be defined in the previous steps before running the following:
     - CLUSTER_HOST_DOMAIN
+    - APPLICATION_NAMESPACE
     - BLOCK_STORAGE_CLASS
     - WORKING_DIRECTORY
     ```bash
@@ -118,7 +120,7 @@ Perform the following from the cluster infrastructure node or workstation with a
     recipe.spp-data-protection.isf.ibm.com/fusion-reference-bnr-recipe created
     ```
 
-**NOTE:** From a kubernetes perspective, the reference application is deployed.  The `wordpress` image/container can take a minute or two to connect to the mysql image/container and create the required `wordpress` database instance and associated tables.  Once complete the `fusion-reference` Route is accessible via browser and additional web content can be generated/managed/reviewed.
+**NOTE:** From a kubernetes perspective, the reference application is deployed.  The `wordpress` image/container can take a minute or two to connect to the mysql image/container and create the required `wordpress` database instance and associated tables.  Once complete, the `fusion-reference` Route is accessible via browser and additional web content can be generated/managed/reviewed.
 
 - Retrieve the `fusion-reference` Route
     ```bash
@@ -171,9 +173,9 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
 - Navigate to Applications
     - Located in the left hand naviation menu
 - Select Fusion Reference namespace/application
-    - Locate `fusion-reference` in the `Applications` table
+    - Locate `${APPLICATION_NAMESPACE}` in the `Applications` table
 - Select Assign policies
-    - Click on the menu drop down for the `fusion-reference` item and click on `Assign policies`
+    - Click on the menu drop down for the `${APPLICATION_NAMESPACE}` item and click on `Assign policies`
 - Assign Backup Policy
     - Select a Backup Policy from the `Assign policies` table
     - Do not select to `Back up now`
@@ -185,6 +187,7 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
     export CLUSTER_HOST_DOMAIN=<host-domain>
     export KUBE_USER=kubeadmin
     export KUBE_CREDENTIAL=<kubeadmin-password>
+    export APPLICATION_NAMESPACE=fusion-reference
     oc login https://${CLUSTER_HOST_DOMAIN}:6443 -u ${KUBE_USER} -p ${KUBE_CREDENTIAL} --insecure-skip-tls-verify
     ```
 - Retrieve Fusion Reference application Policy Assignment
@@ -194,16 +197,16 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
 - Add Fusion Reference Recipe to Fusion Reference Policy Assignment
     ```bash
     export POLICY_ASSIGNMENT_NAME=fusion-reference-wlp-automated-backup-policy-apps.rdr-blue-site-svl-1.cp.fyre.ibm.com
-    oc -n ibm-spectrum-fusion-ns patch policyassignment ${POLICY_ASSIGNMENT_NAME} --type merge -p '{"spec":{"recipe":{"name":"fusion-reference-bnr-recipe", "namespace":"fusion-reference", "apiVersion":"spp-data-protection.isf.ibm.com/v1alpha1"}}}'
+    oc -n ibm-spectrum-fusion-ns patch policyassignment ${POLICY_ASSIGNMENT_NAME} --type merge -p '{"spec":{"recipe":{"name":"fusion-reference-bnr-recipe", "namespace":"${APPLICATION_NAMESPACE}", "apiVersion":"spp-data-protection.isf.ibm.com/v1alpha1"}}}'
     ```
 
 **Take a Fusion Reference namespace/application Backup**
 - Navigate to Backup & Restore/Backed up applications
     - Located in the left hand naviation menu
 - Select Fusion Reference namespace/application (fusion-reference)
-    - Locate `fusion-reference` in the `Backed up Applications` table
+    - Locate `${APPLICATION_NAMESPACE}` in the `Backed up Applications` table
 - Submit Back up
-    - Click on the menu drop down for the `fusion-reference` item and click on `Back up now`
+    - Click on the menu drop down for the `${APPLICATION_NAMESPACE}` item and click on `Back up now`
     - Click on `Back up now` confirmation
 - Navigate to Jobs/Backups tab
     - Located in the left hand naviation menu
@@ -242,8 +245,8 @@ The following steps are provided as a guide to documenting [IBM Fusion Backup & 
 - Navigate to Backup & Restore/Backed up applications
     - Located in the left hand naviation menu
 - Submit Restore
-    - Locate `fusion-reference` in the `Backed up Applications` table
-    - Click on the menu drop down for the `fusion-reference` item and click on `Restore`
+    - Locate `${APPLICATION_NAMESPACE}` in the `Backed up Applications` table
+    - Click on the menu drop down for the `${APPLICATION_NAMESPACE}` item and click on `Restore`
     - Select `Same Cluster`
     - Select `Use the same project the application is already using`, then `Next`
     - Select most recent Fusion Reference backup, then `Next`, then `Restore` and confirm `Restore`
