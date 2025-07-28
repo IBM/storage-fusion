@@ -1,0 +1,37 @@
+---
+namespace: ${APPLICATION_NAMESPACE}
+
+secretGenerator:
+- name: mysql-pass
+  literals:
+  - password=${SQL_PASSWORD}
+
+resources:
+- mysql.yaml
+- fusion-reference.yaml
+
+patches:
+   # Patch the PVC .spec.storageClassName with cluster/block storage class value
+  - target:
+      kind: PersistentVolumeClaim
+      name: wordpress-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: ${BLOCK_STORAGE_CLASS}
+   # Patch the PVC .spec.storageClassName with cluster/block storage class value
+  - target:
+      kind: PersistentVolumeClaim
+      name: mysql-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: ${BLOCK_STORAGE_CLASS} 
+   # Patch the route .spec.host with cluster/host value
+  - target:
+      kind: Route
+      name: fusion-reference
+    patch: |-
+      - op: replace
+        path: /spec/host
+        value: fusion-reference-${APPLICATION_NAMESPACE}.${CLUSTER_HOST_DOMAIN}
