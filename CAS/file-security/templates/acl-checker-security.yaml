@@ -1,0 +1,69 @@
+# Example useage:
+#    oc apply -f acl-checker-security.yaml
+#
+# Create a security context constraint that allows the container to have EUID and EGID capabilities. 
+# Needs to be run with administrator privilege
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: setuid-setgid-scc
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: false
+allowHostDirVolumePlugin: false
+allowHostNetwork: false
+allowHostPorts: false
+allowHostPID: false
+allowHostIPC: false
+readOnlyRootFilesystem: false
+runAsUser:
+  type: MustRunAsNonRoot
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+fsGroup:
+  type: RunAsAny
+requiredDropCapabilities:
+  - ALL
+allowedCapabilities:
+  - SETUID 
+  - SETGID 
+volumes:
+  - configMap
+  - emptyDir
+  - persistentVolumeClaim
+  - secret
+priority: 10
+users: []
+groups: []
+---
+# Create a role that allows using the above security context constraint.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cas-acl-checker 
+  namespace: ibm-cas 
+rules:
+- apiGroups:
+  - security.openshift.io 
+  resourceNames:
+  - setuid-setgid-scc
+  resources:
+  - securitycontextconstraints 
+  verbs: 
+  - use
+---
+# Bind the above role to the default service account in the CAS namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cas-acl-checker
+  namespace: ibm-cas
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cas-acl-checker
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: ibm-cas
