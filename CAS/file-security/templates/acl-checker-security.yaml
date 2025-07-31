@@ -2,7 +2,7 @@
 #    oc apply -f acl-checker-security.yaml
 #
 # Create a security context constraint that allows the container to have EUID and EGID capabilities. 
-# Needs to be run with administrator privilege
+# Administrator privileges are required to apply this YAML file to your cluster.
 apiVersion: security.openshift.io/v1
 kind: SecurityContextConstraints
 metadata:
