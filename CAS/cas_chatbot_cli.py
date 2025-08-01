@@ -75,7 +75,7 @@ class AuthenticationError(Exception):
 class CASChatBot:
     """Enhanced Enterprise CAS Chatbot with improved error handling and features"""
 
-    def __init__(self, config_path: str = "config.yaml.bk.bk1.bk"):
+    def __init__(self, config_path: str = "config.yaml"):
         self.config_path = config_path
         self.config = self.load_config(config_path)
         self.console_url = self.config["console_url"]
@@ -452,7 +452,7 @@ class CASChatBot:
 
             except Exception as e:
                 console.print(f"[red]Provider {provider} failed: {e}[/red]")
-                    continue
+                continue
 
     console.print("[red]All LLM providers failed.[/red]")
 
@@ -675,7 +675,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python chatbot.py                    # Use default config.yaml.bk.bk1.bk
+  python chatbot.py                    # Use default config.yaml
   python chatbot.py -c prod.yaml       # Use production config
   python chatbot.py --config dev.yaml  # Use development config
         """
@@ -683,8 +683,8 @@ Examples:
 
     parser.add_argument(
         '--config', '-c',
-        default='config.yaml.bk.bk1.bk',
-        help='Configuration YAML file path (default: config.yaml.bk.bk1.bk)'
+        default='config.yaml',
+        help='Configuration YAML file path (default: config.yaml)'
     )
 
     parser.add_argument(
