@@ -1,4 +1,4 @@
-# 🤖 CAS CLI Chatbot v1.0.0
+# CAS CLI Chatbot v1.0.0
 
 An enhanced enterprise-grade chatbot for Content-Aware Storage (CAS) systems with advanced features, robust error handling, and comprehensive logging.
 
