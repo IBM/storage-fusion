@@ -11,7 +11,7 @@ granite_llm_model: "ibm-granite/granite-vision-3.2-2b"
 
 nvidia_llm_url: ""
 nvidia_model: "meta/llama3-8b-instruct"
-ngc_api_key: ""
+ngc_api_key:
 
 openai_api_key: "sk-proj-"
 
