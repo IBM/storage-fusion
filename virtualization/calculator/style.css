@@ -1,0 +1,15 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+label {
+  display: block;
+  margin-top: 10px;
+}
+input {
+  margin-bottom: 10px;
+}
+#result {
+  margin-top: 20px;
+  font-weight: bold;
+}
