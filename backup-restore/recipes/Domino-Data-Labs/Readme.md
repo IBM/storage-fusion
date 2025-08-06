@@ -23,6 +23,7 @@ to that project's Fusion PolicyAssignments.
   - namespace \*"domino-compute": default recipe (namespace-scoped resources and PVCs)
 
 +: dummy namespace for this custom recipe only
+
 \*: your application is installed here
 
 # 1) Recipe YAML
