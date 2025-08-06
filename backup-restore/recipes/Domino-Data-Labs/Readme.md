@@ -8,11 +8,22 @@ resources, namely:
   - IngressClasses
   - SecurityContextConstraints
 
+This recipe does not backup PVCs.
+
 Note: we also exclude certain resources to not bloat the backup.
 
 This recipe only needs to be utilized by one unique namespace. In the following
 example, I create a new project named "domino-cluster" and register this recipe
 to that project's Fusion PolicyAssignments.
+
+# Summary of backup policy assignments:
+  - namespace +"domino-cluster": domino-cluster-recipe recipe (select cluster-scope resources only)
+  - namespace \*"domino-system": default recipe (namespace-scoped resources and PVCs)
+  - namespace \*"domino-platform": default recipe (namespace-scoped resources and PVCs)
+  - namespace \*"domino-compute": default recipe (namespace-scoped resources and PVCs)
+
++: dummy namespace for this custom recipe only
+\*: your application is installed here
 
 # 1) Recipe YAML
 ```
@@ -99,7 +110,7 @@ the project without requiring a patch to each PolicyAssignment.
        have two versions of the blob and shared file systems that will cause
        file-not-found issues between workspaces versus UI uploads)
    6) Label namespaces and nodes accordingly for your environment
-   7) Delete CertificateRequests for hephaestus*-tls in domino-compute NS
+   7) Delete CertificateRequests for hephaestus\*-tls in domino-compute NS
    8) Execute fleetcommand-agent-install.sh adding --sync flag to pod manifest:
       The --sync flag on agent install will cause the Helm charts to resync:
       python -m fleetcommand_agent run -f /app/install/domino.yml --sync
