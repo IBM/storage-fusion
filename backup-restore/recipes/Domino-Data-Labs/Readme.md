@@ -1,20 +1,22 @@
 Custom backup/restore recipe (Kenneth Salerno <kpsalerno@us.ibm.com>)
 
-The purpose of this recipe is to backup and restore specific cluster-scoped
-resources, namely:
+The purpose of this recipe is to backup and restore specific prerequisite
+cluster-scoped resources, namely:
   - ClusterRoles
   - ClusterRoleBindings
   - CustomResourceDefinitions
   - IngressClasses
   - SecurityContextConstraints
 
-This recipe does not backup PVCs and should only be used on a blank namespace.
-
 Note: we also exclude certain resources to not bloat the backup.
 
+This recipe does not backup PVCs and should only be used on a blank namespace.
+You must also schedule your application projects to be backed up using the
+default recipe which will backup their namespace-scope resources and PVCs.
+
 This recipe only needs to be utilized by one unique namespace. In the following
-example, I create a new project named "domino-cluster" and register this recipe
-to that project's Fusion PolicyAssignments.
+example, I create a new blank project named "domino-cluster" and register this
+recipe to that project's Fusion PolicyAssignments.
 
 # Summary of backup policy assignments:
   - namespace +"domino-cluster": domino-cluster-recipe recipe (select cluster-scope resources only)
