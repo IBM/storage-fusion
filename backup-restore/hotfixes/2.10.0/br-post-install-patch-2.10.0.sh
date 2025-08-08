@@ -144,6 +144,45 @@ update_isf_operator_csv() {
     fi
 }
 
+update_guardian-dp-operator_csv() {
+    name="$1"
+    deployment_name="$2"  
+    image="$3"      
+    csv_ns="$BR_NS" 
+
+    if (oc get csv -n "$csv_ns" "$name" -o yaml > "$DIR/${name}.save.yaml"); then
+        echo "Scaling down deployment: $deployment_name ..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=0
+
+        echo "Patching clusterserviceversion/$name (deployment: $deployment_name, image: $image) ..."
+        dep_index=$(oc get csv -n "$csv_ns" "$name" -o json | jq "[.spec.install.spec.deployments[].name] | index(\"$deployment_name\")")
+
+        if [[ "$dep_index" == "null" ]]; then
+            echo "ERROR: Deployment '$deployment_name' not found in CSV $name"
+            return 1
+        fi
+        patches=()
+        container_index=0
+        for cname in $(oc get csv -n "$csv_ns" "$name" -o json \
+            | jq -r ".spec.install.spec.deployments[$dep_index].spec.template.spec.containers[].name"); do
+            if [[ "$cname" == "manager" ]]; then
+                patches+=("{\"op\":\"replace\",\"path\":\"/spec/install/spec/deployments/${dep_index}/spec/template/spec/containers/${container_index}/image\",\"value\":\"${image}\"}")
+            fi
+            ((container_index++))
+        done
+
+        patch_json="[$(IFS=,; echo "${patches[*]}")]"
+        [ -z "$DRY_RUN" ] &&  oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json"
+        [ -n "$DRY_RUN" ] && oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json" --dry-run=client -o yaml > "$DIR/${name}.patch.yaml"
+       
+        echo "Scaling up deployment: $deployment_name ..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=1
+
+    else
+        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
+    fi
+}
+
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -201,8 +240,8 @@ if [ -n "$HUB" ]; then
     backuppolicy_img=cp.icr.io/cp/bnr/guardian-backup-policy@sha256:7a6e5982598e093f6be50dbf89e7638ed67600403a7681e3fb328e27eab8360a
     set_deployment_image backuppolicy-deployment backuppolicy-container ${backuppolicy_img}
 
-    guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:d715b6536156abb94607d9943d8a7ea3ac7c53ea2dfa35d536176c572f49468c
-    set_deployment_image guardian-dp-operator-controller-manager manager ${guardiandpoperator_img}
+    guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:04a3446eb98d03eddfce27ff77def52b2c3f89c57d662190f61891d8bd3167fc
+    update_guardian-dp-operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
 fi
 
 transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c6ee0b30aedc5dcc83c50df5d33ff3b7ca4cc086cb2ff984d10a190b1c5efc6f
