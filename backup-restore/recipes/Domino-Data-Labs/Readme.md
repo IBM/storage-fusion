@@ -8,7 +8,7 @@ resources, namely:
   - IngressClasses
   - SecurityContextConstraints
 
-This recipe does not backup PVCs.
+This recipe does not backup PVCs and should only be used on a blank namespace.
 
 Note: we also exclude certain resources to not bloat the backup.
 
@@ -22,7 +22,7 @@ to that project's Fusion PolicyAssignments.
   - namespace \*"domino-platform": default recipe (namespace-scoped resources and PVCs)
   - namespace \*"domino-compute": default recipe (namespace-scoped resources and PVCs)
 
-+: dummy namespace for this custom recipe only
++: blank namespace for this custom recipe only
 
 \*: your application is installed here
 
@@ -76,6 +76,9 @@ spec:
 
 # 2) Steps
 ```
+   #
+   # create blank namespace "domino-cluster" to use with this custom recipe
+   #
    oc new-project domino-cluster
    oc apply -f domino-cluster-recipe.yaml
    oc get frcpe -n domino-cluster
@@ -99,24 +102,39 @@ spec:
 Note: newer releases of Fusion automatically apply the recipes it finds in
 the project without requiring a patch to each PolicyAssignment.
 
-# 3) Restore steps for Domino Data Labs on a fresh cluster
-   1) restore Fusion catalog (Fusion service restore)
-   2) restore domino-cluster project (the one using this custom recipe for
-      cluster-scope resources)
-   3) restore domino-system
-   4) restore domino-platform
-   5) restore domino-compute, but do not restore the shared and blob PVCs
-      (they must be created by the domino install script to point to the same
-       PV that the PVC in the domino-platform is using, otherwise you will
-       have two versions of the blob and shared file systems that will cause
-       file-not-found issues between workspaces versus UI uploads)
-   6) Label namespaces and nodes accordingly for your environment
-   7) Delete CertificateRequests for hephaestus\*-tls in domino-compute NS
-   8) Execute fleetcommand-agent-install.sh adding --sync flag to pod manifest:
+# 3) Restore steps for Domino Data Labs on a fresh (blank) cluster
+   Perform these steps in this explicit order:
+   1) From Fusion GUI: restore Fusion catalog (Fusion service restore) - this
+      is required when you have a new blank cluster freshly installed or when
+      you lose your catalog
+   2) From Fusion GUI: restore project "domino-cluster" (the one using this
+      custom recipe to restore cluster-scope resources which are prerequisites
+      for restoring your application projects domino-system, domino-platform
+      and domino-compute)
+   3) From Fusion GUI: restore project "domino-system"
+   4) From Fusion GUI: restore project "domino-platform"
+   5) From Fusion GUI: restore project "domino-compute", however do NOT restore
+      the shared and blob PVCs: check the option to select PVCs to restore and
+      exclude the Shared and Blob PVCs.
+      (The Blog and Shared PVCs must be created by the domino install
+      script to point to the same PVs that the PVCs in the "domino-platform"
+      project is using, otherwise you will have two independent versions of the
+      blob and shared file systems in these two respective projects that will
+      cause file-not-found issues between workspaces versus UI uploads)
+   6) From OpenShift Console: label nodes accordingly for your environment to
+      schedule compute and platform pods
+   7) From OpenShift Console: delete CertificateRequests for hephaestus\*-tls
+      in domino-compute NS
+   8) From Linux shell: edit "fleetcommand-agent-install.sh" adding --sync flag
+      to pod manifest:
       The --sync flag on agent install will cause the Helm charts to resync:
+
       python -m fleetcommand_agent run -f /app/install/domino.yml --sync
-   9) Restart Domino using restart script here (this will also delete your
-      hephaestus TLS secrets which is why we had to clear previous reqs)
+
+      Then execute fleetcommand-agent-install.sh
+   9) From Linux shell: restart Domino using restart script here (this will
+      also delete your hephaestus TLS secrets which is why we had to clear
+      previous reqs)
       https://support.domino.ai/support/s/article/Restart-Script
 
 # Backup recipe execution: 43 seconds
