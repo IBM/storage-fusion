@@ -77,7 +77,7 @@ spec:
     - group: domino-cluster-included-resources
 ```
 
-# 2) Steps
+# 2) Recipe installation steps
 ```
    #
    # create blank namespace "domino-cluster" to use with this custom recipe
