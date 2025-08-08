@@ -98,7 +98,15 @@ spec:
      patch policyassignment \
      $i \
      --type merge \
-     -p '{"spec":{"recipe":{"name":"domino-cluster-recipe", "namespace":"'domino-cluster'", "apiVersion":"spp-data-protection.isf.ibm.com/v1alpha1"}}}'
+     -p '{
+       "spec": {
+         "recipe": {
+           "name": "domino-cluster-recipe",
+           "namespace": "'domino-cluster'",
+           "apiVersion": "spp-data-protection.isf.ibm.com/v1alpha1"
+         }
+       }
+     }'
    done
 ```
 Note: newer releases of Fusion automatically apply the recipes it finds in
