@@ -14,11 +14,6 @@ spec:
     - subscriptions.operators.coreos.com
     - clusterserviceversions.operators.coreos.com
     - installplans.operators.coreos.com
-    - clients.oidc.security.ibm.com
-    - authentication.operator.ibm.com
-    - challenges.acme.cert-manager.io
-    - orders.acme.cert-manager.io
-    - certificaterequests.cert-manager.io
     name: domino-cluster-resources
     type: resource
     includeClusterResources: true
