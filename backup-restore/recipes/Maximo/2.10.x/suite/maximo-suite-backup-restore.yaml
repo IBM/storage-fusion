@@ -1,0 +1,410 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-suite-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-suite
+  groups:
+  - name: mongodb-volumes
+    type: volume
+    includedNamespaces:
+      - ${MONGODB_NAMESPACE}
+  - name: mongodb-crds
+    type: resource
+    includeClusterResources: true
+    includedResourceTypes:
+      - customresourcedefinitions
+    labelSelector: mongodb-custom-label=manual
+  - name: mongodb-resources
+    type: resource
+    includedNamespaces:
+      - ${MONGODB_NAMESPACE}
+    excludedResourceTypes:
+      - pods
+      - statefulsets
+      - mongodbcommunity.mongodbcommunity.mongodb.com
+  - name: mongodbcommunity
+    type: resource
+    includedNamespaces:
+      - ${MONGODB_NAMESPACE}
+    includedResourceTypes:
+      - mongodbcommunity.mongodbcommunity.mongodb.com
+  #IfGrafanaUncomment- name: maximo-mongodb-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedNamespaces:
+      #IfGrafanaUncomment- ${MONGODB_NAMESPACE}
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: maximo-sls-resources
+    type: resource
+    includedNamespaces:
+      - ${SLS_NAMESPACE}
+    includedResourceTypes:
+      - licenseservices.sls.ibm.com
+      - secrets 
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+    labelSelector: for-backup=true 
+  #IfGrafanaUncomment- name: maximo-sls-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedNamespaces:
+      #IfGrafanaUncomment- ${SLS_NAMESPACE}
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: restore-maximo-sls-secrets
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - secrets 
+    labelSelector: for-restore-overwrite!=true,for-backup=true
+  - name: restore-overwrite-maximo-sls-secrets
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+    restoreOverwriteResources: true
+    labelSelector: for-restore-overwrite=true
+  - name: restore-maximo-sls-operatorgroups
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  - name: restore-maximo-sls-subscriptions
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: restore-maximo-sls-resources
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - licenseservices.sls.ibm.com
+  - name: maximo-core-resources
+    type: resource
+    includedNamespaces:
+      - mas-${MAS_INSTANCE_ID}-core
+    includedResourceTypes:
+      - bascfgs.config.mas.ibm.com 
+      - mongocfgs.config.mas.ibm.com
+      - slscfgs.config.mas.ibm.com
+      - workspaces.core.mas.ibm.com
+      - suites.core.mas.ibm.com
+      #IfDb2Uncomment- jdbccfgs.config.mas.ibm.com 
+      #IfKafkaUncomment- kafkacfgs.config.mas.ibm.com
+      #IfObjectStorageUncomment- objectstoragecfgs.config.mas.ibm.com
+      #IfWatsonStudioUncomment- watsonstudiocfgs.config.mas.ibm.com
+    labelSelector: mas.ibm.com/instanceId=${MAS_INSTANCE_ID}
+  - name: maximo-core-secrets
+    type: resource
+    includedNamespaces:
+      - mas-${MAS_INSTANCE_ID}-core
+    includedResourceTypes:
+      - secrets
+    labelSelector: for-backup=true
+  - name: maximo-core-operatorgroups
+    type: resource
+    includedNamespaces:
+      - mas-${MAS_INSTANCE_ID}-core
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  #IfGrafanaUncomment- name: maximo-core-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedNamespaces:
+      #IfGrafanaUncomment- mas-${MAS_INSTANCE_ID}-core
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: maximo-core-subscriptions
+    type: resource
+    includedNamespaces:
+      - mas-${MAS_INSTANCE_ID}-core
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+    labelSelector: operators.coreos.com/ibm-mas.mas-${MAS_INSTANCE_ID}-core=
+  hooks:
+  - name: mongodb-operator-check
+    type: check
+    namespace: ${GROUP.mongodb-volumes.namespace}
+    selectResource: deployment
+    labelSelector: owner=mongodb
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 180
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: mongodb-instance-check
+    type: check
+    namespace: ${GROUP.mongodb-volumes.namespace}
+    selectResource: mongodbcommunity.mongodb.com/v1/mongodbcommunity
+    nameSelector: mas-mongo-ce
+    timeout: 120
+    onError: fail
+    chks:
+    - name: phaseRunning
+      timeout: 300
+      onError: fail
+      condition: "{$.status.phase} == {\"Running\"}"
+  - name: mongodb-pod-exec
+    labelSelector: app=mas-mongo-ce-svc
+    timeout: 300
+    namespace: ${GROUP.mongodb-volumes.namespace}
+    onError: fail
+    ops:
+      - command: >
+          ["/bin/bash", "-c", "PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"db.fsyncLock()\" || echo \"Not Master\""]
+        container: mongod
+        timeout: 300
+        name: fsyncLock
+        onError: fail
+      - command: >
+          ["/bin/bash", "-c", "PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"db.fsyncUnlock()\" || echo \"Not Master\""]
+        container: mongod
+        timeout: 300
+        name: fsyncUnlock
+        onError: fail
+      - command: >
+          ["/bin/bash", "-c", "export DB=mas_${MAS_INSTANCE_ID}_core; export PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates  --eval \"db = connect('mongodb://localhost/admin?tls=true&tlsAllowInvalidCertificates=true'); db.auth('admin', process.env.PASSWORD); mydb = db.getSiblingDB(process.env.DB); printjson(mydb.OauthClient.drop());\" || echo \"Not Master\""]
+        container: mongod
+        timeout: 300
+        name: dropCollection
+        onError: fail
+      #IfMVIUncomment- command: >
+          #IfMVIUncomment["/bin/bash", "-c", "export DB=mas-${MAS_INSTANCE_ID}-visualinspection; export PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates  --eval \"db = connect('mongodb://localhost/admin?tls=true&tlsAllowInvalidCertificates=true'); db.auth('admin', process.env.PASSWORD); mydb = db.getSiblingDB(process.env.DB); printjson(mydb.WebAPIs.drop());\" || echo \"Not Master\""]
+        #IfMVIUncommentcontainer: mongod
+        #IfMVIUncommenttimeout: 300
+        #IfMVIUncommentname: dropCollectionMvi
+        #IfMVIUncommentonError: fail
+      #IfMVIUncomment- command: >
+          #IfMVIUncomment["/bin/bash", "-c", "export DB=mas-${MAS_INSTANCE_ID}-visualinspection; export PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates  --eval \"db = connect('mongodb://localhost/admin?tls=true&tlsAllowInvalidCertificates=true'); db.auth('admin', process.env.PASSWORD); mydb = db.getSiblingDB(process.env.DB); printjson(mydb.TrainedModels.updateMany({ deployed: 1 },{ \\$set: { deployed: 0 } }));\" || echo \"Not Master\""]
+        #IfMVIUncommentcontainer: mongod
+        #IfMVIUncommenttimeout: 300
+        #IfMVIUncommentname: undeployModelsMvi
+        #IfMVIUncommentonError: fail
+      #IfAssistUncomment- command: >
+          #IfAssistUncomment["/bin/bash", "-c", "export DB=mas-assist; export PASSWORD=$(curl -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.mongodb-volumes.namespace}/secrets/mas-mongo-ce-admin-admin | python3 -c \"import sys, json; data = json.load(sys.stdin); print(data['data']['password'])\" | base64 -d); [[ $(mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates --eval \"rs.isMaster().ismaster\" --quiet | tail -1) == \"true\" ]] && mongosh --host localhost -u admin -p $PASSWORD --port 27017 --tls --tlsAllowInvalidCertificates  --eval \"db = connect('mongodb://localhost/admin?tls=true&tlsAllowInvalidCertificates=true'); db.auth('admin', process.env.PASSWORD); mydb = db.getSiblingDB(process.env.DB); printjson(mydb.tenants.drop());\" || echo \"Not Master\""]
+        #IfAssistUncommentcontainer: mongod
+        #IfAssistUncommenttimeout: 300
+        #IfAssistUncommentname: dropAssistTenants
+        #IfAssistUncommentonError: fail
+    selectResource: pod
+    type: exec
+  - name: maximo-sls-ibm-sls-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-sls-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-sls.ibm-sls=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-sls-ibm-truststore-mgr-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-sls-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.ibm-sls=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-sls-licenseservices-check
+    type: check
+    namespace: ${GROUP.maximo-sls-resources.namespace} 
+    selectResource: sls.ibm.com/v1/licenseservices
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+    - name: statusInitialized
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Initialized\")].status} == {\"True\"}"
+  - name: ibm-sls-controller-manager-exec
+    labelSelector: app.kubernetes.io/instance=ibm-sls 
+    namespace: ${GROUP.maximo-sls-resources.namespace}
+    onError: fail
+    ops:
+    - command: |
+        ["/bin/bash", "-c", "curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/openshift-config-managed/configmaps/console-public | jq '.data.consoleURL' | tr -d '\"' | python3 -c \"print('.'.join(input().split('.')[1:]))\" >/tmp/domain"]
+      container: manager
+      name: retrieve-domain
+      timeout: 180
+    - command: |
+        ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"domain\\\":\\\"ibm-sls.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/sls.ibm.com/v1/namespaces/${GROUP.maximo-sls-resources.namespace}/licenseservices/sls -d $data"]
+      container: manager
+      name: patch-sls-licenseservices-domain
+      timeout: 600
+    selectResource: pod
+    timeout: 180
+    type: exec
+  - name: maximo-core-csv-check
+    type: check
+    namespace: ${GROUP.maximo-core-resources.namespace} 
+    selectResource: operators.coreos.com/v1alpha1/clusterserviceversions
+    labelSelector: operators.coreos.com/ibm-mas.mas-${MAS_INSTANCE_ID}-core=
+    timeout: 600
+    onError: fail
+    chks:
+    - name: phaseSucceeded
+      timeout: 600
+      onError: fail
+      condition: "{$.status.phase} == {\"Succeeded\"}"
+  - name: maximo-core-ibm-mas-operator-check
+    type: check
+    namespace: ${GROUP.maximo-core-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas.mas-${MAS_INSTANCE_ID}-core=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-core-ibm-truststore-mgr-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-core-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.mas-${MAS_INSTANCE_ID}-core=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-core-entitymgr-suite-check
+    type: check
+    namespace: ${GROUP.maximo-core-resources.namespace} 
+    selectResource: core.mas.ibm.com/v1/suites
+    labelSelector: mas.ibm.com/instanceId=${MAS_INSTANCE_ID}
+    timeout: 3000
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 3000
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  - name: ibm-mas-operator-exec
+    labelSelector: app.kubernetes.io/instance=ibm-mas
+    namespace: ${GROUP.maximo-core-resources.namespace}
+    onError: fail
+    ops:
+    - command: |
+        ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"domain\\\":\\\"${MAS_INSTANCE_ID}.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/core.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/suites/${MAS_INSTANCE_ID}?fieldManager=kubectl-patch -d $data"]
+      container: manager
+      name: patch-spoke-suites-domain
+      timeout: 600
+    - command: |
+        ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"domain\\\":\\\"${MAS_INSTANCE_ID}.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/internal.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/coreidps/${MAS_INSTANCE_ID}-coreidp?fieldManager=kubectl-patch -d $data"] 
+      container: manager
+      name: patch-spoke-coreidps-domain
+      timeout: 600
+    - command: |
+        ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"config\\\":{\\\"url\\\":\\\"https://${REPORTING_OPERATOR_ENDPOINT}-${REPORTING_OPERATOR_NAMESPACE}.$(cat /tmp/domain)\\\"}}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/config.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/bascfgs/${MAS_INSTANCE_ID}-bas-system?fieldManager=kubectl-patch -d $data"]
+      container: manager
+      name: patch-spoke-bascfgs-url
+      timeout: 600
+    #IfKafkaUncomment- command: |
+    #IfKafkaUncomment    ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"config\\\":{\\\"hosts\\\":[{\\\"host\\\":\\\"mas-${MAS_INSTANCE_ID}-system-kafka-tls-bootstrap-${KAFKA_NAMESPACE}.$(cat /tmp/domain)\\\",\\\"port\\\":443}]},\\\"displayName\\\":\\\"mas-${MAS_INSTANCE_ID}-system-kafka-tls-bootstrap-${KAFKA_NAMESPACE}.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/config.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/kafkacfgs/${MAS_INSTANCE_ID}-kafka-system?fieldManager=kubectl-patch -d $data"]
+    #IfKafkaUncomment  container: manager
+    #IfKafkaUncomment  name: patch-spoke-kafkacfgs-host
+    #IfKafkaUncomment  timeout: 600
+    #IfWatsonStudioUncomment- command: |
+    #IfWatsonStudioUncomment    ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"config\\\":{\\\"endpoint\\\":\\\"https://cpd-ibm-cpd.$(cat /tmp/domain)\\\"},\\\"displayName\\\":\\\"https://cpd-ibm-cpd.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/config.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/watsonstudiocfgs/${MAS_INSTANCE_ID}-watsonstudio-system?fieldManager=kubectl-patch -d $data"]
+    #IfWatsonStudioUncomment  container: manager
+    #IfWatsonStudioUncomment  name: patch-spoke-watsonstudiocfgs-endpoint
+    #IfWatsonStudioUncomment  timeout: 600
+    - command: |
+        ["/bin/bash", "-c", "curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/openshift-config-managed/configmaps/console-public | jq '.data.consoleURL' | tr -d '\"' | python3 -c \"print('.'.join(input().split('.')[1:]))\" >/tmp/domain"]
+      container: manager
+      name: retrieve-domain
+      timeout: 180
+    - command: |
+        ["/bin/bash", "-c", "registrationKey=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/ibm-sls/configmaps/sls-suite-registration | jq -r '.data.registrationKey' | echo -n `xargs -n 1` | base64); data='{\\\"data\\\":{\\\"registrationKey\\\":\\\"$registrationKey\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.maximo-core-resources.namespace}/secrets/sls-registration-key?fieldManager=kubectl-patch -d $data"]
+      container: manager
+      name: patch-sls-registration-key
+      timeout: 600
+    - command: |
+        ["/bin/bash", "-c", "certificate=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/ibm-sls/configmaps/sls-suite-registration | jq '.data.ca' | tr -d '\"'); data='{\\\"spec\\\":{\\\"certificates\\\":[{\\\"crt\\\":\\\"$certificate\\\",\\\"alias\\\":\\\"ca\\\"}],\\\"config\\\":{\\\"url\\\":\\\"https://sls.ibm-sls.ibm-sls.$(cat /tmp/domain)\\\"}}}'; eval \"data=$data\"; echo \"$data\" >/tmp/datafile; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/config.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/slscfgs/${MAS_INSTANCE_ID}-sls-system?fieldManager=kubectl-patch -d @/tmp/datafile; rm -f /tmp/datafile"]
+      container: manager
+      name: patch-spoke-slscfgs-crt-url
+      timeout: 600
+    selectResource: pod
+    timeout: 180
+    type: exec
+  workflows:
+  - failOn: any-error
+    name: backup
+    sequence:
+    - group: mongodb-crds
+    - group: mongodb-resources
+    #IfGrafanaUncomment- group: maximo-mongodb-dashboards
+    - group: mongodbcommunity
+    - hook: mongodb-pod-exec/fsyncLock
+    - group: mongodb-volumes
+    - hook: mongodb-pod-exec/fsyncUnlock
+    - group: maximo-sls-resources
+    #IfGrafanaUncomment- group: maximo-sls-dashboards
+    - group: maximo-core-resources
+    - group: maximo-core-secrets
+    - group: maximo-core-operatorgroups
+    - group: maximo-core-subscriptions
+    #IfGrafanaUncomment- group: maximo-core-dashboards
+  - failOn: any-error
+    name: restore
+    sequence:
+    - group: mongodb-volumes
+    - group: mongodb-crds
+    - group: mongodb-resources
+    #IfGrafanaUncomment- group: maximo-mongodb-dashboards
+    - hook: mongodb-operator-check/replicasReady
+    - group: mongodbcommunity
+    - hook: mongodb-instance-check/phaseRunning
+    - hook: mongodb-pod-exec/dropCollection
+    #IfMVIUncomment- hook: mongodb-pod-exec/dropCollectionMvi
+    #IfMVIUncomment- hook: mongodb-pod-exec/undeployModelsMvi
+    #IfAssistUncomment- hook: mongodb-pod-exec/dropAssistTenants
+    - group: restore-maximo-sls-operatorgroups 
+    - group: restore-maximo-sls-subscriptions
+    #IfGrafanaUncomment- group: maximo-sls-dashboards
+    - hook: maximo-sls-ibm-sls-controller-manager-check/replicasReady
+    - hook: maximo-sls-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - hook: ibm-sls-controller-manager-exec/retrieve-domain
+    - group: restore-maximo-sls-secrets 
+    - group: restore-maximo-sls-resources 
+    - hook: ibm-sls-controller-manager-exec/patch-sls-licenseservices-domain
+    - hook: maximo-sls-licenseservices-check/statusReady
+    - group: restore-overwrite-maximo-sls-secrets
+    - hook: maximo-sls-licenseservices-check/statusInitialized
+    - hook: maximo-sls-licenseservices-check/statusReady
+    - group: maximo-core-operatorgroups
+    - group: maximo-core-secrets
+    - group: maximo-core-subscriptions
+    - hook: maximo-core-ibm-mas-operator-check/replicasReady
+    - hook: maximo-core-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - hook: ibm-mas-operator-exec/retrieve-domain
+    - group: maximo-core-resources
+    #IfGrafanaUncomment- group: maximo-core-dashboards
+    - hook: ibm-mas-operator-exec/patch-sls-registration-key
+    - hook: ibm-mas-operator-exec/patch-spoke-slscfgs-crt-url
+    - hook: ibm-mas-operator-exec/patch-spoke-suites-domain
+    - hook: ibm-mas-operator-exec/patch-spoke-coreidps-domain
+    - hook: ibm-mas-operator-exec/patch-spoke-bascfgs-url
+    #IfKafkaUncomment- hook: ibm-mas-operator-exec/patch-spoke-kafkacfgs-host
+    #IfWatsonStudioUncomment- hook: ibm-mas-operator-exec/patch-spoke-watsonstudiocfgs-endpoint
+    - hook: maximo-core-entitymgr-suite-check/statusReady

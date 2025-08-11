@@ -1,0 +1,96 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-amq-streams-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-amq-streams
+  groups:
+  - name: maximo-amq-streams-volumes
+    type: volume
+  - name: maximo-amq-streams-resources
+    type: resource
+  - name: maximo-amq-streams-operatorgroups
+    type: resource
+    backupRef: maximo-amq-streams-resources
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  - name: maximo-amq-streams-subscriptions
+    type: resource
+    backupRef: maximo-amq-streams-resources
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: maximo-amq-streams-configmaps-secrets
+    type: resource
+    backupRef: maximo-amq-streams-resources
+    includedResourceTypes:
+      - configmaps
+      - secrets
+    labelSelector: for-backup=true 
+  - name: maximo-kafkas
+    type: resource
+    backupRef: maximo-amq-streams-resources
+    includedResourceTypes:
+      - kafkas.kafka.strimzi.io
+      - kafkausers.kafka.strimzi.io
+  #IfGrafanaUncomment- name: maximo-amqstreams-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  hooks:
+  - name: maximo-kafkas-check
+    type: check
+    namespace: ${GROUP.maximo-amq-streams-volumes.namespace}
+    selectResource: kafka.strimzi.io/v1beta2/kafkas
+    labelSelector: for-backup=true 
+    timeout: 120
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 1000
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  - name: maximo-kafkausers-check
+    type: check
+    namespace: ${GROUP.maximo-amq-streams-volumes.namespace}
+    selectResource: kafka.strimzi.io/v1beta2/kafkausers
+    labelSelector: for-backup=true
+    timeout: 120
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 1000
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  - name: maximo-amq-streams-cluster-operator-check
+    type: check
+    namespace: ${GROUP.maximo-amq-streams-volumes.namespace}
+    selectResource: deployment
+    labelSelector: olm.owner.kind=ClusterServiceVersion
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  workflows:
+  - failOn: any-error
+    name: backup
+    sequence:
+    - group: maximo-amq-streams-resources
+    - group: maximo-amq-streams-volumes
+    #IfGrafanaUncomment- group: maximo-amqstreams-dashboards
+  - failOn: any-error
+    name: restore
+    sequence:
+    - group: maximo-amq-streams-volumes
+    - group: maximo-amq-streams-operatorgroups
+    - group: maximo-amq-streams-subscriptions
+    #IfGrafanaUncomment- group: maximo-amqstreams-dashboards
+    - hook: maximo-amq-streams-cluster-operator-check/replicasReady
+    - group: maximo-amq-streams-configmaps-secrets
+    - group: maximo-kafkas
+    - hook: maximo-kafkas-check/statusReady
+    - hook: maximo-kafkausers-check/statusReady

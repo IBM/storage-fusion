@@ -1,0 +1,125 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-sls-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-sls
+  groups:
+  - name: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - licenseservices.sls.ibm.com
+      - secrets 
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+    labelSelector: for-backup=true 
+  - name: restore-maximo-sls-secrets
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - secrets 
+    labelSelector: for-restore-overwrite!=true,for-backup=true
+  - name: restore-overwrite-maximo-sls-secrets
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+    restoreOverwriteResources: true
+    labelSelector: for-restore-overwrite=true
+  - name: restore-maximo-sls-operatorgroups
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  - name: restore-maximo-sls-subscriptions
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: restore-maximo-sls-resources
+    backupRef: maximo-sls-resources
+    type: resource
+    includedResourceTypes:
+      - licenseservices.sls.ibm.com
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  hooks:
+  - name: maximo-sls-ibm-sls-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-sls-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-sls.ibm-sls=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-sls-ibm-truststore-mgr-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-sls-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.ibm-sls=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-sls-licenseservices-check
+    type: check
+    namespace: ${GROUP.maximo-sls-resources.namespace} 
+    selectResource: sls.ibm.com/v1/licenseservices
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+    - name: statusInitialized
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Initialized\")].status} == {\"True\"}"
+  - name: ibm-sls-controller-manager-exec
+    labelSelector: app.kubernetes.io/instance=ibm-sls 
+    namespace: ${GROUP.maximo-sls-resources.namespace}
+    onError: fail
+    ops:
+    - command: |
+        ["/bin/bash", "-c", "curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/openshift-config-managed/configmaps/console-public | jq '.data.consoleURL' | tr -d '\"' | python3 -c \"print('.'.join(input().split('.')[1:]))\" >/tmp/domain"]
+      container: manager
+      name: retrieve-domain
+      timeout: 180
+    - command: |
+        ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"domain\\\":\\\"ibm-sls.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/sls.ibm.com/v1/namespaces/${GROUP.maximo-sls-resources.namespace}/licenseservices/sls -d $data"]
+      container: manager
+      name: patch-sls-licenseservices-domain
+      timeout: 600
+    selectResource: pod
+    timeout: 180
+    type: exec
+  workflows:
+  - name: backup
+    sequence:
+    - group: maximo-sls-resources
+  - name: restore
+    sequence:
+    - group: restore-maximo-sls-operatorgroups 
+    - group: restore-maximo-sls-subscriptions 
+    - hook: maximo-sls-ibm-sls-controller-manager-check/replicasReady
+    - hook: maximo-sls-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - hook: ibm-sls-controller-manager-exec/retrieve-domain
+    - group: restore-maximo-sls-secrets 
+    - group: restore-maximo-sls-resources 
+    - hook: ibm-sls-controller-manager-exec/patch-sls-licenseservices-domain
+    - hook: maximo-sls-licenseservices-check/statusReady
+    - group: restore-overwrite-maximo-sls-secrets
+    - hook: maximo-sls-licenseservices-check/statusInitialized
+    - hook: maximo-sls-licenseservices-check/statusReady

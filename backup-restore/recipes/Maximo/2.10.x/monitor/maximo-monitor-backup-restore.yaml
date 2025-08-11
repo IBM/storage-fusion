@@ -1,0 +1,121 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-monitor-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-monitor
+  groups:
+  - name: maximo-monitor-resources
+    type: resource
+    includedNamespaces:
+      - mas-${MAS_INSTANCE_ID}-monitor
+    includedResourceTypes:
+      - monitorapps.apps.mas.ibm.com
+      - monitorworkspaces.apps.mas.ibm.com
+      - secrets 
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+    labelSelector: for-backup=true
+  #IfGrafanaUncomment- name: maximo-monitor-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedNamespaces:
+      #IfGrafanaUncomment- mas-${MAS_INSTANCE_ID}-monitor
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: restore-maximo-monitor-secrets
+    backupRef: maximo-monitor-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+  - name: restore-maximo-monitor-operatorgroups
+    backupRef: maximo-monitor-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  - name: restore-maximo-monitor-subscriptions
+    backupRef: maximo-monitor-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: restore-maximo-monitor-monitorapps
+    backupRef: maximo-monitor-resources
+    type: resource
+    includedResourceTypes:
+      - monitorapps.apps.mas.ibm.com
+  - name: restore-maximo-monitor-monitorworkspaces
+    backupRef: maximo-monitor-resources
+    type: resource
+    includedResourceTypes:
+      - monitorworkspaces.apps.mas.ibm.com
+  hooks:
+  - name: maximo-monitor-ibm-mas-operator-check
+    type: check
+    namespace: ${GROUP.maximo-monitor-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas-monitor.mas-${MAS_INSTANCE_ID}-monitor=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-monitor-ibm-truststore-mgr-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-monitor-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.mas-${MAS_INSTANCE_ID}-monitor= 
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-monitor-monitorapps-check
+    type: check
+    namespace: ${GROUP.maximo-monitor-resources.namespace} 
+    selectResource: apps.mas.ibm.com/v1/monitorapps
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  - name: maximo-monitor-monitorworkspaces-check
+    type: check
+    namespace: ${GROUP.maximo-monitor-resources.namespace} 
+    selectResource: apps.mas.ibm.com/v1/monitorworkspaces
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  workflows:
+  - failOn: any-error
+    name: backup
+    priority: 0
+    sequence:
+    - group: maximo-monitor-resources
+    #IfGrafanaUncomment- group: maximo-monitor-dashboards
+  - failOn: any-error
+    name: restore
+    priority: 0
+    sequence:
+    - group: restore-maximo-monitor-secrets
+    - group: restore-maximo-monitor-operatorgroups
+    - group: restore-maximo-monitor-subscriptions
+    #IfGrafanaUncomment- group: maximo-monitor-dashboards
+    - hook: maximo-monitor-ibm-mas-operator-check/replicasReady
+    - hook: maximo-monitor-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - group: restore-maximo-monitor-monitorapps
+    - hook: maximo-monitor-monitorapps-check/statusReady
+    - group: restore-maximo-monitor-monitorworkspaces
+    - hook: maximo-monitor-monitorworkspaces-check/statusReady

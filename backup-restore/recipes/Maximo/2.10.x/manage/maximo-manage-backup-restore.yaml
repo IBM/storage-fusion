@@ -1,0 +1,112 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-manage-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-manage
+  groups:
+  - name: maximo-manage-volumes
+    type: volume
+  - name: maximo-manage-resources
+    type: resource
+    includedResourceTypes:
+      - manageapps.apps.mas.ibm.com
+      - manageworkspaces.apps.mas.ibm.com
+      - secrets 
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+    labelSelector: for-backup=true 
+  - name: restore-maximo-manage-secrets
+    backupRef: maximo-manage-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+  - name: restore-maximo-manage-operatorgroups
+    backupRef: maximo-manage-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  #IfGrafanaUncomment- name: maximo-manage-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: restore-maximo-manage-subscriptions
+    backupRef: maximo-manage-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: restore-maximo-manage-manageapps-manageworkspaces
+    backupRef: maximo-manage-resources
+    type: resource
+    includedResourceTypes:
+      - manageapps.apps.mas.ibm.com
+      - manageworkspaces.apps.mas.ibm.com
+  hooks:
+  - name: maximo-manage-ibm-mas-operator-check
+    type: check
+    namespace: ${GROUP.maximo-manage-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas-manage.mas-${MAS_INSTANCE_ID}-manage=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-manage-ibm-truststore-mgr-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-manage-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.mas-${MAS_INSTANCE_ID}-manage= 
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-manage-manageapps-check
+    type: check
+    namespace: ${GROUP.maximo-manage-resources.namespace} 
+    selectResource: apps.mas.ibm.com/v1/manageapps
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  - name: maximo-manage-manageworkspaces-check
+    type: check
+    namespace: ${GROUP.maximo-manage-resources.namespace} 
+    selectResource: apps.mas.ibm.com/v1/manageworkspaces
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  workflows:
+  - name: backup
+    sequence:
+    - group: maximo-manage-resources
+    - group: maximo-manage-volumes
+    #IfGrafanaUncomment- group: maximo-manage-dashboards
+  - name: restore
+    sequence:
+    - group: maximo-manage-volumes
+    - group: restore-maximo-manage-secrets
+    - group: restore-maximo-manage-operatorgroups
+    - group: restore-maximo-manage-subscriptions
+    #IfGrafanaUncomment- group: maximo-manage-dashboards
+    - hook: maximo-manage-ibm-mas-operator-check/replicasReady
+    - hook: maximo-manage-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - group: restore-maximo-manage-manageapps-manageworkspaces
+    - hook: maximo-manage-manageapps-check/statusReady
+    - hook: maximo-manage-manageworkspaces-check/statusReady
