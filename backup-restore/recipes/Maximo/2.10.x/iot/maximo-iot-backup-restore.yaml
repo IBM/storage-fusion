@@ -1,0 +1,110 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-iot-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-iot
+  groups:
+  - name: maximo-iot-volumes
+    type: volume
+  - name: maximo-iot-resources
+    type: resource
+    includedResourceTypes:
+      - iots.iot.ibm.com
+      - iotworkspaces.iot.ibm.com
+      - secrets
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+    labelSelector: for-backup=true
+  #IfGrafanaUncomment- name: maximo-iot-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: restore-maximo-iot-secrets
+    backupRef: maximo-iot-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+  - name: restore-maximo-iot-operatorgroups
+    backupRef: maximo-iot-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  - name: restore-maximo-iot-subscriptions
+    backupRef: maximo-iot-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: restore-maximo-iot-iotworkspaces
+    backupRef: maximo-iot-resources
+    type: resource
+    includedResourceTypes:
+      - iots.iot.ibm.com
+      - iotworkspaces.iot.ibm.com
+  hooks:
+  - name: maximo-iot-ibm-mas-operator-check
+    type: check
+    namespace: ${GROUP.maximo-iot-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas-iot.mas-${MAS_INSTANCE_ID}-iot=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-iot-ibm-truststore-mgr-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-iot-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.mas-${MAS_INSTANCE_ID}-iot=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-iot-check
+    type: check
+    namespace: ${GROUP.maximo-iot-resources.namespace}
+    selectResource: iot.ibm.com/v1/iots
+    labelSelector: for-backup=true
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  - name: maximo-iot-iotworkspaces-check
+    type: check
+    namespace: ${GROUP.maximo-iot-resources.namespace}
+    selectResource: iot.ibm.com/v1/iotworkspaces
+    labelSelector: for-backup=true
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+  workflows:
+  - name: backup
+    sequence:
+    - group: maximo-iot-resources
+    #IfGrafanaUncomment- group: maximo-iot-dashboards
+  - name: restore
+    sequence:
+    - group: restore-maximo-iot-secrets
+    - group: restore-maximo-iot-operatorgroups
+    - group: restore-maximo-iot-subscriptions
+    #IfGrafanaUncomment- group: maximo-iot-dashboards
+    - hook: maximo-iot-ibm-mas-operator-check/replicasReady
+    - hook: maximo-iot-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - group: restore-maximo-iot-iotworkspaces
+    - hook: maximo-iot-check/statusReady
+    - hook: maximo-iot-iotworkspaces-check/statusReady

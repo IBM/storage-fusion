@@ -1,0 +1,14 @@
+#!/bin/bash
+
+
+echo -e "\n=== crd ==="
+oc get crd -l app.kubernetes.io/name=ibm-mas,operators.coreos.com/ibm-mas.mas-cpst3-core=
+
+echo -e "\n=== clusterroles ==="
+oc get clusterroles -o json | jq '.items[] | select(.metadata.ownerReferences != null) | .metadata | "\(.name)  \(.ownerReferences[].name)  \(.ownerReferences[].kind)"' | grep CustomResourceDefinition | egrep `oc get crd -l operators.coreos.com/ibm-mas.mas-cpst3-core= --no-headers | awk '{print $1}' | xargs | sed 's/ /|/g'` | tr -d '"' | awk '{print $1}'
+echo -e "\n"
+oc get clusterrolebindings -o json | jq '.items[] | select(.subjects[]? | .namespace == "mas-cpst3-core") | .roleRef.name' | tr -d '"'
+
+echo -e "\n=== clusterrolebindings ==="
+oc get clusterrolebindings -o json | jq '.items[] | select(.subjects[]? | .namespace == "mas-cpst3-core") | .metadata.name' | tr -d '"'
+
