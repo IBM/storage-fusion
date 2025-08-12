@@ -1,0 +1,176 @@
+apiVersion: data-protection.isf.ibm.com/v1alpha1
+kind: Transform
+metadata:
+  name: transform-all-with-variables
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  transforms:
+  - name: deployment-with-strategic-patch
+    strategicPatches:
+    - patchData: |
+        { 
+          "spec":
+            {
+              "template":
+                {
+                  "spec": {
+                    "containers": [
+                      { 
+                        "name": "nginx-main",
+                        "image": "docker-na-public.artifactory.swg-devops.com/hyc-abell-devops-team-dev-docker-local/ashish/nginx:1.25.6",
+                        "imagePullPolicy": "Always",
+                        "env": [
+                          {
+                            "name": "test",
+                            "value": "${MODIFY_BY}"
+                          },
+                          {
+                            "name": "test-1",
+                            "value": "from-spec"
+                          },
+                        ]
+                      }
+                    ]
+                  }
+                }
+            }
+        }
+    subject:
+      groupResource: deployments.apps
+      resourceNameRegex: nginx-multi-container
+  - name: configmap-with-string-patch
+    stringPatch:
+    - key: data/instance.json
+      replaceStrings:
+      - new: '\"persistence.cachingpv.storageClass\": \"${TARGET_STORAGE_CLASS_FS}\"'
+        old: '\"persistence.cachingpv.storageClass\": \"transform\"'
+    subject:
+      groupResource: configmaps
+      resourceNameRegex: dv-instance-config
+  - name: ingress-with-json-patch
+    json:
+    - op: test
+      path: /spec/rules/0/host
+      value: example.com
+    - op: replace
+      path: /spec/rules/0/host
+      value: '${INGRESS_HOST}'
+    subject:
+      groupResource: ingresses.networking.k8s.io
+      labelSelector: 'app=test'
+  - name: pvc-test-replace-labels
+    json:
+    - op: test
+      path: /metadata/labels/c
+      value: d
+    - op: replace
+      path: /metadata/labels/c
+      value: "${MODIFY_BY}"
+    subject:
+      groupResource: persistentvolumeclaims
+      labelSelector: a=b,c=d
+  - name: custom-resource-add-label-json-patch
+    json:
+    - op: add
+      path: /metadata/labels
+      value: '{"modify-by":"${MODIFY_BY}"}'
+    subject:
+      groupResource: crontabs.stable.example.com
+      resourceNameRegex: crontab-1
+  - name: configmap-with-json-patch-add-annotations
+    json:
+    - op: add
+      path: /metadata/annotations
+      value: '{"modify-by":"${MODIFY_BY}"}'
+    subject:
+      groupResource: configmaps
+      labelSelector: a=b
+  - name: cronjob-with-json-patch-update-schedule
+    json:
+    - op: replace
+      path: /spec/schedule
+      value: '0 0 1 * *'
+    subject:
+      groupResource: cronjobs.batch
+      resourceNameRegex: cronjob-1
+  - name: statefulsets-with-merge-patch-labels
+    mergePatches:
+    - patchData: |
+        {
+          "metadata": {
+            "labels": {
+              "modify-by": "${MODIFY_BY}"
+            }
+          }
+        }
+    subject:
+      groupResource: statefulsets.apps
+      labelSelector: 'a=b'
+  - name: custom-resource-with-string-patch
+    stringPatch:
+    - key: /spec/image
+      replaceStrings:
+      - new: '${IMAGE}'
+        old: 'my-job:beta'
+    subject:
+      groupResource: crontabs.stable.example.com
+      resourceNameRegex: crontab-1
+  - name: secret-with-string-patch
+    stringPatch:
+    - key: /data/instance.json
+      replaceStrings:
+      - new: '\"resources.dv.requests.memory\": \"${REQUEST_MEMORY}\"'
+        old: '\"resources.dv.requests.memory\": \"24Gi\"'
+    subject:
+      groupResource: secrets
+      resourceNameRegex: complex-config-secret
+  - name: pvc-test-replace-storage-class-fs
+    json:
+    - op: test
+      path: /spec/storageClassName
+      value: "${SOURCE_STORAGE_CLASS_FS}"
+    - op: replace
+      path: /spec/storageClassName
+      value: "${TARGET_STORAGE_CLASS_FS}"
+    subject:
+      groupResource: persistentvolumeclaims
+  - name: pvc-test-replace-storage-class-rbd
+    json:
+    - op: test
+      path: /spec/storageClassName
+      value: "${SOURCE_STORAGE_CLASS_RBD}"
+    - op: replace
+      path: /spec/storageClassName
+      value: "${TARGET_STORAGE_CLASS_RBD}"
+    subject:
+      groupResource: persistentvolumeclaims
+  - name: deployment-with-string-patch
+    stringPatch:
+    - key: /spec/template/spec/containers/1/resources/limits/memory
+      replaceStrings:
+      - new: '256Mi'
+        old: '128Mi'
+    subject:
+      groupResource: deployments.apps
+      resourceNameRegex: nginx-multi-container
+  - name: statefulsets-test-replace-labels
+    json:
+    - op: test
+      path: /metadata/labels/a
+      value: b
+    - op: replace
+      path: /metadata/labels/a
+      value: '${MODIFY_BY}'
+    subject:
+      groupResource: statefulsets.apps
+      labelSelector: a=b
+  - name: statefulsets-remove-add-labels
+    json:
+    - op: remove
+      path: /metadata/labels/operators.coreos.com~1cloud-native-postgresql.cpdo
+    - op: add
+      path: /metadata/labels/operators.coreos.com~1cloud-native-postgresql.cpdo-new
+      value: ''
+    subject:
+      groupResource: statefulsets.apps
+      labelSelector: a=b
