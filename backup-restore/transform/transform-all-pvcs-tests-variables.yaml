@@ -1,0 +1,80 @@
+apiVersion: data-protection.isf.ibm.com/v1alpha1
+kind: Transform
+metadata:
+  name: transform-all-pvcs-tests-variables
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  transforms:
+  - name: test-add-labels
+    json:
+    - op: test
+      path: /metadata/labels/a
+      value: b
+    - op: add
+      path: /metadata/labels
+      value: '{"x":"${ENV_VAR_1}"}'
+    subject:
+      groupResource: persistentvolumeclaims
+  - name: test-replace-labels
+    json:
+    - op: test
+      path: /metadata/labels/c
+      value: e
+    - op: replace
+      path: /metadata/labels/c
+      value: "${ENV_VAR_2}"
+    subject:
+      groupResource: persistentvolumeclaims
+      resourceNameRegex: pvc1
+  - name: test-remove-labels
+    json:
+    - op: test
+      path: /metadata/labels/f
+      value: g
+    - op: remove
+      path: /metadata/labels/f
+    subject:
+      groupResource: persistentvolumeclaims
+      resourceNameRegex: pvc1
+  - name: test-add-annotations
+    json:
+    - op: test
+      path: /metadata/labels/a
+      value: b
+    - op: add
+      path: /metadata/annotations
+      value: '{"x":"${ENV_VAR_1}"}'
+    subject:
+      groupResource: persistentvolumeclaims
+  - name: test-replace-annotations
+    json:
+    - op: test
+      path: /metadata/annotations/c
+      value: e
+    - op: replace
+      path: /metadata/annotations/c
+      value: "${ENV_VAR_2}"
+    subject:
+      groupResource: persistentvolumeclaims
+      resourceNameRegex: pvc1
+  - name: test-remove-annotations
+    json:
+    - op: test
+      path: /metadata/annotations/f
+      value: g
+    - op: remove
+      path: /metadata/annotations/f
+    subject:
+      groupResource: persistentvolumeclaims
+      resourceNameRegex: pvc1
+  - name: test-replace-storageclass
+    json:
+    - op: test
+      path: /spec/storageClassName
+      value: ocs-storagecluster-ceph-rbd
+    - op: replace
+      path: /spec/storageClassName
+      value: "${TARGET_STORAGE_CLASS}"
+    subject:
+      groupResource: persistentvolumeclaims
+      resourceNameRegex: pvc3
