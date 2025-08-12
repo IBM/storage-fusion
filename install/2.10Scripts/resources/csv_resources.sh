@@ -53,7 +53,8 @@ genrate_cm ()
 
       deployments=$(echo $csv | jq '.spec.install.spec.deployments')
 
-      for deployment in $(echo $deployments | jq -c '.[]'); do
+      for LINE in $(echo $deployments | jq -r '.[] | @base64'); do
+          deployment=$(echo "$LINE" | base64 --decode)
           dep_name=$(echo $deployment | jq -r '.name')
           echo "DEPLOYMENT $dep_name"
 
