@@ -50,7 +50,7 @@ spec:
     - name: phaseRunning
       timeout: 300
       onError: fail
-      condition: "{$.status.phase} == {\"Running\"}"
+      condition: '{$.status.phase} == {"Running"}'
   - name: mongodb-pod-exec
     labelSelector: app=mas-mongo-ce-svc
     timeout: 300

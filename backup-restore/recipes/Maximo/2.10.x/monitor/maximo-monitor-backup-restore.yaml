@@ -85,7 +85,7 @@ spec:
     - name: statusReady
       timeout: 7200
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
   - name: maximo-monitor-monitorworkspaces-check
     type: check
     namespace: ${GROUP.maximo-monitor-resources.namespace} 
@@ -97,7 +97,7 @@ spec:
     - name: statusReady
       timeout: 7200
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
   workflows:
   - failOn: any-error
     name: backup

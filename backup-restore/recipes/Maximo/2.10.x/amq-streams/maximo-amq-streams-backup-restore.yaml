@@ -50,7 +50,7 @@ spec:
     - name: statusReady
       timeout: 1000
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
   - name: maximo-kafkausers-check
     type: check
     namespace: ${GROUP.maximo-amq-streams-volumes.namespace}
@@ -62,7 +62,7 @@ spec:
     - name: statusReady
       timeout: 1000
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
   - name: maximo-amq-streams-cluster-operator-check
     type: check
     namespace: ${GROUP.maximo-amq-streams-volumes.namespace}

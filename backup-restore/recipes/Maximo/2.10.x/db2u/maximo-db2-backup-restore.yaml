@@ -45,7 +45,7 @@ spec:
     - name: stateReady
       timeout: 1200
       onError: fail
-      condition: "{$.status.state} == {\"Ready\"}"
+      condition: '{$.status.state} == {"Ready"}'
   - name: db2uclusters-pod-exec
     type: exec
     namespace: ${GROUP.db2u-volumes.namespace}
