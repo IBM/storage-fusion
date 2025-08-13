@@ -97,7 +97,7 @@ spec:
     - name: statusReady
       timeout: 7200
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
   - name: maximo-assist-assistworkspaces-check
     type: check
     namespace: ${GROUP.maximo-assist-resources.namespace} 
@@ -109,7 +109,7 @@ spec:
     - name: statusReady
       timeout: 7200
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
   workflows:
   - name: backup
     sequence:

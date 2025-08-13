@@ -82,11 +82,11 @@ spec:
     - name: statusReady
       timeout: 7200
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
     - name: statusInitialized
       timeout: 7200
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Initialized\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Initialized")].status} == {"True"}'
   - name: ibm-sls-controller-manager-exec
     labelSelector: app.kubernetes.io/instance=ibm-sls 
     namespace: ${GROUP.maximo-sls-resources.namespace}

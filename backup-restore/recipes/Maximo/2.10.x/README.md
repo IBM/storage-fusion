@@ -225,6 +225,11 @@ Note: Supported with Maximo 9.1 and higher.
 
 ## Fusion 2.10.x recipe enhancements
 1. Added rules check to restore-pre-req.sh scripts to avoid multiple entries.
+2. Added scripts and recipe for [Assist](./assist/README.md).
+3. Added scripts and recipe for [IoT](./iot/README.md).
+4. Added scripts and recipe for [Monitor](./monitor/README.md).
+5. Added scripts and recipe for [Predict](./predict/README.md).
+6. Added scripts and recipe for [Visual Inspection](./visualinspection/README.md).
 
 
 ## Fusion 2.9.0 recipe enhancements

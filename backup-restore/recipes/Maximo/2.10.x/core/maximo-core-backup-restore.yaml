@@ -50,7 +50,7 @@ spec:
     - name: phaseSucceeded
       timeout: 600
       onError: fail
-      condition: "{$.status.phase} == {\"Succeeded\"}"
+      condition: '{$.status.phase} == {"Succeeded"}'
   - name: maximo-core-ibm-mas-operator-check
     type: check
     namespace: ${GROUP.maximo-core-resources.namespace}
@@ -86,7 +86,7 @@ spec:
     - name: statusReady
       timeout: 3000
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
   - labelSelector: app.kubernetes.io/instance=ibm-mas
     name: ibm-mas-operator-exec
     namespace: ${GROUP.maximo-core-resources.namespace}

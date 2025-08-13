@@ -148,7 +148,7 @@ spec:
     - name: phaseRunning
       timeout: 300
       onError: fail
-      condition: "{$.status.phase} == {\"Running\"}"
+      condition: '{$.status.phase} == {"Running"}'
   - name: mongodb-pod-exec
     labelSelector: app=mas-mongo-ce-svc
     timeout: 300
@@ -228,11 +228,11 @@ spec:
     - name: statusReady
       timeout: 7200
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
     - name: statusInitialized
       timeout: 7200
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Initialized\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Initialized")].status} == {"True"}'
   - name: ibm-sls-controller-manager-exec
     labelSelector: app.kubernetes.io/instance=ibm-sls 
     namespace: ${GROUP.maximo-sls-resources.namespace}
@@ -262,7 +262,7 @@ spec:
     - name: phaseSucceeded
       timeout: 600
       onError: fail
-      condition: "{$.status.phase} == {\"Succeeded\"}"
+      condition: '{$.status.phase} == {"Succeeded"}'
   - name: maximo-core-ibm-mas-operator-check
     type: check
     namespace: ${GROUP.maximo-core-resources.namespace}
@@ -298,7 +298,7 @@ spec:
     - name: statusReady
       timeout: 3000
       onError: fail
-      condition: "{$.status.conditions[?(@.type==\"Ready\")].status} == {\"True\"}"
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
   - name: ibm-mas-operator-exec
     labelSelector: app.kubernetes.io/instance=ibm-mas
     namespace: ${GROUP.maximo-core-resources.namespace}
