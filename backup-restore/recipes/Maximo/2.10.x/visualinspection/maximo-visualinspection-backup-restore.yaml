@@ -1,0 +1,110 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-visualinspection-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-visualinspection
+  groups:
+  - name: maximo-visualinspection-volumes
+    type: volume
+  - name: maximo-visualinspection-resources
+    type: resource
+    includedResourceTypes:
+      - visualinspectionapps.apps.mas.ibm.com
+      - visualinspectionappworkspaces.apps.mas.ibm.com
+      - secrets 
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+      - configmaps
+    labelSelector: for-backup=true 
+  - name: restore-maximo-visualinspection-secrets
+    backupRef: maximo-visualinspection-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+  - name: restore-maximo-visualinspection-configmaps
+    backupRef: maximo-visualinspection-resources
+    type: resource
+    includedResourceTypes:
+      - configmaps
+  - name: restore-maximo-visualinspection-operatorgroups
+    backupRef: maximo-visualinspection-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  #IfGrafanaUncomment- name: maximo-visualinspection-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: restore-maximo-visualinspection-subscriptions
+    backupRef: maximo-visualinspection-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: restore-maximo-visualinspection-visualinspectionapps-visualinspectionappworkspaces
+    backupRef: maximo-visualinspection-resources
+    type: resource
+    includedResourceTypes:
+      - visualinspectionapps.apps.mas.ibm.com
+      - visualinspectionappworkspaces.apps.mas.ibm.com
+  hooks:
+  - name: maximo-visualinspection-ibm-mas-operator-check
+    type: check
+    namespace: ${GROUP.maximo-visualinspection-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas-visualinspection.mas-${MAS_INSTANCE_ID}-visualinspection=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-visualinspection-visualinspectionapps-check
+    type: check
+    namespace: ${GROUP.maximo-visualinspection-resources.namespace} 
+    selectResource: apps.mas.ibm.com/v1/visualinspectionapps
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  - name: maximo-visualinspection-visualinspectionappworkspaces-check
+    type: check
+    namespace: ${GROUP.maximo-visualinspection-resources.namespace} 
+    selectResource: apps.mas.ibm.com/v1/visualinspectionappworkspaces
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  workflows:
+  - failOn: any-error
+    name: backup
+    priority: 0
+    sequence:
+    - group: maximo-visualinspection-resources
+    - group: maximo-visualinspection-volumes
+    #IfGrafanaUncomment- group: maximo-visualinspection-dashboards
+  - failOn: any-error
+    name: restore
+    priority: 0
+    sequence:
+    - group: maximo-visualinspection-volumes
+    - group: restore-maximo-visualinspection-secrets
+    - group: restore-maximo-visualinspection-configmaps
+    - group: restore-maximo-visualinspection-operatorgroups
+    - group: restore-maximo-visualinspection-subscriptions
+    #IfGrafanaUncomment- group: maximo-visualinspection-dashboards
+    - hook: maximo-visualinspection-ibm-mas-operator-check/replicasReady
+    - group: restore-maximo-visualinspection-visualinspectionapps-visualinspectionappworkspaces
+    - hook: maximo-visualinspection-visualinspectionapps-check/statusReady
+    - hook: maximo-visualinspection-visualinspectionappworkspaces-check/statusReady

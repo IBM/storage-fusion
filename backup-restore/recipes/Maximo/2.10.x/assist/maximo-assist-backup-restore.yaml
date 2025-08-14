@@ -1,0 +1,132 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-assist-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-assist
+  groups:
+  - name: maximo-assist-redisvolumes
+    type: volume
+    labelSelector: redis=true
+  - name: maximo-assist-resources
+    type: resource
+    includedResourceTypes:
+      - assistapps.apps.mas.ibm.com
+      - assistworkspaces.apps.mas.ibm.com
+      - secrets 
+      - configmaps
+      - statefulsets
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+  - name: restore-maximo-assist-secrets
+    backupRef: maximo-assist-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+    labelSelector: for-backup=true 
+  - name: restore-maximo-assist-configmaps
+    backupRef: maximo-assist-resources
+    type: resource
+    includedResourceTypes:
+      - configmaps
+    labelSelector: for-backup=true 
+  - name: restore-maximo-assist-statefulsets
+    backupRef: maximo-assist-resources
+    type: resource
+    includedResourceTypes:
+      - statefulsets
+    labelSelector: app=ema-redis
+  - name: restore-maximo-assist-operatorgroups
+    backupRef: maximo-assist-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+    labelSelector: for-backup=true 
+  #IfGrafanaUncomment- name: maximo-assist-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: restore-maximo-assist-subscriptions
+    backupRef: maximo-assist-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+    labelSelector: for-backup=true 
+  - name: restore-maximo-assist-assistapps-assistworkspaces
+    backupRef: maximo-assist-resources
+    type: resource
+    includedResourceTypes:
+      - assistapps.apps.mas.ibm.com
+      - assistworkspaces.apps.mas.ibm.com
+    labelSelector: for-backup=true 
+  hooks:
+  - name: maximo-assist-ibm-mas-operator-check
+    type: check
+    namespace: ${GROUP.maximo-assist-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas-assist.mas-${MAS_INSTANCE_ID}-assist=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-assist-ibm-mas-redis-check
+    type: check
+    namespace: ${GROUP.maximo-assist-resources.namespace}
+    selectResource: statefulset
+    labelSelector: app=ema-redis
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-assist-assistapps-check
+    type: check
+    namespace: ${GROUP.maximo-assist-resources.namespace} 
+    selectResource: apps.mas.ibm.com/v1/assistapps
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  - name: maximo-assist-assistworkspaces-check
+    type: check
+    namespace: ${GROUP.maximo-assist-resources.namespace} 
+    selectResource: apps.mas.ibm.com/v1/assistworkspaces
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  workflows:
+  - name: backup
+    sequence:
+    - group: maximo-assist-resources
+    - group: maximo-assist-redisvolumes
+    #IfGrafanaUncomment- group: maximo-assist-dashboards
+  - name: restore
+    sequence:
+    - group: maximo-assist-redisvolumes
+    - group: restore-maximo-assist-secrets
+    - group: restore-maximo-assist-configmaps
+    - group: restore-maximo-assist-statefulsets
+    - hook: maximo-assist-ibm-mas-redis-check/replicasReady
+    - group: restore-maximo-assist-operatorgroups
+    - group: restore-maximo-assist-subscriptions
+    #IfGrafanaUncomment- group: maximo-assist-dashboards
+    - hook: maximo-assist-ibm-mas-operator-check/replicasReady
+    - group: restore-maximo-assist-assistapps-assistworkspaces
+    - hook: maximo-assist-assistapps-check/statusReady
+    - hook: maximo-assist-assistworkspaces-check/statusReady
