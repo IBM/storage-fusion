@@ -1,0 +1,112 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-predict-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-predict
+  groups:
+  - includedNamespaces:
+    - mas-${MAS_INSTANCE_ID}-predict
+    includedResourceTypes:
+    - predictapps.apps.mas.ibm.com
+    - predictworkspaces.apps.mas.ibm.com
+    - secrets
+    - operatorgroups.operators.coreos.com
+    - subscriptions.operators.coreos.com
+    labelSelector: for-backup=true
+    name: maximo-predict-resources
+    type: resource
+  - backupRef: maximo-predict-resources
+    includedResourceTypes:
+    - secrets
+    name: restore-maximo-predict-secrets
+    type: resource
+  - backupRef: maximo-predict-resources
+    includedResourceTypes:
+    - operatorgroups.operators.coreos.com
+    name: restore-maximo-predict-operatorgroups
+    type: resource
+  - backupRef: maximo-predict-resources
+    includedResourceTypes:
+    - subscriptions.operators.coreos.com
+    name: restore-maximo-predict-subscriptions
+    type: resource
+  - backupRef: maximo-predict-resources
+    includedResourceTypes:
+    - predictapps.apps.mas.ibm.com
+    name: restore-maximo-predict-predictapps
+    type: resource
+  - backupRef: maximo-predict-resources
+    includedResourceTypes:
+    - predictworkspaces.apps.mas.ibm.com
+    name: restore-maximo-predict-predictworkspaces
+    type: resource
+  hooks:
+  - chks:
+    - condition: '{$.spec.replicas} == {$.status.readyReplicas}'
+      name: replicasReady
+      onError: fail
+      timeout: 600
+    labelSelector: operators.coreos.com/ibm-mas-predict.mas-${MAS_INSTANCE_ID}-predict=
+    name: maximo-predict-ibm-mas-operator-check
+    namespace: ${GROUP.maximo-predict-resources.namespace}
+    onError: fail
+    selectResource: deployment
+    timeout: 120
+    type: check
+  - chks:
+    - condition: '{$.spec.replicas} == {$.status.readyReplicas}'
+      name: replicasReady
+      onError: fail
+      timeout: 600
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.mas-${MAS_INSTANCE_ID}-predict=
+    name: maximo-predict-ibm-truststore-mgr-controller-manager-check
+    namespace: ${GROUP.maximo-predict-resources.namespace}
+    onError: fail
+    selectResource: deployment
+    timeout: 120
+    type: check
+  - chks:
+    - condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+      name: statusReady
+      onError: fail
+      timeout: 7200
+    labelSelector: for-backup=true
+    name: maximo-predict-predictapps-check
+    namespace: ${GROUP.maximo-predict-resources.namespace}
+    onError: fail
+    selectResource: apps.mas.ibm.com/v1/predictapps
+    timeout: 7200
+    type: check
+  - chks:
+    - condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+      name: statusReady
+      onError: fail
+      timeout: 7200
+    labelSelector: for-backup=true
+    name: maximo-predict-predictworkspaces-check
+    namespace: ${GROUP.maximo-predict-resources.namespace}
+    onError: fail
+    selectResource: apps.mas.ibm.com/v1/predictworkspaces
+    timeout: 7200
+    type: check
+  workflows:
+  - failOn: any-error
+    name: backup
+    priority: 0
+    sequence:
+    - group: maximo-predict-resources
+  - failOn: any-error
+    name: restore
+    priority: 0
+    sequence:
+    - group: restore-maximo-predict-secrets
+    - group: restore-maximo-predict-operatorgroups
+    - group: restore-maximo-predict-subscriptions
+    - hook: maximo-predict-ibm-mas-operator-check/replicasReady
+    - hook: maximo-predict-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - group: restore-maximo-predict-predictapps
+    - hook: maximo-predict-predictapps-check/statusReady
+    - group: restore-maximo-predict-predictworkspaces
+    - hook: maximo-predict-predictworkspaces-check/statusReady

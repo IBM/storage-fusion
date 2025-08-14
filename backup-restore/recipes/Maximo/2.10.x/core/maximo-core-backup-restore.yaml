@@ -1,0 +1,165 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-core-backup-restore-recipe
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-core
+  groups:
+  - name: maximo-core-resources
+    type: resource
+    includedResourceTypes:
+      - bascfgs.config.mas.ibm.com 
+      - mongocfgs.config.mas.ibm.com
+      - slscfgs.config.mas.ibm.com
+      - workspaces.core.mas.ibm.com
+      - suites.core.mas.ibm.com
+      #IfDb2Uncomment- jdbccfgs.config.mas.ibm.com 
+      #IfKafkaUncomment- kafkacfgs.config.mas.ibm.com
+      #IfObjectStorageUncomment- objectstoragecfgs.config.mas.ibm.com
+      #IfWatsonStudioUncomment- watsonstudiocfgs.config.mas.ibm.com
+    labelSelector: mas.ibm.com/instanceId=${MAS_INSTANCE_ID}
+  - name: maximo-core-secrets
+    type: resource
+    includedResourceTypes:
+      - secrets
+    labelSelector: for-backup=true 
+  - name: maximo-core-operatorgroups
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  #IfGrafanaUncomment- name: maximo-core-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: maximo-core-subscriptions
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+    labelSelector: operators.coreos.com/ibm-mas.mas-${MAS_INSTANCE_ID}-core=
+  hooks:
+  - name: maximo-core-csv-check
+    type: check
+    namespace: ${GROUP.maximo-core-resources.namespace} 
+    selectResource: operators.coreos.com/v1alpha1/clusterserviceversions
+    labelSelector: operators.coreos.com/ibm-mas.mas-${MAS_INSTANCE_ID}-core=
+    timeout: 600
+    onError: fail
+    chks:
+    - name: phaseSucceeded
+      timeout: 600
+      onError: fail
+      condition: '{$.status.phase} == {"Succeeded"}'
+  - name: maximo-core-ibm-mas-operator-check
+    type: check
+    namespace: ${GROUP.maximo-core-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas.mas-${MAS_INSTANCE_ID}-core=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-core-ibm-truststore-mgr-controller-manager-check
+    type: check
+    namespace: ${GROUP.maximo-core-resources.namespace}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.mas-${MAS_INSTANCE_ID}-core=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-core-entitymgr-suite-check
+    type: check
+    namespace: ${GROUP.maximo-core-resources.namespace} 
+    selectResource: core.mas.ibm.com/v1/suites
+    labelSelector: mas.ibm.com/instanceId=${MAS_INSTANCE_ID}
+    timeout: 3000
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 3000
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  - labelSelector: app.kubernetes.io/instance=ibm-mas
+    name: ibm-mas-operator-exec
+    namespace: ${GROUP.maximo-core-resources.namespace}
+    onError: fail
+    ops:
+    - command: |
+        ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"domain\\\":\\\"${MAS_INSTANCE_ID}.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/core.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/suites/${MAS_INSTANCE_ID}?fieldManager=kubectl-patch -d $data"]
+      container: manager
+      name: patch-spoke-suites-domain
+      timeout: 600
+    - command: |
+        ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"domain\\\":\\\"${MAS_INSTANCE_ID}.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/internal.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/coreidps/${MAS_INSTANCE_ID}-coreidp?fieldManager=kubectl-patch -d $data"] 
+      container: manager
+      name: patch-spoke-coreidps-domain
+      timeout: 600
+    - command: |
+        ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"config\\\":{\\\"url\\\":\\\"https://${REPORTING_OPERATOR_ENDPOINT}-${REPORTING_OPERATOR_NAMESPACE}.$(cat /tmp/domain)\\\"}}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/config.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/bascfgs/${MAS_INSTANCE_ID}-bas-system?fieldManager=kubectl-patch -d $data"]
+      container: manager
+      name: patch-spoke-bascfgs-url
+      timeout: 600
+    #IfKafkaUncomment- command: |
+    #IfKafkaUncomment    ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"config\\\":{\\\"hosts\\\":[{\\\"host\\\":\\\"mas-${MAS_INSTANCE_ID}-system-kafka-tls-bootstrap-${KAFKA_NAMESPACE}.$(cat /tmp/domain)\\\",\\\"port\\\":443}]},\\\"displayName\\\":\\\"mas-${MAS_INSTANCE_ID}-system-kafka-tls-bootstrap-${KAFKA_NAMESPACE}.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/config.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/kafkacfgs/${MAS_INSTANCE_ID}-kafka-system?fieldManager=kubectl-patch -d $data"]
+    #IfKafkaUncomment  container: manager
+    #IfKafkaUncomment  name: patch-spoke-kafkacfgs-host
+    #IfKafkaUncomment  timeout: 600
+    #IfWatsonStudioUncomment- command: |
+    #IfWatsonStudioUncomment    ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"config\\\":{\\\"endpoint\\\":\\\"https://cpd-ibm-cpd.$(cat /tmp/domain)\\\"},\\\"displayName\\\":\\\"https://cpd-ibm-cpd.$(cat /tmp/domain)\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/config.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/watsonstudiocfgs/${MAS_INSTANCE_ID}-watsonstudio-system?fieldManager=kubectl-patch -d $data"]
+    #IfWatsonStudioUncomment  container: manager
+    #IfWatsonStudioUncomment  name: patch-spoke-watsonstudiocfgs-endpoint
+    #IfWatsonStudioUncomment  timeout: 600
+    - command: |
+        ["/bin/bash", "-c", "curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/openshift-config-managed/configmaps/console-public | jq '.data.consoleURL' | tr -d '\"' | python3 -c \"print('.'.join(input().split('.')[1:]))\" >/tmp/domain"]
+      container: manager
+      name: retrieve-domain
+      timeout: 180
+    - command: |
+        ["/bin/bash", "-c", "registrationKey=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/ibm-sls/configmaps/sls-suite-registration | jq -r '.data.registrationKey' | echo -n `xargs -n 1` | base64); data='{\\\"data\\\":{\\\"registrationKey\\\":\\\"$registrationKey\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/${GROUP.maximo-core-resources.namespace}/secrets/sls-registration-key?fieldManager=kubectl-patch -d $data"]
+      container: manager
+      name: patch-sls-registration-key
+      timeout: 600
+    - command: |
+        ["/bin/bash", "-c", "certificate=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/ibm-sls/configmaps/sls-suite-registration | jq '.data.ca' | tr -d '\"'); data='{\\\"spec\\\":{\\\"certificates\\\":[{\\\"crt\\\":\\\"$certificate\\\",\\\"alias\\\":\\\"ca\\\"}],\\\"config\\\":{\\\"url\\\":\\\"https://sls.ibm-sls.ibm-sls.$(cat /tmp/domain)\\\"}}}'; eval \"data=$data\"; echo \"$data\" >/tmp/datafile; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/config.mas.ibm.com/v1/namespaces/${GROUP.maximo-core-resources.namespace}/slscfgs/${MAS_INSTANCE_ID}-sls-system?fieldManager=kubectl-patch -d @/tmp/datafile; rm -f /tmp/datafile"]
+      container: manager
+      name: patch-spoke-slscfgs-crt-url
+      timeout: 600
+    selectResource: pod
+    timeout: 180
+    type: exec
+  workflows:
+  - failOn: any-error
+    name: backup
+    sequence:
+    - group: maximo-core-resources
+    - group: maximo-core-secrets
+    - group: maximo-core-operatorgroups
+    - group: maximo-core-subscriptions
+    #IfGrafanaUncomment- group: maximo-core-dashboards
+  - failOn: any-error
+    name: restore
+    sequence:
+    - group: maximo-core-operatorgroups
+    - group: maximo-core-secrets
+    - group: maximo-core-subscriptions
+    - hook: maximo-core-ibm-mas-operator-check/replicasReady
+    - hook: maximo-core-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - hook: ibm-mas-operator-exec/retrieve-domain
+    - group: maximo-core-resources
+    #IfGrafanaUncomment- group: maximo-core-dashboards
+    - hook: ibm-mas-operator-exec/patch-sls-registration-key
+    - hook: ibm-mas-operator-exec/patch-spoke-slscfgs-crt-url
+    - hook: ibm-mas-operator-exec/patch-spoke-suites-domain
+    - hook: ibm-mas-operator-exec/patch-spoke-coreidps-domain
+    - hook: ibm-mas-operator-exec/patch-spoke-bascfgs-url
+    #IfKafkaUncomment- hook: ibm-mas-operator-exec/patch-spoke-kafkacfgs-host
+    #IfWatsonStudioUncomment- hook: ibm-mas-operator-exec/patch-spoke-watsonstudiocfgs-endpoint
+    - hook: maximo-core-entitymgr-suite-check/statusReady
