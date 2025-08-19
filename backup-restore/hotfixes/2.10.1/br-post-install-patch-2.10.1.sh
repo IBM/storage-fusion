@@ -99,6 +99,50 @@ set_velero_image() {
     fi
 }
 
+patch_kafka_cr() {
+    echo "Patching Kafka..."
+    if ! oc get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
+        # Patch is not needed 
+        return 0
+    fi
+    patch="{\"spec\":{\"kafka\":{\"listeners\":[{\"authentication\":{\"type\":\"tls\"},\"name\":\"tls\",\"port\":9093,\"tls\":true,\"type\":\"internal\"}]}}}"
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
+        echo "Waiting for the Kafka cluster to restart (10 min max)"
+        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
+        if [ $? -ne 0 ]; then
+            echo "Error: Kafka is not ready after configuration patch."
+            exit 1
+        else
+            echo "Kafka is ready. Restarting services that use Kafka."
+
+        fi
+    else
+        oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka.patch.yaml
+    fi
+}
+
+# restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
+# Arguments:
+#   $1: Namespace of deployments
+#   ${@:2}: List of deployments
+restart_deployments() {
+    DEPLOYMENT_NAMESPACE=${1}
+    DEPLOYMENTS="${@:2}"
+
+    if [ -n "$DRY_RUN" ]; then
+        return 0
+    fi
+
+    echo "Restarting deployments $DEPLOYMENTS"
+    for item in $DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$item"
+    done
+    for item in $DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$item"
+    done
+}
+
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -148,6 +192,10 @@ set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
 velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:910ffee32ec4121df8fc2002278f971cd6b0d923db04d530f31cf5739e08e24c
 set_velero_image ${velero_img}
+
+patch_kafka_cr
+restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
+restart_deployments "$ISF_NS" isf-application-operator-controller-manager
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
