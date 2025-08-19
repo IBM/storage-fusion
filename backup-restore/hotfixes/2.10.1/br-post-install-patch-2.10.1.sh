@@ -106,10 +106,10 @@ patch_kafka_cr() {
         return 0
     fi
     patch="{\"spec\":{\"kafka\":{\"listeners\":[{\"authentication\":{\"type\":\"tls\"},\"name\":\"tls\",\"port\":9093,\"tls\":true,\"type\":\"internal\"}]}}}"
-        if [ -z "$DRY_RUN" ]; then
-            oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
-            echo "Waiting for the Kafka cluster to restart (10 min max)"
-            oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
+        echo "Waiting for the Kafka cluster to restart (10 min max)"
+        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
         if [ $? -ne 0 ]; then
             echo "Error: Kafka is not ready after configuration patch."
             exit 1
@@ -117,8 +117,9 @@ patch_kafka_cr() {
             echo "Kafka is ready. Restarting services that use Kafka."
 
         fi
+    else
+        oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka.patch.yaml
     fi
-    [ -n "$DRY_RUN" ] && oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka.patch.yaml
 }
 
 # restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
@@ -134,13 +135,12 @@ restart_deployments() {
     fi
 
     echo "Restarting deployments $DEPLOYMENTS"
-    for item in $(echo "$DEPLOYMENTS"); do
+    for item in $DEPLOYMENTS; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$item"
     done
-    for item in $(echo "$DEPLOYMENTS"); do
-        oc -n "$DEPLOYMENT_NAMESPACE" wait --for=condition=Available "deployment/$item" --timeout=600s
+    for item in $DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$item"
     done
-    echo "Services restarted"
 }
 
 REQUIREDCOMMANDS=("oc" "jq")
