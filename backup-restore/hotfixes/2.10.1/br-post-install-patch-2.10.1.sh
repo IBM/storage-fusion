@@ -193,9 +193,12 @@ set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:910ffee32ec4121df8fc2002278f971cd6b0d923db04d530f31cf5739e08e24c
 set_velero_image ${velero_img}
 
-patch_kafka_cr
-restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
-restart_deployments "$ISF_NS" isf-application-operator-controller-manager
+if [ -n "$HUB" ]
+ then
+    patch_kafka_cr
+    restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
+    restart_deployments "$ISF_NS" isf-application-operator-controller-manager
+fi
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
