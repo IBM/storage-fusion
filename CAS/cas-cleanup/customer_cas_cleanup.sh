@@ -25,7 +25,7 @@
 #   the '-y' flag is passed.
 
 # Usage:
-#   ./cleanup-cas-customer.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
+#   ./cleanup_cas_customer.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
 #
 ###############################################################################
 
@@ -276,8 +276,8 @@ delete_catalog_source() {
   fi
 }
 
-# Delete CAS-specific CRDs (safe approach)
-delete_cas_crds_only() {
+# Delete CAS-specific CRD instances safely
+delete_cas_crd_instances() {
     echo "Looking for CAS-specific CRDs (excluding Kafka CRDs)..."
     local CAS_CRDS
     CAS_CRDS=$(oc get crd --no-headers -o custom-columns=":metadata.name" | grep -i "cas.isf" || true)
@@ -287,19 +287,36 @@ delete_cas_crds_only() {
         return
     fi
 
-    echo "Found the following CAS CRDs:"
-    echo "$CAS_CRDS"
-    echo
-    read -p "Do you want to delete these CAS CRDs? (y/n): " confirm
-    if [[ "$confirm" =~ ^[Yy]$ ]]; then
-        for crd in $CAS_CRDS; do
-            echo "Deleting CAS CRD: $crd..."
-            oc delete crd "$crd" --grace-period=0 || true
+    for crd in $CAS_CRDS; do
+        local resource
+        resource=$(echo "$crd" | cut -d '.' -f1)
+
+        echo "----"
+        echo "CRD: $crd"
+        echo "Resource: $resource"
+        echo "Checking instances..."
+
+        local instances
+        instances=$(oc get "$resource" --all-namespaces --no-headers -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name" 2>/dev/null || true)
+
+        if [ -z "$instances" ]; then
+            echo "  No instances found for $resource"
+            continue
+        fi
+
+        echo "$instances" | while read -r ns name; do
+            echo "  Deleting $resource/$name in namespace $ns"
+
+            # Remove finalizers if present
+            oc patch "$resource" "$name" -n "$ns" --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]' 2>/dev/null || true
+
+            # Delete the instance
+            oc delete "$resource" "$name" -n "$ns" --ignore-not-found=true
+
+            # Wait until gone
+            retry_until_gone "$resource" "$name" "$ns"
         done
-        echo "CAS CRDs deleted."
-    else
-        echo "Skipping CAS CRD deletion."
-    fi
+    done
 }
 
 # Resource cleanup
@@ -313,9 +330,10 @@ resource_cleanup() {
         xargs -r oc delete pod -n "$NAMESPACE" --grace-period=0
 
     # Delete all other resources
-    oc delete pods --all -n "$NAMESPACE" --wait=true || true
     oc delete secret --all -n "$NAMESPACE" --wait=true || true
     oc delete configmap --all -n "$NAMESPACE" --wait=true || true
+    oc delete domains --all -n "$NAMESPACE" --wait=true || true
+    oc delete datasource --all -n "$NAMESPACE" --wait=true || true
     echo "Resource cleanup complete in namespace: $NAMESPACE"
 }
 
@@ -347,14 +365,14 @@ delete_namespace() {
 ### MAIN EXECUTION FLOW #####
 #######################################
 
-run_step "Delete Custom Resources" delete_custom_resources
-run_step "Delete Catalog Source" delete_catalog_source
-run_step "Delete Kafka Resources" delete_kafka_resources
 run_step "Resource Cleanup" resource_cleanup
 run_step "Cleanup PVCs" cleanup_pvcs
-run_step "Uninstall Operators" uninstall_operators
-run_step "Delete CAS CRDs Only" delete_cas_crds_only
+run_step "Delete Catalog Source" delete_catalog_source
+run_step "Delete Kafka Resources" delete_kafka_resources
+run_step "Delete Custom Resources" delete_custom_resources
+run_step "Delete CAS CRDs Only" delete_cas_crd_instances
 run_step "Final Resource Cleanup" final_cleanup
+run_step "Uninstall Operators" uninstall_operators
 run_step "Delete Fusion Service Instance" delete_fusion_service_instance
 run_step "Delete Namespace" delete_namespace
 
