@@ -128,18 +128,24 @@ patch_kafka_cr() {
 #   ${@:2}: List of deployments
 restart_deployments() {
     DEPLOYMENT_NAMESPACE=${1}
-    DEPLOYMENTS="${@:2}"
+    DEPLOYMENTS=("${@:2}")
+    VALID_DEPLOYMENTS=()
 
     if [ -n "$DRY_RUN" ]; then
-        return 0
+     return
     fi
 
-    echo "Restarting deployments $DEPLOYMENTS"
-    for item in $DEPLOYMENTS; do
-        oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$item"
+    for deployment in "${DEPLOYMENTS[@]}"; do
+        if oc -n "$DEPLOYMENT_NAMESPACE" get deployment "${deployment}" &> /dev/null; then
+            VALID_DEPLOYMENTS+=("$deployment")
+        fi
     done
-    for item in $DEPLOYMENTS; do
-        oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$item"
+    echo "Restarting deployments $VALID_DEPLOYMENTS"
+    for deployment in $VALID_DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
+    done
+    for deployment in $VALID_DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
     done
 }
 
@@ -193,9 +199,11 @@ set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:910ffee32ec4121df8fc2002278f971cd6b0d923db04d530f31cf5739e08e24c
 set_velero_image ${velero_img}
 
-patch_kafka_cr
-restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
-restart_deployments "$ISF_NS" isf-application-operator-controller-manager
+if [ -n "$HUB" ]; then
+    patch_kafka_cr
+    restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
+    restart_deployments "$ISF_NS" isf-application-operator-controller-manager
+fi
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
@@ -204,4 +212,3 @@ echo "Please verify that the pods for the following deployment have successfully
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "node-agent"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"

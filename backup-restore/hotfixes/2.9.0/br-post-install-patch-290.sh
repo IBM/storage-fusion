@@ -49,6 +49,67 @@ check_cmd ()
 {
    (type $1 > /dev/null) || echo "$1 command not found, install jq command to apply patch"
 }
+
+patch_kafka_cr() {
+    echo "Patching Kafka..."
+    if ! oc get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
+        # Patch is not needed 
+        return 0
+    fi
+    patch="{\"spec\":{\"kafka\":{\"listeners\":[{\"authentication\":{\"type\":\"tls\"},\"name\":\"tls\",\"port\":9093,\"tls\":true,\"type\":\"internal\"}]}}}"
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
+        echo "Waiting for the Kafka cluster to restart (10 min max)"
+        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
+        if [ $? -ne 0 ]; then
+            echo "Error: Kafka is not ready after configuration patch."
+            exit 1
+        else
+            echo "Kafka is ready. Restarting services that use Kafka."
+
+        fi
+    else
+        oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka.patch.yaml
+    fi
+}
+
+# restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
+# Arguments:
+#   $1: Namespace of deployments
+#   ${@:2}: List of deployments
+restart_deployments() {
+    DEPLOYMENT_NAMESPACE=${1}
+    DEPLOYMENTS=("${@:2}")
+    VALID_DEPLOYMENTS=()
+
+    if [ -n "$DRY_RUN" ]; then
+     return
+    fi
+
+    for deployment in "${DEPLOYMENTS[@]}"; do
+        if oc -n "$DEPLOYMENT_NAMESPACE" get deployment "${deployment}" &> /dev/null; then
+            VALID_DEPLOYMENTS+=("$deployment")
+        fi
+    done
+    echo "Restarting deployments $VALID_DEPLOYMENTS"
+    for deployment in $VALID_DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
+    done
+    for deployment in $VALID_DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
+    done
+}
+
+REQUIREDCOMMANDS=("oc" "jq")
+echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
+for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
+    IS_COMMAND=$(check_cmd $COMMAND)
+    if [ $IS_COMMAND -ne 0 ]; then
+        echo "ERROR: $COMMAND command not found, install $COMMAND command to apply patch"
+        exit $IS_COMMAND
+    fi
+done
+
 check_cmd oc
 check_cmd jq
 oc whoami > /dev/null || (echo "Not logged in to your cluster" ; exit 1)
@@ -211,7 +272,9 @@ if [[ "$VERSION" == 2.9.0* ]]; then
       else
         echo "ERROR: Failed to save original backup-service-deployment. Skipped updates."
       fi
-
+      patch_kafka_cr
+      restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
+      restart_deployments "$ISF_NS" isf-application-operator-controller-manager
     fi
 fi
 
