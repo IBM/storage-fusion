@@ -183,6 +183,56 @@ update_guardian-dp-operator_csv() {
     fi
 }
 
+patch_kafka_cr() {
+    echo "Patching Kafka..."
+    if ! oc get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
+        # Patch is not needed 
+        return 0
+    fi
+    patch="{\"spec\":{\"kafka\":{\"listeners\":[{\"authentication\":{\"type\":\"tls\"},\"name\":\"tls\",\"port\":9093,\"tls\":true,\"type\":\"internal\"}]}}}"
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
+        echo "Waiting for the Kafka cluster to restart (10 min max)"
+        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
+        if [ $? -ne 0 ]; then
+            echo "Error: Kafka is not ready after configuration patch."
+            exit 1
+        else
+            echo "Kafka is ready. Restarting services that use Kafka."
+
+        fi
+    else
+        oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka.patch.yaml
+    fi
+}
+
+# restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
+# Arguments:
+#   $1: Namespace of deployments
+#   ${@:2}: List of deployments
+restart_deployments() {
+    DEPLOYMENT_NAMESPACE=${1}
+    DEPLOYMENTS=("${@:2}")
+    VALID_DEPLOYMENTS=()
+
+    if [ -n "$DRY_RUN" ]; then
+     return
+    fi
+
+    for deployment in "${DEPLOYMENTS[@]}"; do
+        if oc -n "$DEPLOYMENT_NAMESPACE" get deployment "${deployment}" &> /dev/null; then
+            VALID_DEPLOYMENTS+=("$deployment")
+        fi
+    done
+    echo "Restarting deployments $VALID_DEPLOYMENTS"
+    for deployment in $VALID_DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
+    done
+    for deployment in $VALID_DEPLOYMENTS; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
+    done
+}
+
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -242,6 +292,10 @@ if [ -n "$HUB" ]; then
 
     guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:04a3446eb98d03eddfce27ff77def52b2c3f89c57d662190f61891d8bd3167fc
     update_guardian-dp-operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
+
+    patch_kafka_cr
+    restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
+    restart_deployments "$ISF_NS" isf-application-operator-controller-manager
 fi
 
 transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c6ee0b30aedc5dcc83c50df5d33ff3b7ca4cc086cb2ff984d10a190b1c5efc6f
@@ -253,6 +307,12 @@ set_velero_image ${velero_img}
 [ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:74990bffe171264a3d08eab53398dd5e98491a24269642b38688d854c1549224
 [ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:c060b4b34da3edc756dbc5f6d3f6afd8e895ece52dff3d4aad8965217365a966
 update_isf_operator_csv isf-operator.v2.10.0 "${isfdataprotection_img}"
+
+if [ -n "$HUB" ]; then
+    patch_kafka_cr
+    restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
+    restart_deployments "$ISF_NS" isf-application-operator-controller-manager
+fi
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
