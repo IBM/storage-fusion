@@ -25,7 +25,7 @@
 #   the '-y' flag is passed.
 
 # Usage:
-#   ./cleanup-cas-customer.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
+#   ./customer_cas_cleanup.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
 #
 ###############################################################################
 
@@ -35,6 +35,8 @@ set -euo pipefail
 NAMESPACE="ibm-cas"
 KEEP_PARADEDB=false
 KEEP_NAMESPACE=false
+RETRY_COUNT=5
+RETRY_INTERVAL=10
 
 # Help
 print_help() {
@@ -46,6 +48,24 @@ print_help() {
   echo "  --keep-namespace             Do NOT delete the namespace after cleanup"
   echo "  --help                       Display this help message"
   exit 0
+}
+
+# Run wrapper with error handling
+run_step() {
+  local step_name="$1"; shift
+  echo "============================================================"
+  echo "INFO" "Starting: $step_name"
+  echo "============================================================"
+  echo
+  if "$@"; then
+    echo
+    echo "============================================================"
+    echo "INFO" "Completed: $step_name"
+    echo "============================================================"
+  else
+    echo "ERROR" "Failed: $step_name (continuing to next step)"
+  fi
+  echo
 }
 
 # Parse arguments
@@ -106,77 +126,66 @@ echo "Current PVCs in namespace:"
 oc get pvc -n "$NAMESPACE"
 echo ""
 
+# Retry wrapper
+retry_until_gone() {
+  local resource=$1
+  local namespace=$2
+  local kind=$3
+
+  for i in $(seq 1 "$RETRY_COUNT"); do
+    if [[ -z "$namespace" ]]; then
+      if ! oc get "$kind" "$resource" &>/dev/null; then
+        echo "$kind/$resource deleted successfully."
+        return 0
+      fi
+    else
+      if ! oc get "$kind" "$resource" -n "$namespace" &>/dev/null; then
+        echo "$kind/$resource deleted successfully."
+        return 0
+      fi
+    fi
+    echo "[$i/$RETRY_COUNT] Waiting for $kind/$resource to terminate..."
+    sleep "$RETRY_INTERVAL"
+  done
+
+  echo "$kind/$resource did not delete after $RETRY_COUNT retries."
+  read -rp "Do you want to patch/remove finalizers and force delete $kind/$resource? [y/N]: " confirm
+  if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    if [[ -z "$namespace" ]]; then
+      oc patch "$kind" "$resource" --type=merge -p '{"metadata":{"finalizers":[]}}' || true
+      oc delete "$kind" "$resource" --wait=false || true
+    else
+      oc patch "$kind" "$resource" -n "$namespace" --type=merge -p '{"metadata":{"finalizers":[]}}' || true
+      oc delete "$kind" "$resource" -n "$namespace" --wait=false || true
+    fi
+  fi
+}
+
 # Delete CAS CRs
 delete_custom_resources() {
   local CR_LIST
   CR_LIST=$(oc get CasInstall -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name" || true)
   for CR in $CR_LIST; do
     echo "Deleting CasInstall: $CR"
-    oc delete CasInstall "$CR" -n "$NAMESPACE" --wait=true || true
+    oc delete CasInstall "$CR" -n "$NAMESPACE" --wait=false || true
+    retry_until_gone "$CR" "$NAMESPACE" "CasInstall"
   done
 }
 
 # Delete Kafka-related resources with patching finalizers
 delete_kafka_resources() {
-  local TOPICS USERS KAFKAS
+  local RESOURCES=("kafkatopics.kafka.strimzi.io" "kafkauser.kafka.strimzi.io" "kafka.kafka.strimzi.io")
 
-  echo "Checking and deleting KafkaTopics..."
-  TOPICS=$(oc get kafkatopics.kafka.strimzi.io -n "$NAMESPACE" -o name || true)
-  for topic in $TOPICS; do
-    echo "Attempting to delete KafkaTopic: $topic"
-    oc delete "$topic" -n "$NAMESPACE" --wait=false || true
-  done
-
-  echo "Checking and deleting KafkaUsers..."
-  USERS=$(oc get kafkauser.kafka.strimzi.io -n "$NAMESPACE" -o name || true)
-  for user in $USERS; do
-    echo "Attempting to delete KafkaUser: $user"
-    oc delete "$user" -n "$NAMESPACE" --wait=false || true
-  done
-
-  echo "Checking and deleting Kafka clusters..."
-  KAFKAS=$(oc get kafka.kafka.strimzi.io -n "$NAMESPACE" -o name || true)
-  for kafka in $KAFKAS; do
-    echo "Attempting to delete Kafka: $kafka"
-    oc delete "$kafka" -n "$NAMESPACE" --wait=false || true
-  done
-
-  echo "Waiting 2 minutes before checking stuck resources..."
-  sleep 120
-
-  # Helper to check and patch stuck Kafka resource
-  patch_stuck_kafka_resource() {
-    local RESOURCE_TYPE=$1
-    local RESOURCE_LIST
-    RESOURCE_LIST=$(oc get "$RESOURCE_TYPE" -n "$NAMESPACE" -o name 2>/dev/null || true)
-
-    for res in $RESOURCE_LIST; do
-      DELETION_TIMESTAMP=$(oc get "$res" -n "$NAMESPACE" -o jsonpath='{.metadata.deletionTimestamp}' 2>/dev/null || true)
-      if [[ -n "$DELETION_TIMESTAMP" ]]; then
-        echo "Resource $res is stuck in Terminating (deletionTimestamp present)."
-        read -rp "Do you want to remove finalizers and force delete $res? [y/N]: " confirm
-        if [[ "$confirm" =~ ^[Yy]$ ]]; then
-          echo "Patching finalizers for $res"
-          oc patch "$res" -n "$NAMESPACE" --type=merge -p '{"metadata":{"finalizers":[]}}' || true
-          echo "Force deleting $res"
-          oc delete "$res" -n "$NAMESPACE" --wait=false || true
-        else
-          echo "Skipping $res as per user input."
-        fi
-      fi
+  for kind in "${RESOURCES[@]}"; do
+    local LIST
+    LIST=$(oc get "$kind" -n "$NAMESPACE" -o name || true)
+    for res in $LIST; do
+      echo "Deleting $res..."
+      oc delete "$res" -n "$NAMESPACE" --wait=false || true
+      retry_until_gone "${res#*/}" "$NAMESPACE" "$kind"
     done
-  }
-
-  echo "Checking for stuck KafkaTopics..."
-  patch_stuck_kafka_resource "kafkatopics.kafka.strimzi.io"
-
-  echo "Checking for stuck KafkaUsers..."
-  patch_stuck_kafka_resource "kafkauser.kafka.strimzi.io"
-
-  echo "Checking for stuck Kafka clusters..."
-  patch_stuck_kafka_resource "kafka.kafka.strimzi.io"
+  done
 }
-
 
 # Uninstall CAS operators
 uninstall_operators() {
@@ -185,62 +194,64 @@ uninstall_operators() {
   for sub in $SUBS; do
     CSV=$(oc get "$sub" -n "$NAMESPACE" -o jsonpath='{.status.installedCSV}' || true)
     echo "Deleting subscription: $sub"
-    oc delete "$sub" -n "$NAMESPACE" || true
+    oc delete "$sub" -n "$NAMESPACE" --wait=false || true
+    retry_until_gone "${sub#*/}" "$NAMESPACE" "Subscription"
     if [[ -n "$CSV" ]]; then
       echo "Deleting CSV: $CSV"
-      oc delete clusterserviceversion "$CSV" -n "$NAMESPACE" || true
+      oc delete clusterserviceversion "$CSV" -n "$NAMESPACE" --wait=false || true
+      retry_until_gone "$CSV" "$NAMESPACE" "clusterserviceversion"
     fi
   done
 }
 
-#Cleanup PVCs and PVs
+# Cleanup PVCs and PVs in parallel
 cleanup_pvcs() {
   local PVC_LIST
-  PVC_LIST=$(oc get pvc -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name")
+  PVC_LIST=$(oc get pvc -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name" || true)
+  local MAX_PARALLEL=5
+  local JOBS=0
 
   for pvc in $PVC_LIST; do
-    if [[ "$KEEP_PARADEDB" == true && "$pvc" == cluster-parade* ]]; then
-      echo "Skipping cluster-parade PVC: $pvc"
-      continue
-    fi
+    (
+      if [[ "$KEEP_PARADEDB" == true && "$pvc" == cluster-parade* ]]; then
+        echo "Skipping cluster-parade PVC: $pvc"
+        exit 0
+      fi
 
-    echo "Deleting PVC: $pvc"
-    oc delete pvc "$pvc" -n "$NAMESPACE" || true
+      echo "Deleting PVC: $pvc"
+      oc delete pvc "$pvc" -n "$NAMESPACE" --wait=false || true
+      retry_until_gone "$pvc" "$NAMESPACE" "pvc"
 
-    sleep 10  # Allow PVC deletion to settle
+      local PV
+      PV=$(oc get pv --no-headers -o custom-columns=":metadata.name,:spec.claimRef.name" | grep "$pvc" | awk '{print $1}' || true)
 
-    local PV
-    PV=$(oc get pv --no-headers -o custom-columns=":metadata.name,:spec.claimRef.name,:status.phase" | grep "$pvc" | awk '{print $1}' || true)
-
-    if [[ -n "$PV" ]]; then
-      echo "Checking PV $PV for cleanup..."
-      STATUS=$(oc get pv "$PV" -o jsonpath='{.status.phase}' || true)
-
-      if [[ "$STATUS" == "Released" ]]; then
-        echo "PV $PV is stuck in 'Released' state. Waiting 2 minutes before prompting..."
-        sleep 120
-
-        # Check if still Released
+      if [[ -n "$PV" ]]; then
+        echo "Found PV $PV for PVC $pvc"
         STATUS=$(oc get pv "$PV" -o jsonpath='{.status.phase}' || true)
+
         if [[ "$STATUS" == "Released" ]]; then
-          echo "PV $PV is still Released."
-          read -rp "Do you want to force delete PV $PV by removing finalizers? [y/N]: " confirm
+          read -rp "PV $PV is Released. Remove finalizers and delete? [y/N]: " confirm
           if [[ "$confirm" =~ ^[Yy]$ ]]; then
-            echo "Removing finalizers from PV $PV..."
             oc patch pv "$PV" -p '{"metadata":{"finalizers":null}}' --type=merge || true
-            echo "Deleting PV $PV..."
             oc delete pv "$PV" --wait=false || true
-          else
-            echo "Skipping PV $PV cleanup as per user request."
           fi
-        else
-          echo "PV $PV is no longer Released. Skipping force delete."
         fi
       fi
-    fi
-  done
-}
+    ) &
 
+    # increment job counter
+    JOBS=$((JOBS + 1))
+
+    # if we hit MAX_PARALLEL, wait for background jobs to finish before continuing
+    while [[ $(jobs -rp | wc -l) -ge $MAX_PARALLEL ]]; do
+      sleep 1
+    done
+  done
+
+  # wait for all remaining jobs
+  wait
+  echo "PVC and PV cleanup complete for namespace: $NAMESPACE"
+}
 
 # Function to delete FusionServiceInstance
 delete_fusion_service_instance() {
@@ -265,44 +276,109 @@ delete_catalog_source() {
   fi
 }
 
-# Delete CAS-specific CRDs (safe approach)
-delete_cas_crds_only() {
-  echo "Checking CAS-specific CRDs (read-only list)..."
-  oc get crd | grep "cas.isf" || echo "None found (not deleting)"
+# Delete CAS-specific CRD instances
+delete_cas_crd_instances() {
+    echo "Looking for CAS-specific CRDs (excluding Kafka CRDs)..."
+    local CAS_CRDS
+    CAS_CRDS=$(oc get crd --no-headers -o custom-columns=":metadata.name" | grep -i "cas.isf" || true)
+
+    if [ -z "$CAS_CRDS" ]; then
+        echo "No CAS CRDs found."
+        return
+    fi
+
+    for crd in $CAS_CRDS; do
+        local resource
+        resource=$(echo "$crd" | cut -d '.' -f1)
+
+        echo "----"
+        echo "CRD: $crd"
+        echo "Resource: $resource"
+        echo "Checking instances in namespace: $NAMESPACE"
+
+        local instances
+        instances=$(oc get "$resource" -n "$NAMESPACE" --no-headers \
+            -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name" 2>/dev/null || true)
+
+        if [ -z "$instances" ]; then
+            echo "  No instances found for $resource in namespace $NAMESPACE"
+            continue
+        fi
+
+        echo "$instances" | while read -r ns name; do
+            echo "  Deleting $resource/$name in namespace $ns"
+
+            # remove all finalizers (json patch)
+            oc patch "$resource" "$name" -n "$ns" --type=json \
+                -p='[{"op": "remove", "path": "/metadata/finalizers"}]' 2>/dev/null || true
+
+            oc patch "$resource" "$name" -n "$ns" --type=merge \
+                -p '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
+
+            oc delete "$resource" "$name" -n "$ns" --ignore-not-found=true --wait=false
+
+            # Retry until gone
+            retry_until_gone "$resource" "$name" "$ns"
+        done
+    done
+}
+
+# Resource cleanup
+resource_cleanup() {
+    echo "Cleaning up all resources in namespace: $NAMESPACE..."
+
+    # Delete pods stuck in specific states (graceful delete)
+    oc get pods -n "$NAMESPACE" --no-headers | \
+        grep -E 'Running|CrashLoopBackOff|Pending|Failed' | \
+        awk '{print $1}' | \
+        xargs -r oc delete pod -n "$NAMESPACE" --grace-period=0
+
+    # Delete all other resources
+    oc delete secret --all -n "$NAMESPACE" --wait=true || true
+    oc delete configmap --all -n "$NAMESPACE" --wait=true || true
+    oc delete domains --all -n "$NAMESPACE" --wait=true || true
+    oc delete datasource --all -n "$NAMESPACE" --wait=true || true
+    echo "Resource cleanup complete in namespace: $NAMESPACE"
 }
 
 # Final cleanup
 final_cleanup() {
-    echo "Cleaning up all resources in $NAMESPACE..."
+    echo "Cleaning up all resources in namespace: $NAMESPACE..."
 
-    oc delete all --all -n "$NAMESPACE" --wait=true || true
+    # Delete all resources
+    oc delete pods --all -n "$NAMESPACE" --wait=true || true
     oc delete pvc --all -n "$NAMESPACE" --wait=true || true
     oc delete secret --all -n "$NAMESPACE" --wait=true || true
     oc delete configmap --all -n "$NAMESPACE" --wait=true || true
-
-    echo "Resource cleanup complete."
+    oc delete all --all -n "$NAMESPACE" --wait=true || true
+    echo "Resource cleanup complete in namespace: $NAMESPACE"
 }
 
 # Delete namespace
 delete_namespace() {
   if [[ "$KEEP_NAMESPACE" == false ]]; then
     echo "Deleting Namespace: $NAMESPACE"
-    oc delete namespace "$NAMESPACE" || true
+    oc delete namespace "$NAMESPACE" --wait=false || true
+    retry_until_gone "$NAMESPACE" "" "namespace"
   else
     echo "Namespace $NAMESPACE preserved (--keep-namespace)."
   fi
 }
 
-### MAIN EXECUTION
-delete_custom_resources
-delete_catalog_source
-delete_cas_crds_only
-final_cleanup
-cleanup_pvcs
-delete_kafka_resources
-uninstall_operators
-delete_fusion_service_instance
-delete_namespace
+#######################################
+### MAIN EXECUTION FLOW #####
+#######################################
+
+run_step "Resource Cleanup" resource_cleanup
+run_step "Cleanup PVCs" cleanup_pvcs
+run_step "Delete Catalog Source" delete_catalog_source
+run_step "Delete Kafka Resources" delete_kafka_resources
+run_step "Delete Custom Resources" delete_custom_resources
+run_step "Delete CAS CRDs Only" delete_cas_crd_instances
+run_step "Final Resource Cleanup" final_cleanup
+run_step "Uninstall Operators" uninstall_operators
+run_step "Delete Fusion Service Instance" delete_fusion_service_instance
+run_step "Delete Namespace" delete_namespace
 
 echo ""
 echo "IBM CAS gets cleaned up successfully."
