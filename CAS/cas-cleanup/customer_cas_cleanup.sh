@@ -25,7 +25,7 @@
 #   the '-y' flag is passed.
 
 # Usage:
-#   ./cleanup_cas_customer.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
+#   ./customer_cas_cleanup.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
 #
 ###############################################################################
 
@@ -276,7 +276,7 @@ delete_catalog_source() {
   fi
 }
 
-# Delete CAS-specific CRD instances safely
+# Delete CAS-specific CRD instances
 delete_cas_crd_instances() {
     echo "Looking for CAS-specific CRDs (excluding Kafka CRDs)..."
     local CAS_CRDS
@@ -294,26 +294,30 @@ delete_cas_crd_instances() {
         echo "----"
         echo "CRD: $crd"
         echo "Resource: $resource"
-        echo "Checking instances..."
+        echo "Checking instances in namespace: $NAMESPACE"
 
         local instances
-        instances=$(oc get "$resource" --all-namespaces --no-headers -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name" 2>/dev/null || true)
+        instances=$(oc get "$resource" -n "$NAMESPACE" --no-headers \
+            -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name" 2>/dev/null || true)
 
         if [ -z "$instances" ]; then
-            echo "  No instances found for $resource"
+            echo "  No instances found for $resource in namespace $NAMESPACE"
             continue
         fi
 
         echo "$instances" | while read -r ns name; do
             echo "  Deleting $resource/$name in namespace $ns"
 
-            # Remove finalizers if present
-            oc patch "$resource" "$name" -n "$ns" --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]' 2>/dev/null || true
+            # remove all finalizers (json patch)
+            oc patch "$resource" "$name" -n "$ns" --type=json \
+                -p='[{"op": "remove", "path": "/metadata/finalizers"}]' 2>/dev/null || true
 
-            # Delete the instance
-            oc delete "$resource" "$name" -n "$ns" --ignore-not-found=true
+            oc patch "$resource" "$name" -n "$ns" --type=merge \
+                -p '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
 
-            # Wait until gone
+            oc delete "$resource" "$name" -n "$ns" --ignore-not-found=true --wait=false
+
+            # Retry until gone
             retry_until_gone "$resource" "$name" "$ns"
         done
     done
