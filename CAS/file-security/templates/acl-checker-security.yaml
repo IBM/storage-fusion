@@ -37,6 +37,7 @@ priority: 10
 users: []
 groups: []
 ---
+# Create a role that allows using the above security context constraint.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -52,6 +53,7 @@ rules:
   verbs: 
   - use
 ---
+# Bind the above role to the default service account in the CAS namespace
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
