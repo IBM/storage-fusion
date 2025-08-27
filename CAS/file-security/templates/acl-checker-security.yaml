@@ -26,8 +26,8 @@ fsGroup:
 requiredDropCapabilities:
   - ALL
 allowedCapabilities:
-  - SETUID 
-  - SETGID 
+  - SETUID
+  - SETGID
 volumes:
   - configMap
   - emptyDir
@@ -37,7 +37,6 @@ priority: 10
 users: []
 groups: []
 ---
-# Create a role that allows using the above security context constraint.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -53,7 +52,6 @@ rules:
   verbs: 
   - use
 ---
-# Bind the above role to the default service account in the CAS namespace
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -65,5 +63,5 @@ roleRef:
   name: cas-acl-checker
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: ibm-isf-cas-operator-system
   namespace: ibm-cas
