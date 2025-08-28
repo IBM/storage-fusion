@@ -26,8 +26,8 @@ fsGroup:
 requiredDropCapabilities:
   - ALL
 allowedCapabilities:
-  - SETUID 
-  - SETGID 
+  - SETUID
+  - SETGID
 volumes:
   - configMap
   - emptyDir
@@ -65,5 +65,5 @@ roleRef:
   name: cas-acl-checker
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: ibm-isf-cas-operator-system
   namespace: ibm-cas
