@@ -3,9 +3,9 @@ Use these instructions to enable multi-cluster observability for IBM Fusion clus
 
 ### ACM Operator Setup
 Make sure that you meet the following prerequisites:
-1. Install the ACM operator on your hub clusters. For the procedure, see Install Red Hat Advanced Cluster Management.
-2. Make sure that you add all other IBM Fusion clusters to the ACM hub as managed clusters. For procedure Cluster management.
-3. Make sure that you enable the ACMs observability stack to collect and visualize metrics. For procedure, see Observability.
+1. Install the ACM operator on your hub clusters. For the procedure, see [Install Red Hat Advanced Cluster Management](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.13/html-single/install/index).
+2. Make sure that you add all other IBM Fusion clusters to the ACM hub as managed clusters. For procedure [Cluster management](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.13/html-single/clusters/index).
+3. Make sure that you enable the ACMs observability stack to collect and visualize metrics. For procedure, see [Observability](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.13/html-single/observability/index).
 4. Verify whether the observability stack is enabled as follows:
     1. Log in to the OpenShift® Container Platform web console where ACM is installed.
     2. Go to **Infrastructure** > **Clusters**.

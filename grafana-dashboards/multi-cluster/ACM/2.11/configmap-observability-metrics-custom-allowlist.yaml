@@ -3,41 +3,11 @@ apiVersion: v1
 metadata:
   name: observability-metrics-custom-allowlist
   namespace: open-cluster-management-observability
-  uid: 53e288ac-f864-4bb9-b1a8-b11f194bfecd
-  resourceVersion: '11899346'
-  creationTimestamp: '2025-07-02T15:04:15Z'
-  labels:
-    cluster.open-cluster-management.io/backup: ''
-  managedFields:
-    - manager: mco-operator
-      operation: Update
-      apiVersion: v1
-      time: '2025-07-02T15:04:15Z'
-      fieldsType: FieldsV1
-      fieldsV1:
-        'f:metadata':
-          'f:labels':
-            .: {}
-            'f:cluster.open-cluster-management.io/backup': {}
-    - manager: Mozilla
-      operation: Update
-      apiVersion: v1
-      time: '2025-07-10T13:16:33Z'
-      fieldsType: FieldsV1
-      fieldsV1:
-        'f:data':
-          .: {}
-          'f:metrics_list.yaml': {}
 data:
   metrics_list.yaml: |
     names:
       - isf_cluster_details
       - isf_service
-      - isf_local_storage_total_gib
-      - isf_local_storage_used_percentage
       - isf_switches_info
-      - isf_switches_port
-      - isf_switches_hardware
       - isf_nodes_info
-      - isf_node_hardware
       - isf_environment_risk
