@@ -1,0 +1,13 @@
+﻿kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: observability-metrics-custom-allowlist
+  namespace: open-cluster-management-observability
+data:
+  metrics_list.yaml: |
+    names:
+      - isf_cluster_details
+      - isf_service
+      - isf_switches_info
+      - isf_nodes_info
+      - isf_environment_risk
