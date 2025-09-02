@@ -82,6 +82,15 @@ else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
 fi
 
+if (oc get deployment dbr-controller -n $BR_NS -o yaml > $DIR/dbr-controller-deployment.save.yaml); then
+    echo "Applying proxy settings to dbr-controller..."
+  oc set env deployment dbr-controller -n $BR_NS \
+        http_proxy="$HTTP_PROXY_URL" https_proxy="$HTTPS_PROXY_URL" no_proxy="$NO_PROXY" \
+        HTTP_PROXY="$HTTP_PROXY_URL" HTTPS_PROXY="$HTTPS_PROXY_URL" NO_PROXY="$NO_PROXY"
+else
+    echo "ERROR: Failed to save original dbr-controller deployment. Skipped updates."
+fi
+
 if (oc get dpa velero -n $BR_NS -o yaml > $DIR/dpa-velero.save.yaml); then
     echo "Applying proxy settings to DataProtectionApplication velero resource..."
     oc patch dpa velero -n $BR_NS --type=json -p "[{
