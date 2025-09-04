@@ -145,7 +145,7 @@ update_isf_operator_csv() {
 }
 
 # Updates guardian-dp-operator and idp-agent-operator CSVs
-update_guardian-dp-operator_csv() {
+update_operator_csv() {
     name="$1"
     deployment_name="$2"  
     image="$3"      
@@ -292,10 +292,10 @@ if [ -n "$HUB" ]; then
     set_deployment_image backuppolicy-deployment backuppolicy-container ${backuppolicy_img}
 
     guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:7cd60eff9e671712d6239eaef4aba86f8871bc2252a97b3b2858e2d06930df63
-    update_guardian-dp-operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
+    update_operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
 
     guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:791916f88f56819fb3487ac40c184ff0785a713957edd66415f4222b00c08e87
-    update_guardian-dp-operator_csv ibm-dataprotectionagent.v2.10.0 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
+    update_operator_csv ibm-dataprotectionagent.v2.10.0 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
 
 
     patch_kafka_cr
