@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.10.0 release.
-HOTFIX_NUMBER=2
+HOTFIX_NUMBER=1
 EXPECTED_VERSION=2.10.0
 
 patch_usage() {
@@ -144,8 +144,7 @@ update_isf_operator_csv() {
     fi
 }
 
-# Updates guardian-dp-operator and idp-agent-operator CSVs
-update_operator_csv() {
+update_guardian-dp-operator_csv() {
     name="$1"
     deployment_name="$2"  
     image="$3"      
@@ -186,7 +185,7 @@ update_operator_csv() {
 
 patch_kafka_cr() {
     echo "Patching Kafka..."
-    if ! oc get kafka guardian-kafka-cluster -n "$BR_NS" -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
+    if ! oc get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
         # Patch is not needed 
         return 0
     fi
@@ -194,7 +193,7 @@ patch_kafka_cr() {
     if [ -z "$DRY_RUN" ]; then
         oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
         echo "Waiting for the Kafka cluster to restart (10 min max)"
-        oc wait --for=condition=Ready kafka/guardian-kafka-cluster -n "$BR_NS" --timeout=600s
+        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
         if [ $? -ne 0 ]; then
             echo "Error: Kafka is not ready after configuration patch."
             exit 1
@@ -225,11 +224,11 @@ restart_deployments() {
             VALID_DEPLOYMENTS+=("$deployment")
         fi
     done
-    echo "Restarting deployments ${VALID_DEPLOYMENTS[@]}"
-    for deployment in ${VALID_DEPLOYMENTS[@]}; do
+    echo "Restarting deployments $VALID_DEPLOYMENTS"
+    for deployment in $VALID_DEPLOYMENTS; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
     done
-    for deployment in ${VALID_DEPLOYMENTS[@]}; do
+    for deployment in $VALID_DEPLOYMENTS; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
     done
 }
@@ -291,27 +290,29 @@ if [ -n "$HUB" ]; then
     backuppolicy_img=cp.icr.io/cp/bnr/guardian-backup-policy@sha256:7a6e5982598e093f6be50dbf89e7638ed67600403a7681e3fb328e27eab8360a
     set_deployment_image backuppolicy-deployment backuppolicy-container ${backuppolicy_img}
 
-    guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:7cd60eff9e671712d6239eaef4aba86f8871bc2252a97b3b2858e2d06930df63
-    update_operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
-
-    guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:791916f88f56819fb3487ac40c184ff0785a713957edd66415f4222b00c08e87
-    update_operator_csv ibm-dataprotectionagent.v2.10.0 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
-
+    guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:04a3446eb98d03eddfce27ff77def52b2c3f89c57d662190f61891d8bd3167fc
+    update_guardian-dp-operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
 
     patch_kafka_cr
     restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager
 fi
 
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:f320cb916c95ba6d16e8e71089cc0eeb580e73d890fb396caeaae020f1b535b9
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c6ee0b30aedc5dcc83c50df5d33ff3b7ca4cc086cb2ff984d10a190b1c5efc6f
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 
-velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:344fa732b4485f3edc4afef73d2f2a8ac6c1f6911f073ae3e2d94cb5cc606eb2
+velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:d4e54c0e98983f78b4f022ae5fd9dc4f751d725b19d15d355e73055cfeec863d
 set_velero_image ${velero_img}
 
 [ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:74990bffe171264a3d08eab53398dd5e98491a24269642b38688d854c1549224
 [ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:c060b4b34da3edc756dbc5f6d3f6afd8e895ece52dff3d4aad8965217365a966
 update_isf_operator_csv isf-operator.v2.10.0 "${isfdataprotection_img}"
+
+if [ -n "$HUB" ]; then
+    patch_kafka_cr
+    restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
+    restart_deployments "$ISF_NS" isf-application-operator-controller-manager
+fi
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}

@@ -91,11 +91,11 @@ restart_deployments() {
             VALID_DEPLOYMENTS+=("$deployment")
         fi
     done
-    echo "Restarting deployments ${VALID_DEPLOYMENTS[@]}"
-    for deployment in ${VALID_DEPLOYMENTS[@]}; do
+    echo "Restarting deployments $VALID_DEPLOYMENTS"
+    for deployment in $VALID_DEPLOYMENTS; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
     done
-    for deployment in ${VALID_DEPLOYMENTS[@]}; do
+    for deployment in $VALID_DEPLOYMENTS; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
     done
 }
