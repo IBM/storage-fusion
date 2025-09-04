@@ -100,7 +100,7 @@ set_velero_image() {
 }
 
 # Updates guardian-dp-operator and idp-agent-operator CSVs
-update_guardian-dp-operator_csv() {
+update_operator_csv() {
     name="$1"
     deployment_name="$2"
     image="$3"
@@ -241,10 +241,10 @@ set_velero_image ${velero_img}
 
 if [ -n "$HUB" ]; then
     guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:e7dce0d4817e545e5d40f90b116e85bd5ce9098f979284f12ad63cbc56f52d8c
-    update_guardian-dp-operator_csv guardian-dp-operator.v2.10.1 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
+    update_operator_csv guardian-dp-operator.v2.10.1 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
 
     guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:b2ab67807e79a064b14d7c79c902c5ec5949c0b6dc2ac4c990dcfb201f00ee0a
-    update_guardian-dp-operator_csv ibm-dataprotectionagent.v2.10.1 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
+    update_operator_csv ibm-dataprotectionagent.v2.10.1 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
     patch_kafka_cr
     restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager
