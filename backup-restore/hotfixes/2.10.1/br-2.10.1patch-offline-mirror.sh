@@ -13,29 +13,16 @@ export TARGET_PATH
 set -e
 
 
-FBRVELERO=fbr-velero@sha256:b34f53ef2a02a883734f24dba9411baf6cfeef38983183862fa0ea773a7fc405
-TRANSACTIONMANAGER=guardian-transaction-manager@sha256:bca60d34c71c1b0507c481d5bcb03491ad77c8f1aaa1bac40823d481e2827bf0
-GUARDIANDPOPERATOR=guardian-dp-operator@sha256:e7dce0d4817e545e5d40f90b116e85bd5ce9098f979284f12ad63cbc56f52d8c
-GUARDIANIDPAGENTOPERATOR=idp-agent-operator@sha256:b2ab67807e79a064b14d7c79c902c5ec5949c0b6dc2ac4c990dcfb201f00ee0a
+FBRVELERO=fbr-velero@sha256:910ffee32ec4121df8fc2002278f971cd6b0d923db04d530f31cf5739e08e24c
+TRANSACTIONMANAGER=guardian-transaction-manager@sha256:62c62ec0cd03945bcbc408faa62338e65476617c427373fd609e4809605127a3
 
 declare -a IMAGES=(
   $FBRVELERO
   $TRANSACTIONMANAGER
 )
 
-declare -a CPOPENIMAGES=(
-  "$GUARDIANDPOPERATOR"
-  "$GUARDIANIDPAGENTOPERATOR"
-)
-
 for IMAGE in "${IMAGES[@]}"; do
   DESTINATION=docker://$TARGET_PATH/cp/bnr/$IMAGE
   echo -e "Copying\n Image: $IMAGE\n Destination: docker://$TARGET_PATH/cp/bnr/$IMAGE\n"
   skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/$IMAGE $DESTINATION
-done
-
-for CPOPENIMAGE in "${CPOPENIMAGES[@]}"; do
-  DESTINATION=docker://$TARGET_PATH/cpopen/$CPOPENIMAGE
-  echo -e "Copying\n Image: $CPOPENIMAGE\n Destination: docker://$TARGET_PATH/cpopen/$CPOPENIMAGE\n"
-  skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/"$CPOPENIMAGE" "$DESTINATION"
 done
