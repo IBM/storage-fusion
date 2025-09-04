@@ -4,3 +4,8 @@ This hotfix fixes the following Backup & Restore issues:
     2. Reducing Datamover Resource Usage - Updates to loadAffinity settings in DPA to more accurately 
        set limit of concurrent DataUploads/DataDownloads allowed to be active a at time. (Issue: 57072)
     3. Missing Namespace Custom Labels During Restore. (Issue: 57207)
+    4. Excessive node agent pod restarts. Reduce dataTransfer updates during backup and restore. (#56437)
+    5. Unintended restore failure alerts are being triggered for old or previously failed restore jobs. (#356289)
+    6. Unable to restore an application on the spoke cluster using altNamespace if namespace exists in cluster. (#358337)
+    7. Continuous Updates to PolicyAssignment CRs by guardian-dp-operator. (#58795)
+    8. Kafka broker security patch. (#58927)

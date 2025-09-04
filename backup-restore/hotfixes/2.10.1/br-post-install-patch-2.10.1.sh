@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.1 release.
-HOTFIX_NUMBER=2
+HOTFIX_NUMBER=3
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -99,9 +99,49 @@ set_velero_image() {
     fi
 }
 
+# Updates guardian-dp-operator and idp-agent-operator CSVs
+update_operator_csv() {
+    name="$1"
+    deployment_name="$2"
+    image="$3"
+    csv_ns="$BR_NS"
+
+    if (oc get csv -n "$csv_ns" "$name" -o yaml > "$DIR/${name}.save.yaml"); then
+        echo "Scaling down deployment: $deployment_name ..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=0
+
+        echo "Patching clusterserviceversion/$name (deployment: $deployment_name, image: $image) ..."
+        dep_index=$(oc get csv -n "$csv_ns" "$name" -o json | jq "[.spec.install.spec.deployments[].name] | index(\"$deployment_name\")")
+
+        if [[ "$dep_index" == "null" ]]; then
+            echo "ERROR: Deployment '$deployment_name' not found in CSV $name"
+            return 1
+        fi
+        patches=()
+        container_index=0
+        for cname in $(oc get csv -n "$csv_ns" "$name" -o json \
+            | jq -r ".spec.install.spec.deployments[$dep_index].spec.template.spec.containers[].name"); do
+            if [[ "$cname" == "manager" ]]; then
+                patches+=("{\"op\":\"replace\",\"path\":\"/spec/install/spec/deployments/${dep_index}/spec/template/spec/containers/${container_index}/image\",\"value\":\"${image}\"}")
+            fi
+            ((container_index++))
+        done
+
+        patch_json="[$(IFS=,; echo "${patches[*]}")]"
+        [ -z "$DRY_RUN" ] &&  oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json"
+        [ -n "$DRY_RUN" ] && oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json" --dry-run=client -o yaml > "$DIR/${name}.patch.yaml"
+
+        echo "Scaling up deployment: $deployment_name ..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=1
+
+    else
+        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
+    fi
+}
+
 patch_kafka_cr() {
     echo "Patching Kafka..."
-    if ! oc get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
+    if ! oc get kafka guardian-kafka-cluster -n "$BR_NS" -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
         # Patch is not needed 
         return 0
     fi
@@ -109,7 +149,7 @@ patch_kafka_cr() {
     if [ -z "$DRY_RUN" ]; then
         oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
         echo "Waiting for the Kafka cluster to restart (10 min max)"
-        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
+        oc wait --for=condition=Ready kafka/guardian-kafka-cluster -n "$BR_NS" --timeout=600s
         if [ $? -ne 0 ]; then
             echo "Error: Kafka is not ready after configuration patch."
             exit 1
@@ -140,11 +180,11 @@ restart_deployments() {
             VALID_DEPLOYMENTS+=("$deployment")
         fi
     done
-    echo "Restarting deployments $VALID_DEPLOYMENTS"
-    for deployment in $VALID_DEPLOYMENTS; do
+    echo "Restarting deployments ${VALID_DEPLOYMENTS[@]}"
+    for deployment in ${VALID_DEPLOYMENTS[@]}; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
     done
-    for deployment in $VALID_DEPLOYMENTS; do
+    for deployment in ${VALID_DEPLOYMENTS[@]}; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
     done
 }
@@ -192,14 +232,19 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
     exit 0
 fi
 
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:62c62ec0cd03945bcbc408faa62338e65476617c427373fd609e4809605127a3
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:bca60d34c71c1b0507c481d5bcb03491ad77c8f1aaa1bac40823d481e2827bf0
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
-velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:910ffee32ec4121df8fc2002278f971cd6b0d923db04d530f31cf5739e08e24c
+velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:b34f53ef2a02a883734f24dba9411baf6cfeef38983183862fa0ea773a7fc405
 set_velero_image ${velero_img}
 
 if [ -n "$HUB" ]; then
+    guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:e7dce0d4817e545e5d40f90b116e85bd5ce9098f979284f12ad63cbc56f52d8c
+    update_operator_csv guardian-dp-operator.v2.10.1 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
+
+    guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:b2ab67807e79a064b14d7c79c902c5ec5949c0b6dc2ac4c990dcfb201f00ee0a
+    update_operator_csv ibm-dataprotectionagent.v2.10.1 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
     patch_kafka_cr
     restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager
@@ -212,3 +257,8 @@ echo "Please verify that the pods for the following deployment have successfully
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "node-agent"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-dp-operator-controller-manager"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manager"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-kafka-cluster-kafka"
+
