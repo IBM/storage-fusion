@@ -34,7 +34,7 @@ The ISF-OCV-Sizing Tool is a standalone application designed to help users estim
 ### Steps
 1. Clone the repository:
     ```sh
-    git clone https://github.com/sandeepbazar/isf-ocv-sizing.git
+    git clone https://github.com/IBM/storage-fusion/tree/master/virtualization/isf-ocv-sizing
     ```
 2. Navigate to the project directory:
     ```sh
@@ -74,7 +74,6 @@ Performs the VM sizing calculations based on the inputs provided by the user.
 The application consists of the following key components:
 - **GUI Application:** Handles user interactions and displays results.
 - **Calculation Engine:** Core logic for sizing calculations.
-![image](https://media.github.ibm.com/user/220167/files/20c7d77b-53d1-4c73-9829-974194ea68b4)
 
 ## Sequence for VM Sizing Calculation
 - User inputs number of Nodes.
@@ -83,7 +82,6 @@ The application consists of the following key components:
 - The GUI interface passes these specifications to the Calculation Engine.
 - The Calculation Engine performs calculations based on user inputs.
 - Results are sent back to the GUI for display.
-![diagram (1)](https://media.github.ibm.com/user/220167/files/697ad05d-684f-4cdd-940b-6d21ff709158)
 
 ## Future Enhancements
 - Integrate the tool as a microservice within OpenShift.
