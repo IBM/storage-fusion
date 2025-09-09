@@ -207,6 +207,42 @@ patch_kafka_cr() {
     fi
 }
 
+update_kafka_topic_message_size() {
+    echo "Patching Kafka inventory and restore topics..."
+
+    patch='[{"op": "add", "path": “/spec/config/max.message.bytes", "value": "5242880"}]'
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}"
+        oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}"
+        echo "Patched Kafka topics"
+    else
+        oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/inventory-topic.patch.yaml
+        oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/restore-topic.patch.yaml
+    fi
+}
+
+update_kafka_connection() {
+    echo "Setting Kafka message size properties in kafka-connection ConfigMap..."
+    patch='[{"op": "add", "path": "/data/max.request.size", "value": "5242880"}]'
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch configmap kafka-connection --type='json' -p="${patch}"
+    else
+        oc -n "$BR_NS" patch configmap kafka-connection --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka-connection.patch.yaml
+    fi
+}
+
+update_tm_env() {
+    echo "Setting Kafka message size property in as TM env variable..."
+    message_size='MAX_REQUEST_SIZE=5242880'
+    if [ -z "$DRY_RUN" ]; then
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}"
+        oc set env -n "$BR_NS" deployment/dbr-controller "${message_size}"
+    else
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}" --dry-run=client -o yaml >$DIR/tm_env.patch.yaml
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}" --dry-run=client -o yaml >$DIR/dbr_env.patch.yaml
+    fi
+}
+
 # restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
 # Arguments:
 #   $1: Namespace of deployments
@@ -290,6 +326,9 @@ if [ -n "$HUB" ]; then
 
     backuppolicy_img=cp.icr.io/cp/bnr/guardian-backup-policy@sha256:7a6e5982598e093f6be50dbf89e7638ed67600403a7681e3fb328e27eab8360a
     set_deployment_image backuppolicy-deployment backuppolicy-container ${backuppolicy_img}
+    
+    jobmanager_img=cp.icr.io/cp/bnr/guardian-job-manager@sha256:6145c6fc7fe238fba1e130eb4ca3c85a374cc41533009819ef83376b5f632010
+    set_deployment_image job-manager job-manager-container ${jobmanager_img}
 
     guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:7cd60eff9e671712d6239eaef4aba86f8871bc2252a97b3b2858e2d06930df63
     update_operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
@@ -299,11 +338,14 @@ if [ -n "$HUB" ]; then
 
 
     patch_kafka_cr
+    update_kafka_topic_message_size
+    update_kafka_connection
     restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager
 fi
 
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:f320cb916c95ba6d16e8e71089cc0eeb580e73d890fb396caeaae020f1b535b9
+update_tm_env
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:3490ace98538dcb95413fd08ff380bb91905f2929234e733a86b5be4e6a71ede
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 
 velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:344fa732b4485f3edc4afef73d2f2a8ac6c1f6911f073ae3e2d94cb5cc606eb2
@@ -321,6 +363,7 @@ if [ -n "$HUB" ]; then
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-location-deployment"
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backuppolicy-deployment"
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-service"
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "job-manager"
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-dp-operator-controller-manager"
 fi
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
