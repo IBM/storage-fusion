@@ -9,3 +9,4 @@ This hotfix fixes the following Backup & Restore issues:
     6. Unable to restore an application on the spoke cluster using altNamespace if namespace exists in cluster. (#358337)
     7. Continuous Updates to PolicyAssignment CRs by guardian-dp-operator. (#58795)
     8. Kafka broker security patch. (#58927)
+    9. Restore fails with error Backup inventory info not returned from application service for applicationId (#59191)
