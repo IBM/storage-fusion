@@ -118,7 +118,6 @@ def calculate_vm_sizing(total_cpu, total_memory, storage, cpu_overhead,
             node.
             storage_overhead (int): Reserved storage for system overhead.
             overcommit_ratio (float): CPU overcommit ratio
-            (e.g., 1.5 for 150% overcommit).
             vms (list of tuple): List containing VM specs in the format
             (vCPU, memory, storage).
             custom_st (int): Custom storage (in GiB) required per VM.
@@ -142,12 +141,14 @@ def calculate_vm_sizing(total_cpu, total_memory, storage, cpu_overhead,
 
     # Total CPU and Memory overheads
     total_cpu_overhead = (
-        (openshift_cpu_reservation + cpu_overhead) * 2 + node_cpu_overhead)
+            (openshift_cpu_reservation + cpu_overhead) * 2 + node_cpu_overhead)
     total_memory_overhead = (
-        openshift_memory_reservation + node_memory_overhead + memory_overhead)
+            openshift_memory_reservation + node_memory_overhead + memory_overhead)
+
+    total_vcpu = total_cpu * 2
 
     # Resources after all overheads
-    available_cpus = total_cpu - total_cpu_overhead
+    available_cpus = total_vcpu - total_cpu_overhead
     available_cpu = available_cpus * overcommit_ratio
     available_memory = total_memory - total_memory_overhead
     total_storage = storage - storage_overhead
@@ -198,10 +199,8 @@ def perform_calculation(node_count, cpu_overhead, memory_overhead,
             storage_overhead (int): Storage reserved for system use.
             total_storage_capacity (int): Total usable storage across
             all nodes (GiB).
-            ha_reserve_percent (float): HA reservation percentage
-            (e.g., 0.25 for 25% HA).
-            overcommit_ratio (float): vCPU overcommit ratio
-            (e.g., 1.5 means 150% CPU usage allowed).
+            ha_reserve_percent (float): HA reservation percentage.
+            overcommit_ratio (float): CPU overcommit ratio
             node_details (list of dict): List containing per-node specs
             with 'cpu' and 'memory'.
             vm_inputs (dict): Dictionary where each key is a VM type,
@@ -237,15 +236,17 @@ def perform_calculation(node_count, cpu_overhead, memory_overhead,
 
         # Step 4: Combine all CPU and Memory overheads
         total_cpu_overhead = (
-            (cpu_overhead + ocp_cpu_overhead) * 2 + fusion_cpu_overhead)
+                (cpu_overhead + ocp_cpu_overhead) * 2 + fusion_cpu_overhead)
         total_memory_overhead = (
-            memory_overhead + ocp_memory_overhead + fusion_memory_overhead)
+                memory_overhead + ocp_memory_overhead + fusion_memory_overhead)
+
+        total_vcpus = total_cpu * 2
 
         # Step 5: Compute available resources (adjusted for HA reservation)
-        available_vcpus = (total_cpu - total_cpu_overhead) * (
-                    1 - ha_reserve_percent) * overcommit_ratio
+        available_vcpus = (total_vcpus - total_cpu_overhead) * (
+                1 - ha_reserve_percent) * overcommit_ratio
         available_memory = (total_memory - total_memory_overhead) * (
-                    1 - ha_reserve_percent)
+                1 - ha_reserve_percent)
         available_storage = total_storage_capacity - storage_overhead
 
         # Step 6: Sum required resources from VMs
@@ -299,33 +300,56 @@ def perform_calculation(node_count, cpu_overhead, memory_overhead,
 
 
 def calculate_infrastructure(requested_specs, overhead_cpu, overhead_memory,
-                             overhead_storage, ha, overcommit_cpu):
+                             overhead_storage, ha, overcommit_cpu,
+                             num_drives=2):
     """
-    Perform calculations based on the requested specs and
-    configuration details.
+    Perform calculations based on the requested specs and configuration
+    details. Includes OCP reservation and FDF overheads.
 
-    :param requested_specs: Dictionary containing total CPU,
-    memory, and storage.
-    :param overhead_cpu: CPU overhead value.
-    :param overhead_memory: Memory overhead value.
-    :param overhead_storage: Storage overhead value.
-    :param ha: High Availability percentage (0 to 1).
-    :param overcommit_cpu: Overcommit ratio for vCPU.
-    :return: A dictionary with results for required CPU, memory, and storage.
+    :param requested_specs: Dictionary containing total CPU, memory,
+    and storage.
+    :param overhead_cpu: Custom CPU overhead value.
+    :param overhead_memory: Custom Memory overhead value.
+    :param overhead_storage: Custom Storage overhead value.
+    :param ha: High Availability percentage.
+    :param overcommit_cpu: Overcommit ratio for CPU.
+    :param num_drives: Number of drives for FDF overhead calculation.
+    :return: A dictionary with results for required CPU, memory,
+    and storage.
     """
+
     total_cpu = requested_specs.get('total_cpu', 0)
     total_memory = requested_specs.get('total_memory', 0)
     total_storage = requested_specs.get('total_storage', 0)
 
-    required_cpu = (total_cpu + overhead_cpu) * (1 + ha) * overcommit_cpu
-    required_memory = (total_memory + overhead_memory) * (1 + ha)
+    total_cpu_cores = total_cpu / 2
+
+    # OCP reservation
+    ocp_cpu_overhead = calculate_cpu_reserved_for_ocp(total_cpu_cores)
+    ocp_memory_overhead = calculate_memory_reserved_for_ocp(total_memory)
+
+    # base cluster + BnR + FDF overhead
+    fusion_cpu_overhead, fusion_memory_overhead = (
+        fusion_base_system_and_fdf_consumption(
+            num_drives))
+
+    # Combine all overheads
+    total_cpu_overhead = (
+            (overhead_cpu + ocp_cpu_overhead) * 2 + fusion_cpu_overhead)
+    total_memory_overhead = (
+            overhead_memory + ocp_memory_overhead + fusion_memory_overhead)
+
+    # Apply HA and Overcommit
+    required_cpu = (total_cpu + total_cpu_overhead) * (1 + ha) * overcommit_cpu
+    required_memory = (total_memory + total_memory_overhead) * (1 + ha)
     required_storage = total_storage + overhead_storage
+
 
     return {
         'total_cpu': total_cpu,
         'total_memory': total_memory,
         'total_storage': total_storage,
-        'required_cpu': required_cpu,
-        'required_memory': required_memory,
-        'required_storage': required_storage
+        'required_cpu': round(required_cpu, 2),
+        'required_memory': round(required_memory, 2),
+        'required_storage': round(required_storage, 2)
     }

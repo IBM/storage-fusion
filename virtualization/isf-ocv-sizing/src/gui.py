@@ -183,7 +183,7 @@ class CustomInfrastructurePage(QWidget):
         self.hciDetailsLayout.addSpacing(5)
 
         overheadLayout = QGridLayout()
-        cpuOverheadLabel = QLabel("CPU Overhead (vCPU):")
+        cpuOverheadLabel = QLabel("CPU Overhead (cores):")
         self.cpuOverheadInput = QLineEdit()
         memoryOverheadLabel = QLabel("Memory Overhead (GiB):")
         self.memoryOverheadInput = QLineEdit()
@@ -208,7 +208,7 @@ class CustomInfrastructurePage(QWidget):
         #self.highAvailabilityInput.setStyleSheet("font-size: 15px;")
         #self.highAvailabilityInput.setAlignment(Qt.AlignLeft)
 
-        overcommitRatioLabel = QLabel("Overcommit Ratio (vCPU): ")
+        overcommitRatioLabel = QLabel("Overcommit Ratio for CPU: ")
         overcommitRatioLabel.setFixedWidth(170)
         self.overcommitRatioInput = QLineEdit()
         self.overcommitRatioInput.setFixedSize(200, 20)
@@ -301,7 +301,7 @@ class CustomInfrastructurePage(QWidget):
         num_nodes = self.nodeCountSpinBox.value()
         for i in range(1, num_nodes + 1):
             nodeLayout = QHBoxLayout()
-            nodeCpuLabel = QLabel(f"Node {i} CPU (cpu cores)")
+            nodeCpuLabel = QLabel(f"Node {i} CPU (cores)")
             nodeCpuInput = QLineEdit()
             nodeMemLabel = QLabel(f" Memory (GiB)")
             nodeMemInput = QLineEdit()
@@ -606,11 +606,11 @@ class UploadInfrastructurePage(QWidget):
         self.overcommit_cpu.setAlignment(Qt.AlignLeft)
         self.overcommit_cpu.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        detailsLayout.addRow("CPU Overhead (vCPU):", self.overhead_cpu)
+        detailsLayout.addRow("CPU Overhead (cores):", self.overhead_cpu)
         detailsLayout.addRow("Memory Overhead (GiB):", self.overhead_memory)
         detailsLayout.addRow("Storage Overhead (GiB):", self.overhead_storage)
         detailsLayout.addRow("High Availability (%):", self.ha)
-        detailsLayout.addRow("Overcommit Ratio (vCPU):", self.overcommit_cpu)
+        detailsLayout.addRow("Overcommit Ratio for CPU:", self.overcommit_cpu)
 
         self.detailsGroup.setLayout(detailsLayout)
 
@@ -736,7 +736,7 @@ class UploadInfrastructurePage(QWidget):
 
         self.result_text.setPlainText(
             f"Uploaded VM Configuration:\n"
-            f"Total CPU: {total_cpu} VCPU\n"
+            f"Total CPU: {total_cpu} vCPU\n"
             f"Total Memory: {total_memory:.2f} GiB\n"
             f"Total Storage: {total_storage:.2f} GiB\n"
         )
@@ -867,7 +867,7 @@ class availableInfrastructurePage(QWidget):
         self.hciDetailsLayout.addLayout(overheadLayout1)
 
         clusterLayout1 = QHBoxLayout()
-        storageLabel1 = QLabel("Overcommit ratio for CPU (cores):")
+        storageLabel1 = QLabel("Overcommit ratio for CPU:")
         storageLabel1.setStyleSheet("font-size: 14px;")
         storageLabel1.setFixedWidth(245)
 
@@ -1017,7 +1017,7 @@ class availableInfrastructurePage(QWidget):
         num_nodes = self.nodeCountSpinBox.value()
         for i in range(1, num_nodes + 1):
             nodeLayout = QHBoxLayout()
-            nodeCpuLabel = QLabel(f"Node {i} CPU (CPU cores)")
+            nodeCpuLabel = QLabel(f"Node {i} CPU (cores)")
             nodeCpuInput = QLineEdit()
             nodeMemLabel = QLabel(" Memory (GiB)")
             nodeMemInput = QLineEdit()
