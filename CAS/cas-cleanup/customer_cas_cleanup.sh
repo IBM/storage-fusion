@@ -306,11 +306,9 @@ delete_cas_crd_instances() {
             oc patch "$resource" "$name" -n "$NAMESPACE" --type=json \
                 -p='[{"op": "remove", "path": "/metadata/finalizers"}]' 2>/dev/null || true
 
-            # extra safety: force remove via merge
             oc patch "$resource" "$name" -n "$NAMESPACE" --type=merge \
                 -p '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
 
-            # delete instance
             oc delete "$resource" "$name" -n "$NAMESPACE" --ignore-not-found=true --wait=false
 
             # wait until gone
