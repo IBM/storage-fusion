@@ -25,6 +25,7 @@ else
     patch_usage
     exit 1
 fi
+HOTFIX_NUMBER=1
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -44,6 +45,19 @@ check_cmd ()
 {
    type $1 > /dev/null
    echo $?
+}
+
+update_hotfix_configmap() {
+    hotfix=$1
+    applied_on=$(date '+%Y-%m-%dT%T')
+    if (oc -n "$BR_NS" get configmap bnr-hotfixes -o yaml 1>$DIR/bnr-hotfixes.save.yaml 2>&1); then
+        patch="[{\"op\": \"add\", \"path\": \"/data/${hotfix}-applied-on\", \"value\": \"${applied_on}\"}]"
+        [ -z "$DRY_RUN" ] && oc -n "$BR_NS" patch configmap bnr-hotfixes --type=json -p "${patch}"
+        [ -n "$DRY_RUN" ] && oc -n "$BR_NS" patch configmap bnr-hotfixes --type=json -p "${patch}" --dry-run=client -o yaml >$DIR/bnr-hotfixes.patch.yaml
+    else
+        [ -z "$DRY_RUN" ] && oc -n "$BR_NS" create configmap bnr-hotfixes --from-literal="${hotfix}"-applied-on="${applied_on}"
+        [ -n "$DRY_RUN" ] && oc -n "$BR_NS" create configmap bnr-hotfixes --from-literal="${hotfix}"-applied-on="${applied_on}" --dry-run=client -o yaml >$DIR/bnr-hotfixes.patch.yaml
+    fi
 }
 
 
@@ -92,6 +106,9 @@ then
 else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
 fi
+
+hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
+update_hotfix_configmap ${hotfix}
 
 echo "Please verify that these pods have successfully restarted after hotfix update in their corresponding namespace:"
 printf "  %-25s: %s\n" "$BR_NS" "transaction-manager"
