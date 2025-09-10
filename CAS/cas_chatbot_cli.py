@@ -262,17 +262,29 @@ class CASChatBot:
 
     def fetch_tables(self) -> bool:
         """Fetch available tables from CAS"""
+        query_params =""
+        if self.config.get("default_after"):
+            query_params += f"?after={self.config.get("default_after")}"
+        if self.config.get("default_before"):
+            query_params += f"?before={self.config.get("default_before")}"
+        if self.config.get("default_limit"):
+            query_params += f"?limit={self.config.get("default_limit")}"
+        if self.config.get("efault_order"):
+            query_params += f"?order={self.config.get("default_order")}"
+
         try:
             headers = {'Authorization': f'Bearer {self.token}'}
             response = requests.get(
-                f"{self.config['cas_url']}/api/v1/querysearch/tables",
+                f"{self.config['cas_url']}/contentawarestorage/api/v1/vector_stores{query_params}",
                 headers=headers,
                 timeout=self.config.get("request_timeout", 10)
             )
 
             if response.ok:
                 data = response.json()
-                self.tables = data.get("data", [])
+                self.tables =[]
+                for table in data.get("data",[]):
+                    self.tables.append(table.get("name"))
 
                 if not self.tables:
                     console.print("[yellow]No tables found for this user role[/yellow]")
@@ -301,7 +313,7 @@ class CASChatBot:
             console.print(f"[red]Failed to fetch tables: {e}[/red]")
             return False
 
-    def query(self, user_query: str, table: str) -> QueryResult:
+    def query(self, user_query: str, vector_store_id: str) -> QueryResult:
         """Execute semantic search query"""
         try:
             headers = {
@@ -311,8 +323,8 @@ class CASChatBot:
 
             payload = {
                 "query": user_query,
-                "table": table,
-                "limit": self.config.get("default_limit", 5),
+                "ranking_options": self.config.get("default_ranking_options"),
+                "max_num_results": self.config.get("default_max_num_results", 5),
                 "enable_source": self.config.get("enable_source", False),
                 "enable_content_metadata": self.config.get("enable_content_metadata", False)
             }
@@ -325,7 +337,7 @@ class CASChatBot:
                 task = progress.add_task("🔍 Searching...", total=None)
 
                 response = requests.post(
-                    f"{self.config['cas_url']}/api/v1/querysearch/semantic_search",
+                    f"{self.config['cas_url']}/vector_stores/{vector_store_id}/search'",
                     headers=headers,
                     json=payload,
                     timeout=self.config.get("request_timeout", 30)
