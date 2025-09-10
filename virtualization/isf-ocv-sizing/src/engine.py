@@ -322,19 +322,20 @@ def calculate_infrastructure(requested_specs, overhead_cpu, overhead_memory,
     total_memory = requested_specs.get('total_memory', 0)
     total_storage = requested_specs.get('total_storage', 0)
 
+    total_cpu_cores = total_cpu / 2
+
     # OCP reservation
-    ocp_cpu_overhead = calculate_cpu_reserved_for_ocp(total_cpu)
+    ocp_cpu_overhead = calculate_cpu_reserved_for_ocp(total_cpu_cores)
     ocp_memory_overhead = calculate_memory_reserved_for_ocp(total_memory)
 
     # base cluster + BnR + FDF overhead
     fusion_cpu_overhead, fusion_memory_overhead = (
         fusion_base_system_and_fdf_consumption(
             num_drives))
-    fusion_cpu_cores_overhead = fusion_cpu_overhead / 2
 
     # Combine all overheads
     total_cpu_overhead = (
-            overhead_cpu + ocp_cpu_overhead + fusion_cpu_cores_overhead)
+            (overhead_cpu + ocp_cpu_overhead) * 2 + fusion_cpu_overhead)
     total_memory_overhead = (
             overhead_memory + ocp_memory_overhead + fusion_memory_overhead)
 
@@ -342,6 +343,7 @@ def calculate_infrastructure(requested_specs, overhead_cpu, overhead_memory,
     required_cpu = (total_cpu + total_cpu_overhead) * (1 + ha) * overcommit_cpu
     required_memory = (total_memory + total_memory_overhead) * (1 + ha)
     required_storage = total_storage + overhead_storage
+
 
     return {
         'total_cpu': total_cpu,

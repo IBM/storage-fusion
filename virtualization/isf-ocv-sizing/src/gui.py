@@ -736,7 +736,7 @@ class UploadInfrastructurePage(QWidget):
 
         self.result_text.setPlainText(
             f"Uploaded VM Configuration:\n"
-            f"Total CPU: {total_cpu} cores\n"
+            f"Total CPU: {total_cpu} vCPU\n"
             f"Total Memory: {total_memory:.2f} GiB\n"
             f"Total Storage: {total_storage:.2f} GiB\n"
         )
@@ -781,11 +781,11 @@ class UploadInfrastructurePage(QWidget):
 
         result_text = (
             f"Uploaded VM configuration:\n"
-            f"Total CPU: {requested_specs['total_cpu']:.2f} cores\n"
+            f"Total CPU: {requested_specs['total_cpu']:.2f} vCPU\n"
             f"Total Memory: {requested_specs['total_memory']:.2f} GiB\n"
             f"Total Storage: {requested_specs['total_storage']:.2f} GiB\n\n"
             f"Required Fusion Infrastructure configuration:\n"
-            f"Total CPU Needed: {results['required_cpu']:.2f} cores\n"
+            f"Total CPU Needed: {results['required_cpu']:.2f} vCPU\n"
             f"Total Memory Needed: {results['required_memory']:.2f} GiB\n"
             f"Total Storage Needed: {results['required_storage']:.2f} GiB\n"
         )
