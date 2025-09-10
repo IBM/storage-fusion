@@ -208,12 +208,13 @@ patch_kafka_cr() {
 }
 
 update_kafka_topic_message_size() {
-    echo "Patching Kafka inventory and restore topics..."
+    echo "Patching Kafka inventory, restore and delete-backup topics..."
 
-    patch='[{"op": "add", "path": “/spec/config/max.message.bytes", "value": "5242880"}]'
+    patch='[{"op": "add", "path": "/spec/config/max.message.bytes", "value": "5242880"}]'
     if [ -z "$DRY_RUN" ]; then
         oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}"
         oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}"
+        oc -n "$BR_NS" patch KafkaTopic delete-backup --type='json' -p="${patch}"
         echo "Patched Kafka topics"
     else
         oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/inventory-topic.patch.yaml
