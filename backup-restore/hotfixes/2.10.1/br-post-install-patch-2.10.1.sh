@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.1 release.
-HOTFIX_NUMBER=3
+HOTFIX_NUMBER=4
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -162,6 +162,43 @@ patch_kafka_cr() {
     fi
 }
 
+update_kafka_topic_message_size() {
+    echo "Patching Kafka inventory, restore and delete-backup topics..."
+
+    patch='[{"op": "add", "path": "/spec/config/max.message.bytes", "value": "5242880"}]'
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}"
+        oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}"
+        oc -n "$BR_NS" patch KafkaTopic delete-backup --type='json' -p="${patch}"
+        echo "Patched Kafka topics"
+    else
+        oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/inventory-topic.patch.yaml
+        oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/restore-topic.patch.yaml
+    fi
+}
+
+update_kafka_connection() {
+    echo "Setting Kafka message size properties in kafka-connection ConfigMap..."
+    patch='[{"op": "add", "path": "/data/max.request.size", "value": "5242880"}]'
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch configmap kafka-connection --type='json' -p="${patch}"
+    else
+        oc -n "$BR_NS" patch configmap kafka-connection --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka-connection.patch.yaml
+    fi
+}
+
+update_tm_env() {
+    echo "Setting Kafka message size property in as TM env variable..."
+    message_size='MAX_REQUEST_SIZE=5242880'
+    if [ -z "$DRY_RUN" ]; then
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}"
+        oc set env -n "$BR_NS" deployment/dbr-controller "${message_size}"
+    else
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}" --dry-run=client -o yaml >$DIR/tm_env.patch.yaml
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}" --dry-run=client -o yaml >$DIR/dbr_env.patch.yaml
+    fi
+}
+
 # restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
 # Arguments:
 #   $1: Namespace of deployments
@@ -232,7 +269,8 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
     exit 0
 fi
 
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:bca60d34c71c1b0507c481d5bcb03491ad77c8f1aaa1bac40823d481e2827bf0
+update_tm_env
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:45a3ff23c17fc0078bd67f26ba494724dd9f9d0c9b73c92adf444e6d152b2136
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
@@ -245,7 +283,13 @@ if [ -n "$HUB" ]; then
 
     guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:b2ab67807e79a064b14d7c79c902c5ec5949c0b6dc2ac4c990dcfb201f00ee0a
     update_operator_csv ibm-dataprotectionagent.v2.10.1 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
+    
+    jobmanager_img=cp.icr.io/cp/bnr/guardian-job-manager@sha256:b9fe3eb8e5562c35c8f353a1283328a39eefeccaca81b0b9608f9eb14631ae6c
+    set_deployment_image job-manager job-manager-container ${jobmanager_img}
+
     patch_kafka_cr
+    update_kafka_topic_message_size
+    update_kafka_connection
     restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager
 fi
@@ -261,4 +305,4 @@ printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-dp-operator-controller-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-kafka-cluster-kafka"
-
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "job-manager"
