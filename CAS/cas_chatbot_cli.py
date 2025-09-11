@@ -216,8 +216,8 @@ class CASChatBot:
         try:
             base_url = self.config['cas_url']
             endpoints = [
-                ("/api/v1/querysearch", "Query Search API"),
-                ("/api/v1/querysearch/health", "Health Check")
+                ("/contentawarestorage/api/v1/openapi.json", "Query Search API"),
+                ("/contentawarestorage/api/v1/health", "Health Check")
             ]
             headers = {'Authorization': f'Bearer {self.token}'}
 
@@ -230,7 +230,6 @@ class CASChatBot:
                         headers=headers,
                         timeout=self.config.get("request_timeout", 10)
                     )
-
                     if response.ok:
                         console.print(f"[dim]{description}: OK[/dim]")
 
@@ -263,10 +262,6 @@ class CASChatBot:
     def fetch_tables(self) -> bool:
         """Fetch available tables from CAS"""
         query_params =""
-        if self.config.get("default_after"):
-            query_params += f"?after={self.config.get("default_after")}"
-        if self.config.get("default_before"):
-            query_params += f"?before={self.config.get("default_before")}"
         if self.config.get("default_limit"):
             query_params += f"?limit={self.config.get("default_limit")}"
         if self.config.get("efault_order"):
@@ -335,9 +330,8 @@ class CASChatBot:
                     console=console,
             ) as progress:
                 task = progress.add_task("🔍 Searching...", total=None)
-
                 response = requests.post(
-                    f"{self.config['cas_url']}/vector_stores/{vector_store_id}/search'",
+                    f"{self.config['cas_url']}/contentawarestorage/api/v1/vector_stores/{vector_store_id}/search",
                     headers=headers,
                     json=payload,
                     timeout=self.config.get("request_timeout", 30)
@@ -348,7 +342,7 @@ class CASChatBot:
             if response.ok:
                 data = response.json()
                 self.query_count += 1
-                logger.info(f"Query executed successfully for table: {table}")
+                logger.info(f"Query executed successfully for table: {vector_store_id}")
                 return QueryResult(success=True, data=data)
             else:
                 error_msg = f"Query failed: {response.status_code} - {response.text}"
@@ -375,14 +369,12 @@ class CASChatBot:
                 "error": getattr(search_result, "error", ""),
                 "timestamp": str(getattr(search_result, "timestamp", datetime.now()))
             }
-
         prompt = f"""
     You are an intelligent assistant helping users understand data from a semantic search engine.
     Based on the following retrieved data:
     {json.dumps(query_data, indent=2)}
     Answer the user's query: \"{user_query}\"
     """
-
 
         for provider in self.config.get("llm_provider_sequence", []):
             try:
