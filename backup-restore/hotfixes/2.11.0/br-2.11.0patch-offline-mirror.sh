@@ -12,7 +12,7 @@ TARGET_PATH="$1"
 export TARGET_PATH
 set -e
 
-TRANSACTIONMANAGER=guardian-transaction-manager@sha256:950a851ff61b748abc0e141922c17eaca6a944e3f8a1d74b73855322a0f74568
+TRANSACTIONMANAGER=guardian-transaction-manager@sha256:6465fadda4ca4402d098932d68563209ecfcc6ca7aa3e5accee02be98e4404dd
 
 declare -a IMAGES=(
   $TRANSACTIONMANAGER
