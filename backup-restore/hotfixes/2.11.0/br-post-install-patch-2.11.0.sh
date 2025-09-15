@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=1
+HOTFIX_NUMBER=2
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -101,7 +101,7 @@ fi
 if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
 then
     echo "Patching deployment/transaction-manager image..."
-    oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:950a851ff61b748abc0e141922c17eaca6a944e3f8a1d74b73855322a0f74568
+    oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:6465fadda4ca4402d098932d68563209ecfcc6ca7aa3e5accee02be98e4404dd
     oc rollout status --namespace $BR_NS --timeout=65s deployment/transaction-manager
 else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
