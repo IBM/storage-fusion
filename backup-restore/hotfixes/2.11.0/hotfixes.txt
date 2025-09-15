@@ -1,3 +1,4 @@
 This hotfix fixes the following Backup & Restore issues:
 
     1.  Removed the validation for label, if label more than 63 character label will be truncated for Velero Backup CR.(Issue: 59712)
+    2.  Fix KeyError while accessing intrinsic variable APP.namespace.name during restore.(Issue: 60235)
