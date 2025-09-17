@@ -118,11 +118,11 @@ if ! oc get ns "$NAMESPACE" &>/dev/null; then
   exit 1
 fi
 
-# List Pods and PVCs (for awareness)
-echo "Current Pods in namespace:"
+# List Pods and PVCs
+echo "Current Pods in namespace: '$NAMESPACE'"
 oc get pods -n "$NAMESPACE"
 echo ""
-echo "Current PVCs in namespace:"
+echo "Current PVCs in namespace: '$NAMESPACE'"
 oc get pvc -n "$NAMESPACE"
 echo ""
 
@@ -246,20 +246,32 @@ cleanup_pvcs() {
 }
 
 # Function to delete FusionServiceInstance
-delete_fusion_service_instance() {
-    local fusion_ns
+delete_fusion_service_instances() {
+    local fusion_ns instance_name mandatory
+
+    # Discover the namespace
     fusion_ns=$(oc get spectrumfusion -A --no-headers | cut -d" " -f1 | head -n1)
     [ -z "$fusion_ns" ] && fusion_ns=$(oc get subs -A -o custom-columns=:metadata.namespace,:spec.name | grep "isf-operator$" | cut -d" " -f1)
     [ -z "$fusion_ns" ] && fusion_ns="ibm-spectrum-fusion-ns"
 
-    if oc get fusionserviceinstance ibm-cas-service-instance -n "$fusion_ns" &>/dev/null; then
-        echo "Deleting FusionServiceInstance from $fusion_ns..."
-        # Delete without waiting, then retry until gone
-        oc delete fusionserviceinstance ibm-cas-service-instance -n "$fusion_ns" --wait=false || true
-        retry_until_gone "ibm-cas-service-instance" "$fusion_ns" "fusionserviceinstance"
-    else
-        echo "No FusionServiceInstance found in $fusion_ns."
-    fi
+    local instances=(
+        "ibm-cas-service-instance:true"
+        "cas-install-redstack:false"
+    )
+    for entry in "${instances[@]}"; do
+        instance_name="${entry%%:*}"
+        mandatory="${entry##*:}"
+
+        if oc get fusionserviceinstance "$instance_name" -n "$fusion_ns" &>/dev/null; then
+            echo "Deleting FusionServiceInstance '$instance_name' from $fusion_ns..."
+            oc delete fusionserviceinstance "$instance_name" -n "$fusion_ns" --wait=false || true
+            retry_until_gone "$instance_name" "$fusion_ns" "fusionserviceinstance"
+        elif [ "$mandatory" = "true" ]; then
+            echo "Mandatory FusionServiceInstance '$instance_name' not found in $fusion_ns."
+        else
+            echo "Optional FusionServiceInstance '$instance_name' not found, skipping."
+        fi
+    done
 }
 
 # Delete CAS CatalogSource
@@ -306,9 +318,11 @@ delete_cas_crd_instances() {
             oc patch "$resource" "$name" -n "$NAMESPACE" --type=json \
                 -p='[{"op": "remove", "path": "/metadata/finalizers"}]' 2>/dev/null || true
 
+            # extra safety: force remove via merge
             oc patch "$resource" "$name" -n "$NAMESPACE" --type=merge \
                 -p '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
 
+            # delete instance
             oc delete "$resource" "$name" -n "$NAMESPACE" --ignore-not-found=true --wait=false
 
             # wait until gone
@@ -366,15 +380,25 @@ resource_cleanup() {
 
 # Final cleanup
 final_cleanup() {
-    echo "Cleaning up all resources in namespace: $NAMESPACE..."
+    echo "Starting cleanup of all resources in namespace: $NAMESPACE..."
 
-    # Delete all resources
-    oc delete pods --all -n "$NAMESPACE" --wait=true || true
-    oc delete pvc --all -n "$NAMESPACE" --wait=true || true
-    oc delete secret --all -n "$NAMESPACE" --wait=true || true
-    oc delete configmap --all -n "$NAMESPACE" --wait=true || true
-    oc delete all --all -n "$NAMESPACE" --wait=true || true
-    echo "Resource cleanup complete in namespace: $NAMESPACE"
+    # Delete pods, PVCs, secrets, configmaps, services, routes, jobs, cronjobs, and other resources
+    oc delete pods --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+    oc delete pvc --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+    oc delete secrets --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+    oc delete configmaps --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+    oc delete services --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+    oc delete routes --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+    oc delete jobs --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+    oc delete cronjobs --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+    oc delete rolebindings --all -n "$NAMESPACE" --ignore-not-found=true || true
+    oc delete all --all -n "$NAMESPACE" --wait=true --ignore-not-found=true || true
+
+    # Delete specific network policies if they exist
+    oc delete networkpolicy docling-deny-all-egress -n "$NAMESPACE" --ignore-not-found=true || true
+    oc delete networkpolicy docling-allow-local-egress -n "$NAMESPACE" --ignore-not-found=true || true
+
+    echo "Resource cleanup completed in namespace: $NAMESPACE"
 }
 
 # Delete namespace
@@ -398,7 +422,7 @@ run_step "Delete Catalog Source" delete_catalog_source
 run_step "Delete Kafka Resources" delete_kafka_resources
 run_step "Delete CAS CRDs Only" delete_cas_crd_instances
 run_step "Final Resource Cleanup" final_cleanup
-run_step "Delete Fusion Service Instance" delete_fusion_service_instance
+run_step "Delete Fusion Service Instance" delete_fusion_service_instances
 run_step "Uninstall Operators" uninstall_operators
 run_step "Delete Namespace" delete_namespace
 
