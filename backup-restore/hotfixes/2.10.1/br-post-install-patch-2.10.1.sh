@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.1 release.
-HOTFIX_NUMBER=4
+HOTFIX_NUMBER=5
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -226,6 +226,7 @@ restart_deployments() {
     done
 }
 
+echo "Applying $EXPECTED_VERSION hotfix $HOTFIX_NUMBER"
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -270,7 +271,7 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
 fi
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:45a3ff23c17fc0078bd67f26ba494724dd9f9d0c9b73c92adf444e6d152b2136
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:82897c82182ce44ee9cef38415190a84b393004884ccb720087b1fd20d628ee8
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
