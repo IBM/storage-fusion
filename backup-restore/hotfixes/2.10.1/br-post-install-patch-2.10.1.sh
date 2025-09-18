@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.1 release.
+# Run this script on hub and spoke clusters to apply the latest hotfixes.
 HOTFIX_NUMBER=5
 EXPECTED_VERSION=2.10.1
 
