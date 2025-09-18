@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.9.1 release.
-HOTFIX_NUMBER=3
+HOTFIX_NUMBER=5
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -189,6 +189,7 @@ restart_deployments() {
     done
 }
 
+echo "Applying $EXPECTED_VERSION hotfix $HOTFIX_NUMBER"
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -232,7 +233,8 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
     exit 0
 fi
 
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:bca60d34c71c1b0507c481d5bcb03491ad77c8f1aaa1bac40823d481e2827bf0
+update_tm_env
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:82897c82182ce44ee9cef38415190a84b393004884ccb720087b1fd20d628ee8
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
@@ -261,4 +263,3 @@ printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-dp-operator-controller-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-kafka-cluster-kafka"
-
