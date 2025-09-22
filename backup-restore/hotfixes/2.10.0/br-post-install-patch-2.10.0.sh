@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.10.0 release.
-HOTFIX_NUMBER=3
+HOTFIX_NUMBER=4
 EXPECTED_VERSION=2.10.0
 
 patch_usage() {
@@ -271,6 +271,7 @@ restart_deployments() {
     done
 }
 
+echo "Applying $EXPECTED_VERSION hotfix $HOTFIX_NUMBER"
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -346,7 +347,7 @@ if [ -n "$HUB" ]; then
 fi
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:3490ace98538dcb95413fd08ff380bb91905f2929234e733a86b5be4e6a71ede
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:a01bf78faf42f7cfb55e5fbedc7c81e2fbaef93b6f41709f3077c7e901a9bacc
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 
 velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:344fa732b4485f3edc4afef73d2f2a8ac6c1f6911f073ae3e2d94cb5cc606eb2
