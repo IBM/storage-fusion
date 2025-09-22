@@ -271,6 +271,7 @@ restart_deployments() {
     done
 }
 
+echo "Applying $EXPECTED_VERSION hotfix $HOTFIX_NUMBER"
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
