@@ -124,12 +124,12 @@ the project without requiring a patch to each PolicyAssignment.
    6) From Fusion GUI: restore project "domino-compute", however do NOT restore
       the domino-shared-store-domino-compute and
       domino-blob-store-domino-compute PVCs: check the option to select PVCs to
-      restore and exclude the Shared and Blob PVCs.
+      restore and exclude these two PVCs in the domino-compute namespace.
 
-      (The Blog and Shared PVCs must be created by the domino install
-      script to point to the same PVs that the PVCs in the "domino-platform"
-      project is using, otherwise you will have two independent versions of the
-      blob and shared file systems in these two respective projects that will
+      (The Blob and Shared PVCs must point to the same CephFS volumeHandles
+      that the respective PVCs in the "domino-platform" project is using,
+      otherwise you will have two independent versions of the blob and shared
+      file systems in these two separate projects that will
       cause file-not-found issues between workspaces versus UI uploads)
 
       To create the domino-shared-store-domino-compute PVC in domino-compute,
@@ -137,6 +137,8 @@ the project without requiring a patch to each PolicyAssignment.
       to, give it a unique name and create it. Then copy the PVC and change
       the name to domino-shared-store-domino-compute and namespace to
       domino-compute and create it.
+
+      Repeat this process for the domino-blob-store-domino-compute PVC.
 
    7) From OpenShift Console: label nodes accordingly for your environment to
       schedule compute and platform pods
