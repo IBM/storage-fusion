@@ -126,11 +126,12 @@ the project without requiring a patch to each PolicyAssignment.
       domino-blob-store-domino-compute PVCs: check the option to select PVCs to
       restore and exclude these two PVCs in the domino-compute namespace.
 
-      (The Blob and Shared PVCs must point to the same CephFS volumeHandles
-      that the respective PVCs in the "domino-platform" project is using,
-      otherwise you will have two independent versions of the blob and shared
-      file systems in these two separate projects that will
-      cause file-not-found issues between workspaces versus UI uploads)
+      (The Blob and Shared PVCs in domino-compute must point to the same CephFS
+      volumeHandles that the respective PVCs in the "domino-platform" project
+      is using, otherwise you will have two independent versions of the blob
+      and shared file systems in these two separate projects that will cause
+      file-not-found issues in your workspaces when you upload new documents in
+      the UI)
 
       To create the domino-shared-store-domino-compute PVC in domino-compute,
       copy the PV that the domino-shared-store in domino-platform is pointing
