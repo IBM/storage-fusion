@@ -154,7 +154,7 @@ class CustomInfrastructurePage(QWidget):
         self.cpuOverheadInput1 = QLineEdit()
         memoryOverheadLabel1 = QLabel("Number of disks per node:")
         self.memoryOverheadInput1 = QLineEdit()
-        storageOverheadLabel1 = QLabel("Size of the disk per node (GiB):")
+        storageOverheadLabel1 = QLabel("Size of the disk per node(GiB):")
         self.storageOverheadInput1 = QLineEdit()
         overheadLayout1.addWidget(cpuOverheadLabel1, 0, 0)
         overheadLayout1.addWidget(self.cpuOverheadInput1, 0, 1)
