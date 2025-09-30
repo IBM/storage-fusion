@@ -146,6 +146,7 @@ the project without requiring a patch to each PolicyAssignment.
       schedule compute and platform pods:
 
       If using HCP NodePools:
+
       For platform workers:
 ```
       spec:
