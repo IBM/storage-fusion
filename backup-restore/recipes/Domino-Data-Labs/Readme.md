@@ -146,6 +146,7 @@ the project without requiring a patch to each PolicyAssignment.
 
    8) From OpenShift Console: delete CertificateRequests for hephaestus\*-tls
       in domino-compute NS
+
    9) From Linux shell: restart Domino using restart script here (this will
       also delete your hephaestus TLS secrets which is why we had to clear
       previous reqs)
