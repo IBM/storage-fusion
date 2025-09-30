@@ -147,14 +147,18 @@ the project without requiring a patch to each PolicyAssignment.
 
       If using HCP NodePools:
       For platform workers:
+```
       spec:
         nodeLabels:
           dominodatalab.com/node-pool: "platform"
+```
 
       For compute workers:
+```
       spec:
         nodeLabels:
           dominodatalab.com/node-pool: "default"
+```
 
    Validate if restore has generated valid certificates, if not run these
    additional steps:
