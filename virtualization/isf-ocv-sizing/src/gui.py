@@ -154,7 +154,7 @@ class CustomInfrastructurePage(QWidget):
         self.cpuOverheadInput1 = QLineEdit()
         memoryOverheadLabel1 = QLabel("Number of disks per node:")
         self.memoryOverheadInput1 = QLineEdit()
-        storageOverheadLabel1 = QLabel("Size of the disk per node:")
+        storageOverheadLabel1 = QLabel("Size of the disk per node (GiB):")
         self.storageOverheadInput1 = QLineEdit()
         overheadLayout1.addWidget(cpuOverheadLabel1, 0, 0)
         overheadLayout1.addWidget(self.cpuOverheadInput1, 0, 1)
@@ -882,21 +882,21 @@ class availableInfrastructurePage(QWidget):
         self.hciDetailsLayout.addLayout(clusterLayout1)
         self.hciDetailsLayout.addSpacing(5)
 
-        clusterLayout = QHBoxLayout()
-        storageLabel = QLabel("Enter storage of entire cluster (GiB):")
-        storageLabel.setStyleSheet("font-size: 14px;")
-        storageLabel.setFixedWidth(245)
+        #clusterLayout = QHBoxLayout()
+        #storageLabel = QLabel("Enter storage of entire cluster (GiB):")
+        #storageLabel.setStyleSheet("font-size: 14px;")
+        #storageLabel.setFixedWidth(245)
 
-        self.storageInput = QLineEdit()
-        self.storageInput.setFixedSize(140, 20)
-        self.storageInput.setStyleSheet("font-size: 12px;")
+        #self.storageInput = QLineEdit()
+        #self.storageInput.setFixedSize(140, 20)
+        #self.storageInput.setStyleSheet("font-size: 12px;")
 
-        clusterLayout.addWidget(storageLabel)
-        clusterLayout.addWidget(self.storageInput)
-        clusterLayout.setAlignment(Qt.AlignLeft)
+        #clusterLayout.addWidget(storageLabel)
+        #clusterLayout.addWidget(self.storageInput)
+        #clusterLayout.setAlignment(Qt.AlignLeft)
 
-        self.hciDetailsLayout.addLayout(clusterLayout)
-        self.hciDetailsLayout.addSpacing(5)
+        #self.hciDetailsLayout.addLayout(clusterLayout)
+        #self.hciDetailsLayout.addSpacing(5)
 
 
         overheadLayout = QGridLayout()
@@ -1033,12 +1033,14 @@ class availableInfrastructurePage(QWidget):
         """
         try:
             node_count = self.nodeCountSpinBox.value()
-            storage = int(self.storageInput.text() or 0)
+            #storage = int(self.storageInput.text() or 0)
             cpu_overhead = int(self.cpuOverheadInput.text() or 0)
             memory_overhead = int(self.memoryOverheadInput.text() or 0)
             storage_overhead = int(self.storageOverheadInput.text() or 0)
             overcommit_ratio = int(self.storageInput1.text() or 0)
             num_drives = int(self.memoryOverheadInput1.text() or 0)
+            size_of_the_drive = int(self.storageOverheadInput1.text() or 0)
+            no_of_st_nodes = int(self.cpuOverheadInput1.text() or 0)
             total_cpu = 0
             total_memory = 0
 
@@ -1064,8 +1066,8 @@ class availableInfrastructurePage(QWidget):
                             except ValueError:
                                 pass
 
-            result = calculate_vm_sizing(total_cpu, total_memory, storage, cpu_overhead, memory_overhead,
-                                         storage_overhead, overcommit_ratio, vms, custom_st, num_drives)
+            result = calculate_vm_sizing(total_cpu, total_memory, cpu_overhead, memory_overhead,
+                                         storage_overhead, overcommit_ratio, vms, custom_st, num_drives, size_of_the_drive, no_of_st_nodes)
             self.outputArea.setText(result)
         except Exception as e:
             self.outputArea.setText(f"Error: {str(e)}")

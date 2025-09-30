@@ -100,10 +100,10 @@ def fusion_base_system_and_fdf_consumption(num_drives):
     return node_cpu_overhead, node_memory_overhead
 
 
-def calculate_vm_sizing(total_cpu, total_memory, storage, cpu_overhead,
+def calculate_vm_sizing(total_cpu, total_memory, cpu_overhead,
                         memory_overhead, storage_overhead, overcommit_ratio,
                         vms,
-                        custom_st, num_drives):
+                        custom_st, num_drives, size_of_the_drive, no_of_st_nodes):
     """
         Calculates the maximum number of virtual machines (VMs) that can be
         scheduled on a system after accounting for OpenShift reservations,
@@ -151,7 +151,8 @@ def calculate_vm_sizing(total_cpu, total_memory, storage, cpu_overhead,
     available_cpus = total_vcpu - total_cpu_overhead
     available_cpu = available_cpus * overcommit_ratio
     available_memory = total_memory - total_memory_overhead
-    total_storage = storage - storage_overhead
+    total_cluster_storage = no_of_st_nodes * num_drives * size_of_the_drive
+    total_storage = (total_cluster_storage / 3) - storage_overhead
 
     vm_cpu, vm_mem, _ = vms[0]
     total_vm_cpu = vm_cpu
@@ -169,7 +170,7 @@ def calculate_vm_sizing(total_cpu, total_memory, storage, cpu_overhead,
         return (
             f"Total Available Resources (Excluding Overhead):\n CPU cores "
             f"[{total_cpu}]  Memory [{total_memory}]  "
-            f"Storage [{storage}]\n\n"
+            f"Storage [{total_cluster_storage}]\n\n"
             f"Selected T-Shirt Size: {vm_cpu} vCPU, {vm_mem} GiB, \n\n"
             f"Maximum VMs that can be Scheduled: {max_vms1}")
     else:
