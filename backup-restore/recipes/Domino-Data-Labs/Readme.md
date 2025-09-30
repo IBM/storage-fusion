@@ -134,11 +134,13 @@ the project without requiring a patch to each PolicyAssignment.
 
       To create the domino-shared-store-domino-compute PVC in domino-compute,
       copy the PV that the domino-shared-store in domino-platform is pointing
-      to, give it a unique name, remove the UID and claimRef block.
+      to, give it a unique name, and remove the uid, creationTimestamp,
+      resourceVersion and remove the status and claimRef blocks.
 
-      Then copy the PVC and change the name to
+      Then copy the PVC in domino-platform and change the name to
       domino-shared-store-domino-compute, change the PV name to what you
-      assigned your PV above, namespace to domino-compute, remove the UID.
+      assigned your PV above, namespace to domino-compute, and remove the uid,
+      resourceVersion and creationTimestamp and remove the status block.
 
       Repeat this process for the domino-blob-store-domino-compute PVC.
 
