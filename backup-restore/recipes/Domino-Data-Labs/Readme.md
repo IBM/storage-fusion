@@ -143,6 +143,7 @@ the project without requiring a patch to each PolicyAssignment.
 
    Validate if restore has generated valid certificates, if not run these
    additional steps:
+
    8) From OpenShift Console: delete CertificateRequests for hephaestus\*-tls
       in domino-compute NS
    9) From Linux shell: restart Domino using restart script here (this will
