@@ -154,7 +154,7 @@ the project without requiring a patch to each PolicyAssignment.
           dominodatalab.com/node-pool: "platform"
 ```
 
-      For compute workers:
+For compute workers:
 
 ```
       spec:
