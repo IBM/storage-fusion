@@ -143,7 +143,18 @@ the project without requiring a patch to each PolicyAssignment.
       Repeat this process for the domino-blob-store-domino-compute PVC.
 
    7) From OpenShift Console: label nodes accordingly for your environment to
-      schedule compute and platform pods
+      schedule compute and platform pods:
+
+      If using HCP NodePools:
+      For platform workers:
+      spec:
+        nodeLabels:
+          dominodatalab.com/node-pool: "platform"
+
+      For compute workers:
+      spec:
+        nodeLabels:
+          dominodatalab.com/node-pool: "default"
 
    Validate if restore has generated valid certificates, if not run these
    additional steps:
