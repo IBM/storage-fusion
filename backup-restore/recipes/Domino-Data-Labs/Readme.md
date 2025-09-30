@@ -21,7 +21,8 @@ recipe to that project's Fusion PolicyAssignments.
 
 # Summary of backup policy assignments:
   - namespace +"domino-cluster": domino-cluster-recipe recipe (select cluster-scope resources only)
-  - namespace \*"domino-system": default recipe (namespace-scoped resources and PVCs)
+  - namespace \*"domino-operator": default recipe (namespace-scoped resources)
+  - namespace \*"domino-system": default recipe (namespace-scoped resources)
   - namespace \*"domino-platform": default recipe (namespace-scoped resources and PVCs)
   - namespace \*"domino-compute": default recipe (namespace-scoped resources and PVCs)
 
@@ -117,27 +118,33 @@ the project without requiring a patch to each PolicyAssignment.
       custom recipe to restore cluster-scope resources which are prerequisites
       for restoring your application projects domino-system, domino-platform
       and domino-compute)
-   3) From Fusion GUI: restore project "domino-system"
-   4) From Fusion GUI: restore project "domino-platform"
-   5) From Fusion GUI: restore project "domino-compute", however do NOT restore
-      the shared and blob PVCs: check the option to select PVCs to restore and
-      exclude the Shared and Blob PVCs.
+   3) From Fusion GUI: restore project "domino-operator"
+   4) From Fusion GUI: restore project "domino-system"
+   5) From Fusion GUI: restore project "domino-platform"
+   6) From Fusion GUI: restore project "domino-compute", however do NOT restore
+      the domino-shared-store-domino-compute and
+      domino-blob-store-domino-compute PVCs: check the option to select PVCs to
+      restore and exclude the Shared and Blob PVCs.
+
       (The Blog and Shared PVCs must be created by the domino install
       script to point to the same PVs that the PVCs in the "domino-platform"
       project is using, otherwise you will have two independent versions of the
       blob and shared file systems in these two respective projects that will
       cause file-not-found issues between workspaces versus UI uploads)
-   6) From OpenShift Console: label nodes accordingly for your environment to
+
+      To create the domino-shared-store-domino-compute PVC in domino-compute,
+      copy the PV that the domino-shared-store in domino-platform is pointing
+      to, give it a unique name and create it. Then copy the PVC and change
+      the name to domino-shared-store-domino-compute and namespace to
+      domino-compute and create it.
+
+   7) From OpenShift Console: label nodes accordingly for your environment to
       schedule compute and platform pods
-   7) From OpenShift Console: delete CertificateRequests for hephaestus\*-tls
+
+   Validate if restore has generated valid certificates, if not run these
+   additional steps:
+   8) From OpenShift Console: delete CertificateRequests for hephaestus\*-tls
       in domino-compute NS
-   8) From Linux shell: edit "fleetcommand-agent-install.sh" adding --sync flag
-      to pod manifest:
-      The --sync flag on agent install will cause the Helm charts to resync:
-
-      python -m fleetcommand_agent run -f /app/install/domino.yml --sync
-
-      Then execute fleetcommand-agent-install.sh
    9) From Linux shell: restart Domino using restart script here (this will
       also delete your hephaestus TLS secrets which is why we had to clear
       previous reqs)
