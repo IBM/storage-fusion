@@ -73,6 +73,13 @@ patch_kafka_cr() {
     fi
 }
 
+fix_redis() {
+    if oc get StatefulSet redis-master -n $BNR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+        echo redis CR needs to be recreated
+        . ./fixredis.sh
+    fi
+}
+
 # restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
 # Arguments:
 #   $1: Namespace of deployments
@@ -257,6 +264,8 @@ if [[ "$VERSION" == 2.9.0* ]]; then
     if [ -n "$HUB" ]
     then
       echo "Apply patches to hub..."
+      fix_redis
+
       if (oc get deployment -n $BR_NS job-manager -o yaml > $DIR/job-manager-deployment.save.yaml)
       then
         echo "Patching job-manager-deployment image..."
