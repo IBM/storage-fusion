@@ -71,6 +71,13 @@ patch_kafka_cr() {
     fi
 }
 
+fix_redis() {
+    if oc get StatefulSet redis-master -n $BNR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+        echo redis CR needs to be recreated
+        . ./fixredis.sh
+    fi
+}
+
 # restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
 # Arguments:
 #   $1: Namespace of deployments
@@ -193,6 +200,7 @@ oc get clusterrole ${TMCLUSTERROLE} -o yaml > $DIR/clusterrole-$TMCLUSTERROLE.ya
 echo -e "$(cat $DIR/clusterrole-$TMCLUSTERROLE.yaml)\n${TMROLETOADD}" | oc apply -f -
 
 if [ -n "$HUB" ]; then
+    fix_redis
     patch_kafka_cr
     restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager

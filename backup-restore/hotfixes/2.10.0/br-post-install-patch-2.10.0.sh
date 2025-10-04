@@ -207,6 +207,13 @@ patch_kafka_cr() {
     fi
 }
 
+fix_redis() {
+    if oc get StatefulSet redis-master -n $BNR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+        echo redis CR needs to be recreated
+        . ./fixredis.sh
+    fi
+}
+
 update_kafka_topic_message_size() {
     echo "Patching Kafka inventory, restore and delete-backup topics..."
 
@@ -317,6 +324,8 @@ fi
 
 if [ -n "$HUB" ]; then
     echo "Apply patches to hub..."
+
+    fix_redis
 
     update_backuplocation_role
 

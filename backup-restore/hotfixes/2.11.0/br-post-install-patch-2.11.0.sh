@@ -60,6 +60,12 @@ update_hotfix_configmap() {
     fi
 }
 
+fix_redis() {
+    if oc get StatefulSet redis-master -n $BNR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+        echo redis CR needs to be recreated
+        . ./fixredis.sh
+    fi
+}
 
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
@@ -98,6 +104,10 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
     exit 0
 fi
 
+if [ -n "$HUB" ]; then
+    fix_redis
+fi
+    
 if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
 then
     echo "Patching deployment/transaction-manager image..."
