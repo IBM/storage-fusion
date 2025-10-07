@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+if ! command -v skopeo &> /dev/null; then
+  echo "ERROR: skopeo is not installed."
+  exit 1
+fi
+
 if [ $# -ne 2 ]; then
   echo "ERROR: Usage: $0 <SOURCE_IMAGE> <TARGET_PATH>"
   exit 1
