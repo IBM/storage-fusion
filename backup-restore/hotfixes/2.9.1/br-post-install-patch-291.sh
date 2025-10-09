@@ -50,7 +50,7 @@ check_cmd ()
 
 patch_kafka_cr() {
     echo "Patching Kafka..."
-    if ! oc get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
+    if ! oc -n "$BR_NS" get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
         # Patch is not needed 
         return 0
     fi
@@ -58,7 +58,7 @@ patch_kafka_cr() {
     if [ -z "$DRY_RUN" ]; then
         oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
         echo "Waiting for the Kafka cluster to restart (10 min max)"
-        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
+        oc wait -n "$BR_NS" --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
         if [ $? -ne 0 ]; then
             echo "Error: Kafka is not ready after configuration patch."
             exit 1
@@ -72,9 +72,9 @@ patch_kafka_cr() {
 }
 
 fix_redis() {
-    if oc get StatefulSet redis-master -n $BNR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+    if oc get StatefulSet redis-master -n $BR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
         echo redis CR needs to be recreated
-        . ./fixredis.sh
+        . ../scripts/fixredis.sh
     fi
 }
 

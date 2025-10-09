@@ -163,9 +163,9 @@ patch_kafka_cr() {
 }
 
 fix_redis() {
-    if oc get StatefulSet redis-master -n $BNR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+    if oc get StatefulSet redis-master -n $BR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
         echo redis CR needs to be recreated
-        . ./fixredis.sh
+        . ../scripts/fixredis.sh
     fi
 }
 
@@ -287,7 +287,7 @@ set_velero_image ${velero_img}
 
 if [ -n "$HUB" ]; then
     fix_redis
-    
+
     guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:e7dce0d4817e545e5d40f90b116e85bd5ce9098f979284f12ad63cbc56f52d8c
     update_operator_csv guardian-dp-operator.v2.10.1 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
 
