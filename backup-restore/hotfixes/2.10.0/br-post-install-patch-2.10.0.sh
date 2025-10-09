@@ -208,9 +208,9 @@ patch_kafka_cr() {
 }
 
 fix_redis() {
-    if oc get StatefulSet redis-master -n $BNR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+    if oc get StatefulSet redis-master -n $BR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
         echo redis CR needs to be recreated
-        . ./fixredis.sh
+        . ../scripts/fixredis.sh
     fi
 }
 

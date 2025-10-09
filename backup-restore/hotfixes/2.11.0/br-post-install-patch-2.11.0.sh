@@ -61,9 +61,9 @@ update_hotfix_configmap() {
 }
 
 fix_redis() {
-    if oc get StatefulSet redis-master -n $BNR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+    if oc get StatefulSet redis-master -n $BR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
         echo redis CR needs to be recreated
-        . ./fixredis.sh
+        . ../scripts/fixredis.sh
     fi
 }
 
@@ -107,7 +107,7 @@ fi
 if [ -n "$HUB" ]; then
     fix_redis
 fi
-    
+
 if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
 then
     echo "Patching deployment/transaction-manager image..."
