@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes.
-HOTFIX_NUMBER=5
+HOTFIX_NUMBER=6
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {

@@ -5,3 +5,4 @@ This hotfix fixes the following Backup & Restore issues:
     3.  After a commit failure exception, the Transaction-Manager and DBR-Controller pods will no longer consume new kafka messages and jobs will not be processed until after a manual restart
     4.  Jobs that hit a PartiallyFailed recipe step fail entirely and stop processing the remaining steps of the recipe
     5.  File path in Scale file system is not set correctly for Scale PVC restored by kopia datamover (05/01 and 05/16)
+    6.  Redis certificate expiration causes jobs to fail (59690)
