@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes.
-HOTFIX_NUMBER=5
+HOTFIX_NUMBER=6
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -162,6 +162,56 @@ patch_kafka_cr() {
     fi
 }
 
+fix_redis() {
+    if oc get StatefulSet redis-master -n $BR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+        echo redis CR needs to be recreated
+        IDP_SERVER_POD=$(oc get pods -n $BR_NS | awk '{print $1}' | grep -i ibm-dataprotectionserver-controller-manager)
+        STORAGE_CLASS=$(oc get dataprotectionserver ibm-backup-restore-service-instance -n $BR_NS -o yaml | grep storageClass |  awk -F' ' '{print $2}')
+
+        # Get the Redis CR yaml from idp-server pod
+        if [ -f "guardian-redis-cr.yaml" ]; then
+            rm "guardian-redis-cr.yaml"
+        fi
+        oc exec -c manager -n $BR_NS $IDP_SERVER_POD -- cat /k8s/redis/guardian-redis-cr.yaml >  ./guardian-redis-cr.yaml
+
+        OLD_SIZE="size: 8Gi"
+        NEW_SIZE="size: 256Mi"
+        OLD_FBR_IMAGE="fbr-redis"
+        NEW_FBR_IMAGE="fbr-valkey"
+        OLD_FBR_TAG="tag: 7.0.4"
+        NEW_FBR_TAG="tag: 7.2.5"
+        OLD_SC="rook-ceph-block"
+
+        # Replace old PVC size, valkey image and tag
+        sed -i '' "s/${OLD_SIZE}/${NEW_SIZE}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/${OLD_FBR_IMAGE}/${NEW_FBR_IMAGE}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/\<${OLD_FBR_TAG}\>/${NEW_FBR_TAG}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/${OLD_SC}/${STORAGE_CLASS}/g" "guardian-redis-cr.yaml"
+
+        oc scale deployment -n $BR_NS redis-operator-controller-manager --replicas=0
+
+        # Delete any redis-dockercfg* and redis-token* secrets that might have been constantly
+        # generated when redis-controller was in error state
+        oc get secrets -o name | grep redis-dockercfg | xargs oc delete
+        oc get secrets -o name | grep redis-token | xargs oc delete
+
+        # Create Redis CR
+        oc delete redis redis -n $BR_NS --timeout=60s
+        if oc get redis redis -n $BR_NS >/dev/null 2>&1; then
+            oc patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' redis redis -n $BR_NS
+            oc delete redis redis -n $BR_NS
+        fi
+
+        oc scale deployment -n $BR_NS redis-operator-controller-manager --replicas=1
+        oc wait -n $BR_NS deployment/redis-operator-controller-manager --for=jsonpath='{.status.readyReplicas}'=1
+
+        # Recreate Redis CR using updated yaml
+        oc apply -n $BR_NS -f guardian-redis-cr.yaml
+        echo Finished creating Redis CR
+
+    fi
+}
+
 update_kafka_topic_message_size() {
     echo "Patching Kafka inventory, restore and delete-backup topics..."
 
@@ -279,6 +329,8 @@ velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:b34f53ef2a02a883734f24dba9411baf6c
 set_velero_image ${velero_img}
 
 if [ -n "$HUB" ]; then
+    fix_redis
+
     guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:e7dce0d4817e545e5d40f90b116e85bd5ce9098f979284f12ad63cbc56f52d8c
     update_operator_csv guardian-dp-operator.v2.10.1 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
 

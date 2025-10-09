@@ -11,3 +11,4 @@ This hotfix fixes the following Backup & Restore issues:
     8. Kafka broker security patch. (#58927)
     9. Restore fails with error Backup inventory info not returned from application service for applicationId (#59191)
     10. Exechook fails due to cancellation when the runtime is expected to be longer than an hour (#61073)
+    11. Redis certificate expiration causes jobs to fail (59690)
