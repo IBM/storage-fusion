@@ -60,7 +60,7 @@ INDEX=$(oc get fusionserviceinstance ibm-backup-restore-service-instance -n $ISF
 
 
 if [ -z "$INDEX" ] || [ "$INDEX" == "null" ]; then
-  PATCH_JSON=$(printf '[{"op":"add", "path":"/spec/parameters/-", "value":{"name":"autoUpgrade","provided":true,"value":"%s"}}]' "$UPGRADE_VALUE")
+  PATCH_JSON=$(printf '[{"op":"add", "path":"/spec/parameters/-", "value":{"name":"autoUpgrade","value":"%s"}}]' "$UPGRADE_VALUE")
 else
   PATCH_JSON=$(printf '[{"op":"replace", "path":"/spec/parameters/%s/value", "value":"%s"}]' "$INDEX" "$UPGRADE_VALUE")
 fi
