@@ -3,8 +3,8 @@
 # display usage information
 usage() {
   echo "Usage: $0 [enable|disable]"
-  echo "  enable:  Set the autoUpgrade parameter to true"
-  echo "  disable: Set the autoUpgrade parameter to false"
+  echo "  enable:  Set the auto-upgrade parameter to true"
+  echo "  disable: Set the auto-upgrade parameter to false"
   exit 1
 }
 
@@ -68,8 +68,8 @@ fi
 echo "Applying patch: $PATCH_JSON"
 
 if oc patch fusionserviceinstance ibm-backup-restore-service-instance -n $ISF_NS --type=json -p="$PATCH_JSON"; then
-  echo "Success: Auto upgrade has been set to '$UPGRADE_VALUE'."
+  echo "Success: Auto-upgrade has been set to '$UPGRADE_VALUE'."
 else
-  echo "Error: Failed to update the auto upgrade setting."
+  echo "Error: Failed to update the auto-upgrade setting."
   exit 1
 fi
