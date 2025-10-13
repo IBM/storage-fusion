@@ -3,10 +3,13 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
+VERSION=202510131630  # Use YYYYMMDDhhmm UTC
 LOG=/tmp/$(basename $0)_log.txt
 rm -f "$LOG"
 exec &> >(tee -a $LOG)
 
+echo Logging to $LOG
+echo "VERSION: $VERSION"
 echo "ARGUMENTS:" "$@"
 
 USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
@@ -29,6 +32,12 @@ check_cmd ()
 
 check_cmd oc
 check_cmd jq
+
+OCVER=$(oc version --client -o yaml | grep "^releaseClientVersion:" | cut -d" " -f2 | cut -d"." -f1-2)
+export OCVER
+echo "oc version: $OCVER"
+[ -z "$OCVER" ] && err_exit "Could not get OC version"
+awk "BEGIN{exit ($OCVER < 4.12 ? 0 : 1)}" && err_exit "OC version 4.12 or higher required. You have $OCVER"
 
 oc whoami > /dev/null || err_exit "Not logged in a cluster"
 
