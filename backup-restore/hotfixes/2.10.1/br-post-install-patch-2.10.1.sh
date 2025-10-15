@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes.
-HOTFIX_NUMBER=6
+HOTFIX_NUMBER=7
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -321,7 +321,7 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
 fi
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:82897c82182ce44ee9cef38415190a84b393004884ccb720087b1fd20d628ee8
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:bface27625e47932f792855827507dd5df50dc7e35f4780b2cc1629b8783fa79
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
@@ -337,8 +337,11 @@ if [ -n "$HUB" ]; then
     guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:b2ab67807e79a064b14d7c79c902c5ec5949c0b6dc2ac4c990dcfb201f00ee0a
     update_operator_csv ibm-dataprotectionagent.v2.10.1 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
     
-    jobmanager_img=cp.icr.io/cp/bnr/guardian-job-manager@sha256:b9fe3eb8e5562c35c8f353a1283328a39eefeccaca81b0b9608f9eb14631ae6c
+    jobmanager_img=cp.icr.io/cp/bnr/guardian-job-manager@sha256:c3265f3e16e326bbd0fe42ae5e36fbf92b1907ce5f37c79953c31c3733b6237a
     set_deployment_image job-manager job-manager-container ${jobmanager_img}
+
+    backupservice_img=cp.icr.io/cp/bnr/guardian-backup-service@sha256:e59760cea7f93ef3809071d00d340afed5c22eebb662d030139ebc20e2b10172
+    set_deployment_image backup-service backup-service ${backupservice_img}
 
     patch_kafka_cr
     update_kafka_topic_message_size
@@ -359,3 +362,4 @@ printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manag
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-kafka-cluster-kafka"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "job-manager"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-service"
