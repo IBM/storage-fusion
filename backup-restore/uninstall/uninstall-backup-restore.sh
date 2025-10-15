@@ -3,7 +3,7 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
-VERSION=202510131630  # Use YYYYMMDDhhmm UTC
+VERSION=202510152300  # Use YYYYMMDDhhmm UTC
 LOG=/tmp/$(basename $0)_log.txt
 rm -f "$LOG"
 exec &> >(tee -a $LOG)
@@ -33,9 +33,11 @@ check_cmd ()
 check_cmd oc
 check_cmd jq
 
-OCVER=$(oc version --client -o yaml | grep "^releaseClientVersion:" | cut -d" " -f2 | cut -d"." -f1-2)
+OCVER_FULL=$(oc version --client -o json | jq -r '.releaseClientVersion')
+[ -z "$OCVER_FULL" ] && OCVER_FULL=$(oc version --client -o json | jq -r '.clientVersion.gitVersion')
+OCVER=$(echo "$OCVER_FULL" | cut -d"." -f1-2)
 export OCVER
-echo "oc version: $OCVER"
+echo "oc version: $OCVER_FULL"
 [ -z "$OCVER" ] && err_exit "Could not get OC version"
 awk "BEGIN{exit ($OCVER < 4.12 ? 0 : 1)}" && err_exit "OC version 4.12 or higher required. You have $OCVER"
 
