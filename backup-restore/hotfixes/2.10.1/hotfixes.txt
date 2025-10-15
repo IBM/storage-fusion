@@ -12,3 +12,6 @@ This hotfix fixes the following Backup & Restore issues:
     9. Restore fails with error Backup inventory info not returned from application service for applicationId (#59191)
     10. Exechook fails due to cancellation when the runtime is expected to be longer than an hour (#61073)
     11. Redis certificate expiration causes jobs to fail (59690)
+    12. Unable to restore pre 2.9 backup with 2.10.* (61073)
+    13. Additional logging added for backup error 'NoneType' is not iterable" (61235)
+    14.Jobs taking long to go from CancelPending to Cancelled state (61518)
