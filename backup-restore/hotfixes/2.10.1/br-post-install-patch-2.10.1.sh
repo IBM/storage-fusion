@@ -321,7 +321,7 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
 fi
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:bface27625e47932f792855827507dd5df50dc7e35f4780b2cc1629b8783fa79
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:1f52c523437c8514d3569cd8cf57568af7f5b7b7e2d25f5e31e3929aa855b8db
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
