@@ -1,6 +1,3 @@
-#!/bin/sh
-
-
 # Domino Data Labs - IBM Fusion backup and restore
 Custom backup/restore recipe (Kenneth Salerno <kpsalerno@us.ibm.com>)
 
