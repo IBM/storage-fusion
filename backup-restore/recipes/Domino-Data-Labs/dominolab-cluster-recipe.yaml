@@ -4,7 +4,7 @@ metadata:
   name: domino-cluster-recipe
   namespace: domino-system
 spec:
-  appType: dominolab-uat
+  appType: dominolab
   groups:
   - name: captured-volumes
     type: volume

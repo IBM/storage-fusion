@@ -4,7 +4,7 @@ metadata:
   name: dominolab
   namespace: ibm-spectrum-fusion-ns
 spec:
-  appType: dominolab-uat
+  appType: dominolab
   includedNamespaces: 
     - domino-operator
     - domino-system
