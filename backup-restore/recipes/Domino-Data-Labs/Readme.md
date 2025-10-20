@@ -209,8 +209,9 @@ do
       }'
 done
 ```
-Note: newer releases of Fusion automatically apply the recipes it finds in
-the project without requiring a patch to each PolicyAssignment.
+Note: although newer releases of Fusion automatically find recipes in a
+namespace associated with a policyassignment, for Applications that span
+multiple namespaces we need to patch the policyassignment manually here
 
 # 4) Tune Fusion backup and restore settings (defaults will cancel your job)
 ```
@@ -379,12 +380,12 @@ esac
 
 # 5) Restore steps for Domino Data Labs on a fresh (blank) cluster
    Perform these steps in this explicit order:
-   0) Tune Fusion backup and restore settings (see above step 4)
-   1) From Fusion GUI: restore Fusion catalog (Fusion service restore) - this
+   1) Tune Fusion backup and restore settings (see above step 4)
+   2) From Fusion GUI: restore Fusion catalog (Fusion service restore) - this
       is required when you have a new blank cluster freshly installed or when
       you lose your catalog
-   2) From Fusion GUI: restore application "dominolab"
-   3) Note that PVCs domino-shared-store-domino-compute and
+   3) From Fusion GUI: restore application "dominolab"
+   4) Note that PVCs domino-shared-store-domino-compute and
       domino-blob-store-domino-compute in the domino-compute namespace were
       intentionally excluded from the backup.
 
@@ -408,7 +409,7 @@ esac
 
       Repeat this process for the domino-blob-store-domino-compute PVC.
 
-   4) From OpenShift Console: label nodes accordingly for your environment to
+   5) From OpenShift Console: label nodes accordingly for your environment to
       schedule compute and platform pods:
 
       If using HCP NodePools:
@@ -429,10 +430,10 @@ esac
    Validate if restore has generated valid certificates, if not run these
    additional steps:
 
-   5) From OpenShift Console: delete CertificateRequests for hephaestus\*-tls
+   6) From OpenShift Console: delete CertificateRequests for hephaestus\*-tls
       in domino-compute NS
 
-   6) From Linux shell: restart Domino using restart script here (this will
+   7) From Linux shell: restart Domino using restart script here (this will
       also delete your hephaestus TLS secrets which is why we had to clear
       previous reqs)
       https://support.domino.ai/support/s/article/Restart-Script
@@ -489,7 +490,7 @@ Details: name: domino-cluster-recipe, namespace: domino-system, app_type: domino
 2025-10-20 00:48:27 [INFO]: Cleanup the data uploads created during the backup.
 ```
 
-# Restore recipe execution example:
+# Restore recipe execution log example:
 ```
 2025-10-20 01:19:02 [INFO]: === Restore & recipe validation ===
 2025-10-20 01:19:17 [INFO]: Creating namespace: domino-operator with labels: {'kubernetes.io/metadata.name': 'domino-operator', 'pod-security.kubernetes.io/audit': 'restricted', 'pod-security.kubernetes.io/audit-version': 'latest', 'pod-security.kubernetes.io/warn': 'restricted', 'pod-security.kubernetes.io/warn-version': 'latest'} and annotations: {'openshift.io/description': '', 'openshift.io/display-name': '', 'openshift.io/requester': 'kens', 'openshift.io/sa.scc.mcs': 's0:c33,c2', 'openshift.io/sa.scc.supplemental-groups': '1001060000/10000', 'openshift.io/sa.scc.uid-range': '1001060000/10000', 'security.openshift.io/MinimallySufficientPodSecurityStandard': 'restricted'}
