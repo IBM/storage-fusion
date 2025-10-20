@@ -95,80 +95,11 @@ spec:
 #
 # Create Fusion application definition that spans multiple namespaces
 #
-cat >dominolab-cluster-application.yaml <<EOF
-apiVersion: application.isf.ibm.com/v1alpha1
-kind: Application
-metadata:
-  name: dominolab
-  namespace: ibm-spectrum-fusion-ns
-spec:
-  appType: dominolab
-  includedNamespaces: 
-    - domino-operator
-    - domino-system
-    - domino-platform
-    - domino-compute
-EOF
 oc apply -f dominolab-cluster-application.yaml
 
 # 
 # Create recipe in domino-system namespace
 #
-cat >dominolab-cluster-recipe.yaml <<EOF
-apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
-kind: Recipe
-metadata:
-  name: domino-cluster-recipe
-  namespace: domino-system
-spec:
-  appType: dominolab
-  groups:
-  - name: captured-volumes
-    type: volume
-    includedNamespaces:
-    - domino-platform
-    - domino-compute
-  - name: namespace-resources
-    type: resource
-    includedNamespaces:
-    - domino-operator
-    - domino-system
-    - domino-platform
-    - domino-compute
-    excludedResourceTypes:
-    - events
-    - events.events.k8s.io
-    - imagetags.openshift.io
-    - pods
-    - subscriptions.operators.coreos.com
-    - clusterserviceversions.operators.coreos.com
-    - installplans.operators.coreos.com
-    - persistentvolumes
-    - persistentvolumeclaims
-    - replicasets
-  - name: cluster-resources
-    type: resource
-    includeClusterResources: true
-    includedResourceTypes:
-    - clusterroles
-    - clusterrolebindings
-    - customresourcedefinitions.apiextensions.k8s.io
-    - ingressclasses.networking.k8s.io
-    - securitycontextconstraints.security.openshift.io
-  workflows:
-  - failOn: any-error
-    name: backup
-    sequence:
-    - group: cluster-resources
-    - group: namespace-resources
-    - group: captured-volumes
-  - failOn: any-error
-    name: restore
-    sequence:
-    - group: captured-volumes
-    - group: cluster-resources
-    - group: namespace-resources
-EOF
 oc apply -f dominolab-cluster-recipe.yaml
 
 #
