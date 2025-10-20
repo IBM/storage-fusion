@@ -119,7 +119,7 @@ read ANSWER
 
 #
 # Patch PolicyAssignments to use custom recipe (example policies here are
-# named s3-1week-retention and 4hour-snapshot-3day)
+# named s3-1week-retention and 4hour-snapshot-3day-retention)
 #
 for i in \
   dominolab-daily-s3-1week-retention-apps.sts-pok-ocp-4.ww.pbm.ihost.com \
