@@ -446,9 +446,9 @@ esac
 2025-10-20 00:43:17 [INFO]: Effective namespaces of application: ['domino-operator', 'domino-system', 'domino-platform', 'domino-compute']
 2025-10-20 00:43:18 [INFO]: Job: d6aa6f90-12cb-4100-97f2-00c9ce8a5137 
 Recipe name: domino-cluster-recipe 
-Details: name: domino-cluster-recipe, namespace: domino-system, app_type: dominolab-uat, version: 10.1.12, clusterId: c8bbcbfd-003d-4991-affc-804926289647, applicationId: 907453f6-4519-4c1b-b2b6-a9e1bc72a62a, jobId: d6aa6f90-12cb-4100-97f2-00c9ce8a5137, volume_groups[0]: captured-volumes, resource_groups[0]: namespace-resources, resource_groups[1]: cluster-resources, workflows[0]: backup, workflows[1]: restore
+Details: name: domino-cluster-recipe, namespace: domino-system, app_type: dominolab, version: 10.1.12, clusterId: c8bbcbfd-003d-4991-affc-804926289647, applicationId: 907453f6-4519-4c1b-b2b6-a9e1bc72a62a, jobId: d6aa6f90-12cb-4100-97f2-00c9ce8a5137, volume_groups[0]: captured-volumes, resource_groups[0]: namespace-resources, resource_groups[1]: cluster-resources, workflows[0]: backup, workflows[1]: restore
 2025-10-20 00:43:18 [INFO]: Evaluating volume group captured-volumes with 3 pvc candidates...
-2025-10-20 00:43:19 [INFO]: The recipe "domino-cluster-recipe" for apptype "dominolab-uat" in namespace "domino-system" was validated.
+2025-10-20 00:43:19 [INFO]: The recipe "domino-cluster-recipe" for apptype "dominolab" in namespace "domino-system" was validated.
 2025-10-20 00:43:19 [INFO]: === Recipe execution ===
 2025-10-20 00:43:19 [INFO]: Job d6aa6f90-12cb-4100-97f2-00c9ce8a5137 recipe domino-cluster-recipe starting execution
 2025-10-20 00:43:19 [INFO]: Starting workflow "backup" of recipe "domino-system:domino-cluster-recipe" ...
@@ -464,9 +464,9 @@ Details: name: domino-cluster-recipe, namespace: domino-system, app_type: domino
 2025-10-20 00:46:57 [INFO]: Effective namespaces of application: ['domino-operator', 'domino-system', 'domino-platform', 'domino-compute']
 2025-10-20 00:46:58 [INFO]: Job: d6aa6f90-12cb-4100-97f2-00c9ce8a5137 
 Recipe name: domino-cluster-recipe 
-Details: name: domino-cluster-recipe, namespace: domino-system, app_type: dominolab-uat, version: 10.1.12, clusterId: c8bbcbfd-003d-4991-affc-804926289647, applicationId: 907453f6-4519-4c1b-b2b6-a9e1bc72a62a, jobId: d6aa6f90-12cb-4100-97f2-00c9ce8a5137, volume_groups[0]: captured-volumes, resource_groups[0]: namespace-resources, resource_groups[1]: cluster-resources, workflows[0]: backup, workflows[1]: restore
+Details: name: domino-cluster-recipe, namespace: domino-system, app_type: dominolab, version: 10.1.12, clusterId: c8bbcbfd-003d-4991-affc-804926289647, applicationId: 907453f6-4519-4c1b-b2b6-a9e1bc72a62a, jobId: d6aa6f90-12cb-4100-97f2-00c9ce8a5137, volume_groups[0]: captured-volumes, resource_groups[0]: namespace-resources, resource_groups[1]: cluster-resources, workflows[0]: backup, workflows[1]: restore
 2025-10-20 00:46:58 [INFO]: Evaluating volume group captured-volumes with 3 pvc candidates...
-2025-10-20 00:47:00 [INFO]: The recipe "domino-cluster-recipe" for apptype "dominolab-uat" in namespace "domino-system" was validated.
+2025-10-20 00:47:00 [INFO]: The recipe "domino-cluster-recipe" for apptype "dominolab" in namespace "domino-system" was validated.
 2025-10-20 00:47:00 [INFO]: Reevaluation complete: 1 volume groups
 2025-10-20 00:47:00 [INFO]: Vols in vg: 2
 2025-10-20 00:47:00 [INFO]: Volume from inventory: domino-platform:test-volume1
@@ -502,8 +502,8 @@ Details: name: domino-cluster-recipe, namespace: domino-system, app_type: domino
 2025-10-20 01:19:18 [INFO]: Creating namespace: domino-compute with labels: {'kubernetes.io/metadata.name': 'domino-compute', 'pod-security.kubernetes.io/audit': 'restricted', 'pod-security.kubernetes.io/audit-version': 'latest', 'pod-security.kubernetes.io/warn': 'restricted', 'pod-security.kubernetes.io/warn-version': 'latest'} and annotations: {'openshift.io/description': '', 'openshift.io/display-name': '', 'openshift.io/requester': 'kens', 'openshift.io/sa.scc.mcs': 's0:c36,c30', 'openshift.io/sa.scc.supplemental-groups': '1001320000/10000', 'openshift.io/sa.scc.uid-range': '1001320000/10000', 'security.openshift.io/MinimallySufficientPodSecurityStandard': 'restricted'}
 2025-10-20 01:19:18 [INFO]: Created namespace: domino-compute
 2025-10-20 01:19:18 [INFO]: Recipe name: domino-cluster-recipe 
-Details: name: domino-cluster-recipe, namespace: domino-system, app_type: dominolab-uat, version: 10.1.12, clusterId: 42bd726c-7b81-4f48-ae3d-0719c5d9abd1, applicationId: 907453f6-4519-4c1b-b2b6-a9e1bc72a62a, jobId: cc1dc80e-04b5-478d-ab3c-0f61e87a8a18, volume_groups[0]: captured-volumes, resource_groups[0]: namespace-resources, resource_groups[1]: cluster-resources, workflows[0]: backup, workflows[1]: restore
-2025-10-20 01:19:18 [INFO]: The recipe "domino-cluster-recipe" for apptype "dominolab-uat" in namespace "domino-system" was validated.
+Details: name: domino-cluster-recipe, namespace: domino-system, app_type: dominolab, version: 10.1.12, clusterId: 42bd726c-7b81-4f48-ae3d-0719c5d9abd1, applicationId: 907453f6-4519-4c1b-b2b6-a9e1bc72a62a, jobId: cc1dc80e-04b5-478d-ab3c-0f61e87a8a18, volume_groups[0]: captured-volumes, resource_groups[0]: namespace-resources, resource_groups[1]: cluster-resources, workflows[0]: backup, workflows[1]: restore
+2025-10-20 01:19:18 [INFO]: The recipe "domino-cluster-recipe" for apptype "dominolab" in namespace "domino-system" was validated.
 2025-10-20 01:19:22 [INFO]: === Recipe execution ===
 2025-10-20 01:19:22 [INFO]: Recipe domino-cluster-recipe starting execution
 2025-10-20 01:19:22 [INFO]: Starting workflow "restore" of recipe "domino-system:domino-cluster-recipe" ...
