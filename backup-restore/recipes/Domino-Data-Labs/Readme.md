@@ -8,6 +8,7 @@ namely:
   - ClusterRoleBindings
   - CustomResourceDefinitions
   - IngressClasses
+  - PriorityClasses
   - SecurityContextConstraints
 
 Note: we also exclude certain resources to not bloat the backup.
@@ -74,6 +75,7 @@ spec:
     - clusterrolebindings
     - customresourcedefinitions.apiextensions.k8s.io
     - ingressclasses.networking.k8s.io
+    - priorityclasses
     - securitycontextconstraints.security.openshift.io
   workflows:
   - failOn: any-error
@@ -447,7 +449,7 @@ Details: name: domino-cluster-recipe, namespace: domino-system, app_type: domino
 2025-10-20 01:20:24 [INFO]: End execution sequence "group/captured-volumes" completed successfully.
 2025-10-20 01:20:24 [INFO]: Start execution sequence "group/cluster-resources" ...
 2025-10-20 01:20:24 [INFO]: The backup operation of resources from namespace ['domino-operator', 'domino-system', 'domino-platform', 'domino-compute'] completed successfully.
-2025-10-20 01:20:24 [INFO]: Executing Velero restore backup-resources-019025e6-6ec4-49fe-942b-7f5556342480 using backup backup-resources-27e4f585-4fef-4d22-924a-3e82abf8e1dd with include_namespaces ['domino-operator', 'domino-system', 'domino-platform', 'domino-compute'], exclude_namespaces None, label-selector None, include-resourcetypes ['clusterroles', 'clusterrolebindings', 'customresourcedefinitions.apiextensions.k8s.io', 'ingressclasses.networking.k8s.io', 'securitycontextconstraints.security.openshift.io'], exclude-resourcetypes ['PersistentVolumeClaim', 'imagestreamtags.image.openshift.io', 'virtualmachineinstancemigrations.kubevirt.io', 'virtualmachineclones.clone.kubevirt.io'], include-cluster-resources True, namespace-mapping None, and restore-overwrite-resource False, or-label-selector None and labelSelectorType None
+2025-10-20 01:20:24 [INFO]: Executing Velero restore backup-resources-019025e6-6ec4-49fe-942b-7f5556342480 using backup backup-resources-27e4f585-4fef-4d22-924a-3e82abf8e1dd with include_namespaces ['domino-operator', 'domino-system', 'domino-platform', 'domino-compute'], exclude_namespaces None, label-selector None, include-resourcetypes ['clusterroles', 'clusterrolebindings', 'customresourcedefinitions.apiextensions.k8s.io', 'ingressclasses.networking.k8s.io', 'priorityclasses', 'securitycontextconstraints.security.openshift.io'], exclude-resourcetypes ['PersistentVolumeClaim', 'imagestreamtags.image.openshift.io', 'virtualmachineinstancemigrations.kubevirt.io', 'virtualmachineclones.clone.kubevirt.io'], include-cluster-resources True, namespace-mapping None, and restore-overwrite-resource False, or-label-selector None and labelSelectorType None
 2025-10-20 01:28:03 [INFO]: End execution sequence "group/cluster-resources" completed successfully.
 2025-10-20 01:28:03 [INFO]: Start execution sequence "group/namespace-resources" ...
 2025-10-20 01:28:03 [INFO]: The backup operation of resources from namespace ['domino-operator', 'domino-compute', 'domino-platform', 'domino-system'] completed successfully.
