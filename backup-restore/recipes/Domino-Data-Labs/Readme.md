@@ -113,6 +113,14 @@ oc label pvc -n domino-compute \
   velero.io/exclude-from-backup=true
 
 #
+# Also exclude domino-compute Shared and Blob PVCs from RegionalDR
+#
+oc label pvc -n domino-compute \
+  domino-shared-store-domino-compute \
+  domino-blob-store-domino-compute \
+  ramendr.openshift.io/exclude=true
+
+#
 # Add application "dominolab" to backup policies in Fusion GUI
 # Pause here until you create PolicyAssignments in GUI
 #
@@ -355,6 +363,14 @@ esac
           jq '.metadata.name += "-domino-compute" | .metadata.namespace = "domino-compute" | del(.metadata.uid) | del(.metadata.creationTimestamp) | del(.metadata.resourceVersion) | del(.metadata.annotations."pv.kubernetes.io/bind-completed") | del(.metadata.annotations."pv.kubernetes.io/bound-by-controller") | del(.metadata.finalizers) | .spec.volumeName += "-copy" |  del(.status)' | \
           oc apply -f -
       done
+      oc label pvc -n domino-compute \
+        domino-shared-store-domino-compute \
+        domino-blob-store-domino-compute \
+        velero.io/exclude-from-backup=true
+      oc label pvc -n domino-compute \
+        domino-shared-store-domino-compute \
+        domino-blob-store-domino-compute \
+        ramendr.openshift.io/exclude=true
       ```
 
    5) From OpenShift Console: label nodes accordingly for your environment to
