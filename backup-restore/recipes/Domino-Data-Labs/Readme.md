@@ -353,7 +353,7 @@ esac
         sleep 2
         oc get pvc $i -n domino-platform -o json | \
           jq '.metadata.name += "-domino-compute" | .metadata.namespace = "domino-compute" | del(.metadata.uid) | del(.metadata.creationTimestamp) | del(.metadata.resourceVersion) | del(.metadata.annotations."pv.kubernetes.io/bind-completed") | del(.metadata.annotations."pv.kubernetes.io/bound-by-controller") | del(.metadata.finalizers) | .spec.volumeName += "-copy" |  del(.status)' | \
-        oc apply -f -
+          oc apply -f -
       done
       ```
 
