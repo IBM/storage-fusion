@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes.
-HOTFIX_NUMBER=7
+HOTFIX_NUMBER=8
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -96,6 +96,27 @@ set_velero_image() {
         [ -n "$DRY_RUN" ] && oc -n "$BR_NS" patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/velero.patch.yaml
         echo "Velero Deployement is restarting with replacement image"
         oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
+    fi
+}
+
+update_isf_operator_csv() {
+    name=$1
+    image=$2
+    if (oc get csv -n "$ISF_NS" "$name" -o yaml >$DIR/"$name".save.yaml); then
+        echo "Scaling down isf-data-protection-operator-controller-manager deployment..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$ISF_NS" isf-data-protection-operator-controller-manager --replicas=0
+
+        echo "Patching clusterserviceversion/$name..."
+        index=$(oc get csv -n "$ISF_NS" "$name" -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
+        patch="[{\"op\":\"replace\", \"path\":\"/spec/install/spec/deployments/${index}/spec/template/spec/containers/0/image\", \"value\":\"${image}\"}]"
+
+        [ -z "$DRY_RUN" ] && oc patch csv -n "$ISF_NS" "$name" --type='json' -p "${patch}"
+        [ -n "$DRY_RUN" ] && oc patch csv -n "$ISF_NS" "$name" --type='json' -p "${patch}" --dry-run=client -o yaml >$DIR/"$name".patch.yaml
+
+        echo "Scaling up isf-data-protection-operator-controller-manager deployment..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$ISF_NS" isf-data-protection-operator-controller-manager --replicas=1
+    else
+        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
     fi
 }
 
@@ -321,11 +342,11 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
 fi
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:1f52c523437c8514d3569cd8cf57568af7f5b7b7e2d25f5e31e3929aa855b8db
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:1ed31e6ad1f8ee4f3d29bcb3b5f8caba5b4c571d2f2f8035fe3ff5edce037c27
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
-velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:b34f53ef2a02a883734f24dba9411baf6cfeef38983183862fa0ea773a7fc405
+velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:5c26f3a18fc4a9ad1d0d1b85e69ca576819b8e6bc92826a603db4b32095b4ac9
 set_velero_image ${velero_img}
 
 if [ -n "$HUB" ]; then
@@ -350,16 +371,23 @@ if [ -n "$HUB" ]; then
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager
 fi
 
+[ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:aba0aeee52dd7472b1628222f9e2250cff062501687bdd8c98fd3fad0f47f1cd
+[ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:94a9b349fea12e37c61836448b9840ac6beda6655649eb5d5b7db6c68e8bdfdc
+update_isf_operator_csv isf-operator.v2.10.1 "${isfdataprotection_img}"
+
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
 
 echo "Please verify that the pods for the following deployment have successfully restarted:"
+if [ -n "$HUB" ]; then
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-kafka-cluster-kafka"
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "job-manager"
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-service"
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-dp-operator-controller-manager"
+fi
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "node-agent"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-dp-operator-controller-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-kafka-cluster-kafka"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "job-manager"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-service"
+printf "  %-${#ISF_NS}s: %s\n" "$ISF_NS" "isf-data-protection-operator-controller-manager"
