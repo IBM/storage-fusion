@@ -14,4 +14,7 @@ This hotfix fixes the following Backup & Restore issues:
     11. Redis certificate expiration causes jobs to fail (59690)
     12. Unable to restore pre 2.9 backup with 2.10.* (61073)
     13. Additional logging added for backup error 'NoneType' is not iterable" (61235)
-    14.Jobs taking long to go from CancelPending to Cancelled state (61518)
+    14. Jobs taking long to go from CancelPending to Cancelled state (61518)
+    15. Backups failing due to SELinux relabeling failures on PVCs (61977)
+    16. Alert triggered for old backup job completion (62403)
+    17. Backup fails intermittently with error Hit exception during "group/rg" : argument of type 'NoneType' is not iterable (62741)
