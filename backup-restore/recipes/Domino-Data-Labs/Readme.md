@@ -96,11 +96,13 @@ spec:
 ```
 #
 # Create Fusion application definition that spans multiple namespaces
+# Note: For applications deployed on a HCP managed cluster, apply on spoke
 #
 oc apply -f dominolab-cluster-application.yaml
 
 # 
 # Create recipe in domino-system namespace
+# Note: For applications deployed on a HCP managed cluster, apply on spoke
 #
 oc apply -f dominolab-cluster-recipe.yaml
 
@@ -121,10 +123,10 @@ oc label pvc -n domino-compute \
   ramendr.openshift.io/exclude=true
 
 #
-# Add application "dominolab" to backup policies in Fusion GUI
-# Pause here until you create PolicyAssignments in GUI
+# From Hub's Fusion GUI, find Application "dominolab", add to backup policies
+# Pause here until PolicyAssignments are created from the GUI
 #
-echo -n "Pausing until you add dominolab Application to backup policies..."
+echo -n "Pausing for dominolab to be added to backup policies on Hub..."
 read ANSWER
 
 #
@@ -132,8 +134,8 @@ read ANSWER
 # named daily-s3-1week-retention and 4hour-snapshot-3day-retention)
 #
 for i in \
-  dominolab-daily-s3-1week-retention-apps.sts-pok-ocp-4.ww.pbm.ihost.com \
-  dominolab-4hour-snapshot-3day-retention-apps.sts-pok-ocp-4.ww.pbm.ihost.com
+  dominolab-daily-s3-1week-retention-apps.hcp1.apps.sts-pok-ocp-4.ww.pbm.ihost.com \
+  dominolab-4hour-snapshot-3day-retention-apps.hcp1.apps.sts-pok-ocp-4.ww.pbm.ihost.com
 do
   oc -n ibm-spectrum-fusion-ns \
     patch policyassignment \
