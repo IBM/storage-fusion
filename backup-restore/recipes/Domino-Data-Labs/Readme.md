@@ -86,7 +86,7 @@ spec:
     - group: namespace-resources
     - group: platform-volumes
     - group: compute-volumes
-  - failOn: any-error
+  - failOn: essential-error
     name: restore
     sequence:
     - group: platform-volumes
