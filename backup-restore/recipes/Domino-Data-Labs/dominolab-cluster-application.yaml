@@ -6,7 +6,6 @@ metadata:
 spec:
   appType: dominolab
   includedNamespaces: 
-    - domino-operator
     - domino-system
     - domino-platform
     - domino-compute
