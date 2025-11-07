@@ -136,7 +136,7 @@ read ANSWER
 # Patch dominolab PolicyAssignments to use custom recipe
 #
 for i in $(oc get policyassignment -n ibm-spectrum-fusion-ns -o name | \
-  grep ^dominolab); do
+  grep /dominolab); do
   oc -n ibm-spectrum-fusion-ns \
     patch $i \
       --type merge \
