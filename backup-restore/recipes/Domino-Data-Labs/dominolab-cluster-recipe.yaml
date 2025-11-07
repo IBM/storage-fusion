@@ -48,8 +48,8 @@ spec:
     sequence:
     - group: cluster-resources
     - group: namespace-resources
-    - group: platform-volumes
     - group: compute-volumes
+    - group: platform-volumes
   - failOn: essential-error
     name: restore
     sequence:
