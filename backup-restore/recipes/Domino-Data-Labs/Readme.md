@@ -14,7 +14,6 @@ namely:
 Note: we also exclude certain resources to not bloat the backup.
 
 This recipe will cover all Domino namespaces with an Application definition:
-  - domino-operator
   - domino-system
   - domino-platform (including the shared/blob PVCs)
   - domino-compute (excluding the shared/blob PVCs)
@@ -29,7 +28,6 @@ metadata:
 spec:
   appType: dominolab
   includedNamespaces: 
-    - domino-operator
     - domino-system
     - domino-platform
     - domino-compute
@@ -44,15 +42,18 @@ metadata:
 spec:
   appType: dominolab
   groups:
-  - name: captured-volumes
+  - name: platform-volumes
     type: volume
     includedNamespaces:
     - domino-platform
+  - name: compute-volumes
+    type: volume
+    essential: false
+    includedNamespaces:
     - domino-compute
   - name: namespace-resources
     type: resource
     includedNamespaces:
-    - domino-operator
     - domino-system
     - domino-platform
     - domino-compute
@@ -78,16 +79,18 @@ spec:
     - priorityclasses
     - securitycontextconstraints.security.openshift.io
   workflows:
-  - failOn: any-error
+  - failOn: essential-error
     name: backup
     sequence:
     - group: cluster-resources
     - group: namespace-resources
-    - group: captured-volumes
+    - group: platform-volumes
+    - group: compute-volumes
   - failOn: any-error
     name: restore
     sequence:
-    - group: captured-volumes
+    - group: platform-volumes
+    - group: compute-volumes
     - group: cluster-resources
     - group: namespace-resources
 ```
@@ -130,16 +133,12 @@ echo -n "Pausing for dominolab to be added to backup policies on Hub..."
 read ANSWER
 
 #
-# Patch PolicyAssignments to use custom recipe (example policies here are
-# named daily-s3-1week-retention and 4hour-snapshot-3day-retention)
+# Patch dominolab PolicyAssignments to use custom recipe
 #
-for i in \
-  dominolab-daily-s3-1week-retention-apps.hcp1.apps.sts-pok-ocp-4.ww.pbm.ihost.com \
-  dominolab-4hour-snapshot-3day-retention-apps.hcp1.apps.sts-pok-ocp-4.ww.pbm.ihost.com
-do
+for i in $(oc get policyassignment -n ibm-spectrum-fusion-ns -o name | \
+  grep ^dominolab); do
   oc -n ibm-spectrum-fusion-ns \
-    patch policyassignment \
-    $i \
+    patch $i \
       --type merge \
       -p '{
         "spec": {

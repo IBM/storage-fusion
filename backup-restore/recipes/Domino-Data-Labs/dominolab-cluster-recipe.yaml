@@ -6,15 +6,18 @@ metadata:
 spec:
   appType: dominolab
   groups:
-  - name: captured-volumes
+  - name: platform-volumes
     type: volume
     includedNamespaces:
     - domino-platform
+  - name: compute-volumes
+    type: volume
+    essential: false
+    includedNamespaces:
     - domino-compute
   - name: namespace-resources
     type: resource
     includedNamespaces:
-    - domino-operator
     - domino-system
     - domino-platform
     - domino-compute
@@ -40,15 +43,17 @@ spec:
     - priorityclasses
     - securitycontextconstraints.security.openshift.io
   workflows:
-  - failOn: any-error
+  - failOn: essential-error
     name: backup
     sequence:
     - group: cluster-resources
     - group: namespace-resources
-    - group: captured-volumes
+    - group: platform-volumes
+    - group: compute-volumes
   - failOn: any-error
     name: restore
     sequence:
-    - group: captured-volumes
+    - group: platform-volumes
+    - group: compute-volumes
     - group: cluster-resources
     - group: namespace-resources
