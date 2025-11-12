@@ -18,3 +18,4 @@ This hotfix fixes the following Backup & Restore issues:
     15. Backups failing due to SELinux relabeling failures on PVCs (61977)
     16. Alert triggered for old backup job completion (62403)
     17. Backup fails intermittently with error Hit exception during "group/rg" : argument of type 'NoneType' is not iterable (62741)
+    18. Hotfix branches not including Power and Z images for guardian-velero (63492)
