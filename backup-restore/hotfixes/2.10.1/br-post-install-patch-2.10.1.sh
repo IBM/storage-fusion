@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes.
-HOTFIX_NUMBER=8
+HOTFIX_NUMBER=9
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -346,7 +346,7 @@ transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:1ed3
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
-velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:5c26f3a18fc4a9ad1d0d1b85e69ca576819b8e6bc92826a603db4b32095b4ac9
+velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:726af6360d5a7cb4431cd3e4b903699a8684999e3a73b078b590493a5ca482db
 set_velero_image ${velero_img}
 
 if [ -n "$HUB" ]; then
