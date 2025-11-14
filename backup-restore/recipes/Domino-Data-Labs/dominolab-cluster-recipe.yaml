@@ -32,6 +32,14 @@ spec:
     - persistentvolumes
     - persistentvolumeclaims
     - replicasets
+    - volumereplications.replication.storage.openshift.io
+    - volumegroupreplications.replication.storage.openshift.io
+    - replicationsources.volsync.backube
+    - replicationdestinations.volsync.backube
+    - endpointslices.discovery.k8s.io
+    - endpoints
+    - volumesnapshots.snapshot.storage.k8s.io
+    - volumegroupsnapshots.groupsnapshot.storage.k8s.io
   - name: cluster-resources
     type: resource
     includeClusterResources: true
