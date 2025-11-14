@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=3
+HOTFIX_NUMBER=4
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -109,6 +109,29 @@ fix_redis() {
     fi
 }
 
+get_oadp_version() {
+    oc get csv  -l operators.coreos.com/redhat-oadp-operator.${BR_NS} -o json | jq .items[0].spec.version
+}
+
+set_velero_image() {
+    OADP_VERSION=$(get_oadp_version)
+    echo "Patching OADP $OADP_VERSION"
+    if [[ $OADP_VERSION == *"1.4"* ]]; then
+        image=$1
+    else
+        image=$2
+    fi
+
+    if (oc -n "$BR_NS" get dpa velero -o yaml >$DIR/velero.save.yaml); then
+        echo "Patching deployment/velero image..."
+        patch="[{\"op\": \"replace\", \"path\": \"/spec/unsupportedOverrides/veleroImageFqin\", \"value\":\"${image}\"}]"
+        [ -z "$DRY_RUN" ] && oc -n "$BR_NS" patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}"
+        [ -n "$DRY_RUN" ] && oc -n "$BR_NS" patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/velero.patch.yaml
+        echo "Velero Deployement is restarting with replacement image"
+        oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
+    fi
+}
+
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -158,6 +181,12 @@ then
 else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
 fi
+
+# update oadp velero
+oadp_velero_14=cp.icr.io/cp/bnr/fbr-velero@sha256:1fd0dc018672507b24148a0fe71e69f91ab31576c7fa070c599d7a446b5095aa
+oadp_velero_15=cp.icr.io/cp/bnr/fbr-velero15@sha256:7a57d50f9c1b6a338edf310c5e69182ac98ec6338376b4ddc0474ff7e592f4f4
+set_velero_image ${oadp_velero_14} ${oadp_velero_15}
+
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}

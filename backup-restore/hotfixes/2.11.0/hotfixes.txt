@@ -2,4 +2,5 @@ This hotfix fixes the following Backup & Restore issues:
 
     1.  Removed the validation for label, if label more than 63 character label will be truncated for Velero Backup CR.(Issue: 59712)
     2.  Fix KeyError while accessing intrinsic variable APP.namespace.name during restore.(Issue: 60235)
-    3.  Redis certificate expiration causes jobs to fail (59690)
+    3.  Redis certificate expiration causes jobs to fail (Issue: 59690)
+    4.  OADP datamover Pods get assigned to a node without the backup volumes when PV topology is a subset of the StorageClass topology with StorageClass field volumeBindingMode: WaitForFirstConsumer (Issue: 62485)
