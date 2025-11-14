@@ -106,11 +106,13 @@ spec:
 
 # 3) Application and Recipe installation steps
 Create Fusion application definition that spans multiple namespaces
+
 Note: For applications deployed on a HCP managed cluster, apply on spoke
 ```
 oc apply -f dominolab-cluster-application.yaml
 ```
 Create recipe in domino-system namespace
+
 Note: For applications deployed on a HCP managed cluster, apply on spoke
 ```
 oc apply -f dominolab-cluster-recipe.yaml
@@ -130,6 +132,7 @@ oc label pvc -n domino-compute \
   ramendr.openshift.io/exclude=true
 ```
 From Hub's Fusion GUI, find Application "dominolab", add to backup policies
+
 Then patch dominolab PolicyAssignments to use custom recipe
 ```
 for i in $(oc get policyassignment -n ibm-spectrum-fusion-ns -o name | \
