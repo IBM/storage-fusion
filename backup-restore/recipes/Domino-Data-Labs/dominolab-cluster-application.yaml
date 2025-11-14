@@ -1,0 +1,11 @@
+apiVersion: application.isf.ibm.com/v1alpha1
+kind: Application
+metadata:
+  name: dominolab
+  namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: dominolab
+  includedNamespaces: 
+    - domino-system
+    - domino-platform
+    - domino-compute
