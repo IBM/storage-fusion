@@ -203,7 +203,7 @@ fi
 if (oc get deployment -n $BR_NS dbr-controller -o yaml > $DIR/dbr-controller-deployment.save.yaml)
 then
     echo "Patching deployment/dbr-controller image..."
-    oc set image deployment/dbr-controller --namespace $BR_NS dbr-controller=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c935e0c4a2d9b29c86bacc9322bbd6330a7a30fcb8ccfce2d068abf082d2805e
+    oc set image deployment/dbr-controller --namespace $BR_NS dbr-controller=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:d64c38811669c178aec9aa8b60f439de376e3a47ccb67d7f1e170e1834bb2172
     oc rollout status --namespace $BR_NS --timeout=65s deployment/dbr-controller
 else
     echo "ERROR: Failed to save original dbr-controller deployment. Skipped updates."
