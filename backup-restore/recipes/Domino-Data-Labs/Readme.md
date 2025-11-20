@@ -164,18 +164,18 @@ case $1 in
 		# Tuning Hub Backup Restore:
 		# Long-running backup and restore jobs and increase ephemeral
 		# size limit:
-   		# change backupDatamoverTimeout from 20 minutes to 480
-   		# (8 hours)
+		# change backupDatamoverTimeout from 20 minutes to 480
+		# (8 hours)
 		# change restoreDatamoverTimeout from 20 minutes to 1200
 		# (20 hours)
-   		# change datamoverJobpodEphemeralStorageLimit from 2000Mi to
-   		# 8000Mi or more
+		# change datamoverJobpodEphemeralStorageLimit from 2000Mi to
+		# 8000Mi or more
 		# Long-running jobs:
-   		# change cancelJobAfter from 3600000 milliseconds to 72000000
-   		# (increase from 1 hour to 20 hours)
-   		# Raise velero memory limits from 2Gi to 12Gi and
-   		# ephemeral-storage from 500Mi to 30Gi
-   		# Raise backup-location-deployment limit from 1Gi to 4Gi
+		# change cancelJobAfter from 3600000 milliseconds to 72000000
+		# (increase from 1 hour to 20 hours)
+		# Raise velero memory limits from 2Gi to 12Gi and
+		# ephemeral-storage from 500Mi to 30Gi
+		# Raise backup-location-deployment limit from 1Gi to 4Gi
 		oc patch dataprotectionagent dpagent -n ibm-backup-restore \
 			--type merge \
 			--patch '{
@@ -245,7 +245,7 @@ case $1 in
 			      "spec": {
 			        "containers": [
 			          {
-		    	            "name": "backup-location-container",
+			            "name": "backup-location-container",
 			            "resources": {
 			              "limits": {
 			                "memory": "4Gi"
@@ -290,8 +290,8 @@ case $1 in
 		# (20 hours)
 		# change datamoverJobpodEphemeralStorageLimit from 2000Mi to
 		# 8000Mi or more
-   		# Raise velero memory limits from 2Gi to 12Gi and
-   		# ephemeral-storage from 500Mi to 30Gi
+		# Raise velero memory limits from 2Gi to 12Gi and
+		# ephemeral-storage from 500Mi to 30Gi
 		oc patch dataprotectionagent \
 			ibm-backup-restore-agent-service-instance \
 			-n ibm-backup-restore \
