@@ -1,0 +1,67 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: domino-cluster-recipe
+  namespace: domino-system
+spec:
+  appType: dominolab
+  groups:
+  - name: platform-volumes
+    type: volume
+    includedNamespaces:
+    - domino-platform
+  - name: compute-volumes
+    type: volume
+    essential: false
+    includedNamespaces:
+    - domino-compute
+  - name: namespace-resources
+    type: resource
+    includedNamespaces:
+    - domino-system
+    - domino-platform
+    - domino-compute
+    excludedResourceTypes:
+    - events
+    - events.events.k8s.io
+    - imagetags.openshift.io
+    - pods
+    - subscriptions.operators.coreos.com
+    - clusterserviceversions.operators.coreos.com
+    - installplans.operators.coreos.com
+    - persistentvolumes
+    - persistentvolumeclaims
+    - replicasets
+    - volumereplications.replication.storage.openshift.io
+    - volumegroupreplications.replication.storage.openshift.io
+    - replicationsources.volsync.backube
+    - replicationdestinations.volsync.backube
+    - endpointslices.discovery.k8s.io
+    - endpoints
+    - volumesnapshots.snapshot.storage.k8s.io
+    - volumegroupsnapshots.groupsnapshot.storage.k8s.io
+  - name: cluster-resources
+    type: resource
+    includeClusterResources: true
+    includedResourceTypes:
+    - clusterroles
+    - clusterrolebindings
+    - customresourcedefinitions.apiextensions.k8s.io
+    - ingressclasses.networking.k8s.io
+    - priorityclasses
+    - securitycontextconstraints.security.openshift.io
+  workflows:
+  - failOn: essential-error
+    name: backup
+    sequence:
+    - group: cluster-resources
+    - group: namespace-resources
+    - group: compute-volumes
+    - group: platform-volumes
+  - failOn: essential-error
+    name: restore
+    sequence:
+    - group: platform-volumes
+    - group: compute-volumes
+    - group: cluster-resources
+    - group: namespace-resources
