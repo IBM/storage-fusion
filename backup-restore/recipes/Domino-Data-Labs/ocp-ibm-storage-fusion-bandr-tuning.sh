@@ -13,9 +13,10 @@ case $1 in
    		# 8000Mi or more
 		# Long-running jobs:
    		# change cancelJobAfter from 3600000 milliseconds to 72000000
-   		# (20 hours)
+   		# (increase from 1 hour to 20 hours)
    		# Raise velero memory limits from 2Gi to 12Gi and
    		# ephemeral-storage from 500Mi to 30Gi
+   		# Raise backup-location-deployment limit from 1Gi to 4Gi
 		oc patch dataprotectionagent dpagent -n ibm-backup-restore \
 			--type merge \
 			--patch '{
@@ -75,20 +76,51 @@ case $1 in
 			    }
 			  }
 		 	}'
+		oc scale deployment backup-location-deployment \
+			-n ibm-backup-restore --replicas=0
+		oc patch deployment backup-location-deployment \
+			-n ibm-backup-restore \
+			--patch '{
+			  "spec": {
+			    "template": {
+			      "spec": {
+			        "containers": [
+			          {
+		    	            "name": "backup-location-container",
+			            "resources": {
+			              "limits": {
+			                "memory": "4Gi"
+			              }
+			            }
+			          }
+			        ]
+			      }
+			    }
+			  }
+			}'
+		oc scale deployment backup-location-deployment \
+			-n ibm-backup-restore --replicas=1
 		;;
 	'checkhub')
+		echo "dpagent settings:"
 		oc get dataprotectionagent dpagent -n ibm-backup-restore \
 			-o yaml | grep -e backupDatamoverTimeout \
 				-e restoreDatamoverTimeout \
 				-e datamoverJobpodEphemeralStorageLimit
+		echo "guardian-configmap settings:"
 		oc get configmap guardian-configmap -n ibm-backup-restore \
 			-o yaml | grep -e backupDatamoverTimeout \
 				-e restoreDatamoverTimeout \
 				-e datamoverJobpodEphemeralStorageLimit
+		echo "job-manager deployment settings:"
 		oc get deployment job-manager -n ibm-backup-restore \
 			-o yaml | grep -A1 cancelJobAfter
+		echo "velero settings:"
 		oc get dataprotectionapplication velero -n ibm-backup-restore \
-			-o yaml | grep -A3 limits | tail -2
+			-o yaml | grep -A3 limits | tail -4
+		echo "backup-location-deployment settings:"
+		oc get deployment backup-location-deployment \
+			-n ibm-backup-restore -o yaml | grep -A3 limits
 		;;
 	'spoke')
 		# Long-running backup and restore jobs and increase ephemeral
@@ -144,18 +176,21 @@ case $1 in
 			}'
 		;;
 	'checkspoke')
+		echo "dpagent settings:"
 		oc get dataprotectionagent \
 			ibm-backup-restore-agent-service-instance \
 			-n ibm-backup-restore -o yaml | \
 			grep -e backupDatamoverTimeout \
 				-e restoreDatamoverTimeout \
 				-e datamoverJobpodEphemeralStorageLimit
+		echo "guardian-configmap settings:"
 		oc get configmap guardian-configmap -n ibm-backup-restore \
 			-o yaml | grep -e backupDatamoverTimeout \
 				-e restoreDatamoverTimeout \
 				-e datamoverJobpodEphemeralStorageLimit
+		echo "velero settings:"
 		oc get dataprotectionapplication velero -n ibm-backup-restore \
-			-o yaml | grep -A3 limits | tail -2
+			-o yaml | grep -A3 limits | tail -4
 		;;
 	*) echo "$(basename "$0") [hub|checkhub|spoke|checkspoke]"
 esac
