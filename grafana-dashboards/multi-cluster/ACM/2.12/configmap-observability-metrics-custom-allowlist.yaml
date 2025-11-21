@@ -1,0 +1,24 @@
+﻿kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: observability-metrics-custom-allowlist
+  namespace: open-cluster-management-observability
+data:
+  metrics_list.yaml: |
+    names:
+      - isf_cluster_details
+      - isf_service
+      - isf_switches_info
+      - isf_nodes_info
+      - isf_environment_risk
+      - isf_service_upgrade_risk_count
+      - isf_node_upgrade_risk_count
+      - isf_switch_upgrade_risk_count
+      - ceph_health_status
+      - NooBaa_health_status
+  uwl_metrics_list.yaml: |
+    names:
+      - fusion_events_total
+      - fusion_duplicate_events_total
+      - fusion_hardware_events_total
+      - gpfs_health_status
