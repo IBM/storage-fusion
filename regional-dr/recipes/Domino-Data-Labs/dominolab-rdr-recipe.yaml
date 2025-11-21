@@ -1,0 +1,71 @@
+apiVersion: ramendr.openshift.io/v1alpha1
+kind: Recipe
+metadata:
+  name: dominolab-uat-rdr-recipe
+  namespace: domino-system
+spec:
+  appType: dominolab
+  groups:
+  - name: captured-resources
+    type: resource
+    includeClusterResources: true
+    includedNamespaces:
+    - domino-system
+    - domino-platform
+    - domino-compute
+    excludedResourceTypes:
+    - events
+    - event.events.k8s.io
+    - persistentvolumes
+    - replicaset
+    - persistentvolumeclaims
+    - pods
+    - clusterserviceversions.operators.coreos.com
+    - installplans.operators.coreos.com
+    labelSelector:
+      matchExpressions:
+      - key: ramendr.openshift.io/exclude
+        operator: NotIn
+        values:
+        - "true"
+  - name: cluster-resources
+    type: resource
+    backupRef: captured-resources
+    includeClusterResources: true
+    includedNamespaces:
+    - domino-system
+    - domino-platform
+    - domino-compute
+    includedResourceTypes:
+    - customresourcedefinitions.apiextensions.k8s.io
+    - securitycontextconstraints.security.openshift.io
+    - clusterroles
+    - priorityclasses
+    - clusterrolebindings
+    - ingressclasses.networking.k8s.io
+    labelSelector:
+      matchExpressions:
+      - key: ramendr.openshift.io/exclude
+        operator: NotIn
+        values:
+        - "true"
+  volumes:
+    type: volume
+    name: captured-volumes
+    includedNamespaces:
+    - domino-platform
+    - domino-compute
+    labelSelector:
+      matchExpressions:
+      - key: ramendr.openshift.io/exclude
+        operator: NotIn
+        values:
+        - "true"
+  workflows:
+  - name: backup
+    sequence:
+    - group: captured-resources
+  - name: restore
+    sequence:
+    - group: cluster-resources
+    - group: captured-resources
