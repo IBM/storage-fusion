@@ -3,7 +3,7 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
-VERSION=202510162045  # Use YYYYMMDDhhmm UTC
+VERSION=2025111052150  # Use YYYYMMDDhhmm UTC
 LOG=/tmp/$(basename $0)_log.txt
 rm -f "$LOG"
 exec &> >(tee -a $LOG)
@@ -114,7 +114,7 @@ export NAMESPACE
 echo "Fusion Namespace: $ISF_NS"
 echo "Backup & Restore Namespace: $NAMESPACE"
 echo "Fusion Installplans:"
-oc -n "${ISF_NS}" get ip
+oc -n "${ISF_NS}" get installplan
 echo "Fusion CSVs:"
 oc -n "${ISF_NS}" get csv
 
@@ -345,7 +345,7 @@ echo "oc delete namespace ${NAMESPACE}"
 oc delete namespace "${NAMESPACE}"
 
 echo "Fusion Installplans:"
-oc -n "${ISF_NS}" get ip
+oc -n "${ISF_NS}" get installplan
 echo "Fusion CSVs:"
 oc -n "${ISF_NS}" get csv
 print_heading "Backup and Restore uninstalled"
