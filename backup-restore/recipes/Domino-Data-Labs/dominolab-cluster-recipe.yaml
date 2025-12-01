@@ -15,6 +15,7 @@ spec:
     essential: false
     includedNamespaces:
     - domino-compute
+    labelSelector: dominodatalab.com/type notin (Workspace),app.kubernetes.io/name notin (hephaestus)
   - name: namespace-resources
     type: resource
     includedNamespaces:
