@@ -86,6 +86,8 @@ This repository will host  the following categories of artifacts that can be use
 
 * [Fusion Recipe: Parallel workflow execution](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/09/05/fusion-recipe-parallel-workflow-execution)
 
+* [Fusion Backup and Restore considerations for Applications with Webhooks](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/11/27/fusion-backup-and-restore-considerations-for-appli)
+
 Watch out this space for tools where we can mirror images for IBM Spectrum Fusion and also validate the same.
 
 <!-- A more detailed Usage or detailed explaination of the repository here -->
