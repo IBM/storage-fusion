@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.10.0 release.
-HOTFIX_NUMBER=1
+HOTFIX_NUMBER=5
 EXPECTED_VERSION=2.10.0
 
 patch_usage() {
@@ -144,7 +144,8 @@ update_isf_operator_csv() {
     fi
 }
 
-update_guardian-dp-operator_csv() {
+# Updates guardian-dp-operator and idp-agent-operator CSVs
+update_operator_csv() {
     name="$1"
     deployment_name="$2"  
     image="$3"      
@@ -185,7 +186,7 @@ update_guardian-dp-operator_csv() {
 
 patch_kafka_cr() {
     echo "Patching Kafka..."
-    if ! oc get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
+    if ! oc get kafka guardian-kafka-cluster -n "$BR_NS" -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
         # Patch is not needed 
         return 0
     fi
@@ -193,7 +194,7 @@ patch_kafka_cr() {
     if [ -z "$DRY_RUN" ]; then
         oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
         echo "Waiting for the Kafka cluster to restart (10 min max)"
-        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
+        oc wait --for=condition=Ready kafka/guardian-kafka-cluster -n "$BR_NS" --timeout=600s
         if [ $? -ne 0 ]; then
             echo "Error: Kafka is not ready after configuration patch."
             exit 1
@@ -203,6 +204,93 @@ patch_kafka_cr() {
         fi
     else
         oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka.patch.yaml
+    fi
+}
+
+fix_redis() {
+    if oc get StatefulSet redis-master -n $BR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+        echo redis CR needs to be recreated
+        IDP_SERVER_POD=$(oc get pods -n $BR_NS | awk '{print $1}' | grep -i ibm-dataprotectionserver-controller-manager)
+        STORAGE_CLASS=$(oc get dataprotectionserver ibm-backup-restore-service-instance -n $BR_NS -o yaml | grep storageClass |  awk -F' ' '{print $2}')
+
+        # Get the Redis CR yaml from idp-server pod
+        if [ -f "guardian-redis-cr.yaml" ]; then
+            rm "guardian-redis-cr.yaml"
+        fi
+        oc exec -c manager -n $BR_NS $IDP_SERVER_POD -- cat /k8s/redis/guardian-redis-cr.yaml >  ./guardian-redis-cr.yaml
+
+        OLD_SIZE="size: 8Gi"
+        NEW_SIZE="size: 256Mi"
+        OLD_FBR_IMAGE="fbr-redis"
+        NEW_FBR_IMAGE="fbr-valkey"
+        OLD_FBR_TAG="tag: 7.0.4"
+        NEW_FBR_TAG="tag: 7.2.5"
+        OLD_SC="rook-ceph-block"
+
+        # Replace old PVC size, valkey image and tag
+        sed -i '' "s/${OLD_SIZE}/${NEW_SIZE}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/${OLD_FBR_IMAGE}/${NEW_FBR_IMAGE}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/\<${OLD_FBR_TAG}\>/${NEW_FBR_TAG}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/${OLD_SC}/${STORAGE_CLASS}/g" "guardian-redis-cr.yaml"
+
+        oc scale deployment -n $BR_NS redis-operator-controller-manager --replicas=0
+
+        # Delete any redis-dockercfg* and redis-token* secrets that might have been constantly
+        # generated when redis-controller was in error state
+        oc get secrets -o name | grep redis-dockercfg | xargs oc delete
+        oc get secrets -o name | grep redis-token | xargs oc delete
+
+        # Create Redis CR
+        oc delete redis redis -n $BR_NS --timeout=60s
+        if oc get redis redis -n $BR_NS >/dev/null 2>&1; then
+            oc patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' redis redis -n $BR_NS
+            oc delete redis redis -n $BR_NS
+        fi
+
+        oc scale deployment -n $BR_NS redis-operator-controller-manager --replicas=1
+        oc wait -n $BR_NS deployment/redis-operator-controller-manager --for=jsonpath='{.status.readyReplicas}'=1
+
+        # Recreate Redis CR using updated yaml
+        oc apply -n $BR_NS -f guardian-redis-cr.yaml
+        echo Finished creating Redis CR
+
+    fi
+}
+
+update_kafka_topic_message_size() {
+    echo "Patching Kafka inventory, restore and delete-backup topics..."
+
+    patch='[{"op": "add", "path": "/spec/config/max.message.bytes", "value": "5242880"}]'
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}"
+        oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}"
+        oc -n "$BR_NS" patch KafkaTopic delete-backup --type='json' -p="${patch}"
+        echo "Patched Kafka topics"
+    else
+        oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/inventory-topic.patch.yaml
+        oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/restore-topic.patch.yaml
+    fi
+}
+
+update_kafka_connection() {
+    echo "Setting Kafka message size properties in kafka-connection ConfigMap..."
+    patch='[{"op": "add", "path": "/data/max.request.size", "value": "5242880"}]'
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch configmap kafka-connection --type='json' -p="${patch}"
+    else
+        oc -n "$BR_NS" patch configmap kafka-connection --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka-connection.patch.yaml
+    fi
+}
+
+update_tm_env() {
+    echo "Setting Kafka message size property in as TM env variable..."
+    message_size='MAX_REQUEST_SIZE=5242880'
+    if [ -z "$DRY_RUN" ]; then
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}"
+        oc set env -n "$BR_NS" deployment/dbr-controller "${message_size}"
+    else
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}" --dry-run=client -o yaml >$DIR/tm_env.patch.yaml
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}" --dry-run=client -o yaml >$DIR/dbr_env.patch.yaml
     fi
 }
 
@@ -224,15 +312,16 @@ restart_deployments() {
             VALID_DEPLOYMENTS+=("$deployment")
         fi
     done
-    echo "Restarting deployments $VALID_DEPLOYMENTS"
-    for deployment in $VALID_DEPLOYMENTS; do
+    echo "Restarting deployments ${VALID_DEPLOYMENTS[@]}"
+    for deployment in ${VALID_DEPLOYMENTS[@]}; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
     done
-    for deployment in $VALID_DEPLOYMENTS; do
+    for deployment in ${VALID_DEPLOYMENTS[@]}; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
     done
 }
 
+echo "Applying $EXPECTED_VERSION hotfix $HOTFIX_NUMBER"
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -279,6 +368,8 @@ fi
 if [ -n "$HUB" ]; then
     echo "Apply patches to hub..."
 
+    fix_redis
+
     update_backuplocation_role
 
     backuplocation_img=cp.icr.io/cp/bnr/guardian-backup-location@sha256:5efd82d5e568cc3cd17cc1fd931d4228f87804683cffc87d34c81eec73dd4986
@@ -289,30 +380,34 @@ if [ -n "$HUB" ]; then
 
     backuppolicy_img=cp.icr.io/cp/bnr/guardian-backup-policy@sha256:7a6e5982598e093f6be50dbf89e7638ed67600403a7681e3fb328e27eab8360a
     set_deployment_image backuppolicy-deployment backuppolicy-container ${backuppolicy_img}
+    
+    jobmanager_img=cp.icr.io/cp/bnr/guardian-job-manager@sha256:6145c6fc7fe238fba1e130eb4ca3c85a374cc41533009819ef83376b5f632010
+    set_deployment_image job-manager job-manager-container ${jobmanager_img}
 
-    guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:04a3446eb98d03eddfce27ff77def52b2c3f89c57d662190f61891d8bd3167fc
-    update_guardian-dp-operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
+    guardiandpoperator_img=icr.io/cpopen/guardian-dp-operator@sha256:7cd60eff9e671712d6239eaef4aba86f8871bc2252a97b3b2858e2d06930df63
+    update_operator_csv guardian-dp-operator.v2.10.0 guardian-dp-operator-controller-manager "${guardiandpoperator_img}"
+
+    guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:791916f88f56819fb3487ac40c184ff0785a713957edd66415f4222b00c08e87
+    update_operator_csv ibm-dataprotectionagent.v2.10.0 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
+
 
     patch_kafka_cr
+    update_kafka_topic_message_size
+    update_kafka_connection
     restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager
 fi
 
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c6ee0b30aedc5dcc83c50df5d33ff3b7ca4cc086cb2ff984d10a190b1c5efc6f
+update_tm_env
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:a01bf78faf42f7cfb55e5fbedc7c81e2fbaef93b6f41709f3077c7e901a9bacc
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 
-velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:d4e54c0e98983f78b4f022ae5fd9dc4f751d725b19d15d355e73055cfeec863d
+velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:344fa732b4485f3edc4afef73d2f2a8ac6c1f6911f073ae3e2d94cb5cc606eb2
 set_velero_image ${velero_img}
 
 [ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:74990bffe171264a3d08eab53398dd5e98491a24269642b38688d854c1549224
 [ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:c060b4b34da3edc756dbc5f6d3f6afd8e895ece52dff3d4aad8965217365a966
 update_isf_operator_csv isf-operator.v2.10.0 "${isfdataprotection_img}"
-
-if [ -n "$HUB" ]; then
-    patch_kafka_cr
-    restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
-    restart_deployments "$ISF_NS" isf-application-operator-controller-manager
-fi
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
@@ -322,6 +417,7 @@ if [ -n "$HUB" ]; then
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-location-deployment"
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backuppolicy-deployment"
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-service"
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "job-manager"
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "guardian-dp-operator-controller-manager"
 fi
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"

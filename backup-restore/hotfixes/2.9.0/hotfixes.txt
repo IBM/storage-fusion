@@ -18,3 +18,4 @@ This hotfix fixes the following Backup & Restore issues:
     16. Restic backups not being deleted after upgrade to 2.9 (Issue: 45990)
     17. Check if snapshot exists during DBR processing so that it does not fail (Issue: 54282)
     18. BackupRepository ownerReference should be Velero BSL (Issue: 51400, 55073)
+    19. Redis certificate expiration causes jobs to fail (59690)

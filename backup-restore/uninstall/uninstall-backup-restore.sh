@@ -3,10 +3,13 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
+VERSION=2025111052150  # Use YYYYMMDDhhmm UTC
 LOG=/tmp/$(basename $0)_log.txt
 rm -f "$LOG"
 exec &> >(tee -a $LOG)
 
+echo Logging to $LOG
+echo "VERSION: $VERSION"
 echo "ARGUMENTS:" "$@"
 
 USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
@@ -29,6 +32,14 @@ check_cmd ()
 
 check_cmd oc
 check_cmd jq
+
+OCVER_FULL=$(oc version --client -o json | jq -r '.releaseClientVersion')
+[ -z "$OCVER_FULL" ] || [ "$OCVER_FULL"  == "null" ] && OCVER_FULL=$(oc version --client -o json | jq -r '.clientVersion.gitVersion')
+OCVER=$(echo "$OCVER_FULL" | cut -d"." -f1-2)
+export OCVER
+echo "oc version: $OCVER_FULL"
+[ -z "$OCVER" ] || [ "$OCVER"  == "null" ] && err_exit "Could not get OC version"
+awk "BEGIN{exit ($OCVER < 4.12 ? 0 : 1)}" && err_exit "OC version 4.12 or higher required. You have $OCVER"
 
 oc whoami > /dev/null || err_exit "Not logged in a cluster"
 
@@ -103,7 +114,7 @@ export NAMESPACE
 echo "Fusion Namespace: $ISF_NS"
 echo "Backup & Restore Namespace: $NAMESPACE"
 echo "Fusion Installplans:"
-oc -n "${ISF_NS}" get ip
+oc -n "${ISF_NS}" get installplan
 echo "Fusion CSVs:"
 oc -n "${ISF_NS}" get csv
 
@@ -334,7 +345,7 @@ echo "oc delete namespace ${NAMESPACE}"
 oc delete namespace "${NAMESPACE}"
 
 echo "Fusion Installplans:"
-oc -n "${ISF_NS}" get ip
+oc -n "${ISF_NS}" get installplan
 echo "Fusion CSVs:"
 oc -n "${ISF_NS}" get csv
 print_heading "Backup and Restore uninstalled"

@@ -26,8 +26,8 @@ fsGroup:
 requiredDropCapabilities:
   - ALL
 allowedCapabilities:
-  - SETUID 
-  - SETGID 
+  - SETUID
+  - SETGID
 volumes:
   - configMap
   - emptyDir

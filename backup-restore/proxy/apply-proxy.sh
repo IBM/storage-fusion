@@ -65,7 +65,9 @@ fi
 if [ -n "$HUB" ]; then
     if (oc get deployment -n $BR_NS backup-location-deployment -o yaml > $DIR/backup-location-deployment.save.yaml); then
         echo "Applying proxy settings to backup-location-deployment..."
-        oc set env deployment backup-location-deployment -n $BR_NS http_proxy="$HTTP_PROXY_URL" https_proxy="$HTTPS_PROXY_URL" no_proxy="$NO_PROXY"
+        oc set env deployment backup-location-deployment -n $BR_NS \
+            http_proxy="$HTTP_PROXY_URL" https_proxy="$HTTPS_PROXY_URL" no_proxy="$NO_PROXY" \
+            HTTP_PROXY="$HTTP_PROXY_URL" HTTPS_PROXY="$HTTPS_PROXY_URL" NO_PROXY="$NO_PROXY"
     else
         echo "ERROR: Failed to save original backup-location-deployment. Skipped updates."
     fi
@@ -73,22 +75,62 @@ fi
 
 if (oc get deployment transaction-manager -n $BR_NS -o yaml > $DIR/transaction-manager-deployment.save.yaml); then
     echo "Applying proxy settings to transaction-manager..."
-  oc set env deployment transaction-manager -n $BR_NS http_proxy="$HTTP_PROXY_URL" https_proxy="$HTTPS_PROXY_URL" no_proxy="$NO_PROXY"
+  oc set env deployment transaction-manager -n $BR_NS \
+        http_proxy="$HTTP_PROXY_URL" https_proxy="$HTTPS_PROXY_URL" no_proxy="$NO_PROXY" \
+        HTTP_PROXY="$HTTP_PROXY_URL" HTTPS_PROXY="$HTTPS_PROXY_URL" NO_PROXY="$NO_PROXY"
 else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
 fi
 
+if (oc get deployment dbr-controller -n $BR_NS -o yaml > $DIR/dbr-controller-deployment.save.yaml); then
+    echo "Applying proxy settings to dbr-controller..."
+  oc set env deployment dbr-controller -n $BR_NS \
+        http_proxy="$HTTP_PROXY_URL" https_proxy="$HTTPS_PROXY_URL" no_proxy="$NO_PROXY" \
+        HTTP_PROXY="$HTTP_PROXY_URL" HTTPS_PROXY="$HTTPS_PROXY_URL" NO_PROXY="$NO_PROXY"
+else
+    echo "ERROR: Failed to save original dbr-controller deployment. Skipped updates."
+fi
+
 if (oc get dpa velero -n $BR_NS -o yaml > $DIR/dpa-velero.save.yaml); then
     echo "Applying proxy settings to DataProtectionApplication velero resource..."
-    oc patch dpa velero -n $BR_NS --type=json -p "[{\"op\": \"add\", \"path\": \"/spec/configuration/nodeAgent/podConfig/env\", \"value\":[{\"name\":\"http_proxy\",\"value\":\"$HTTP_PROXY_URL\"},{\"name\":\"https_proxy\",\"value\":\"$HTTPS_PROXY_URL\"},{\"name\":\"no_proxy\",\"value\":\"$NO_PROXY\"}]}]"
-    oc patch dpa velero -n $BR_NS --type=json -p "[{\"op\": \"add\", \"path\": \"/spec/configuration/velero/podConfig/env\", \"value\":[{\"name\":\"http_proxy\",\"value\":\"$HTTP_PROXY_URL\"},{\"name\":\"https_proxy\",\"value\":\"$HTTPS_PROXY_URL\"},{\"name\":\"no_proxy\",\"value\":\"$NO_PROXY\"}]}]"
+    oc patch dpa velero -n $BR_NS --type=json -p "[{
+        \"op\": \"add\", 
+        \"path\": \"/spec/configuration/nodeAgent/podConfig/env\", 
+        \"value\":[
+            {\"name\":\"http_proxy\",\"value\":\"$HTTP_PROXY_URL\"},
+            {\"name\":\"https_proxy\",\"value\":\"$HTTPS_PROXY_URL\"},
+            {\"name\":\"no_proxy\",\"value\":\"$NO_PROXY\"},
+            {\"name\":\"HTTP_PROXY\",\"value\":\"$HTTP_PROXY_URL\"},
+            {\"name\":\"HTTPS_PROXY\",\"value\":\"$HTTPS_PROXY_URL\"},
+            {\"name\":\"NO_PROXY\",\"value\":\"$NO_PROXY\"}
+        ]
+        }]"
+
+    oc patch dpa velero -n $BR_NS --type=json -p "[{
+        \"op\": \"add\", 
+        \"path\": \"/spec/configuration/velero/podConfig/env\", 
+        \"value\":[
+            {\"name\":\"http_proxy\",\"value\":\"$HTTP_PROXY_URL\"},
+            {\"name\":\"https_proxy\",\"value\":\"$HTTPS_PROXY_URL\"},
+            {\"name\":\"no_proxy\",\"value\":\"$NO_PROXY\"},
+            {\"name\":\"HTTP_PROXY\",\"value\":\"$HTTP_PROXY_URL\"},
+            {\"name\":\"HTTPS_PROXY\",\"value\":\"$HTTPS_PROXY_URL\"},
+            {\"name\":\"NO_PROXY\",\"value\":\"$NO_PROXY\"}
+        ]
+        }]"
+
 else
     echo "ERROR: Failed to save original DataProtectionApplication velero resource. Skipped updates."
 fi
 
 if (oc get cm guardian-configmap -n $BR_NS -o yaml > $DIR/guardian-configmap.save.yaml); then
     echo "Applying proxy settings to datamover..."
-    oc patch cm guardian-configmap -n $BR_NS --type=json -p "[{\"op\": \"add\", \"path\": \"/data/datamoverJobEnvVars\", \"value\": \"http_proxy=$HTTP_PROXY_URL;https_proxy=$HTTPS_PROXY_URL;no_proxy=$NO_PROXY\"}]"
+    oc patch cm guardian-configmap -n $BR_NS --type=json -p "[{
+        \"op\": \"add\", 
+        \"path\": \"/data/datamoverJobEnvVars\", 
+        \"value\": \"http_proxy=$HTTP_PROXY_URL;https_proxy=$HTTPS_PROXY_URL;no_proxy=$NO_PROXY;HTTP_PROXY=$HTTP_PROXY_URL;HTTPS_PROXY=$HTTPS_PROXY_URL;NO_PROXY=$NO_PROXY\"
+        }]"
+
 else
     echo "ERROR: Failed to save original guardian-configmap. Skipped updates."
 fi

@@ -50,7 +50,7 @@ check_cmd ()
 
 patch_kafka_cr() {
     echo "Patching Kafka..."
-    if ! oc get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
+    if ! oc -n "$BR_NS" get kafka guardian-kafka-cluster -o jsonpath='{.spec.kafka.listeners}' | grep -q external; then
         # Patch is not needed 
         return 0
     fi
@@ -58,7 +58,7 @@ patch_kafka_cr() {
     if [ -z "$DRY_RUN" ]; then
         oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}"
         echo "Waiting for the Kafka cluster to restart (10 min max)"
-        oc wait --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
+        oc wait -n "$BR_NS" --for=condition=Ready kafka/guardian-kafka-cluster --timeout=600s
         if [ $? -ne 0 ]; then
             echo "Error: Kafka is not ready after configuration patch."
             exit 1
@@ -68,6 +68,56 @@ patch_kafka_cr() {
         fi
     else
         oc -n "$BR_NS" patch kafka guardian-kafka-cluster --type='merge' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka.patch.yaml
+    fi
+}
+
+fix_redis() {
+    if oc get StatefulSet redis-master -n $BR_NS -o yaml | grep "storage: 8Gi" >/dev/null 2>&1; then
+        echo redis CR needs to be recreated
+        IDP_SERVER_POD=$(oc get pods -n $BR_NS | awk '{print $1}' | grep -i ibm-dataprotectionserver-controller-manager)
+        STORAGE_CLASS=$(oc get dataprotectionserver ibm-backup-restore-service-instance -n $BR_NS -o yaml | grep storageClass |  awk -F' ' '{print $2}')
+
+        # Get the Redis CR yaml from idp-server pod
+        if [ -f "guardian-redis-cr.yaml" ]; then
+            rm "guardian-redis-cr.yaml"
+        fi
+        oc exec -c manager -n $BR_NS $IDP_SERVER_POD -- cat /k8s/redis/guardian-redis-cr.yaml >  ./guardian-redis-cr.yaml
+
+        OLD_SIZE="size: 8Gi"
+        NEW_SIZE="size: 256Mi"
+        OLD_FBR_IMAGE="fbr-redis"
+        NEW_FBR_IMAGE="fbr-valkey"
+        OLD_FBR_TAG="tag: 7.0.4"
+        NEW_FBR_TAG="tag: 7.2.5"
+        OLD_SC="rook-ceph-block"
+
+        # Replace old PVC size, valkey image and tag
+        sed -i '' "s/${OLD_SIZE}/${NEW_SIZE}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/${OLD_FBR_IMAGE}/${NEW_FBR_IMAGE}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/\<${OLD_FBR_TAG}\>/${NEW_FBR_TAG}/g" "guardian-redis-cr.yaml"
+        sed -i '' "s/${OLD_SC}/${STORAGE_CLASS}/g" "guardian-redis-cr.yaml"
+
+        oc scale deployment -n $BR_NS redis-operator-controller-manager --replicas=0
+
+        # Delete any redis-dockercfg* and redis-token* secrets that might have been constantly
+        # generated when redis-controller was in error state
+        oc get secrets -o name | grep redis-dockercfg | xargs oc delete
+        oc get secrets -o name | grep redis-token | xargs oc delete
+
+        # Create Redis CR
+        oc delete redis redis -n $BR_NS --timeout=60s
+        if oc get redis redis -n $BR_NS >/dev/null 2>&1; then
+            oc patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' redis redis -n $BR_NS
+            oc delete redis redis -n $BR_NS
+        fi
+
+        oc scale deployment -n $BR_NS redis-operator-controller-manager --replicas=1
+        oc wait -n $BR_NS deployment/redis-operator-controller-manager --for=jsonpath='{.status.readyReplicas}'=1
+
+        # Recreate Redis CR using updated yaml
+        oc apply -n $BR_NS -f guardian-redis-cr.yaml
+        echo Finished creating Redis CR
+
     fi
 }
 
@@ -89,11 +139,11 @@ restart_deployments() {
             VALID_DEPLOYMENTS+=("$deployment")
         fi
     done
-    echo "Restarting deployments $VALID_DEPLOYMENTS"
-    for deployment in $VALID_DEPLOYMENTS; do
+    echo "Restarting deployments ${VALID_DEPLOYMENTS[@]}"
+    for deployment in ${VALID_DEPLOYMENTS[@]}; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
     done
-    for deployment in $VALID_DEPLOYMENTS; do
+    for deployment in ${VALID_DEPLOYMENTS[@]}; do
         oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
     done
 }
@@ -153,7 +203,7 @@ fi
 if (oc get deployment -n $BR_NS dbr-controller -o yaml > $DIR/dbr-controller-deployment.save.yaml)
 then
     echo "Patching deployment/dbr-controller image..."
-    oc set image deployment/dbr-controller --namespace $BR_NS dbr-controller=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:c935e0c4a2d9b29c86bacc9322bbd6330a7a30fcb8ccfce2d068abf082d2805e
+    oc set image deployment/dbr-controller --namespace $BR_NS dbr-controller=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:d64c38811669c178aec9aa8b60f439de376e3a47ccb67d7f1e170e1834bb2172
     oc rollout status --namespace $BR_NS --timeout=65s deployment/dbr-controller
 else
     echo "ERROR: Failed to save original dbr-controller deployment. Skipped updates."
@@ -193,6 +243,7 @@ oc get clusterrole ${TMCLUSTERROLE} -o yaml > $DIR/clusterrole-$TMCLUSTERROLE.ya
 echo -e "$(cat $DIR/clusterrole-$TMCLUSTERROLE.yaml)\n${TMROLETOADD}" | oc apply -f -
 
 if [ -n "$HUB" ]; then
+    fix_redis
     patch_kafka_cr
     restart_deployments "$BR_NS" applicationsvc job-manager backup-service backup-location-deployment backuppolicy-deployment dbr-controller guardian-dp-operator-controller-manager transaction-manager guardian-dm-controller-manager
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager

@@ -129,7 +129,7 @@ class CustomInfrastructurePage(QWidget):
         self.hciDetailsLayout = QVBoxLayout()
 
         nodeHeaderLayout = QHBoxLayout()
-        self.nodeCountLabel = QLabel("Number of worker nodes:")
+        self.nodeCountLabel = QLabel("Number of worker/storage nodes:")
         self.nodeCountLabel.setStyleSheet("font-size: 15px;")
         self.nodeCountSpinBox = QSpinBox()
         self.nodeCountSpinBox.setValue(1)
@@ -149,6 +149,23 @@ class CustomInfrastructurePage(QWidget):
         self.nodeFieldsLayout = QVBoxLayout(self.nodeFieldsContainer)
         self.hciDetailsLayout.addWidget(self.nodeFieldsContainer)
 
+        overheadLayout1 = QGridLayout()
+        cpuOverheadLabel1 = QLabel("Number of storage nodes:")
+        self.cpuOverheadInput1 = QLineEdit()
+        memoryOverheadLabel1 = QLabel("Number of disks per node:")
+        self.memoryOverheadInput1 = QLineEdit()
+        storageOverheadLabel1 = QLabel("Size of the disk per node:")
+        self.storageOverheadInput1 = QLineEdit()
+        overheadLayout1.addWidget(cpuOverheadLabel1, 0, 0)
+        overheadLayout1.addWidget(self.cpuOverheadInput1, 0, 1)
+        overheadLayout1.addWidget(memoryOverheadLabel1, 0, 2)
+        overheadLayout1.addWidget(self.memoryOverheadInput1, 0, 3)
+        overheadLayout1.addWidget(storageOverheadLabel1, 0, 4)
+        overheadLayout1.addWidget(self.storageOverheadInput1, 0, 5)
+
+        self.hciDetailsLayout.addLayout(overheadLayout1)
+
+
         clusterLayout = QHBoxLayout()
         storageLabel = QLabel("Enter storage of entire cluster (GiB):")
         storageLabel.setStyleSheet("font-size: 14px;")
@@ -166,7 +183,7 @@ class CustomInfrastructurePage(QWidget):
         self.hciDetailsLayout.addSpacing(5)
 
         overheadLayout = QGridLayout()
-        cpuOverheadLabel = QLabel("CPU Overhead (vCPU):")
+        cpuOverheadLabel = QLabel("CPU Overhead (cores):")
         self.cpuOverheadInput = QLineEdit()
         memoryOverheadLabel = QLabel("Memory Overhead (GiB):")
         self.memoryOverheadInput = QLineEdit()
@@ -191,7 +208,7 @@ class CustomInfrastructurePage(QWidget):
         #self.highAvailabilityInput.setStyleSheet("font-size: 15px;")
         #self.highAvailabilityInput.setAlignment(Qt.AlignLeft)
 
-        overcommitRatioLabel = QLabel("Overcommit Ratio (vCPU): ")
+        overcommitRatioLabel = QLabel("Overcommit Ratio for CPU: ")
         overcommitRatioLabel.setFixedWidth(170)
         self.overcommitRatioInput = QLineEdit()
         self.overcommitRatioInput.setFixedSize(200, 20)
@@ -284,7 +301,7 @@ class CustomInfrastructurePage(QWidget):
         num_nodes = self.nodeCountSpinBox.value()
         for i in range(1, num_nodes + 1):
             nodeLayout = QHBoxLayout()
-            nodeCpuLabel = QLabel(f"Node {i} CPU (vCPU)")
+            nodeCpuLabel = QLabel(f"Node {i} CPU (cores)")
             nodeCpuInput = QLineEdit()
             nodeMemLabel = QLabel(f" Memory (GiB)")
             nodeMemInput = QLineEdit()
@@ -463,6 +480,7 @@ class CustomInfrastructurePage(QWidget):
             total_storage_capacity = float(self.storageInput.text() or 0)
             ha_reserve_percent = float(self.highAvailabilityInput.text() or 0) / 100
             overcommit_ratio = float(self.overcommitRatioInput.text() or 1.0)
+            num_drives = int(self.memoryOverheadInput1.text() or 0)
 
             node_details = []
             for i in range(self.nodeFieldsLayout.count()):
@@ -497,7 +515,7 @@ class CustomInfrastructurePage(QWidget):
             result_text = perform_calculation(
                 node_count, cpu_overhead, memory_overhead, storage_overhead,
                 total_storage_capacity, ha_reserve_percent, overcommit_ratio,
-                node_details, vm_inputs
+                node_details, vm_inputs, num_drives
             )
 
             self.outputArea.setPlainText(result_text)
@@ -588,11 +606,11 @@ class UploadInfrastructurePage(QWidget):
         self.overcommit_cpu.setAlignment(Qt.AlignLeft)
         self.overcommit_cpu.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        detailsLayout.addRow("CPU Overhead (vCPU):", self.overhead_cpu)
+        detailsLayout.addRow("CPU Overhead (cores):", self.overhead_cpu)
         detailsLayout.addRow("Memory Overhead (GiB):", self.overhead_memory)
         detailsLayout.addRow("Storage Overhead (GiB):", self.overhead_storage)
         detailsLayout.addRow("High Availability (%):", self.ha)
-        detailsLayout.addRow("Overcommit Ratio (vCPU):", self.overcommit_cpu)
+        detailsLayout.addRow("Overcommit Ratio for CPU:", self.overcommit_cpu)
 
         self.detailsGroup.setLayout(detailsLayout)
 
@@ -718,7 +736,7 @@ class UploadInfrastructurePage(QWidget):
 
         self.result_text.setPlainText(
             f"Uploaded VM Configuration:\n"
-            f"Total CPU: {total_cpu} VCPU\n"
+            f"Total CPU: {total_cpu} vCPU\n"
             f"Total Memory: {total_memory:.2f} GiB\n"
             f"Total Storage: {total_storage:.2f} GiB\n"
         )
@@ -813,7 +831,7 @@ class availableInfrastructurePage(QWidget):
         self.hciDetailsLayout = QVBoxLayout()
 
         nodeHeaderLayout = QHBoxLayout()
-        self.nodeCountLabel = QLabel("Number of worker nodes:")
+        self.nodeCountLabel = QLabel("Number of worker/storage nodes:")
         self.nodeCountLabel.setStyleSheet("font-size: 15px;")
         self.nodeCountSpinBox = QSpinBox()
         self.nodeCountSpinBox.setValue(1)
@@ -832,6 +850,38 @@ class availableInfrastructurePage(QWidget):
         self.nodeFieldsLayout = QVBoxLayout(self.nodeFieldsContainer)
         self.hciDetailsLayout.addWidget(self.nodeFieldsContainer)
 
+        overheadLayout1 = QGridLayout()
+        cpuOverheadLabel1 = QLabel("Number of storage nodes:")
+        self.cpuOverheadInput1 = QLineEdit()
+        memoryOverheadLabel1 = QLabel("Number of disks per node:")
+        self.memoryOverheadInput1 = QLineEdit()
+        storageOverheadLabel1 = QLabel("Size of the disk per node:")
+        self.storageOverheadInput1 = QLineEdit()
+        overheadLayout1.addWidget(cpuOverheadLabel1, 0, 0)
+        overheadLayout1.addWidget(self.cpuOverheadInput1, 0, 1)
+        overheadLayout1.addWidget(memoryOverheadLabel1, 0, 2)
+        overheadLayout1.addWidget(self.memoryOverheadInput1, 0, 3)
+        overheadLayout1.addWidget(storageOverheadLabel1, 0, 4)
+        overheadLayout1.addWidget(self.storageOverheadInput1, 0, 5)
+
+        self.hciDetailsLayout.addLayout(overheadLayout1)
+
+        clusterLayout1 = QHBoxLayout()
+        storageLabel1 = QLabel("Overcommit ratio for CPU:")
+        storageLabel1.setStyleSheet("font-size: 14px;")
+        storageLabel1.setFixedWidth(245)
+
+        self.storageInput1 = QLineEdit()
+        self.storageInput1.setFixedSize(140, 20)
+        self.storageInput1.setStyleSheet("font-size: 12px;")
+
+        clusterLayout1.addWidget(storageLabel1)
+        clusterLayout1.addWidget(self.storageInput1)
+        clusterLayout1.setAlignment(Qt.AlignLeft)
+
+        self.hciDetailsLayout.addLayout(clusterLayout1)
+        self.hciDetailsLayout.addSpacing(5)
+
         clusterLayout = QHBoxLayout()
         storageLabel = QLabel("Enter storage of entire cluster (GiB):")
         storageLabel.setStyleSheet("font-size: 14px;")
@@ -848,8 +898,9 @@ class availableInfrastructurePage(QWidget):
         self.hciDetailsLayout.addLayout(clusterLayout)
         self.hciDetailsLayout.addSpacing(5)
 
+
         overheadLayout = QGridLayout()
-        cpuOverheadLabel = QLabel("CPU Overhead (vCPU):")
+        cpuOverheadLabel = QLabel("CPU Overhead (cores):")
         self.cpuOverheadInput = QLineEdit()
         memoryOverheadLabel = QLabel("Memory Overhead (GiB):")
         self.memoryOverheadInput = QLineEdit()
@@ -966,7 +1017,7 @@ class availableInfrastructurePage(QWidget):
         num_nodes = self.nodeCountSpinBox.value()
         for i in range(1, num_nodes + 1):
             nodeLayout = QHBoxLayout()
-            nodeCpuLabel = QLabel(f"Node {i} CPU (vCPU)")
+            nodeCpuLabel = QLabel(f"Node {i} CPU (cores)")
             nodeCpuInput = QLineEdit()
             nodeMemLabel = QLabel(" Memory (GiB)")
             nodeMemInput = QLineEdit()
@@ -986,6 +1037,8 @@ class availableInfrastructurePage(QWidget):
             cpu_overhead = int(self.cpuOverheadInput.text() or 0)
             memory_overhead = int(self.memoryOverheadInput.text() or 0)
             storage_overhead = int(self.storageOverheadInput.text() or 0)
+            overcommit_ratio = int(self.storageInput1.text() or 0)
+            num_drives = int(self.memoryOverheadInput1.text() or 0)
             total_cpu = 0
             total_memory = 0
 
@@ -1012,7 +1065,7 @@ class availableInfrastructurePage(QWidget):
                                 pass
 
             result = calculate_vm_sizing(total_cpu, total_memory, storage, cpu_overhead, memory_overhead,
-                                         storage_overhead, vms, custom_st)
+                                         storage_overhead, overcommit_ratio, vms, custom_st, num_drives)
             self.outputArea.setText(result)
         except Exception as e:
             self.outputArea.setText(f"Error: {str(e)}")

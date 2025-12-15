@@ -1,0 +1,149 @@
+# ============================================================================
+# CAS Chatbot - Sample Configuration (config.yaml.sample)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# OpenShift Console / Admin Configuration
+# ----------------------------------------------------------------------------
+console_url: "https://console-openshift-console.<your-domain>"
+oc_username: "<your-ocp-username>"         # Example: kubeadmin or idp-user
+oc_password: "<your-ocp-password>"
+
+# Token refresh threshold in seconds (default: 5 minutes)
+token_refresh_threshold: 300
+
+# ----------------------------------------------------------------------------
+# CAS API Configuration
+# ----------------------------------------------------------------------------
+cas_url: "https://console-<your-cas-endpoint>"
+default_table: "<default-table-name>"
+default_limit: 5
+
+# ----------------------------------------------------------------------------
+# LLM / AI Providers Configuration
+# ----------------------------------------------------------------------------
+# Priority order for LLM calls - will try in sequence until one succeeds
+llm_provider_sequence: ["nvidia", "openai", "ollama"]
+
+# OpenAI Configuration
+openai_api_key: "${OPENAI_API_KEY:}"        # Set via environment variable
+openai_model: "gpt-3.5-turbo"
+
+# NVIDIA NIM Configuration
+nvidia_llm_url: "<nvidia-endpoint>"
+nvidia_model: "meta/llama3-8b-instruct"
+ngc_api_key: "<your-ngc-api-key>"
+
+# Ollama Configuration
+ollama_host: "<ollama-host-url>"
+ollama_model: "llama3"
+
+# LLM Request Configuration
+llm_timeout: 60           # Timeout (seconds)
+llm_max_retries: 2        # Retry attempts per provider
+
+# ----------------------------------------------------------------------------
+# Keycloak / IDP Configuration
+# ----------------------------------------------------------------------------
+keycloak_url: "<keycloak-url>"
+client_id: "<client-id>"
+client_secret: "<client-secret>"
+keycloak_users_url: "<keycloak-users-endpoint>"
+
+# ----------------------------------------------------------------------------
+# User Management Configuration
+# ----------------------------------------------------------------------------
+users:
+  - name: "idp-admin"
+    type: "idp"
+    client_id: "<client-id>"
+    client_secret: "<client-secret>"
+    token_url: "<token-url>"
+    users_url: "<users-url>"
+
+  - name: "ocp-admin"
+    type: "ocp"
+    kubeconfig: "~/.kube/config"
+    default_namespace: "ibm-cas"
+    default_table: "gt20"
+
+# ----------------------------------------------------------------------------
+# Logging Configuration
+# ----------------------------------------------------------------------------
+logging:
+  level: "INFO"                 # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "logs/cas_chatbot.log"
+  max_bytes: 10485760           # 10 MB
+  backup_count: 5
+  console_output: false
+  structured: false             # Enable JSON logging if true
+
+# ----------------------------------------------------------------------------
+# Caching Configuration
+# ----------------------------------------------------------------------------
+cache:
+  default_ttl: 300              # 5 minutes
+  max_entries: 1000
+  user_cache_ttl: 600           # 10 minutes
+  domain_cache_ttl: 300         # 5 minutes
+
+# ----------------------------------------------------------------------------
+# Session Management
+# ----------------------------------------------------------------------------
+session:
+  file: "session_history.json"
+  auto_save: true
+  backup_enabled: true
+  max_history_entries: 1000
+
+# ----------------------------------------------------------------------------
+# Metrics Configuration
+# ----------------------------------------------------------------------------
+metrics:
+  enabled: true
+  max_samples: 100              # Keep up to 100 timing samples
+
+# ----------------------------------------------------------------------------
+# Query Configuration
+# ----------------------------------------------------------------------------
+enable_source: false
+enable_content_metadata: false
+
+# ----------------------------------------------------------------------------
+# Security Configuration
+# ----------------------------------------------------------------------------
+allow_self_signed: true
+ca_cert_path: ""                # Optional custom CA path
+
+# Authentication flow: auto | idp | ocp
+force_auth_flow: "auto"
+
+# ----------------------------------------------------------------------------
+# Performance Configuration
+# ----------------------------------------------------------------------------
+request_timeout: 30
+subprocess_timeout: 30
+
+rate_limit:
+  enabled: false
+  max_requests: 100
+  time_window: 60               # seconds
+
+# ----------------------------------------------------------------------------
+# Feature Flags
+# ----------------------------------------------------------------------------
+features:
+  health_checks: true
+  metrics_tracking: true
+  cache_enabled: true
+  auto_token_refresh: true
+  session_persistence: true
+
+# ----------------------------------------------------------------------------
+# CLI Configuration
+# ----------------------------------------------------------------------------
+cli:
+  prompt_style: "default"       # default, minimal, full
+  show_welcome_banner: true
+  enable_autocomplete: true
+  history_size: 1000
