@@ -124,7 +124,7 @@ set_velero_image() {
 
     if (oc -n "$BR_NS" get dpa velero -o yaml >$DIR/velero.save.yaml); then
         echo "Patching deployment/velero image..."
-        patch="[{\"op\": \"replace\", \"path\": \"/spec/unsupportedOverrides/veleroImageFqin\", \"value\":\"${image}\"}, {\"op\": \"add\", \"path\": \"/metadata/annotations/veleroforoadp14\", \"value\": \"${oadp_velero_14}\"},{\"op\": \"add\", \"path\": \"/metadata/annotations/veleroforoadp15\", \"value\": \"${oadp_velero_15}\"}]"
+        patch="[{\"op\": \"replace\", \"path\": \"/spec/unsupportedOverrides/veleroImageFqin\", \"value\":\"${image}\"}, {\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp14\", \"value\": \"${oadp_velero_14}\"},{\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp15\", \"value\": \"${oadp_velero_15}\"}]"
         [ -z "$DRY_RUN" ] && oc -n "$BR_NS" patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}"
         [ -n "$DRY_RUN" ] && oc -n "$BR_NS" patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/velero.patch.yaml
         echo "Velero Deployement is restarting with replacement image"
