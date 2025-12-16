@@ -1,6 +1,11 @@
 # Pod Resource Recommendation and Patch Tool
 
-This toolkit analyzes CPU and memory usage for pods in an OpenShift namespace using Prometheus metrics. It generates resource recommendations and provides scripts to apply those recommendations to Deployments, StatefulSets, and CSV-managed pods.
+This toolkit analyzes CPU and memory usage for pods in an OpenShift namespace using Prometheus metrics. It generates resource recommendations (currentky only recaomends the limit lower than the defualts and do not recomends highier limits) and provides scripts to apply those recommendations to Deployments, StatefulSets, and CSV-managed pods.
+
+> **Note:**  
+> The current version of this tool **only recommends reducing CPU and memory limits** when the configured limits are higher than the observed resource usage.  
+> It **does not recommend increasing CPU or memory limits beyond the default values**.
+
 
 ## Features
 
