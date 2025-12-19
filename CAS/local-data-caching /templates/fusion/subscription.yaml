@@ -1,0 +1,11 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: isf-operator
+  namespace: ${FUSION_NAMESPACE}
+spec:
+  channel: v2.0
+  name: ${FUSION_PACKAGE_NAME}
+  source: ${FUSION_CATALOG_NAME}
+  sourceNamespace: ${CATALOG_NAMESPACE}
+  installPlanApproval: ${INSTALL_STRATEGY}
