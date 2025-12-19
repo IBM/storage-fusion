@@ -1,0 +1,24 @@
+apiVersion: scale.spectrum.ibm.com/v1beta1
+kind: Filesystem
+metadata:
+  labels:
+    app.kubernetes.io/instance: ${SCALE_INSTANCE}
+    app.kubernetes.io/name: cluster
+  name: ${FILESYSTEM_NAME}
+  namespace: ${SCALE_NAMESPACE}
+spec:
+  local:
+    blockSize: 4M
+    pools:
+    - disks:
+      - disk0
+      - disk1
+      - disk2
+      name: system
+    replication: 1-way
+    type: shared
+  seLinuxOptions:
+    level: s0
+    role: object_r
+    type: container_file_t
+    user: system_u

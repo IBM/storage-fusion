@@ -1,0 +1,25 @@
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+  name: ${OCS_CLUSTER_NAME}
+  namespace: ${OCS_NAMESPACE}
+  annotations:
+    cluster.ocs.openshift.io/local-devices: "true"
+spec:
+  flexibleScaling: true
+  monDataDirHostPath: /var/lib/rook
+  resourceProfile: balanced
+  storageDeviceSets:
+    - count: ${NO_OF_OSDS}
+      dataPVCTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+          storageClassName: ${OCS_BACKING_STORAGECLASS}
+          volumeMode: Block
+      name: ocs-deviceset-localblock
+      portable: false
+      replica: 1

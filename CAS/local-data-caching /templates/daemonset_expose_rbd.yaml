@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: expose-ceph-rbd-block-devices
+  namespace: ${LOCAL_STORAGE_PROJECT}
+spec:
+  selector:
+    matchLabels:
+      app: expose-ceph-rbd-pvs
+  template:
+    metadata:
+      labels:
+        app: expose-ceph-rbd-pvs
+    spec:
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      volumes:
+        - name: pvc1
+          persistentVolumeClaim:
+            claimName: local-disk1
+        - name: pvc2
+          persistentVolumeClaim:
+            claimName: local-disk2
+        - name: pvc3
+          persistentVolumeClaim:
+            claimName: local-disk3
+      containers:
+        - name: pv-block-attacher
+          image: registry.access.redhat.com/ubi8/ubi
+          command: ["sleep", "infinity"]
+          volumeDevices:
+            - name: pvc1
+              devicePath: /dev/ceph-block1
+            - name: pvc2
+              devicePath: /dev/ceph-block2
+            - name: pvc3
+              devicePath: /dev/ceph-block3
+      restartPolicy: Always

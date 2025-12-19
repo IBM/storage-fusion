@@ -1,0 +1,27 @@
+apiVersion: service.isf.ibm.com/v1
+kind: FusionServiceInstance
+metadata:
+  name: ${SERVICE_NAME}
+  namespace: ${FUSION_NAMESPACE}
+spec:
+  creator: User
+  doInstall: true
+  parameters:
+    - name: namespace
+      provided: false
+      value: ${OCS_NAMESPACE}
+    - name: creator
+      provided: false
+      value: Fusion
+    - name: backingStorageType
+      provided: false
+      value: Provider
+    - name: autoUpgrade
+      provided: false
+      value: "true"
+    - name: enableLVMStorage
+      provided: false
+      value: "true"
+  serviceDefinition: data-foundation-service
+  triggerUpdate: false
+  updateServiceCRSpec: false

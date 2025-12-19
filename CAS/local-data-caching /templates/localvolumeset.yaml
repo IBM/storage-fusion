@@ -1,0 +1,19 @@
+apiVersion: local.storage.openshift.io/v1alpha1
+kind: LocalVolumeSet
+metadata:
+  name: ${OCS_BACKING_STORAGECLASS}
+  namespace: openshift-local-storage
+spec:
+  nodeSelector:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: node-role.kubernetes.io/worker
+            operator: Exists
+  storageClassName: ${OCS_BACKING_STORAGECLASS}
+  volumeMode: Block
+  deviceInclusionSpec:
+    deviceTypes:
+      - disk
+      - part
+    deviceMechanicalProperties:
+      - NonRotational

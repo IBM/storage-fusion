@@ -1,0 +1,18 @@
+apiVersion: service.isf.ibm.com/v1
+kind: FusionServiceInstance
+metadata:
+  name: ${SCALE_SERVICE_NAME}
+  namespace: ${HCI_FUSION_NAMESPACE}
+spec:
+  creator: User
+  doInstall: true
+  parameters:
+    - name: namespace
+      provided: false
+      value: ${HCI_FUSION_NAMESPACE}
+    - name: mode
+      provided: false
+      value: remote
+  serviceDefinition: global-data-platform-remote-mount-service
+  triggerUpdate: false
+  updateServiceCRSpec: false

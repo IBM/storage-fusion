@@ -1,0 +1,9 @@
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: isf-og
+  namespace: ${FUSION_NAMESPACE}
+spec:
+  targetNamespaces:
+    - ${FUSION_NAMESPACE}
+  upgradeStrategy: Default

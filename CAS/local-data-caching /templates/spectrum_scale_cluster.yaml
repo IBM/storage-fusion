@@ -1,0 +1,49 @@
+apiVersion: scale.spectrum.ibm.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    app.kubernetes.io/instance: ${SCALE_INSTANCE}
+    app.kubernetes.io/name: cluster
+  name: ${SCALE_NAMESPACE}
+spec:
+  daemon:
+    clusterNameOverride: ${CLUSTER_BASE_DOMAIN}
+    clusterProfile:
+      controlSetxattrImmutableSELinux: "yes"
+      enforceFilesetQuotaOnRoot: "yes"
+      ignorePrefetchLUNCount: "yes"
+      initPrefetchBuffers: "128"
+      maxTcpConnsPerNodeConn: "4"
+      maxblocksize: 16M
+      prefetchPct: "25"
+      prefetchTimeout: "30"
+    nodeSelector:
+      fusion.spectrum.ibm.com/node: ""
+    nsdDevicesConfig:
+      localDevicePaths:
+    tolerations:
+      - effect: NoSchedule
+        key: isf.ibm.com/noworkload
+        operator: Exists
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
+  gui:
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
+      - effect: NoSchedule
+        key: isf.ibm.com/noworkload
+        operator: Exists
+  pmcollector:
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
+      - effect: NoSchedule
+        key: isf.ibm.com/noworkload
+        operator: Exists
+  license:
+    accept: true
+    license: data-management
