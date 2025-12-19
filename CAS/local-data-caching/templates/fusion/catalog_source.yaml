@@ -1,0 +1,13 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: ${FUSION_CATALOG_NAME}
+  namespace: ${CATALOG_NAMESPACE}
+spec:
+  sourceType: grpc
+  image: ${FUSION_CATALOG_SOURCE_IMAGE}
+  displayName: IBM Fusion Operator Catalog
+  publisher: IBM
+  updateStrategy:
+    registryPoll:
+      interval: 45m
