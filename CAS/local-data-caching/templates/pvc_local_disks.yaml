@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-disk1
+  namespace: ${LOCAL_STORAGE_PROJECT}
+spec:
+  accessModes:
+    - ${LOCAL_DISK_PVC_ACCESS_MODE}
+  resources:
+    requests:
+      storage: ${FILESYSTEM_CAPACITY}
+  storageClassName: ${LOCAL_DISK_PVC_STORAGE_CLASS}
+  volumeMode: ${LOCAL_DISK_PVC_VOLUME_MODE}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-disk2
+  namespace: ${LOCAL_STORAGE_PROJECT}
+spec:
+  accessModes:
+    - ${LOCAL_DISK_PVC_ACCESS_MODE}
+  resources:
+    requests:
+      storage: ${FILESYSTEM_CAPACITY}
+  storageClassName: ${LOCAL_DISK_PVC_STORAGE_CLASS}
+  volumeMode: ${LOCAL_DISK_PVC_VOLUME_MODE}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-disk3
+  namespace: ${LOCAL_STORAGE_PROJECT}
+spec:
+  accessModes:
+    - ${LOCAL_DISK_PVC_ACCESS_MODE}
+  resources:
+    requests:
+      storage: ${FILESYSTEM_CAPACITY}
+  storageClassName: ${LOCAL_DISK_PVC_STORAGE_CLASS}
+  volumeMode: ${LOCAL_DISK_PVC_VOLUME_MODE}
