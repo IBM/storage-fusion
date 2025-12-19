@@ -1,0 +1,21 @@
+apiVersion: service.isf.ibm.com/v1
+kind: FusionServiceInstance
+metadata:
+  name: ${SERVICE_NAME}
+  namespace: ${FUSION_NAMESPACE}
+spec:
+  creator: User
+  doInstall: true
+  parameters:
+    - name: namespace
+      provided: false
+      value: ${CAS_NAMESPACE}
+    - name: doInstall
+      provided: false
+      value: "false"
+    - name: storageClass
+      provided: true
+      value: ${CAS_STORAGE_CLASS}
+  serviceDefinition: ibm-cas-service
+  triggerUpdate: false
+  updateServiceCRSpec: false
