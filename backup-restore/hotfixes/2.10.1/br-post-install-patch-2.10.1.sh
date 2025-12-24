@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes.
-HOTFIX_NUMBER=9
+HOTFIX_NUMBER=10
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -361,7 +361,7 @@ if [ -n "$HUB" ]; then
     jobmanager_img=cp.icr.io/cp/bnr/guardian-job-manager@sha256:c3265f3e16e326bbd0fe42ae5e36fbf92b1907ce5f37c79953c31c3733b6237a
     set_deployment_image job-manager job-manager-container ${jobmanager_img}
 
-    backupservice_img=cp.icr.io/cp/bnr/guardian-backup-service@sha256:e59760cea7f93ef3809071d00d340afed5c22eebb662d030139ebc20e2b10172
+    backupservice_img=cp.icr.io/cp/bnr/guardian-backup-service@sha256:a636ef2d9e1b1022cc5a74ca0d5972019aef95579ea673abd0c2acc8cc48b590
     set_deployment_image backup-service backup-service ${backupservice_img}
 
     patch_kafka_cr
@@ -371,8 +371,8 @@ if [ -n "$HUB" ]; then
     restart_deployments "$ISF_NS" isf-application-operator-controller-manager
 fi
 
-[ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:aba0aeee52dd7472b1628222f9e2250cff062501687bdd8c98fd3fad0f47f1cd
-[ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:94a9b349fea12e37c61836448b9840ac6beda6655649eb5d5b7db6c68e8bdfdc
+[ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:58d468ea4ac16e263aef4bbf3a8eb6d0fc14f9438d0dec0b99dbfd40ed8c287f
+[ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:25aa94788c2e387812a53b7c452ae05ef4bde72e6a1b60c4132bafdbea83eeec
 update_isf_operator_csv isf-operator.v2.10.1 "${isfdataprotection_img}"
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
