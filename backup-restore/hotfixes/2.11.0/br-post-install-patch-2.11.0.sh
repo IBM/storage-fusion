@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=5
+HOTFIX_NUMBER=6
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -109,8 +109,59 @@ fix_redis() {
     fi
 }
 
+update_kafka_topic_message_size() {
+    echo "Patching Kafka inventory, restore and delete-backup topics..."
+
+    patch='[{"op": "add", "path": "/spec/config/max.message.bytes", "value": "5242880"}]'
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}"
+        oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}"
+        oc -n "$BR_NS" patch KafkaTopic delete-backup --type='json' -p="${patch}"
+        echo "Patched Kafka topics"
+    else
+        oc -n "$BR_NS" patch KafkaTopic inventory --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/inventory-topic.patch.yaml
+        oc -n "$BR_NS" patch KafkaTopic restore --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/restore-topic.patch.yaml
+    fi
+}
+
+update_kafka_connection() {
+    echo "Setting Kafka message size properties in kafka-connection ConfigMap..."
+    patch='[{"op": "add", "path": "/data/max.request.size", "value": "5242880"}]'
+    if [ -z "$DRY_RUN" ]; then
+        oc -n "$BR_NS" patch configmap kafka-connection --type='json' -p="${patch}"
+    else
+        oc -n "$BR_NS" patch configmap kafka-connection --type='json' -p="${patch}" --dry-run=client -o yaml >$DIR/kafka-connection.patch.yaml
+    fi
+}
+
+update_tm_env() {
+    echo "Setting Kafka message size property in as TM env variable..."
+    message_size='MAX_REQUEST_SIZE=5242880'
+    if [ -z "$DRY_RUN" ]; then
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}"
+        oc set env -n "$BR_NS" deployment/dbr-controller "${message_size}"
+    else
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}" --dry-run=client -o yaml >$DIR/tm_env.patch.yaml
+        oc set env -n "$BR_NS" deployment/transaction-manager "${message_size}" --dry-run=client -o yaml >$DIR/dbr_env.patch.yaml
+    fi
+}
+
 get_oadp_version() {
-    oc get csv  -l operators.coreos.com/redhat-oadp-operator.${BR_NS} -o json | jq .items[0].spec.version
+    oc get csv  -l operators.coreos.com/redhat-oadp-operator.${BR_NS} -n "$BR_NS" -o json | jq .items[0].spec.version
+}
+
+set_deployment_image() {
+    name=$1
+    container=$2
+    image=$3
+    if (oc -n "$BR_NS" get deployment/"${name}" -o yaml >$DIR/"${name}".save.yaml); then
+        echo "Patching deployment/${name} image..."
+        [ -z "$DRY_RUN" ] && oc -n "$BR_NS" set image deployment/"${name}" "${container}"="${image}"
+        [ -n "$DRY_RUN" ] && oc -n "$BR_NS" set image deployment/"${name}" "${container}"="${image}" --dry-run=client -o yaml >$DIR/"${name}".patch.yaml
+        oc -n "$BR_NS" rollout status --timeout=65s deployment/"${name}"
+    else
+        echo "ERROR: Failed to save original deployment/${name}. Skipped updates."
+    fi
 }
 
 set_velero_image() {
@@ -132,6 +183,54 @@ set_velero_image() {
     fi
 }
 
+update_isf_operator_csv() {
+    name=$1
+    image=$2
+    if (oc get csv -n "$ISF_NS" "$name" -o yaml >$DIR/"$name".save.yaml); then
+        echo "Scaling down isf-data-protection-operator-controller-manager deployment..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$ISF_NS" isf-data-protection-operator-controller-manager --replicas=0
+
+        echo "Patching clusterserviceversion/$name..."
+        index=$(oc get csv -n "$ISF_NS" "$name" -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
+        patch="[{\"op\":\"replace\", \"path\":\"/spec/install/spec/deployments/${index}/spec/template/spec/containers/0/image\", \"value\":\"${image}\"}]"
+
+        [ -z "$DRY_RUN" ] && oc patch csv -n "$ISF_NS" "$name" --type='json' -p "${patch}"
+        [ -n "$DRY_RUN" ] && oc patch csv -n "$ISF_NS" "$name" --type='json' -p "${patch}" --dry-run=client -o yaml >$DIR/"$name".patch.yaml
+
+        echo "Scaling up isf-data-protection-operator-controller-manager deployment..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$ISF_NS" isf-data-protection-operator-controller-manager --replicas=1
+    else
+        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
+    fi
+}
+
+# restart_deployments restarts all the deployments that are provided and waits for them to reach the Available state.
+# Arguments:
+#   $1: Namespace of deployments
+#   ${@:2}: List of deployments
+restart_deployments() {
+    DEPLOYMENT_NAMESPACE=${1}
+    DEPLOYMENTS=("${@:2}")
+    VALID_DEPLOYMENTS=()
+
+    if [ -n "$DRY_RUN" ]; then
+     return
+    fi
+
+    for deployment in "${DEPLOYMENTS[@]}"; do
+        if oc -n "$DEPLOYMENT_NAMESPACE" get deployment "${deployment}" &> /dev/null; then
+            VALID_DEPLOYMENTS+=("$deployment")
+        fi
+    done
+    echo "Restarting deployments ${VALID_DEPLOYMENTS[@]}"
+    for deployment in ${VALID_DEPLOYMENTS[@]}; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout restart deployment "$deployment"
+    done
+    for deployment in ${VALID_DEPLOYMENTS[@]}; do
+        oc -n "$DEPLOYMENT_NAMESPACE" rollout status deployment "$deployment"
+    done
+}
+
 REQUIREDCOMMANDS=("oc" "jq")
 echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
 for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
@@ -143,6 +242,12 @@ for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
 done
 
 oc whoami > /dev/null || ( echo "Not logged in to your cluster" ; exit 1)
+
+ISF_NS=$(oc get spectrumfusion -A -o custom-columns=NS:metadata.namespace --no-headers)
+if [ -z "$ISF_NS" ]; then
+    echo "ERROR: No Successful Fusion installation found. Exiting."
+    exit 1
+fi
 
 BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
 if [ -n "$BR_NS" ]
@@ -171,16 +276,28 @@ fi
 
 if [ -n "$HUB" ]; then
     fix_redis
+
+    update_kafka_topic_message_size
+    update_kafka_connection
+
+    jobmanager_img=cp.icr.io/cp/bnr/guardian-job-manager@sha256:62fb326d26758d531f1912bd28238468f616553dfec99e2d704729f6caf39349
+    set_deployment_image job-manager job-manager-container ${jobmanager_img}
+
+    backupservice_img=cp.icr.io/cp/bnr/guardian-backup-service@sha256:6517b55c0c3ab8aa44f2e5cc4554ee3efb49211f7eb8840623c4160076485611
+    set_deployment_image backup-service backup-service ${backupservice_img}
+
+    restart_deployments "$BR_NS" applicationsvc 
+
 fi
 
-if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
-then
-    echo "Patching deployment/transaction-manager image..."
-    oc set image deployment/transaction-manager --namespace $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:6465fadda4ca4402d098932d68563209ecfcc6ca7aa3e5accee02be98e4404dd
-    oc rollout status --namespace $BR_NS --timeout=65s deployment/transaction-manager
-else
-    echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
-fi
+[ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:63bdb2f47b02366fe39f98bb5d811878b44feed235bca22e0f16586a387c9a80
+[ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:bdfe6ba1101d1de4dab81e513b2f4c7492da19b26186d20ee58d955689cb0be3
+update_isf_operator_csv isf-operator.v2.11.0 "${isfdataprotection_img}"
+
+update_tm_env
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:ded5bef2f272b16d7749fd4aac7cfe0eaf5f84c94d05b20bfcbd441612b686f9
+set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
+set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
 # update oadp velero
 oadp_velero_14=cp.icr.io/cp/bnr/fbr-velero@sha256:1fd0dc018672507b24148a0fe71e69f91ab31576c7fa070c599d7a446b5095aa
@@ -191,5 +308,14 @@ set_velero_image ${oadp_velero_14} ${oadp_velero_15}
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
 
-echo "Please verify that these pods have successfully restarted after hotfix update in their corresponding namespace:"
-printf "  %-25s: %s\n" "$BR_NS" "transaction-manager"
+echo "Please verify that the pods for the following deployment have successfully restarted:"
+if [ -n "$HUB" ]; then
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "job-manager"
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-service"
+    printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "applicationsvc"
+    
+fi
+
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
+printf "  %-${#ISF_NS}s: %s\n" "$ISF_NS" "isf-data-protection-operator-controller-manager"
