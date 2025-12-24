@@ -4,3 +4,9 @@ This hotfix fixes the following Backup & Restore issues:
     2.  Fix KeyError while accessing intrinsic variable APP.namespace.name during restore.(Issue: 60235)
     3.  Redis certificate expiration causes jobs to fail (Issue: 59690)
     4.  OADP datamover Pods get assigned to a node without the backup volumes when PV topology is a subset of the StorageClass topology with StorageClass field volumeBindingMode: WaitForFirstConsumer (Issue: 62485)
+    5.  Restore fails with error Backup inventory info not returned from application service for applicationId (#59191)
+    6.  Unable to restore pre 2.9 backup with 2.10.* (61073)
+    7.  Backup fails intermittently with error Hit exception during "group/rg" : argument of type 'NoneType' is not iterable (61235, 62741))
+    8.  Jobs taking long to go from CancelPending to Cancelled state (61518)
+    9.  Alert triggered for old backup job completion (62403)
+    
