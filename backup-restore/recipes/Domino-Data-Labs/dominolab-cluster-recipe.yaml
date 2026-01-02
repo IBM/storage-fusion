@@ -15,6 +15,7 @@ spec:
     essential: false
     includedNamespaces:
     - domino-compute
+    labelSelector: dominodatalab.com/workload-type notin (Scheduled),dominodatalab.com/workload-type notin (App)
   - name: namespace-resources
     type: resource
     includedNamespaces:
