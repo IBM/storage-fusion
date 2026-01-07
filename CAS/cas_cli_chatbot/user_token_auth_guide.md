@@ -318,7 +318,7 @@ Automatic refresh when token expires.
 # Keycloak configuration for password grant
 keycloak_url: "http://keycloak-server/realms/master/protocol/openid-connect/token"
 client_id: "myapp"
-client_secret: "some-secret"
+client_secret: "mysecret"
 
 # Console URL for OCP
 console_url: "https://console-openshift-console.apps.your-cluster.com"
