@@ -45,48 +45,7 @@ This repository will host  the following categories of artifacts that can be use
 * [Upgrading IBM Spectrum Fusion 2.2.1 HCI to version 2.3.0](https://community.ibm.com/community/user/storage/blogs/anshu-garg/2022/10/19/upgrading-ibm-spectrum-fusion-221-hci-to-version-2?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
 
 ### Blogs related to IBM Storage Fusion Backup and Restore ###
-
-* [How IBM Storage Fusion Simplifies Backup and Recovery of Complex OpenShift Applications - Part 1 "So Why is this Complex?"](https://community.ibm.com/community/user/storage/blogs/jim-smith/2023/07/27/ibm-storage-fusion-backup-restore-recipe-1?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [How IBM Storage Fusion Simplifies Backup and Recovery of Complex OpenShift Applications - Part 2 "Orchestrations and Recipes"](https://community.ibm.com/community/user/storage/blogs/jim-smith/2023/08/01/how-ibm-storage-fusion-simplifies-backup-and-recov?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [How IBM Storage Fusion Simplifies Backup and Recovery of Complex OpenShift Applications - Part 3 “A Deeper Dive into Recipes"](https://community.ibm.com/community/user/storage/blogs/jim-smith/2023/08/04/how-ibm-storage-fusion-simplifies-backup-and-recov?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - How to Identify All Resources of an Application](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2024/01/21/identify-application-resources-for-backup-and-reco?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - Specify resources for backup and restore workflows](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2024/02/14/fusion-recipe-tips-specify-resources-for-backup-an?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - Using hooks](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2024/02/22/fusion-recipe-tips-using-hooks?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - Writing Your First Recipe](https://community.ibm.com/community/user/blogs/jim-smith/2024/02/28/fusion-recipe-tips-first-recipe)
-
-* [Fusion Recipe Tips - Keeping Database Credentials a Secret](https://community.ibm.com/community/user/blogs/ashish-gupta/2024/03/05/fusion-recipe-tips-keeping-database-credentials-a?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - I Didn’t Use a Recipe on Backup and My Application Won’t recover - What Can I Do?](https://community.ibm.com/community/user/blogs/jim-smith/2024/03/13/fusion-recipe-tips-no-backup-recipe?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - Running K8 or OpenShift commands during data protection workflows](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2024/03/23/fusion-recipe-tips-running-k8-or-openshift-command?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - How Can I Make My Recipe More Globally Applicable](https://community.ibm.com/community/user/blogs/ashish-gupta/2024/03/25/fusion-recipe-tips-keeping-database-credentials-a?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - How to undo an operation in case of a failure in the Recipe workflow](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2024/04/05/fusion-recipe-tips-how-to-undo-an-operation-in-cas?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - Protecting cluster-scoped resources](https://community.ibm.com/community/user/blogs/jim-smith/2024/04/12/fusion-recipe-tips?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips - How can I protect the OpenShift image registry using Fusion Recip](https://community.ibm.com/community/user/blogs/ashish-gupta/2024/04/17/fusion-recipe-tips-keeping-database-credentials-a?CommunityKey=e596ba82-cd57-4fae-8042-163e59279ff3)
-
-* [Fusion Recipe Tips: Dynamic Recipe](https://community.ibm.com/community/user/blogs/ashish-gupta/2025/06/04/fusion-dynamic-recipe)
-  
-* [How to make use of Fusion Job hooks?](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/06/12/how-to-make-use-of-fusion-job-hooks)
-  
-* [Using Fusion Label and Annotation Hooks](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/06/12/using-fusion-label-and-annotation-hooks)
-  
-* [How to write Fusion Recipe Check Hook?](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/06/12/how-to-write-fusion-recipe-check-hook-condition-st)
-
-* [Resources Transformation - Fusion Backup & Restore](https://community.ibm.com/community/user/blogs/ashish-gupta/2025/08/12/resources-transformation-fusion)
-
-* [Fusion Recipe: Parallel workflow execution](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/09/05/fusion-recipe-parallel-workflow-execution)
-
-* [Fusion Backup and Restore considerations for Applications with Webhooks](https://community.ibm.com/community/user/blogs/sandeep-prajapati/2025/11/27/fusion-backup-and-restore-considerations-for-appli)
+Refer [this](./backup-restore/recipes/README.md) page.
 
 Watch out this space for tools where we can mirror images for IBM Spectrum Fusion and also validate the same.
 
