@@ -161,7 +161,7 @@ configure_fdf() {
 	while true; do
 		local no_of_disks
 		no_of_disks=$(oc get localvolumeset ${OCS_BACKING_STORAGECLASS} -n openshift-local-storage \
-			-o jsonpath='{.status.totalProvisionedDeviceCount}' 2> ${STDERR_OUT})
+			-o jsonpath='{.status.totalProvisionedDeviceCount}' 2>/dev/null)
 		if [[ "$no_of_disks" -gt 0 ]]; then
 			logger success "LocalVolumeSet ${OCS_BACKING_STORAGECLASS} provisioned $no_of_disks PVs."
 			export NO_OF_OSDS="$no_of_disks"
