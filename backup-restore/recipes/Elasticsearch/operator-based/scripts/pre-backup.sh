@@ -109,4 +109,9 @@ jq --arg instance "$ELASTIC_INSTANCE" '
 echo "============>  fapp '$ELASTIC_NAMESPACE' updated with variable ELASTIC_INSTANCE=$ELASTIC_INSTANCE"
 
 
+# Add elasticsearch permissions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/permissions.sh"
+elasticsearch_permissions
+
 echo "All steps completed successfully."
