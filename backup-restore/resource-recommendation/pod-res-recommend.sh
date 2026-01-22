@@ -13,14 +13,12 @@ Options (mutually exclusive):
   --cpu-only           Only evaluate CPU
   --mem-only           Only evaluate Memory
   --force              Include all running pods, ignoring 24h age filter
+  --insecure-tls       Skip TLS verification for Prometheus connection
 
 Outputs:
   - Excel report with Current vs New recommendations
   - Console table summary
 
-Rules:
-  - Requests: usage < 50% of request → cut to 50%
-  - Limits:   usage < 50% of limit → cut to 75%
   
 EOF
 }
@@ -35,6 +33,36 @@ if [[ -z "$NS" ]]; then
 fi
 
 DURATION=15d
+KEEP_TMP=${KEEP_TMP:-false}
+INSECURE_PROM=${INSECURE_PROM:-false}
+
+
+
+# --- Tuning knobs (do not affect output format; only recommendation safety) ---
+THR_P95_BAD=${THR_P95_BAD:-0.10}
+THR_MAX_BAD=${THR_MAX_BAD:-0.20}
+
+# --- Sidecar floors (kube-rbac-proxy) ---
+RBAC_CPU_FLOOR=${RBAC_CPU_FLOOR:-0.05}      # cores (50m)
+RBAC_CPU_LIM_MIN=${RBAC_CPU_LIM_MIN:-0.20}  # cores (200m)
+RBAC_MEM_FLOOR=${RBAC_MEM_FLOOR:-0.064}     # Gi (64Mi)
+RBAC_MEM_LIM_MIN=${RBAC_MEM_LIM_MIN:-0.128} # Gi (128Mi)
+RBAC_CPU_REQ_HEADROOM=${RBAC_CPU_REQ_HEADROOM:-1.20}
+RBAC_CPU_LIM_MULT=${RBAC_CPU_LIM_MULT:-2.0}
+RBAC_MEM_REQ_HEADROOM=${RBAC_MEM_REQ_HEADROOM:-1.10}
+RBAC_MEM_LIM_MULT=${RBAC_MEM_LIM_MULT:-1.50}
+RBAC_MEM_OOM_MULT=${RBAC_MEM_OOM_MULT:-2.0}
+
+CPU_REQ_HEADROOM=${CPU_REQ_HEADROOM:-1.30}
+CPU_LIM_HEADROOM=${CPU_LIM_HEADROOM:-1.25}
+CPU_LIM_REQ_MULT=${CPU_LIM_REQ_MULT:-1.50}
+
+MEM_REQ_HEADROOM=${MEM_REQ_HEADROOM:-1.10}
+MEM_LIM_HEADROOM=${MEM_LIM_HEADROOM:-1.30}
+MEM_LIM_REQ_MULT=${MEM_LIM_REQ_MULT:-1.50}
+MEM_OOM_MULT=${MEM_OOM_MULT:-2.0}
+MEM_PRESSURE_P95=${MEM_PRESSURE_P95:-0.85}
+
 
 # --- Resource selection ---
 RESOURCES="cpu,memory"
@@ -54,6 +82,7 @@ for arg in "$@"; do
     -f|--force)
       FORCE=1
       ;;
+    --insecure-tls|--insecure-skip-tls-verify) INSECURE_PROM="true" ;;
   esac
 done
 
@@ -153,41 +182,218 @@ PF_LOG="/tmp/pf_prome.log"
 TMPDIR="/tmp/podres_$(date +%s)"
 mkdir -p "$TMPDIR"
 
-echo "[INFO] Starting port-forward to Prometheus pod $PROM_POD in namespace $PROM_NS..."
-oc -n "$PROM_NS" port-forward "$PROM_POD" 9090:9090 >"$PF_LOG" 2>&1 &
-PF_PID=$!
-trap "kill $PF_PID >/dev/null 2>&1 || true; wait $PF_PID 2>/dev/null || true; rm -rf $TMPDIR" EXIT
+# echo "[INFO] Starting port-forward to Prometheus pod $PROM_POD in namespace $PROM_NS..."
+# oc -n "$PROM_NS" port-forward "$PROM_POD" 9090:9090 >"$PF_LOG" 2>&1 &
+# PF_PID=$!
+# trap "kill $PF_PID >/dev/null 2>&1 || true; wait $PF_PID 2>/dev/null || true;" EXIT
 
-for i in {1..30}; do
-  if curl -sS http://localhost:9090/-/ready >/dev/null 2>&1; then
-    echo "Port-forward established (PID=$PF_PID)"
-    break
+# for i in {1..30}; do
+#   if curl -sS http://localhost:9090/-/ready >/dev/null 2>&1; then
+#     echo "Port-forward established (PID=$PF_PID)"
+#     break
+#   fi
+#   sleep 1
+# done
+
+
+
+cleanup() {
+  if [[ "${PF_PID:-}" != "" ]]; then
+    kill "$PF_PID" >/dev/null 2>&1 || true
   fi
-  sleep 1
-done
+  if [[ "$KEEP_TMP" != "true" ]]; then
+    rm -rf "$TMPDIR" >/dev/null 2>&1 || true
+  else
+    echo "[INFO] Keeping tmpdir: $TMPDIR"
+  fi
+}
+trap cleanup EXIT
+
+# --- Prometheus connection ---
+PROM_URL=""
+PROM_TOKEN=""
+
+# Prefer OpenShift monitoring route if present
+if oc -n openshift-monitoring get route prometheus-k8s >/dev/null 2>&1; then
+  host="$(oc -n openshift-monitoring get route prometheus-k8s -o jsonpath='{.spec.host}')"
+  PROM_URL="https://${host}"
+  PROM_TOKEN="$(oc whoami -t)"
+  echo "[CONN] Using OpenShift Prometheus Route: $PROM_URL"
+else
+  echo "[CONN] Route not found. Using port-forward to prometheus-k8s-0 (openshift-monitoring)"
+  # If prometheus-k8s-0 doesn't exist, user likely lacks access. Fail loudly.
+  if ! oc -n openshift-monitoring get pod prometheus-k8s-0 >/dev/null 2>&1; then
+    echo "[ERR] Cannot find prometheus-k8s-0 in openshift-monitoring and route not available."
+    echo "      Provide access to openshift-monitoring or create the route."
+    exit 1
+  fi
+  # find free local port
+  for p in 9090 19090 29090 39090; do
+    if ! nc -z 127.0.0.1 "$p" >/dev/null 2>&1; then
+      LPORT="$p"; break
+    fi
+  done
+  : "${LPORT:=9090}"
+  oc -n openshift-monitoring port-forward pod/prometheus-k8s-0 "${LPORT}:9090" >/dev/null 2>&1 &
+  PF_PID=$!
+  PROM_URL="http://127.0.0.1:${LPORT}"
+  PROM_TOKEN="$(oc whoami -t)"
+  echo "[CONN] Port-forward pid=$PF_PID URL=$PROM_URL"
+fi
 
 # --- Prometheus queries ---
-query_to_tsv() {
-  local q="$1"; local out="$2"
+# query_to_tsv() {
+#   local q="$1"; local out="$2"
   
-  curl -sG --compressed --max-time 120 "http://localhost:9090/api/v1/query" \
-    --data-urlencode "query=$q" \
-  | jq -r '.data.result[]? | [.metric.pod, .metric.container, .value[1]] | @tsv' > "$out" || true
+#   curl -sG --compressed --max-time 120 "http://localhost:9090/api/v1/query" \
+#     --data-urlencode "query=$q" \
+#   | jq -r '.data.result[]? | [.metric.pod, .metric.container, .value[1]] | @tsv' > "$out" || true
+# }
 
+query_to_tsv() {
+  local q="$1"
+  local out="$2"
+  local curl_log="${out}.curl.log"
+  local json_out="${out}.json"
+  local rc=0
+
+  if [[ "$PROM_URL" == https://* && "${INSECURE_PROM}" == "true" ]]; then
+    echo "[WARN] INSECURE_PROM=true → TLS certificate verification is DISABLED for Prometheus"
+    curl -sS -k \
+      --connect-timeout 10 \
+      --max-time 60 \
+      -H "Authorization: Bearer ${PROM_TOKEN}" \
+      --get --data-urlencode "query=${q}" \
+      "${PROM_URL}/api/v1/query" \
+      -o "$json_out" 2> "$curl_log" || rc=$?
+  else
+    curl -sS \
+      --connect-timeout 10 \
+      --max-time 60 \
+      -H "Authorization: Bearer ${PROM_TOKEN}" \
+      --get --data-urlencode "query=${q}" \
+      "${PROM_URL}/api/v1/query" \
+      -o "$json_out" 2> "$curl_log" || rc=$?
+  fi
+
+  if [[ $rc -ne 0 ]]; then
+    echo "[ERROR] curl failed (rc=$rc) for query:" >&2
+    echo "        $q" >&2
+    echo "[ERROR] curl log ($curl_log):" >&2
+    sed -n '1,200p' "$curl_log" >&2 || true
+    return $rc
+  fi
+
+  if ! jq -e '.status=="success"' "$json_out" >/dev/null 2>&1; then
+    echo "[WARN] Prometheus query did not succeed" >&2
+    echo "[WARN] Response:" >&2
+    sed -n '1,200p' "$json_out" >&2 || true
+    return 1
+  fi
+
+  # Convert to TSV: namespace, pod, container, value
+  jq -r '
+    .data.result[]
+    | .metric as $m
+    | [
+        ($m.namespace // $m.kubernetes_namespace // ""),
+        ($m.pod // $m.pod_name // ""),
+        ($m.container // $m.container_name // ""),
+        (.value[1] // "0")
+      ]
+    | @tsv
+  ' "$json_out" > "$out"
 }
 
-CPU_F="$TMPDIR/cpu.tsv"; MEM_F="$TMPDIR/mem.tsv"; FS_F="$TMPDIR/fs.tsv"
+CPU_F="$TMPDIR/cpu.tsv"; CPU_P95_F="$TMPDIR/cpu_p95.tsv"; MEM_F="$TMPDIR/mem.tsv"; MEM_P95_F="$TMPDIR/mem_p95.tsv"; FS_F="$TMPDIR/fs.tsv"; THR_MAX_F="$TMPDIR/cpu_throttle_max.tsv"; THR_P95_F="$TMPDIR/cpu_throttle_p95.tsv"; OOM_F="$TMPDIR/oom.tsv"; RESTART_F="$TMPDIR/restarts.tsv"
 
 echo "[INFO] Querying Prometheus..."
 if [[ "$RESOURCES" == *cpu* ]]; then
-  CPU_USAGE_Q='max by (pod,container) (max_over_time(rate(container_cpu_usage_seconds_total{namespace="'"$NS"'",container!="",container!="POD"}[5m])['"$DURATION"':]))'
+  # CPU max usage (kept for CPU_Use column)
+  CPU_USAGE_Q='max by (pod,container) (
+    max_over_time(
+      rate(container_cpu_usage_seconds_total{namespace="'"$NS"'",container!="",container!="POD",image!=""}[5m])
+    ['"$DURATION"':5m])
+  )'
   query_to_tsv "$CPU_USAGE_Q" "$CPU_F"
+
+  # CPU P95 (used for request sizing logic)
+  CPU_P95_Q='max by (pod,container) (
+    quantile_over_time(
+      0.95,
+      rate(container_cpu_usage_seconds_total{namespace="'"$NS"'",container!="",container!="POD",image!=""}[5m])
+    ['"$DURATION"':5m])
+  )'
+  query_to_tsv "$CPU_P95_Q" "$CPU_P95_F"
+
+  # CPU throttling ratio (MAX) = burst/startup-ish starvation indicator
+  CPU_THR_MAX_Q='max by (pod,container) (
+    max_over_time(
+      (
+        rate(container_cpu_cfs_throttled_periods_total{namespace="'"$NS"'",container!="",container!="POD",image!=""}[5m])
+        /
+        clamp_min(rate(container_cpu_cfs_periods_total{namespace="'"$NS"'",container!="",container!="POD",image!=""}[5m]), 1)
+      )
+    ['"$DURATION"':5m])
+  )'
+  query_to_tsv "$CPU_THR_MAX_Q" "$THR_MAX_F"
+
+  # CPU throttling ratio (P95) = steady-state starvation indicator
+  CPU_THR_P95_Q='max by (pod,container) (
+    quantile_over_time(
+      0.95,
+      max by (pod, container)(
+        rate(container_cpu_cfs_throttled_periods_total{namespace="'"$NS"'",container!="",container!="POD",image!=""}[5m])
+        /
+        clamp_min(rate(container_cpu_cfs_periods_total{namespace="'"$NS"'",container!="",container!="POD",image!=""}[5m]), 1)
+      )
+    ['"$DURATION"':5m])
+  )'
+  query_to_tsv "$CPU_THR_P95_Q" "$THR_P95_F"
 fi
 
 if [[ "$RESOURCES" == *memory* ]]; then
-  MEM_USAGE_Q='max by (pod,container) (max_over_time(container_memory_working_set_bytes{namespace="'"$NS"'",container!="",container!="POD"}['"$DURATION"':]))'
+  # Memory max working set (kept for Mem_Use column)
+  MEM_USAGE_Q='max by (pod,container) (
+    max_over_time(
+      container_memory_working_set_bytes{namespace="'"$NS"'",container!="",container!="POD",image!=""}
+    ['"$DURATION"':5m])
+  )'
   query_to_tsv "$MEM_USAGE_Q" "$MEM_F"
+
+  # Memory P95 working set (used for request sizing logic)
+  MEM_P95_Q='max by (pod,container) (
+    quantile_over_time(
+      0.95,
+      container_memory_working_set_bytes{namespace="'"$NS"'",container!="",container!="POD",image!=""}
+    ['"$DURATION"':5m])
+  )'
+  query_to_tsv "$MEM_P95_Q" "$MEM_P95_F"
+
+  # OOM indicator in-range (more reliable than last_terminated_reason alone)
+  # OOM=1 only if:
+  #   - last terminated reason shows OOMKilled at least once in the window AND
+  #   - there was at least one restart in the window
+  OOM_Q='max by (pod,container) (
+    (
+      max_over_time(
+        kube_pod_container_status_last_terminated_reason{namespace="'"$NS"'",reason="OOMKilled"}['"$DURATION"':5m]
+      )
+    )
+    *
+    (
+      increase(kube_pod_container_status_restarts_total{namespace="'"$NS"'"}['"$DURATION"']) > 0
+    )
+  )'
+  query_to_tsv "$OOM_Q" "$OOM_F"
+
+  # Restarts count over range
+  RESTART_Q='sum by (pod,container) (
+    increase(kube_pod_container_status_restarts_total{namespace="'"$NS"'"}['"$DURATION"'])
+  )'
+  query_to_tsv "$RESTART_Q" "$RESTART_F"
 fi
+
 
 if [[ "$RESOURCES" == *ephemeral* ]]; then
   FS_USAGE_Q='max by (pod,container) (max_over_time(container_fs_usage_bytes{namespace="'"$NS"'",container!="",container!="POD"}['"$DURATION"':]))'
@@ -203,7 +409,7 @@ XLSX="/tmp/usage_report_${NS}_${DURATION}.xlsx"
 PATCH_FILE="/tmp/pods_to_patch_${NS}.json"
 
 # --- Python analysis ---
-RESOURCES="$RESOURCES" NS="$NS" CPU_F="$CPU_F" MEM_F="$MEM_F" FS_F="$FS_F" PODS_JSON="$PODS_JSON" XLSX="$XLSX" PATCH_FILE="$PATCH_FILE" FORCE="$FORCE" "$PYTHON_EXEC" - <<'PYEOF'
+RESOURCES="$RESOURCES" NS="$NS" CPU_F="$CPU_F" CPU_P95_F="$CPU_P95_F" MEM_F="$MEM_F" MEM_P95_F="$MEM_P95_F" FS_F="$FS_F" THR_MAX_F="$THR_MAX_F" THR_P95_F="$THR_P95_F" OOM_F="$OOM_F" RESTART_F="$RESTART_F" PODS_JSON="$PODS_JSON" XLSX="$XLSX" PATCH_FILE="$PATCH_FILE" FORCE="$FORCE" THR_P95_BAD="$THR_P95_BAD" THR_MAX_BAD="$THR_MAX_BAD" CPU_REQ_HEADROOM="$CPU_REQ_HEADROOM" CPU_LIM_HEADROOM="$CPU_LIM_HEADROOM" MEM_REQ_HEADROOM="$MEM_REQ_HEADROOM" MEM_LIM_HEADROOM="$MEM_LIM_HEADROOM" MEM_LIM_REQ_MULT="$MEM_LIM_REQ_MULT" MEM_PRESSURE_P95="$MEM_PRESSURE_P95" RBAC_CPU_FLOOR="$RBAC_CPU_FLOOR" RBAC_CPU_LIM_MIN="$RBAC_CPU_LIM_MIN" RBAC_MEM_FLOOR="$RBAC_MEM_FLOOR" RBAC_MEM_LIM_MIN="$RBAC_MEM_LIM_MIN" RBAC_CPU_REQ_HEADROOM="$RBAC_CPU_REQ_HEADROOM" RBAC_CPU_LIM_MULT="$RBAC_CPU_LIM_MULT" RBAC_MEM_REQ_HEADROOM="$RBAC_MEM_REQ_HEADROOM" RBAC_MEM_LIM_MULT="$RBAC_MEM_LIM_MULT" RBAC_MEM_OOM_MULT="$RBAC_MEM_OOM_MULT" CPU_LIM_REQ_MULT="$CPU_LIM_REQ_MULT" MEM_OOM_MULT="$MEM_OOM_MULT" "$PYTHON_EXEC" - <<'PYEOF'
 import sys, pandas as pd, numpy as np, json, os, re, math, datetime
 from tabulate import tabulate
 if sys.version_info < (3,7):
@@ -217,11 +423,69 @@ selected = set(os.environ.get("RESOURCES", "cpu,memory,ephemeral").split(","))
 XLSX       = os.environ.get("XLSX")
 PATCH_FILE = os.environ.get("PATCH_FILE")
 CPU_F      = os.environ.get("CPU_F")
+CPU_P95_F  = os.environ.get("CPU_P95_F")
+THR_MAX_F  = os.environ.get("THR_MAX_F")
+THR_P95_F  = os.environ.get("THR_P95_F")
+
 MEM_F      = os.environ.get("MEM_F")
+MEM_P95_F  = os.environ.get("MEM_P95_F")
+OOM_F      = os.environ.get("OOM_F")
+RESTART_F  = os.environ.get("RESTART_F")
+
 FS_F       = os.environ.get("FS_F")
 PODS_JSON  = os.environ.get("PODS_JSON")
 NS_NAME    = os.environ.get("NS")
 FORCE      = os.environ.get("FORCE", "0").lower() in ("1","true","yes","y")
+
+# Tuning knobs (passed from shell; defaults match common SRE practice)
+def env_float(name, default):
+    try:
+        return float(os.environ.get(name, default))
+    except Exception:
+        return float(default)
+
+# ---- Throttling & pressure thresholds ----
+THR_P95_BAD        = env_float("THR_P95_BAD", 0.10)
+THR_MAX_BAD        = env_float("THR_MAX_BAD", 0.20)
+
+MEM_PRESSURE_P95  = env_float("MEM_PRESSURE_P95", 0.85)
+MEM_OOM_MULT      = env_float("MEM_OOM_MULT", 2.0)
+
+# ---- Application container policy ----
+
+# CPU
+APP_CPU_FLOOR          = env_float("APP_CPU_FLOOR", 0.05)     # 50m
+APP_CPU_LIM_MIN        = env_float("APP_CPU_LIM_MIN", 0.10)   # 100m
+APP_CPU_REQ_HEADROOM   = env_float("APP_CPU_REQ_HEADROOM", 1.20)
+APP_CPU_LIM_REQ_MULT   = env_float("APP_CPU_LIM_REQ_MULT", 1.50)
+APP_CPU_BURST_MULT     = env_float("APP_CPU_BURST_MULT", 2.00)
+
+# Memory
+APP_MEM_FLOOR          = env_float("APP_MEM_FLOOR", 0.064)    # 64Mi
+APP_MEM_LIM_MIN        = env_float("APP_MEM_LIM_MIN", 0.128)  # 128Mi
+APP_MEM_REQ_HEADROOM   = env_float("APP_MEM_REQ_HEADROOM", 1.10)
+APP_MEM_LIM_REQ_MULT   = env_float("APP_MEM_LIM_REQ_MULT", 1.50)
+APP_MEM_LIM_HEADROOM   = env_float("APP_MEM_LIM_HEADROOM", 1.30)
+
+# ---- Proxy / sidecar policy (latency-critical) ----
+
+# CPU
+PROXY_CPU_FLOOR        = env_float("PROXY_CPU_FLOOR", 0.10)    # 100m
+PROXY_CPU_LIM_MIN      = env_float("PROXY_CPU_LIM_MIN", 0.20)  # 200m
+PROXY_CPU_REQ_HEADROOM = env_float("PROXY_CPU_REQ_HEADROOM", 1.10)
+PROXY_CPU_LIM_REQ_MULT = env_float("PROXY_CPU_LIM_REQ_MULT", 2.00)
+PROXY_CPU_BURST_MULT   = env_float("PROXY_CPU_BURST_MULT", 2.50)
+PROXY_THR_SEVERE       = env_float("PROXY_THR_SEVERE", 0.20)
+
+# Memory
+PROXY_MEM_FLOOR        = env_float("PROXY_MEM_FLOOR", 0.128)   # 128Mi
+PROXY_MEM_LIM_MIN      = env_float("PROXY_MEM_LIM_MIN", 0.256) # 256Mi
+PROXY_MEM_REQ_HEADROOM = env_float("PROXY_MEM_REQ_HEADROOM", 1.10)
+PROXY_MEM_LIM_REQ_MULT = env_float("PROXY_MEM_LIM_REQ_MULT", 1.50)
+PROXY_MEM_LIM_HEADROOM = env_float("PROXY_MEM_LIM_HEADROOM", 1.30)
+PROXY_MEM_OOM_MULT     = env_float("PROXY_MEM_OOM_MULT", 2.0)
+
+
 
 now_utc = datetime.datetime.now(datetime.timezone.utc)
 min_age = now_utc - datetime.timedelta(days=15)   # oldest allowed (≤ 15d old)
@@ -409,23 +673,42 @@ cpu = load(CPU_F, "CPU_Use") if "cpu" in selected else pd.DataFrame(columns=["Po
 mem = load(MEM_F, "Mem_Use") if "memory" in selected else pd.DataFrame(columns=["Pod","Container","Mem_Use"])
 fs  = load(FS_F,  "Eph_Use") if "ephemeral" in selected else pd.DataFrame(columns=["Pod","Container","Eph_Use"])
 
+# --- Additional signals (do not change output columns; used only for safer recommendations) ---
+cpu_p95 = load(CPU_P95_F, "CPU_P95") if "cpu" in selected else pd.DataFrame(columns=["Pod","Container","CPU_P95"])
+thr_max = load(THR_MAX_F, "CPU_Thr_Max") if "cpu" in selected else pd.DataFrame(columns=["Pod","Container","CPU_Thr_Max"])
+thr_p95 = load(THR_P95_F, "CPU_Thr_P95") if "cpu" in selected else pd.DataFrame(columns=["Pod","Container","CPU_Thr_P95"])
+
+mem_p95 = load(MEM_P95_F, "Mem_P95") if "memory" in selected else pd.DataFrame(columns=["Pod","Container","Mem_P95"])
+oom = load(OOM_F, "OOMKilled") if "memory" in selected else pd.DataFrame(columns=["Pod","Container","OOMKilled"])
+restarts = load(RESTART_F, "Restarts") if "memory" in selected else pd.DataFrame(columns=["Pod","Container","Restarts"])
+
+
 if "memory" in selected and not mem.empty:
     mem["Mem_Use"] = pd.to_numeric(mem["Mem_Use"], errors="coerce") / (1024**3)
+if "memory" in selected and not mem_p95.empty:
+    mem_p95["Mem_P95"] = pd.to_numeric(mem_p95["Mem_P95"], errors="coerce") / (1024**3)
+
 if "ephemeral" in selected and not fs.empty:
     fs["Eph_Use"] = pd.to_numeric(fs["Eph_Use"], errors="coerce") / (1024**3)
 
-dfs = [d for d in [cpu, mem, fs] if not d.empty]
+dfs = [d for d in [cpu, cpu_p95, thr_max, thr_p95, mem, mem_p95, oom, restarts, fs] if not d.empty]
 df_usage = dfs[0] if dfs else pd.DataFrame(columns=["Pod","Container"])
 for d in dfs[1:]:
     df_usage = df_usage.merge(d, on=["Pod","Container"], how="outer")
 # coerce numerics but DO NOT fillna here; missing stays NaN
 for c in [col for col in df_usage.columns if col.endswith("_Use")]:
     df_usage[c] = pd.to_numeric(df_usage[c], errors="coerce")
+# additional numeric coercions
+for c in ["CPU_P95","CPU_Thr_Max","CPU_Thr_P95","Mem_P95","OOMKilled","Restarts"]:
+    if c in df_usage.columns:
+        df_usage[c] = pd.to_numeric(df_usage[c], errors="coerce")
 
 if not df_usage.empty:
     df_usage = df_usage.groupby(["Pod","Container"], as_index=False).max()
     df_usage["Workload"] = df_usage["Pod"].map(pod_to_wl)
     df_usage = df_usage[df_usage["Pod"].isin(allowed_pods)]
+
+
 
 # ----------------- Requests/Limits from pod specs (for allowed pods) -----------------
 rows = []
@@ -457,16 +740,31 @@ if not df.empty and "Workload" not in df.columns:
 # --- Aggregate by (Workload, Container), pick representative pod with max total usage ---
 if not df.empty:
     use_cols = [c for c in df.columns if c.endswith("_Use")]
+
+    # columns that are not *_Use but must survive aggregation
+    signal_cols = [c for c in ["CPU_P95","CPU_Thr_Max","CPU_Thr_P95","Mem_P95","OOMKilled","Restarts"]
+                if c in df.columns]
+
+    # score can still be based on *_Use (or include signals if you want)
     df["__score__"] = df[use_cols].sum(axis=1, skipna=True) if use_cols else 0.0
 
-    agg = {col: "max" for col in use_cols}
+    # aggregate: keep max of usage AND signals
+    agg = {col: "max" for col in (use_cols + signal_cols)}
+
+    # also aggregate req/lim
     for col in ("CPU_Req","CPU_Lim","Mem_Req","Mem_Lim","Eph_Req","Eph_Lim"):
-        if col in df.columns: agg[col] = "max"
+        if col in df.columns:
+            agg[col] = "max"
 
     idx = df.groupby(["Workload","Container"])["__score__"].idxmax()
-    rep = df.loc[idx, ["Workload","Container","Pod","__score__"]].rename(columns={"Pod":"RepPod","__score__":"Score"})
+    rep = df.loc[idx, ["Workload","Container","Pod","__score__"]].rename(
+        columns={"Pod":"RepPod","__score__":"Score"}
+    )
+
     aggdf = df.groupby(["Workload","Container"], as_index=False).agg(agg)
     df = aggdf.merge(rep, on=["Workload","Container"], how="left")
+
+
 
     df["WL"]  = df["Workload"]                           # internal workload key
     df["Pod"] = df["RepPod"].fillna(df["Workload"])      # display chosen replica
@@ -476,103 +774,343 @@ if not df.empty:
         df = df.sort_values(["Pod","Container"], ascending=[True,True], ignore_index=True)
     df = df.drop(columns=["Workload","RepPod","__score__"], errors="ignore")
 
-# ----------------- Recommendation rules -----------------
-pods_to_patch, recs = [], []
-controller_pods = []
+# ----------------- Recommendation-----------------
+
+pods_to_patch, controller_pods, recs = [], [], []
+
+# ---------- Container classification ----------
+def classify_container(container):
+    c = str(container).lower()
+    if c in ("kube-rbac-proxy", "rbac-proxy") or "proxy" in c or "envoy" in c:
+        return "proxy"
+    return "app"
+
+
+# ---------- Policy map (env-driven) ----------
+POLICY = {
+    "app": {
+        "cpu": {
+            "floor": APP_CPU_FLOOR,
+            "lim_min": APP_CPU_LIM_MIN,
+            "req_headroom": APP_CPU_REQ_HEADROOM,
+            "lim_req_mult": APP_CPU_LIM_REQ_MULT,
+            "burst_mult": APP_CPU_BURST_MULT,
+        },
+        "mem": {
+            "floor": APP_MEM_FLOOR,
+            "lim_min": APP_MEM_LIM_MIN,
+            "req_headroom": APP_MEM_REQ_HEADROOM,
+            "lim_req_mult": APP_MEM_LIM_REQ_MULT,
+            "lim_headroom": APP_MEM_LIM_HEADROOM,
+            "oom_mult": MEM_OOM_MULT,
+        },
+    },
+    "proxy": {
+        "cpu": {
+            "floor": PROXY_CPU_FLOOR,
+            "lim_min": PROXY_CPU_LIM_MIN,
+            "req_headroom": PROXY_CPU_REQ_HEADROOM,
+            "lim_req_mult": PROXY_CPU_LIM_REQ_MULT,
+            "burst_mult": PROXY_CPU_BURST_MULT,
+            "thr_severe": PROXY_THR_SEVERE,
+        },
+        "mem": {
+            "floor": PROXY_MEM_FLOOR,
+            "lim_min": PROXY_MEM_LIM_MIN,
+            "req_headroom": PROXY_MEM_REQ_HEADROOM,
+            "lim_req_mult": PROXY_MEM_LIM_REQ_MULT,
+            "lim_headroom": PROXY_MEM_LIM_HEADROOM,
+            "oom_mult": PROXY_MEM_OOM_MULT,
+        },
+    },
+}
+
+
+# ---------- CPU tuning ----------
+def tune_cpu(cur_req, cur_lim, sig, pol):
+    notes = []
+    cpu = sig["cpu"]
+    changed = False
+
+    # --- Force mode (testing / override) ---
+    if FORCE:
+        cpu["thr_p95"] = 0.0
+        cpu["thr_max"] = 0.0
+
+    # -----------------------------
+    # Throttling classification
+    # -----------------------------
+
+    cpu_near_req = cpu["p95"] >= 0.5 * max(cur_req, pol["floor"])
+
+    steady_throttling = (
+        cpu["thr_p95"] >= THR_P95_BAD and
+        cpu_near_req
+    )
+
+    bursty_throttling = (
+        cpu["thr_p95"] >= THR_P95_BAD and
+        not cpu_near_req
+    )
+
+    # -----------------------------
+    # CPU REQUEST tuning
+    # -----------------------------
+
+    # Base target from utilization
+    target_req = cpu["p95"] * pol["req_headroom"]
+
+    # Correct hidden demand ONLY for steady starvation
+    if steady_throttling:
+        eff = min(cpu["thr_p95"], 0.90)
+        target_req = (cpu["p95"] / (1.0 - eff)) * pol["req_headroom"]
+        target_req = max(target_req, cur_req)
+        notes.append("Steady CPU throttling detected")
+
+    # Bursty throttling → HOLD request (do not shrink)
+    elif bursty_throttling:
+        target_req = cur_req
+        notes.append("CPU bursty throttling detected; Req held")
+
+    # Enforce floor
+    target_req = max(target_req, pol["floor"])
+
+    # Apply hysteresis (±20%)
+    new_req = cur_req
+    if cur_req == 0 or abs(target_req - cur_req) / max(cur_req, 0.01) >= 0.20:
+        new_req = target_req
+        if new_req > cur_req:
+            notes.append("CPU Req ↑")
+        elif new_req < cur_req:
+            notes.append("CPU Req ↓")
+
+    # -----------------------------
+    # CPU LIMIT tuning
+    # -----------------------------
+
+    new_lim = cur_lim
+    if cur_lim > 0:
+        # Base limit from request + absolute floor
+        target_lim = max(
+            new_req * pol["lim_req_mult"],
+            pol["lim_min"]
+        )
+
+        # ---- Limit decisions (mutually exclusive) ----
+
+        # Steady throttling → HOLD or increase, never shrink
+        if steady_throttling:
+            target_lim = max(target_lim, cur_lim)
+            notes.append("CPU Lim held (steady throttling)")
+
+        # Bursty throttling → HOLD limit (Redis-safe)
+        elif bursty_throttling:
+            target_lim = cur_lim
+            notes.append("CPU Lim held (bursty throttling)")
+
+        # Startup bursts → ignore
+        elif (
+            cpu["thr_max"] >= THR_MAX_BAD and
+            cpu["thr_p95"] < THR_P95_BAD / 2 and
+            cpu["p95"] < new_req * 0.5
+        ):
+            target_lim = cur_lim
+            notes.append("CPU startup burst ignored")
+
+        # Legitimate bursts (no throttling) → allow burst limit
+        elif cpu["thr_max"] >= THR_MAX_BAD:
+            burst_lim = new_req * pol["burst_mult"]
+            if burst_lim > target_lim:
+                target_lim = burst_lim
+                notes.append("CPU burst limit applied")
+
+        # Otherwise allow limit to follow observed max
+        elif cpu["max"] > 0 and cpu["thr_p95"] < THR_P95_BAD:
+            target_lim = max(target_lim, cpu["max"] * 1.10)
+
+        # Apply hysteresis (±20%)
+        if abs(target_lim - cur_lim) / max(cur_lim, 0.01) >= 0.20:
+            new_lim = target_lim
+            if new_lim > cur_lim:
+                notes.append("CPU Lim ↑")
+            elif new_lim < cur_lim:
+                notes.append("CPU Lim ↓")
+
+        # Safety invariant
+        new_lim = max(new_lim, new_req)
+
+    # -----------------------------
+    # Final change detection
+    # -----------------------------
+
+    if new_req != cur_req or new_lim != cur_lim:
+        changed = True
+
+    return new_req, new_lim, changed, notes
+
+def tune_mem(cur_req, cur_lim, sig, pol):
+    notes = []
+    mem, ev = sig["mem"], sig["events"]
+    changed = False
+
+    # Request: p95 × headroom
+    target_req = mem["p95"] * pol["req_headroom"]
+
+    # OOM protection
+    if ev["oom"]:
+        target_req = max(target_req, cur_req)
+
+    # Enforce floor
+    target_req = max(target_req, pol["floor"])
+
+    new_req = cur_req
+    if cur_req == 0 or abs(target_req - cur_req) / max(cur_req, 1) >= 0.20:
+        new_req = target_req
+        if new_req > cur_req:       
+            notes.append("Mem Req ↑")
+        elif new_req < cur_req:
+            notes.append("Mem Req ↓")   
+
+    # Limit: req-based + max burst + OOM
+    new_lim = cur_lim
+    if cur_lim > 0:
+        target_lim = new_req * pol["lim_req_mult"]
+
+        if mem["max"] > 0:
+            target_lim = max(target_lim, mem["max"] * pol["lim_headroom"])
+
+        if ev["oom"]:
+            target_lim = max(target_lim, new_req * pol["oom_mult"])
+            notes.append("OOMKilled observed")
+
+        target_lim = max(target_lim, pol["lim_min"])
+
+        if abs(target_lim - cur_lim) / max(cur_lim, 1) >= 0.20:
+            new_lim = target_lim
+            if new_lim > cur_lim:       
+                notes.append("Mem Lim ↑")
+            elif new_lim < cur_lim:
+                notes.append("Mem Lim ↓")
+
+    if new_req != cur_req or new_lim != cur_lim:
+        changed = True 
+
+    return new_req, new_lim, changed, notes
+
+
+def ensure_limit_ge_req(res, kind):
+    if nz(res.get(f"{kind}_Lim")) < nz(res.get(f"{kind}_Req")):
+        res[f"{kind}_Lim"] = res[f"{kind}_Req"]
+
+
+# ----------------- MAIN LOOP -----------------
 
 for _, r in df.iterrows():
-    pod = r["Pod"]; cont = r["Container"]
+    pod, cont = r["Pod"], r["Container"]
+    
+    # if not cont.lower().startswith("redis"):
+    #     continue
+
     res, notes = {}, []
+    changed_flag = False
 
-    def adj_request(use, req, kind):
-        req_v = nz(req)
-        if req_v > 0 and use < 0.5 * req_v:
-            res[f"{kind}_Req"] = req_v * 0.5; notes.append(f"{kind} ↓ Req")
+    signals = {
+        "cpu": {
+            "p95": nz(r.get("CPU_P95"), 0.0),
+            "max": nz(r.get("CPU_Use"), 0.0),
+            "thr_p95": nz(r.get("CPU_Thr_P95"), 0.0),
+            "thr_max": nz(r.get("CPU_Thr_Max"), 0.0),
+        },
+        "mem": {
+            "p95": nz(r.get("Mem_P95"), nz(r.get("Mem_Use"), 0.0)),
+            "max": nz(r.get("Mem_Use"), 0.0),
+        },
+        "events": {
+            "oom": nz(r.get("OOMKilled"), 0) >= 1,
+            "mem_pressure": (
+                nz(r.get("Mem_Lim")) > 0 and
+                nz(r.get("Mem_P95"), 0) / nz(r.get("Mem_Lim")) >= MEM_PRESSURE_P95
+            ),
+            "restarts": nz(r.get("Restarts"), 0),
+        }
+    }
+    policy = POLICY[classify_container(cont)]
 
-    def adj_limit(use, req, cur_lim, kind):
-        lim_v = nz(cur_lim); req_v = nz(req)
-        if lim_v == 0: return
-        if use < 0.5 * lim_v:
-            new_lim = lim_v * 0.75
-            if new_lim < req_v:
-                new_lim = req_v; notes.append(f"{kind} ↓ Lim→Req")
-            else:
-                notes.append(f"{kind} ↓ Lim")
-            res[f"{kind}_Lim"] = new_lim
+    print(f"[INFO] Processing Pod='{pod}' Container='{cont}'")
+    print(f"Signals: {signals}")
 
-    # Use nz(...) for rule math; but for display we won't coerce to zero
-    if should_check("cpu"):
-        adj_request(nz(r.get("CPU_Use", 0.0)), r.get("CPU_Req"), "CPU")
-        adj_limit  (nz(r.get("CPU_Use", 0.0)), r.get("CPU_Req"), r.get("CPU_Lim"), "CPU")
-    if should_check("mem"):
-        adj_request(nz(r.get("Mem_Use", 0.0)), r.get("Mem_Req"), "Mem")
-        adj_limit  (nz(r.get("Mem_Use", 0.0)), r.get("Mem_Req"), r.get("Mem_Lim"), "Mem")
-    if should_check("eph"):
-        adj_request(nz(r.get("Eph_Use", 0.0)), r.get("Eph_Req"), "Eph")
-        adj_limit  (nz(r.get("Eph_Use", 0.0)), r.get("Eph_Req"), r.get("Eph_Lim"), "Eph")
-
-    changed = "Yes" if notes else "No"
-    wl_key = r.get("WL", None)
+     # Build record
 
     rec = {"Pod": pod, "Container": cont}
-    if wl_key: rec["WL"] = wl_key
+    wl_key = r.get("WL", None)
+    if wl_key:
+        rec["WL"] = wl_key
     rec["Score"] = nz(r.get("Score"), 0.0)
 
-    # ---------- Display: DO NOT coerce usage to 0; keep None/NaN as N/A ----------
-    if "cpu" in selected:
-        rec.update({
-            "CPU_Use":         ceil_cpu(r.get("CPU_Use")),   # <-- no nz()
-            "CPU_Req_Current": ceil_cpu(r.get("CPU_Req")),
-            "CPU_Req_New":     ceil_cpu(res.get("CPU_Req", r.get("CPU_Req"))),
-            "CPU_Lim_Current": ceil_cpu(r.get("CPU_Lim")),
-            "CPU_Lim_New":     ceil_cpu(res.get("CPU_Lim", r.get("CPU_Lim"))),
-        })
-    if "memory" in selected:
-        rec.update({
-            "Mem_Use":         ceil_mem(r.get("Mem_Use")),   # <-- no nz()
-            "Mem_Req_Current": ceil_mem(r.get("Mem_Req")),
-            "Mem_Req_New":     ceil_mem(res.get("Mem_Req", r.get("Mem_Req"))),
-            "Mem_Lim_Current": ceil_mem(r.get("Mem_Lim")),
-            "Mem_Lim_New":     ceil_mem(res.get("Mem_Lim", r.get("Mem_Lim"))),
-        })
-    if "ephemeral" in selected:
-        rec.update({
-            "Eph_Use":         ceil_mem(r.get("Eph_Use")),   # <-- no nz()
-            "Eph_Req_Current": ceil_mem(r.get("Eph_Req")),
-            "Eph_Req_New":     ceil_mem(res.get("Eph_Req", r.get("Eph_Req"))),
-            "Eph_Lim_Current": ceil_mem(r.get("Eph_Lim")),
-            "Eph_Lim_New":     ceil_mem(res.get("Eph_Lim", r.get("Eph_Lim"))),
-        })
+    if should_check("cpu"):
+        cpu_req, cpu_lim, changed, cpu_notes = tune_cpu(
+            nz(r.get("CPU_Req")), nz(r.get("CPU_Lim")), signals, policy["cpu"]
+        )
+        res["CPU_Req"], res["CPU_Lim"] = cpu_req, cpu_lim
 
-    rec["Changed"] = changed
-    rec["Notes"]   = "; ".join(notes)
-    recs.append(rec)
-    
-    if notes:
-        reqs, lims = {}, {}
-        cpu_req = res.get("CPU_Req", r.get("CPU_Req"))
-        mem_req = res.get("Mem_Req", r.get("Mem_Req"))
-        eph_req = res.get("Eph_Req", r.get("Eph_Req"))
-        if not is_na(cpu_req) and nz(cpu_req) > 0: reqs["cpu"] = fmt_cpu_k8s(cpu_req)
-        if not is_na(mem_req) and nz(mem_req) > 0: reqs["memory"] = fmt_mem_k8s_mi(mem_req)
-        if not is_na(eph_req) and nz(eph_req) > 0: reqs["ephemeral-storage"] = fmt_mem_k8s_mi(eph_req)
-
-        cpu_lim = res.get("CPU_Lim", r.get("CPU_Lim"))
-        mem_lim = res.get("Mem_Lim", r.get("Mem_Lim"))
-        eph_lim = res.get("Eph_Lim", r.get("Eph_Lim"))
-        if not is_na(cpu_lim) and nz(cpu_lim) > 0: lims["cpu"] = fmt_cpu_k8s(cpu_lim)
-        if not is_na(mem_lim) and nz(mem_lim) > 0: lims["memory"] = fmt_mem_k8s_mi(mem_lim)
-        if not is_na(eph_lim) and nz(eph_lim) > 0: lims["ephemeral-storage"] = fmt_mem_k8s_mi(eph_lim)
+        rec.update({ 
+        "CPU_P95": ceil_cpu(r.get("CPU_P95")), 
+        "CPU_Max": ceil_cpu(r.get("CPU_Use")), 
+        "CPU_Req_Current": ceil_cpu(r.get("CPU_Req")), 
+        "CPU_Req_New": ceil_cpu(res.get("CPU_Req", r.get("CPU_Req"))), 
+        "CPU_Lim_Current": ceil_cpu(r.get("CPU_Lim")), 
+        "CPU_Lim_New": ceil_cpu(res.get("CPU_Lim", r.get("CPU_Lim"))), 
+        })
         
-        print(f"[INFO] Pod '{pod}' Container '{cont}' to be patched: Requests={reqs} Limits={lims}")
-        if pod.startswith("ibm-dataprotectionserver-controller-manager") or pod.startswith("ibm-dataprotectionagent-controller-manager"):
-            print(f"[INFO] --> Special controller pod detected; all replicas will inherit these settings.")
-            controller_pods.append({"Pod": pod, "Container": cont, "requests": reqs, "limits": lims})
+        changed_flag = changed_flag or changed
+        notes.extend(cpu_notes)
+
+    if should_check("mem"):
+        mem_req, mem_lim, changed, mem_notes = tune_mem(
+            nz(r.get("Mem_Req")), nz(r.get("Mem_Lim")), signals, policy["mem"]
+        )
+        res["Mem_Req"], res["Mem_Lim"] = mem_req, mem_lim
+
+        rec.update({ 
+        "Mem_P95": ceil_mem(r.get("Mem_P95")), 
+        "Mem_Max": ceil_mem(r.get("Mem_Use")), 
+        "Mem_Req_Current": ceil_mem(r.get("Mem_Req")), 
+        "Mem_Req_New": ceil_mem(res.get("Mem_Req", r.get("Mem_Req"))), 
+        "Mem_Lim_Current": ceil_mem(r.get("Mem_Lim")), 
+        "Mem_Lim_New": ceil_mem(res.get("Mem_Lim", r.get("Mem_Lim"))), 
+        })
+
+        changed_flag = changed_flag or changed
+        notes.extend(mem_notes)
+
+    if should_check("cpu"):
+        ensure_limit_ge_req(res, "CPU")
+    if should_check("mem"):
+        ensure_limit_ge_req(res, "Mem")
+
+
+
+    rec["Changed"] = "Yes" if changed_flag else "No" 
+    rec["Notes"] = "; ".join(notes) 
+    recs.append(rec)
+
+    if changed_flag:
+        reqs, lims = {}, {}
+        if nz(res.get("CPU_Req")) > 0: reqs["cpu"] = fmt_cpu_k8s(res["CPU_Req"])
+        if nz(res.get("Mem_Req")) > 0: reqs["memory"] = fmt_mem_k8s_mi(res["Mem_Req"])
+        if nz(res.get("CPU_Lim")) > 0: lims["cpu"] = fmt_cpu_k8s(res["CPU_Lim"])
+        if nz(res.get("Mem_Lim")) > 0: lims["memory"] = fmt_mem_k8s_mi(res["Mem_Lim"])
+        entry = {"Pod": pod, "Container": cont, "requests": reqs, "limits": lims}
+
+        if pod.startswith(("ibm-dataprotectionserver-controller-manager",
+                            "ibm-dataprotectionagent-controller-manager")):
+            controller_pods.append(entry)
         else:
-            pods_to_patch.append({"Pod": pod, "Container": cont, "requests": reqs, "limits": lims})
+            pods_to_patch.append(entry)
 
 if controller_pods:
-    pods_to_patch.extend(controller_pods)   
+    pods_to_patch.extend(controller_pods)
+
 
 # --- Build overrides from RAW records (keep WL), then build display df_recs ---
 df_recs_raw = pd.DataFrame(recs)  # contains WL for workload-keyed overrides
@@ -595,9 +1133,9 @@ if not df_recs_raw.empty:
 # 2) Display DataFrame (no WL column)
 df_recs = df_recs_raw.copy()
 ordered = ["Pod","Container"]
-if "cpu" in selected:       ordered += ["CPU_Use","CPU_Req_Current","CPU_Req_New","CPU_Lim_Current","CPU_Lim_New"]
-if "memory" in selected:    ordered += ["Mem_Use","Mem_Req_Current","Mem_Req_New","Mem_Lim_Current","Mem_Lim_New"]
-if "ephemeral" in selected: ordered += ["Eph_Use","Eph_Req_Current","Eph_Req_New","Eph_Lim_Current","Eph_Lim_New"]
+if "cpu" in selected:       ordered += ["CPU_P95","CPU_Max","CPU_Req_Current","CPU_Req_New","CPU_Lim_Current","CPU_Lim_New"]
+if "memory" in selected:    ordered += ["Mem_P95","Mem_Max","Mem_Req_Current","Mem_Req_New","Mem_Lim_Current","Mem_Lim_New"]
+if "ephemeral" in selected: ordered += ["Eph_Max","Eph_Req_Current","Eph_Req_New","Eph_Lim_Current","Eph_Lim_New"]
 ordered += ["Changed","Notes"]
 for col in ordered:
     if col not in df_recs.columns:
@@ -761,12 +1299,13 @@ def build_console_df(df, selected, full):
 
     # CPU section
     if "cpu" in selected and all(c in df.columns for c in
-        ["CPU_Use", "CPU_Req_Current", "CPU_Req_New",
+        ["CPU_P95", "CPU_Max", "CPU_Req_Current", "CPU_Req_New",
          "CPU_Lim_Current", "CPU_Lim_New"]):
         cpu_series = df.apply(
-            lambda r: f"{fmt_cpu_or_na(r['CPU_Use'])} | "
-                      f"{fmt_cpu_or_na(r['CPU_Req_Current'])}→{fmt_cpu_or_na(r['CPU_Req_New'])} | "
-                      f"{fmt_cpu_or_na(r['CPU_Lim_Current'])}→{fmt_cpu_or_na(r['CPU_Lim_New'])}",
+            lambda r: f"P95={fmt_cpu_or_na(r['CPU_P95'])}"
+                    f" (Max={fmt_cpu_or_na(r['CPU_Max'])}) | "
+                    f"{fmt_cpu_or_na(r['CPU_Req_Current'])}→{fmt_cpu_or_na(r['CPU_Req_New'])} | "
+                    f"{fmt_cpu_or_na(r['CPU_Lim_Current'])}→{fmt_cpu_or_na(r['CPU_Lim_New'])}",
             axis=1
         )
         # --- Fix 3: use .insert() (avoids get_loc path entirely) ---
@@ -774,10 +1313,11 @@ def build_console_df(df, selected, full):
 
     # Memory section
     if "memory" in selected and all(c in df.columns for c in
-        ["Mem_Use","Mem_Req_Current","Mem_Req_New",
+        ["Mem_P95","Mem_Max","Mem_Req_Current","Mem_Req_New",
          "Mem_Lim_Current","Mem_Lim_New"]):
         mem_series = df.apply(
-            lambda r: f"{fmt_mem_or_na(r['Mem_Use'])} | "
+            lambda r: f"P95={fmt_mem_or_na(r['Mem_P95'])}"
+                      f" (Max={fmt_mem_or_na(r['Mem_Max'])}) | "
                       f"{fmt_mem_or_na(r['Mem_Req_Current'])}→{fmt_mem_or_na(r['Mem_Req_New'])} | "
                       f"{fmt_mem_or_na(r['Mem_Lim_Current'])}→{fmt_mem_or_na(r['Mem_Lim_New'])}",
             axis=1
@@ -786,10 +1326,10 @@ def build_console_df(df, selected, full):
 
     # Ephemeral section (same pattern)
     if "ephemeral" in selected and all(c in df.columns for c in
-        ["Eph_Use","Eph_Req_Current","Eph_Req_New",
+        ["Eph_Max","Eph_Req_Current","Eph_Req_New",
          "Eph_Lim_Current","Eph_Lim_New"]):
         eph_series = df.apply(
-            lambda r: f"{fmt_mem_or_na(r['Eph_Use'])} | "
+            lambda r: f"{fmt_mem_or_na(r['Eph_Max'])} | "
                       f"{fmt_mem_or_na(r['Eph_Req_Current'])}→{fmt_mem_or_na(r['Eph_Req_New'])} | "
                       f"{fmt_mem_or_na(r['Eph_Lim_Current'])}→{fmt_mem_or_na(r['Eph_Lim_New'])}",
             axis=1
@@ -815,14 +1355,54 @@ if not full:
 print("\n=== Namespace Quota (Current vs New) ===")
 print(tabulate(df_ns, headers="keys", tablefmt="github"))
 
-print("\n Rules applied:")
-print(" - Requests: usage < 50% of request → cut to 50%")
-print(" - Limits:   usage < 50% of limit → cut to 75%")
+print("\nRules applied:")
+
+print("\nCPU Requests:")
+print("  - Base = P95 CPU usage × headroom")
+print("  - CPU demand is considered meaningful only if P95 ≥ 50% of current request (or floor)")
+print("  - If steady throttling exists (P95 throttle ≥ threshold AND meaningful CPU):")
+print("      * Correct hidden demand: P95 / (1 - throttle) × headroom")
+print("      * Never reduce CPU request while steady throttling exists")
+print("  - If bursty throttling exists (high throttle, low P95):")
+print("      * Hold CPU request (do not shrink)")
+print("  - If no throttling exists:")
+print("      * CPU request may be reduced based on P95")
+print("  - Minimum CPU floors are always enforced")
+print("  - Changes are applied only if the delta is ≥ 20%")
+
+print("\nCPU Limits:")
+print("  - Base = max(new CPU request × limit-multiplier, absolute minimum limit)")
+print("  - If steady throttling exists:")
+print("      * Never reduce CPU limit")
+print("  - If bursty throttling exists:")
+print("      * Hold CPU limit (do not shrink)")
+print("  - Startup-only bursts (high max throttle, low P95 throttle, low P95 usage) are ignored")
+print("  - If no throttling exists:")
+print("      * Allow burst headroom (new request × burst-multiplier)")
+print("      * Or track observed max usage (max × 1.1)")
+print("  - CPU limit is never allowed below CPU request")
+print("  - Changes are applied only if the delta is ≥ 20%")
+
+print("\nMemory Requests:")
+print("  - Base = P95 memory usage × headroom")
+print("  - If an OOM occurred:")
+print("      * Never reduce memory request")
+print("  - Minimum memory floors are always enforced")
+print("  - Changes are applied only if the delta is ≥ 20%")
+
+print("\nMemory Limits:")
+print("  - Base = new memory request × limit-multiplier")
+print("  - Allow memory bursts using observed max × headroom")
+print("  - If an OOM occurred:")
+print("      * Memory limit ≥ request × OOM multiplier")
+print("  - Minimum memory limits are always enforced")
+print("  - Changes are applied only if the delta is ≥ 20%")
+
+
 print("\nExcel report:", XLSX)
 print("Patch JSON:", PATCH_FILE)
 print("Patch JSON includes only podcontainers with changes in the selected resources.")
 print(f"\nTo apply the recommendations, run :\n./pod-res-apply.sh {PATCH_FILE}\n")
 print("above script runs in dry-run mode by default; use -p to patch changes.")
 print("Done.")
-
 PYEOF
