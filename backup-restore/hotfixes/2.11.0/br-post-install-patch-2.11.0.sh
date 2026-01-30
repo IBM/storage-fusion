@@ -295,7 +295,7 @@ fi
 update_isf_operator_csv isf-operator.v2.11.0 "${isfdataprotection_img}"
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:ded5bef2f272b16d7749fd4aac7cfe0eaf5f84c94d05b20bfcbd441612b686f9
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:a2d01e24fa8d71334c85e458c7b47432be49a3c90ea44e1865fa47f82697b9ef
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
