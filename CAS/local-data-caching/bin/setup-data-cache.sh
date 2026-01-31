@@ -90,6 +90,8 @@ main() {
 		logger success "FDF is already configured."
 	fi
 
+	patch_rbd_csi_driver
+
 	# Deploy IBM Storage Scale if not already installed
 	if is_scale_deployed; then
 		logger success "IBM Storage Scale is already deployed."
@@ -142,7 +144,7 @@ main() {
 	configure_scale_watch "${CAS_NAMESPACE}" "${FILESYSTEM_NAME}"
 	logger success "Scale watch configured"
 
-	logger success "CAS Data Caching has been successfully installed! 🎉"
+	logger success "Local Data Caching has been successfully configured for CAS! 🎉"
 }
 
 main "$@"

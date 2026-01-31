@@ -131,7 +131,7 @@ check_mcp() {
 check_nodes() {
 	worker_num=$(oc get node | grep -c worker)
 	worker_l_num=$(oc get node --show-labels | grep worker | grep topology.kubernetes.io/region | grep -c topology.kubernetes.io/zone)
-	storage_num=$(oc get node --show-labels | grep worker | grep -c scale.spectrum.ibm.com/role=storage)
+	storage_num=$(oc get node --show-labels | grep worker | grep -c "${SCALE_ROLE_LABEL}=${SCALE_ROLE_STORAGE}")
 
 	info "worker node number: $worker_num"
 	if [[ worker_num -lt 3 ]]; then

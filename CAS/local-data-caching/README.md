@@ -1,7 +1,4 @@
-# [Tech Preview] Local Data Caching for Content Aware Storage (CAS)
-
-> [!IMPORTANT]
-> *These scripts are provided as a **Tech Preview** tool for installing **IBM Fusion Content-Aware Storage (CAS) service without a remotely mounted IBM Storage Scale filesystem** and all required data services. Running this tool against production systems is not supported.*
+# Local Data Caching for Content Aware Storage (CAS)
 
 This tool deploys a configuration of IBM Fusion services that enable local caching of data from remote S3 buckets for ingestion by CAS. This is achieved by setting up an IBM Storage Scale Container Native (formerly known as CNSA) local Scale cluster on OpenShift Container Platform using local Data Foundation (DF) RBD volumes as backing storage devices.
 
@@ -11,10 +8,10 @@ The scripts in these directories work against both Fusion SDS 2.12 and Fusion HC
 
 ## Requirements
 
-* OpenShift version **4.17** or higher
+* OpenShift version **4.17** or higher, **4.20** is recommended
 * IBM Fusion SDS or HCI **2.12** or higher
 * **Cluster admin access**
-* At least **3 worker nodes** with local disks OR **Compact cluster** with local disks
+* At least **3 worker nodes** OR **Compact cluster** with at least one local disk per node, recommended at least 1TB disks
 * At least 1 node with [supported GPUs](https://www.ibm.com/docs/en/fusion-software/2.12.0?topic=prerequisites-system-requirements#systemrequirements__table_xpm_ddx_rgc)
 
 ### Prerequisites
@@ -35,7 +32,7 @@ $ ./bin/setup-data-cache.sh [--filesystem-name <name>] [--filesystem-capacity <G
 | Flag                    | Description                | Default    |
 | ----------------------- | -------------------------- | ---------- |
 | `--filesystem-name`     | Name of the filesystem     | `cache-fs` |
-| `--filesystem-capacity` | Capacity of the filesystem as [Kubernetes Quantities](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/) (e.g. Gi, Ti, G, T) | `755Gi`   |
+| `--filesystem-capacity` | Capacity of the filesystem as [Kubernetes Quantities](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/) (e.g. Gi, Ti, G, T) | `250Gi`   |
 
 ### Configuration Parameters
 

@@ -17,8 +17,6 @@ spec:
       maxblocksize: 16M
       prefetchPct: "25"
       prefetchTimeout: "30"
-    nodeSelector:
-      fusion.spectrum.ibm.com/node: ""
     nsdDevicesConfig:
       localDevicePaths:
     tolerations:
@@ -28,6 +26,11 @@ spec:
       - effect: NoSchedule
         key: node-role.kubernetes.io/master
         operator: Exists
+    quorum:
+      nodeSelector:
+        matchExpressions:
+        - key: ${QUORUM_NODE_SELECTOR_LABEL}
+          operator: Exists
   gui:
     tolerations:
       - effect: NoSchedule

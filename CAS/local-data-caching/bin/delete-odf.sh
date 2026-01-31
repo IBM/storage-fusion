@@ -114,20 +114,23 @@ result=$(oc get ns openshift-storage --no-headers 2>/dev/null | wc -l | tr -d ' 
 if [[ $result -eq 0 ]]; then
 	info "There is no openshift-storage namespace"
 else
-	printf "\n------delete storageconsumer------\n"
-	## delete storageconsumer
-	result=$(oc get storageconsumer -n openshift-storage --no-headers 2>/dev/null | wc -l | tr -d ' ')
-	if [[ $result -eq 0 ]]; then
-		info "There is no storageconsumer"
-	else
-		oc delete -n openshift-storage storageconsumer --all --wait=true
-		if [[ $? -ge 1 ]]; then
-			error "error to delete storageconsumer"
-			exit 1
-		else
-			info "storageconsumer has been deleted successfully"
-		fi
-	fi
+	# printf "\n------delete storageclient------\n"
+	# oc delete storageclient ocs-storagecluster -n openshift-storage
+
+	# printf "\n------delete storageconsumer------\n"
+	# ## delete storageconsumer
+	# result=$(oc get storageconsumer -n openshift-storage --no-headers 2>/dev/null | wc -l | tr -d ' ')
+	# if [[ $result -eq 0 ]]; then
+	# 	info "There is no storageconsumer"
+	# else
+	# 	oc delete -n openshift-storage storageconsumer --all --wait=true
+	# 	if [[ $? -ge 1 ]]; then
+	# 		error "error to delete storageconsumer"
+	# 		exit 1
+	# 	else
+	# 		info "storageconsumer has been deleted successfully"
+	# 	fi
+	# fi
 
 	printf "\n------delete storagesystem------\n"
 	## delete storagesystem

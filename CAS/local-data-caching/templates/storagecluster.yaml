@@ -8,7 +8,32 @@ metadata:
 spec:
   flexibleScaling: true
   monDataDirHostPath: /var/lib/rook
-  resourceProfile: balanced
+  resourceProfile: performance
+  multiCloudGateway:
+    reconcileStrategy: ignore
+  placement:
+    mon:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: ${QUORUM_NODE_SELECTOR_LABEL}
+              operator: Exists
+      tolerations:
+      - effect: NoSchedule
+        key: isf.ibm.com/noworkload
+        operator: Exists
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+        operator: Exists
+    mgr:
+      tolerations:
+      - effect: NoSchedule
+        key: isf.ibm.com/noworkload
+        operator: Exists
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+        operator: Exists
   storageDeviceSets:
     - count: ${NO_OF_OSDS}
       dataPVCTemplate:

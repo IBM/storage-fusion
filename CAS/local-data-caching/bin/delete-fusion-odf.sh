@@ -37,6 +37,9 @@ fi
 printf "\n------scale isf-cns deployment to 0 replica------\n"
 oc scale deployment --replicas=0 isf-cns-operator-controller-manager -n "$FUSION_NS"
 
+printf "\n------delete odf fusionserviceinstance ------\n"
+oc delete fusionserviceinstance odfmanager -n "$FUSION_NS"
+
 printf "\n------delete odfmanager------\n"
 oc delete odfmanager odfmanager
 
@@ -64,7 +67,7 @@ if [[ $result -ne 0 ]]; then
 	echo "Delete ODF failed"
 	echo "Please check failure and retry"
 	echo "================================================================="
-	exit
+	exit 1
 fi
 
 # printf "\n------scale isf-prereq deployment to 0 replica------\n"
@@ -75,9 +78,6 @@ oc delete sc ibm-spectrum-fusion-mgmt-sc
 
 # printf "\n------scale isf-prereq deployment to 1 replica------\n"
 # oc scale deployment --replicas=1 isf-prereq-operator-controller-manager -n "$FUSION_NS"
-
-printf "\n------delete odf fusionserviceinstance ------\n"
-oc delete fusionserviceinstance odfmanager -n "$FUSION_NS"
 
 printf "\n------delete fdf catalogsource ------\n"
 oc delete catalogsource isf-data-foundation-catalog -n openshift-marketplace

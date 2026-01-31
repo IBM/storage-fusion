@@ -17,6 +17,9 @@ OCP_TOLERATED_VERSION="4.18.0"
 MARKETPLACE_NAMESPACE="openshift-marketplace"
 CLUSTER_OCS_OPENSHIFT_IO="cluster.ocs.openshift.io"
 EXPECTED_NODE_COUNT=3
+WORKER_ROLE="node-role.kubernetes.io/worker"
+MASTER_ROLE="node-role.kubernetes.io/master"
+CONTROL_ROLE="node-role.kubernetes.io/control-plane"
 
 #========================================
 # Red Hat Catalog Configuration
@@ -67,6 +70,7 @@ SPECTRUM_FUSION="spectrumfusion"
 #========================================
 HCI_FUSION_NAMESPACE="ibm-spectrum-fusion-ns"
 APPLIANCE_INFO="appliance-info"
+FUSION_NODE_LABEL="fusion.spectrum.ibm.com/node"
 
 #========================================
 # DF (Data Foundation) Configuration
@@ -86,6 +90,16 @@ SCALE_INSTANCE="ibm-spectrum-scale"
 SCALE_NAMESPACE="ibm-spectrum-scale"
 SCALE_STORAGE_CLASS="ibm-spectrum-scale-sample"
 
+SCALE_NODE_ROLE_LABEL="node-role.kubernetes.io/scale"
+SCALE_DESIGNATION_LABEL="scale.spectrum.ibm.com/designation"
+SCALE_DAEMON_LABEL="scale.spectrum.ibm.com/daemon"
+SCALE_IMAGE_DIGEST_LABEL="scale.spectrum.ibm.com/image-digest"
+SCALE_ROLE_LABEL="scale.spectrum.ibm.com/role"
+
+SCALE_DESIGNATION_QUORUM="quorum"
+SCALE_ROLE_AFM="afm"
+SCALE_ROLE_STORAGE="storage"
+
 #========================================
 # IBM Catalog Configuration
 #========================================
@@ -103,7 +117,7 @@ IBM_OPEN_REGISTRY_NS="cpopen"
 # Scale Filesystem Default Values
 #========================================
 DEFAULT_FS_NAME="cache-fs"
-DEFAULT_FS_SIZE="755Gi"
+DEFAULT_FS_SIZE="250Gi"
 
 #========================================
 # LOCAL_DISK_PVC Configuration
