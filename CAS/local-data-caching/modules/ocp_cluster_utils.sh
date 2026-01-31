@@ -161,9 +161,10 @@ get_cluster_base_domain() {
 # Function: Get node name for a given pod
 #----------------------------------------
 get_node_for_pod() {
-	local pod="$1"
+	local namespace="$1"
+	local pod="$2"
 	[[ -z "$pod" ]] && return 1
-	oc get pod "$pod" -n $OCS_NAMESPACE -o jsonpath='{.spec.nodeName}' 2>/dev/null
+	oc get pod "$pod" -n "$namespace" -o jsonpath='{.spec.nodeName}' 2>/dev/null
 }
 
 #----------------------------------------

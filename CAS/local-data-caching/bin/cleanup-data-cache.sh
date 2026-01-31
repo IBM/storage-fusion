@@ -4,8 +4,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 set -a
-source "$ROOT_DIR/config/config.env"
 source "$ROOT_DIR/lib/constants.sh"
+source "$ROOT_DIR/config/config.env"
 set +a
 
 LOG_DIR="./logs"
@@ -27,35 +27,82 @@ else
 	ENV="SDS"
 fi
 
+echo "Fusion environment: ${ENV}"
+
+wait_for_delete() {
+	local namespace="$1"
+	local resource="$2"
+
+	while oc get "${resource}" -n "${namespace}" &> /dev/null; do
+		echo "Waiting for resource to delete... (10s)"
+		sleep 10
+	done
+}
+
+oc_nodes_cmd(){
+	local nodes="${1}"
+	shift
+	local cmd="${@}"
+
+	echo "Running command: ${cmd}"
+
+	for node in ${nodes}; do
+		echo ${node#*/}
+		oc debug $node -- chroot /host /bin/bash -c "${CMD}" -s 2> /dev/null
+	done
+}
+
 cleanup_cnsa() {
 	echo "Cleaning up CNSA..."
 
+	oc scale deployment --replicas=0 isf-cns-operator-controller-manager -n "$FUSION_NAMESPACE"
+
 	oc label -n ${SCALE_NAMESPACE} filesystem ${FILESYSTEM_NAME} scale.spectrum.ibm.com/allowDelete=
 	envsubst <templates/filesystem.yaml | oc delete -f - --ignore-not-found=true
+	wait_for_delete "${SCALE_NAMESPACE}" "filesystem/${FILESYSTEM_NAME}"
+
+	oc_nodes_cmd "$(oc get no -l scale=true -o name)" 'rm -rf /var/mmfs; rm -rf /usr/lpp/mmfs; rm -rf /var/adm/ras; rmmod tracedev mmfs26 mmfslinux;'
+
 	oc delete localdisk disk0 disk1 disk2 -n "$SCALE_NAMESPACE" --ignore-not-found=true
-	oc label node --all scale.spectrum.ibm.com/nsdFailureGroup- scale.spectrum.ibm.com/nsdFailureGroupMappingType-
-
-	oc delete -f templates/scale_install.yaml --ignore-not-found=true
-
-	oc delete scc ibm-spectrum-scale-privileged spectrum-scale-csiaccess --ignore-not-found=true
-
-	oc delete pv -l app.kubernetes.io/instance=ibm-spectrum-scale,app.kubernetes.io/name=pmcollector --ignore-not-found=true
-	oc delete sc -l app.kubernetes.io/instance=ibm-spectrum-scale,app.kubernetes.io/name=pmcollector --ignore-not-found=true
-
-	oc delete sc "$SCALE_STORAGE_CLASS" --ignore-not-found=true
+	wait_for_delete "${SCALE_NAMESPACE}" "localdisk/disk0"
 
 	if [[ $ENV == "HCI" ]]; then
 		oc delete "$FUSION_SERVICE_INSTANCE_CR" "$SCALE_SERVICE_NAME" -n "$FUSION_NAMESPACE" --ignore-not-found=true
+		oc delete scalemanager/scalemanager -n "$FUSION_NAMESPACE" --ignore-not-found=true
 	else
 		oc patch "$SPECTRUM_FUSION_CRD" "$SPECTRUM_FUSION" -n "$FUSION_NAMESPACE" --type merge -p '{"spec": {"GlobalDataPlatform": {"Enable": false}}}'
+		oc delete scalemanager/scalemanager -n "$FUSION_NAMESPACE" --ignore-not-found=true
 	fi
+
+	oc delete clusters.scale.spectrum.ibm.com "${SCALE_NAMESPACE}" -n "$SCALE_NAMESPACE" --ignore-not-found=true
+	wait_for_delete "${SCALE_NAMESPACE}" "clusters.scale.spectrum.ibm.com/${SCALE_NAMESPACE}"
+
+	oc label node --all scale.spectrum.ibm.com/nsdFailureGroup- scale.spectrum.ibm.com/nsdFailureGroupMappingType-
+
+	oc delete scc ibm-spectrum-scale-privileged spectrum-scale-csiaccess --ignore-not-found=true
+
+	oc delete pvc -l app.kubernetes.io/instance=ibm-spectrum-scale,app.kubernetes.io/name=pmcollector --ignore-not-found=true
+	oc delete sc -l app.kubernetes.io/instance=ibm-spectrum-scale,app.kubernetes.io/name=pmcollector --ignore-not-found=true
+
+	oc delete sc "$SCALE_STORAGE_CLASS" --ignore-not-found=true
+	oc delete volumesnapshotclass "$SCALE_STORAGE_CLASS" --ignore-not-found=true
+
+	oc label node --all "scale-" "${SCALE_DAEMON_LABEL}-" "${SCALE_IMAGE_DIGEST_LABEL}-" "${SCALE_ROLE_LABEL}-" "${SCALE_DESIGNATION_LABEL}-"
 
 	envsubst <templates/daemonset_expose_rbd.yaml | oc delete -f - --ignore-not-found=true
 	envsubst <templates/pvc_local_disks.yaml | oc delete -f - --ignore-not-found=true
 	oc delete project "$LOCAL_STORAGE_PROJECT" --ignore-not-found=true
+	oc delete project "$SCALE_NAMESPACE" --ignore-not-found=true
+	oc delete project "$SCALE_NAMESPACE-dns" --ignore-not-found=true
+	oc delete project "$SCALE_CSI_NAMESPACE" --ignore-not-found=true
+	oc delete project "$SCALE_OPERATOR_NAMESPACE" --ignore-not-found=true
+
+	oc scale deployment --replicas=1 isf-cns-operator-controller-manager -n "$FUSION_NAMESPACE"
 }
 
 cleanup_df() {
+	$ROOT_DIR/bin/delete-fusion-odf.sh "$FUSION_NAMESPACE"
+
 	DEVICES=($(oc get pvc -n $OCS_NAMESPACE -l $DEVICESET_LABEL -o jsonpath='{range .items[*]}{.spec.volumeName}{"\n"}{end}' |
 		while read pv; do
 			oc get pv "$pv" -o jsonpath='{.metadata.annotations.storage\.openshift\.com/device-name}{"\n"}'
@@ -65,8 +112,6 @@ cleanup_df() {
 		echo ">>> Cleaning device: $DEV"
 		$ROOT_DIR/bin/disk-cleanup.sh "/dev/$DEV"
 	done
-
-	$ROOT_DIR/bin/delete-fusion-odf.sh "$FUSION_NAMESPACE"
 }
 
 cleanup_fusion() {
@@ -174,7 +219,6 @@ cleanup_fusion() {
 		oc delete clusterrolebinding isf-bkprstr-operator-manager-rolebinding
 
 		oc delete OperatorGroup isf-fusionbase -n $FUSION_NAMESPACE
-		oc get CatalogSource -n openshift-marketplace -l app=ibm-fusion-hcp -o name | xargs -n1 oc delete -n openshift-marketplace
 		oc delete ns baas
 		oc delete ns ibm-spectrum-protect-plus-ns
 		oc delete ns ibm-spectrum-scale-csi
@@ -205,7 +249,7 @@ cleanup_fusion() {
 		oc delete role fusionmanager-addon
 
 		oc delete catalogsource ibm-usage-metering-catalog-source -n openshift-marketplace
-		oc get CatalogSource -n openshift-marketplace -l app=ibm-fusion-hcp -o name | xargs -n1 oc delete -n openshift-marketplace
+		oc get CatalogSource -n openshift-marketplace -l app=ibm-fusion-hcp -o name | xargs -n1 oc delete -n openshift-marketplace CatalogSource
 
 		oc delete ns $FUSION_NAMESPACE
 	fi
@@ -259,15 +303,15 @@ export FILESYSTEM_NAME
 
 case "$ACTION" in
 --all | --fusion)
-	cleanup_cnsa
-	cleanup_df
-	cleanup_fusion
+	cleanup_cnsa || exit 1
+	cleanup_df || exit 1
+	cleanup_fusion || exit 1
 	;;
 --cnsa)
-	cleanup_cnsa
+	cleanup_cnsa || exit 1
 	;;
 --df)
-	cleanup_cnsa
-	cleanup_df
+	cleanup_cnsa || exit 1
+	cleanup_df || exit 1
 	;;
 esac

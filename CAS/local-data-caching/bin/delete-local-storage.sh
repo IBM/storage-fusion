@@ -17,15 +17,15 @@ echo "================================================================="
 echo "Cleanup local storage"
 echo "================================================================="
 
-printf "\n------delete localvolumesets------\n"
-oc delete localvolumesets.local.storage.openshift.io --all -n openshift-local-storage
-
 printf "\n------delete local storage pv and storageclass------\n"
 sc_list=$(oc get sc | grep "kubernetes.io/no-provisioner" | awk '{print $1}')
 for i in $sc_list; do
 	oc get pv | grep "$i" | awk '{print $1}' | xargs oc delete pv
 	oc delete sc "$i"
 done
+
+printf "\n------delete localvolumesets------\n"
+oc delete localvolumesets.local.storage.openshift.io --all -n openshift-local-storage
 
 printf "\n------delete the symlinks created by the LocalVolumeSet------\n"
 for i in $(oc get node -l cluster.ocs.openshift.io/openshift-storage= -o jsonpath='{ .items[*].metadata.name }'); do

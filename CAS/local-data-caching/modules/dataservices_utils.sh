@@ -162,7 +162,7 @@ configure_fdf() {
 		local no_of_disks
 		no_of_disks=$(oc get localvolumeset ${OCS_BACKING_STORAGECLASS} -n openshift-local-storage \
 			-o jsonpath='{.status.totalProvisionedDeviceCount}' 2>/dev/null)
-		if [[ "$no_of_disks" -gt 0 ]]; then
+		if [[ "$no_of_disks" -gt 2 ]]; then
 			logger success "LocalVolumeSet ${OCS_BACKING_STORAGECLASS} provisioned $no_of_disks PVs."
 			export NO_OF_OSDS="$no_of_disks"
 			break
@@ -203,6 +203,14 @@ configure_fdf() {
 		logger info "StorageCluster not Ready yet... retrying in ${RETRY_INTERVAL}s ($retry_count/$STORAGE_CLUSTER_RETRY_COUNT)"
 		sleep "$RETRY_INTERVAL"
 	done
+}
+
+patch_rbd_csi_driver() {
+	if oc get -n $OCS_NAMESPACE driver.csi.ceph.io/openshift-storage.rbd.csi.ceph.com &>/dev/null; then
+		oc patch -n $OCS_NAMESPACE driver.csi.ceph.io/openshift-storage.rbd.csi.ceph.com \
+			--type=merge \
+			-p '{"spec": {"nodePlugin": {"tolerations": [{"effect": "NoSchedule","key": "node-role.kubernetes.io/master","operator": "Exists"},{"effect": "NoSchedule","key": "node.ocs.openshift.io/storage","operator": "Equal","value": "true"}]}}}'
+	fi
 }
 
 #----------------------------------------
@@ -387,12 +395,12 @@ get_rbd_pod() {
 
 	# Try newer label first
 	pod=$(oc get pod -n $OCS_NAMESPACE -l $RBD_POD_NEW_LABEL \
-		-o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+		-o jsonpath='{.items[1].metadata.name}' 2>/dev/null)
 
 	# Fallback for older label
 	if [[ -z "$pod" ]]; then
 		pod=$(oc get pod -n $OCS_NAMESPACE -l $RBD_POD_OLD_LABEL \
-			-o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+			-o jsonpath='{.items[1].metadata.name}' 2>/dev/null)
 	fi
 
 	if [[ -z "$pod" ]]; then
@@ -409,7 +417,7 @@ get_rbd_pod() {
 get_rbd_devices() {
 	local pod node
 	pod=$(get_rbd_pod) || return 1
-	node=$(get_node_for_pod "$pod")
+	node=$(get_node_for_pod "$OCS_NAMESPACE" "$pod")
 
 	logger info "Using RBD nodeplugin pod '$pod' running on node '$node'"
 
@@ -527,8 +535,8 @@ patch_device_regex_in_scale_cluster() {
 #----------------------------------------
 create_local_disks() {
 	local pod node i=0
-	pod=$(get_rbd_pod) || return 1
-	node=$(get_node_for_pod "$pod")
+	pod="$(get_scale_core_pod)" || return 1
+	node=$(get_node_for_pod "$SCALE_NAMESPACE" "$pod")
 
 	logger info "Creating LocalDisk CRs on node '$node'..."
 
@@ -700,7 +708,7 @@ validate_local_disks_usage() {
 # Function: Get first scale-core Pod
 #----------------------------------------
 get_scale_core_pod() {
-	scale_core_pod="$(oc get daemons.scale.spectrum.ibm.com -n "${SCALE_NAMESPACE}" ibm-spectrum-scale --template={{.status.statusDetails.quorumPods}} | tr ',' ' ' | awk '{print $1}')"
+	scale_core_pod="$(oc get daemons.scale.spectrum.ibm.com -n "${SCALE_NAMESPACE}" ibm-spectrum-scale -o jsonpath='{.status.roles[0].pods}' | tr ',' ' ' | awk '{print $1}')"
 	logger info "Using scale-core Pod: ${scale_core_pod}"
 	echo "${scale_core_pod}"
 }
@@ -720,10 +728,10 @@ scale_core_exec() {
 #----------------------------------------
 configure_afm() {
 	logger info "Checking for AFM Gateway label..."
-	afm_node="$(oc get no -l scale.spectrum.ibm.com/role=afm --no-headers -o custom-columns=NAME:.metadata.name)"
+	afm_node="$(oc get no -l "${SCALE_ROLE_LABEL}=${SCALE_ROLE_AFM}" --no-headers -o custom-columns=NAME:.metadata.name)"
 	if [[ "${afm_node}x" == "x" ]]; then
 		afm_node=$(get_nodes | tr '\n' ' ' | awk '{print $1}')
-		label_nodes "scale.spectrum.ibm.com/role=afm" "${afm_node}"
+		label_nodes "${SCALE_ROLE_LABEL}=${SCALE_ROLE_AFM}" "${afm_node}"
 	fi
 	logger success "AFM Gateway label set on ${afm_node}"
 }
