@@ -1,6 +1,6 @@
-# CAS Bootstrap Automation
+# CAS Resource Configuration
 
-Production-ready automation for configuring IBM CAS resources on OpenShift.
+Automation for configuring IBM CAS resources on OpenShift.
 
 ## What this script does
 

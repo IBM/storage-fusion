@@ -1,0 +1,50 @@
+# OpenShift GitOps Operator Installation
+# This uses the OpenShift GitOps Operator which is the recommended way for OpenShift
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-gitops-operator
+  namespace: openshift-operators
+spec:
+  channel: stable
+  name: openshift-gitops-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+
+---
+# Note: For OpenShift, ArgoCD is installed via OpenShift GitOps Operator
+# After operator is installed, ArgoCD instance is created automatically
+# or can be created via GitOps using the ArgoCD instance manifest below
+
+---
+apiVersion: argoproj.io/v1beta1
+kind: ArgoCD
+metadata:
+  name: openshift-gitops
+  namespace: openshift-gitops
+spec:
+  server:
+    route:
+      enabled: true
+    replicas: 2
+  controller:
+    replicas: 2
+  repo:
+    replicas: 2
+  ha:
+    enabled: true
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  # Configure OpenShift SSO via Dex
+  sso:
+    provider: dex
+    dex:
+      openShiftOAuth: true
+
+

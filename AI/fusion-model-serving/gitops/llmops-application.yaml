@@ -1,0 +1,57 @@
+# Application 1: OpenShift AI Platform
+# Includes chat application and all platform components
+# OpenShift AI already provides monitoring, so we don't need separate monitoring app
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llmops-platform
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: llmops-platform
+    validated-patterns.io/pattern: llmops-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.ibm.com/Purnanand-Kumar1/Fusion-AI.git
+    targetRevision: main
+    path: fusion-AgenticAssistanceSampleApp/gitops/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: llmops-platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# Application 2: LLM Models
+# Deploys LLM model serving on OpenShift AI
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llmops-models
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: llmops-models
+    validated-patterns.io/pattern: llmops-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.ibm.com/Purnanand-Kumar1/Fusion-AI.git
+    targetRevision: main
+    path: fusion-model-serving/gitops/models
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default-dsc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

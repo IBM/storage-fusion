@@ -1,0 +1,233 @@
+---
+- name: Install Red Hat OpenShift AI
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  vars:
+    # Operator configuration
+    operator_namespace: "redhat-ods-operator"
+    operator_channel: "stable"
+    
+    # DataScienceCluster configuration
+    dsci_name: "default-dsci"
+    dsc_name: "default-dsc"
+    
+  tasks:
+    - name: Create operator namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ operator_namespace }}"
+
+    - name: Create OperatorGroup
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: operators.coreos.com/v1
+          kind: OperatorGroup
+          metadata:
+            name: rhods-operator
+            namespace: "{{ operator_namespace }}"
+
+    - name: Create Subscription for OpenShift AI Operator
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: operators.coreos.com/v1alpha1
+          kind: Subscription
+          metadata:
+            name: rhods-operator
+            namespace: "{{ operator_namespace }}"
+          spec:
+            channel: "{{ operator_channel }}"
+            installPlanApproval: Manual
+            name: rhods-operator
+            source: redhat-operators
+            sourceNamespace: openshift-marketplace
+
+    - name: Wait for Subscription to create InstallPlan
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: Subscription
+        name: rhods-operator
+        namespace: "{{ operator_namespace }}"
+      register: subscription_result
+      until: >
+        subscription_result.resources | length > 0 and
+        subscription_result.resources[0].status is defined and
+        subscription_result.resources[0].status.installplan is defined and
+        subscription_result.resources[0].status.installplan.name is defined
+      retries: 30
+      delay: 10
+      
+    - name: Get InstallPlan name from Subscription status
+      set_fact:
+        install_plan_name: "{{ subscription_result.resources[0].status.installplan.name }}"
+
+    - name: Display InstallPlan information
+      debug:
+        msg:
+          - "InstallPlan created: {{ install_plan_name }}"
+          - "Namespace: {{ operator_namespace }}"
+
+    - name: Get InstallPlan details
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: InstallPlan
+        name: "{{ install_plan_name }}"
+        namespace: "{{ operator_namespace }}"
+      register: install_plan_details
+
+    - name: Display InstallPlan approval status
+      debug:
+        msg:
+          - "InstallPlan Name: {{ install_plan_name }}"
+          - "Approval Mode: {{ install_plan_details.resources[0].spec.approval }}"
+          - "Approved: {{ install_plan_details.resources[0].spec.approved }}"
+          - "Phase: {{ install_plan_details.resources[0].status.phase | default('Unknown') }}"
+
+    - name: Approve the InstallPlan
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: operators.coreos.com/v1alpha1
+          kind: InstallPlan
+          metadata:
+            name: "{{ install_plan_name }}"
+            namespace: "{{ operator_namespace }}"
+          spec:
+            approval: Manual
+            approved: true
+
+    - name: Wait for InstallPlan to complete
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: InstallPlan
+        name: "{{ install_plan_name }}"
+        namespace: "{{ operator_namespace }}"
+      register: install_plan_status
+      until: >
+        install_plan_status.resources | length > 0 and
+        install_plan_status.resources[0].status is defined and
+        install_plan_status.resources[0].status.phase == 'Complete'
+      retries: 30
+      delay: 10
+
+    - name: Wait for OpenShift AI operator to be ready
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: ClusterServiceVersion
+        namespace: "{{ operator_namespace }}"
+      register: csv_result
+      until: >
+        csv_result.resources | length > 0 and
+        csv_result.resources | selectattr('metadata.name', 'search', 'rhods-operator') | list | length > 0 and
+        (csv_result.resources | selectattr('metadata.name', 'search', 'rhods-operator') | list | first).status.phase == 'Succeeded'
+      retries: 30
+      delay: 10
+
+    - name: Create DataScienceCluster Initialization (DSCI)
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: dscinitialization.opendatahub.io/v1
+          kind: DSCInitialization
+          metadata:
+            name: "{{ dsci_name }}"
+          spec:
+            applicationsNamespace: redhat-ods-applications
+            monitoring:
+              managementState: Managed
+              namespace: redhat-ods-monitoring
+            serviceMesh:
+              controlPlane:
+                metricsCollection: Istio
+                name: data-science-smcp
+                namespace: istio-system
+              managementState: Managed
+            trustedCABundle:
+              customCABundle: ''
+              managementState: Managed
+
+    - name: Wait for DSCI to be ready
+      kubernetes.core.k8s_info:
+        api_version: dscinitialization.opendatahub.io/v1
+        kind: DSCInitialization
+        name: "{{ dsci_name }}"
+      register: dsci_result
+      until: >
+        dsci_result.resources | length > 0 and
+        dsci_result.resources[0].status.phase is defined and
+        dsci_result.resources[0].status.phase == 'Ready'
+      retries: 20
+      delay: 10
+
+    - name: Create DataScienceCluster (DSC)
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: datasciencecluster.opendatahub.io/v1
+          kind: DataScienceCluster
+          metadata:
+            name: "{{ dsc_name }}"
+          spec:
+            components:
+              codeflare:
+                managementState: Removed
+              kserve:
+                defaultDeploymentMode: RawDeployment
+                managementState: Managed
+                serving:
+                  managementState: Removed
+                  name: knative-serving
+              modelregistry:
+                registriesNamespace: rhoai-model-registries
+              feastoperator: {}
+              trustyai:
+                managementState: Removed
+              ray:
+                managementState: Managed
+              kueue:
+                managementState: Removed
+              workbenches:
+                managementState: Managed
+              dashboard:
+                managementState: Managed
+              modelmeshserving:
+                managementState: Removed
+              llamastackoperator: {}
+              datasciencepipelines:
+                managementState: Managed
+              trainingoperator:
+                managementState: Managed
+
+    - name: Wait for DataScienceCluster to be ready
+      kubernetes.core.k8s_info:
+        api_version: datasciencecluster.opendatahub.io/v1
+        kind: DataScienceCluster
+        name: "{{ dsc_name }}"
+      register: dsc_result
+      until: >
+        dsc_result.resources | length > 0 and
+        dsc_result.resources[0].status.phase is defined and
+        dsc_result.resources[0].status.phase == 'Ready'
+      retries: 30
+      delay: 10
+
+    - name: Display installation summary
+      debug:
+        msg:
+          - "========================================="
+          - "Red Hat OpenShift AI Installation Complete!"
+          - "========================================="
+          - "Operator Namespace: {{ operator_namespace }}"
+          - "Applications Namespace: redhat-ods-applications"
+          - "InstallPlan: {{ install_plan_name }}"
+          - "CSV Status: {{ csv_result.resources[0].status.phase }}"
+          - "DSC Status: {{ dsc_result.resources[0].status.phase }}"
+          - "========================================="
+          - "Access the dashboard through the OpenShift console application launcher"

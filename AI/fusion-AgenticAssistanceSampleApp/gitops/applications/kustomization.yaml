@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: llmops-platform
+
+resources:
+  - rbac.yaml
+  - chat-app-deployment.yaml
+  - configmap.yaml
+  - secrets.yaml
+
+commonLabels:
+  app.kubernetes.io/name: llmops-platform
+  app.kubernetes.io/component: application
+  validated-patterns.io/pattern: llmops-platform
+
+

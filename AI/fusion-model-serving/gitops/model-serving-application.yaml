@@ -1,0 +1,26 @@
+# Deploys LLM model serving on OpenShift AI
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llmops-models
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: llmops-models
+    validated-patterns.io/pattern: llmops-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.ibm.com/Purnanand-Kumar1/Fusion-AI.git
+    targetRevision: main
+    path: fusion-model-serving/gitops/models
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default-dsc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

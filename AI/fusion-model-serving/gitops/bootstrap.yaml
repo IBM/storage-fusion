@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llmops-bootstrap
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: llmops-bootstrap
+    validated-patterns.io/pattern: llmops-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.ibm.com/Purnanand-Kumar1/Fusion-AI.git
+    targetRevision: main
+    path: fusion-AgenticAssistanceSampleApp/gitops/llmops-application.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  # This bootstrap application will deploy all other applications
+  # It references the gitops directory which contains:
+  # - llmops-application.yaml (main application)
+  # - models/ (LLM model serving)
+  # - applications/ (Chat application deployment)
+
