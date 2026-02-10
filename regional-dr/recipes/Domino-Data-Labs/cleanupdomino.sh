@@ -15,6 +15,8 @@ done
 cat <<EOF
 
 Optional: cleanup endpointslices on target cluster:
-oc delete endpointslices -n domino-platform --all
+oc get endpointslices -n domino-platform | awk '/volsync-rsync/ {
+	system("oc delete endpointslice -n domino-platform "\$1)
+}'
 oc delete pod -n submariner-operator -lcomponent=submariner-lighthouse
 EOF
