@@ -25,7 +25,7 @@
 #   the '-y' flag is passed.
 
 # Usage:
-#   ./customer_cas_cleanup.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
+#  yes y | bash customer_cas_cleanup.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
 #
 ###############################################################################
 
@@ -332,11 +332,11 @@ delete_cas_crd_instances() {
 }
 
 
-# resource cleanup with parallel flow
+# resource cleanup with parallel flow (STS -> Pods -> Other resources)
 resource_cleanup() {
   echo "Starting resource cleanup in namespace: $NAMESPACE"
+
   local MAX_PARALLEL=5
-  local active_jobs=0
 
   control_parallel() {
     while [[ $(jobs -rp | wc -l) -ge $MAX_PARALLEL ]]; do
@@ -344,25 +344,61 @@ resource_cleanup() {
     done
   }
 
-  # Delete pods stuck in certain states
+  #################################################
+  # STEP 1: Delete StatefulSets FIRST (CRITICAL)
+  #################################################
+  echo "Deleting StatefulSets..."
+
+  sts_list=$(oc get sts -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
+
+  if [[ -z "$sts_list" ]]; then
+    echo "No StatefulSets found in namespace $NAMESPACE"
+  else
+    echo "$sts_list" | while read -r sts; do
+      control_parallel
+      (
+        echo "Deleting StatefulSet $sts"
+        oc delete sts "$sts" -n "$NAMESPACE" --wait=false || true
+        retry_until_gone "$sts" "$NAMESPACE" "sts"
+      ) &
+    done
+
+    wait
+  fi
+  echo "All StatefulSets deletion initiated"
+
+  #################################################
+  # STEP 2: Delete Pods AFTER StatefulSets
+  #################################################
+  echo "Deleting remaining pods..."
+
   oc get pods -n "$NAMESPACE" --no-headers | \
     awk '{print $1, $3}' | \
     while read -r pod status; do
-      if [[ "$status" =~ ^(Running|CrashLoopBackOff|Pending|Failed)$ ]]; then
+      if [[ "$status" =~ ^(Running|CrashLoopBackOff|Pending|Failed|Terminating)$ ]]; then
         control_parallel
         (
-          echo "Deleting pod $pod"
-          oc delete pod "$pod" -n "$NAMESPACE" --grace-period=0 --wait=false || true
+          echo "Deleting pod $pod (status: $status)"
+          oc delete pod "$pod" -n "$NAMESPACE" \
+            --grace-period=0 \
+            --force \
+            --wait=false || true
           retry_until_gone "$pod" "$NAMESPACE" "pod"
         ) &
       fi
     done
 
-  # List of resource types to delete
+  wait
+  echo "Pod cleanup complete"
+
+  #################################################
+  # STEP 3: Delete other namespaced resources
+  #################################################
   local resources=("secret" "configmap" "domains" "datasource")
 
   for res in "${resources[@]}"; do
-    oc get "$res" -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name" 2>/dev/null | \
+    oc get "$res" -n "$NAMESPACE" --no-headers \
+      -o custom-columns=":metadata.name" 2>/dev/null | \
     while read -r name; do
       control_parallel
       (
@@ -373,7 +409,9 @@ resource_cleanup() {
     done
   done
 
-  # Wait for all background jobs to complete
+  #################################################
+  # Final wait
+  #################################################
   wait
   echo "Resource cleanup complete in namespace: $NAMESPACE"
 }
