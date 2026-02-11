@@ -25,7 +25,7 @@
 #   the '-y' flag is passed.
 
 # Usage:
-#   ./customer_cas_cleanup.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
+#  yes y | bash customer_cas_cleanup.sh [-n <namespace>] [--keep] [--keep-namespace] [--help]
 #
 ###############################################################################
 
@@ -349,17 +349,22 @@ resource_cleanup() {
   #################################################
   echo "Deleting StatefulSets..."
 
-  oc get sts -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name" 2>/dev/null | \
-  while read -r sts; do
-    control_parallel
-    (
-      echo "Deleting StatefulSet $sts"
-      oc delete sts "$sts" -n "$NAMESPACE" --wait=false || true
-      retry_until_gone "$sts" "$NAMESPACE" "sts"
-    ) &
-  done
+  sts_list=$(oc get sts -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
 
-  wait
+  if [[ -z "$sts_list" ]]; then
+    echo "No StatefulSets found in namespace $NAMESPACE"
+  else
+    echo "$sts_list" | while read -r sts; do
+      control_parallel
+      (
+        echo "Deleting StatefulSet $sts"
+        oc delete sts "$sts" -n "$NAMESPACE" --wait=false || true
+        retry_until_gone "$sts" "$NAMESPACE" "sts"
+      ) &
+    done
+
+    wait
+  fi
   echo "All StatefulSets deletion initiated"
 
   #################################################
