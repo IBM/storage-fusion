@@ -7,7 +7,8 @@ for i in virtualmachines; do
 	echo "removing VolumeReplications from $i..."
 	oc delete vr -n $i --all
 	echo "Stopping VMs in $i..."
-	for vm in $(oc get vms -n $i -o name | cut -d/ -f2); do
+	for vm in $(oc get vms -n $i --no-headers | \
+		awk '!/Stopped/ { print $1 }'); do
 		virtctl stop -n $i $vm || {
 			while :; do
 				echo "Pausing for retry in 10 seconds..."
