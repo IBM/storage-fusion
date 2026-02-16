@@ -18,3 +18,4 @@ This hotfix fixes the following Backup & Restore issues:
     16. Restore fails with error Backup inventory info not returned from application service for applicationId (#59191)
     17. Exechook fails due to cancellation when the runtime is expected to be longer than an hour (#61073)
     18. Redis certificate expiration causes jobs to fail (59690)
+    19. Change AWS S3 connections with OADP to use virtual host style urls instead of host path style by default for proxy compatibility. Proxy services may rely on the bucket in the url's subdomain for validation. Buckets with "." in their name will still default to path style for compatibility. S3 compatibles will continue to use path style urls. Path style format may be forced by adding "FORCEAWSPATHSTYLE" to .spec.transactionManager.testFlags in the DataProtectionAgent. (#68134)
