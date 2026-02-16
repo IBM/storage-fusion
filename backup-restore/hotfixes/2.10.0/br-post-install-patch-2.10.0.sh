@@ -356,14 +356,14 @@ if [ -z "$BR_NS" ]; then
 fi
 
 AGENTCSV=$(oc -n "$BR_NS" get csv -o name | grep ibm-dataprotectionagent)
-# VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-headers)
-# if [ -z "$VERSION" ]; then
-#     echo "ERROR: Could not get B&R version. Skipped updates"
-#     exit 0
-# elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
-#     echo "This patch applies to B&R version $EXPECTED_VERSION only, you have $VERSION. Skipped updates"
-#     exit 0
-# fi
+VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-headers)
+if [ -z "$VERSION" ]; then
+    echo "ERROR: Could not get B&R version. Skipped updates"
+    exit 0
+elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
+    echo "This patch applies to B&R version $EXPECTED_VERSION only, you have $VERSION. Skipped updates"
+    exit 0
+fi
 
 if [ -n "$HUB" ]; then
     echo "Apply patches to hub..."
