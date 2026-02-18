@@ -19,3 +19,4 @@ This hotfix fixes the following Backup & Restore issues:
     16. Alert triggered for old backup job completion (62403)
     17. Backup fails intermittently with error Hit exception during "group/rg" : argument of type 'NoneType' is not iterable (62741)
     18. Hotfix branches not including Power and Z images for guardian-velero (63492)
+    19. Change AWS S3 connections with OADP to use virtual host style urls instead of host path style by default for proxy compatibility. Proxy services may rely on the bucket in the url's subdomain for validation. Buckets with "." in their name will still default to path style for compatibility. S3 compatibles will continue to use path style urls. Path style format may be forced by adding "FORCEAWSPATHSTYLE" to .spec.transactionManager.testFlags in the DataProtectionAgent. (#68134)

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes.
-HOTFIX_NUMBER=10
+HOTFIX_NUMBER=11
 EXPECTED_VERSION=2.10.1
 
 patch_usage() {
@@ -342,7 +342,7 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
 fi
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:1ed31e6ad1f8ee4f3d29bcb3b5f8caba5b4c571d2f2f8035fe3ff5edce037c27
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:081c7a1269a9058f2c2e7a5b432ac4adbbcbdbf6a8fcc779bf16de9a915c4bd6
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
