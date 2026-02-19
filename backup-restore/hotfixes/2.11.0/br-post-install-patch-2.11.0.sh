@@ -319,3 +319,7 @@ fi
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
 printf "  %-${#ISF_NS}s: %s\n" "$ISF_NS" "isf-data-protection-operator-controller-manager"
+
+echo "Please verify that the pods for the following daemonsets have successfully restarted for Openshift 4.18 and lower:"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "node-agent"
+echo "Manually restart node-agent pods if they haven’t been restarted."
