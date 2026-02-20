@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=6
+HOTFIX_NUMBER=7
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -295,7 +295,7 @@ fi
 update_isf_operator_csv isf-operator.v2.11.0 "${isfdataprotection_img}"
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:a2d01e24fa8d71334c85e458c7b47432be49a3c90ea44e1865fa47f82697b9ef
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:25bfde6b666b864ee90541ca872c61d4f6be0b19da22fb7edf8c4156992955ec
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
