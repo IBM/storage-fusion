@@ -95,6 +95,7 @@ The following operators must be installed and in a Ready state:
     - Provides KServe, ODH Model Controller, and AI platform components.
   - Red Hat OpenShift Service Mesh 3
     - Required for KServe networking and internal traffic management.
+
 #### Access and Permissions
   - `oc` CLI configured and authenticated to your OpenShift cluster
   - Cluster-admin or sufficient RBAC to create namespaces, roles, and Argo CD Applications
@@ -214,8 +215,7 @@ Navigate to:
 
 **Red Hat Applications → OpenShift GitOps → Cluster Argo CD**
 
-<p align="center"><img width="309" alt="image" src="https://github.ibm.com/user-attachments/assets/030d4eb7-2dca-4bd8-9476-d517ecaf4486" /><p>
-
+<p align="center"><img width="309" alt="argocd" src="https://github.com/user-attachments/assets/437f0463-61d9-4e11-86b0-af2a65a9c3a9" /><p>
 
 When prompted, log in using your OpenShift (OCP) credentials via the integrated OAuth authentication.
 
@@ -232,7 +232,7 @@ The application should display:
 - **Health Status:** `Healthy`
 - All Kubernetes resources managed under GitOps
 
-<p align="center"><img width="1725" alt="model-serving" src="https://github.ibm.com/user-attachments/assets/0497640d-1b0d-4a27-b469-b0b92f0120fb" /></p>
+<img width="3102" height="1642" alt="model-serving" src="https://github.com/user-attachments/assets/56de81c6-85b5-4e8a-9b50-0ba6a9fd2af1" />
 
 
 ---
@@ -454,3 +454,5 @@ By leveraging OpenShift GitOps (Argo CD), model serving becomes declarative, ver
 Running the stack on IBM Fusion HCI simplifies GPU enablement, storage integration, and operator readiness, providing a consistent path from experimentation to scalable AI deployments.
 
 Platform operators manage infrastructure, while GitOps governs model lifecycle, creating a clean separation of responsibilities for reliable AI operations.
+
+
