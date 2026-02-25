@@ -45,14 +45,23 @@ spec:
 2. Follow the steps mentioned in the doc to enable prometheus to scrape metrics from the new target: [Setup Openshift Monitoring Stack for monitoring IBM Storage Scale container native project](https://github.com/IBM/ibm-spectrum-scale-bridge-for-grafana/wiki/Setup-Openshift-Monitoring-Stack-for-monitoring-IBM-Storage-Scale-container-native-project)
 
 ### Switch Monitoring
-Added new panels for:
-- Memory Usage in %
-- CPU Usage in %
-- Operational state of the interface
-- Sensor Temperature:
-  - PSUs
-  - CPU Cores
-  - Ports
-  - Ambient Board
-  - ASIC 
-- Total bytes received by an interface
+IBM Fusion 2.12.1 introduces comprehensive switch monitoring capabilities for fleet-wide visibility across all Fusion clusters. This feature enables centralized monitoring of both high-speed data switches and management switches, providing critical insights into network infrastructure health and performance.
+
+#### Monitoring Panels
+The dashboard includes the following monitoring panels for comprehensive switch observability:
+
+##### Resource Utilization
+- **Memory Usage (%)**: Real-time memory consumption metrics to identify memory pressure and potential resource constraints
+- **CPU Usage (%)**: Processor utilization tracking for performance analysis and capacity planning
+
+##### Network Interface Health
+- **Operational State**: Monitor the operational status of each network interface (up/down) to quickly identify connectivity issues
+- **Total Bytes Received**: Track ingress traffic volume per interface for bandwidth analysis and anomaly detection
+
+##### Thermal Monitoring
+Critical temperature sensors provide early warning of thermal issues that could lead to hardware failure:
+- **PSU Temperature**: Power Supply Unit thermal monitoring
+- **CPU Core Temperature**: Processor thermal metrics
+- **Port Temperature**: Individual port thermal readings
+- **Ambient Board Temperature**: Overall board temperature monitoring
+- **ASIC Temperature**: Application-Specific Integrated Circuit thermal data
