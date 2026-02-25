@@ -336,61 +336,31 @@ After deployment, you can verify the RAG system is operational using the UI:
 
 1. Open a web browser and navigate to the RAG frontend.
 
-
-<img width="1664" alt="Screenshot 2026-01-21 at 10 58 15 PM" src="https://github.ibm.com/user-attachments/assets/d6d2a3d3-bc81-4103-a8cd-503c16de8aa8" />
-
+<img width="1548" height="930" alt="image" src="https://github.com/user-attachments/assets/c46cef1f-287c-47f2-8d52-c6e8be88098e" />
 
 2. Create a new collection by clicking "Create New Collection" at the bottom left. Provide a name and upload your documents (for example, IBM Fusion HCI and SDS PDFs).
 
-
 3. Click Create Collection and wait for ingestion to complete. Depending on the document size, this may take a few minutes.
 
-
-
-<img width="1648" alt="Screenshot 2026-01-21 at 10 59 06 PM" src="https://github.ibm.com/user-attachments/assets/18f44d39-ea7e-4264-9a17-bd8df83042ed" />
-
-
+<img width="1544" height="930" alt="image" src="https://github.com/user-attachments/assets/6eea4a65-c709-48e4-a616-548a72069fc4" />
 
 4. In the home tab, click the Notifications icon on the top right.
 
-
-
-<img width="1301" alt="Screenshot 2026-01-21 at 10 59 38 PM" src="https://github.ibm.com/user-attachments/assets/55bba55c-6025-43ee-9626-902fe80d5131" />
-
-
+<img width="1540" height="1188" alt="image" src="https://github.com/user-attachments/assets/ae175c43-feaf-4b57-87e7-babb2ef227c4" />
 
 5. Monitor the logs of the <ingestor-server-xxxxx> pod in the rag namespace to check for any errors.
 
-
-
+<img width="1532" height="1172" alt="image" src="https://github.com/user-attachments/assets/e8bcfeb0-37db-4fdd-97a3-a8d1906305a6" />
 
 6. Wait for the process to complete: ingestion may take several minutes depending on the size and number of uploaded documents.
 
-
-
-
-<img width="1314" alt="Screenshot 2026-01-21 at 11 00 01 PM" src="https://github.ibm.com/user-attachments/assets/0b068aab-6bb0-4909-86ae-a19fdcac140e" />
-
-
-
-
 7. Once ingestion completes, click the uploaded document in the left panel. The collection will appear in the bottom right panel, ready for querying.
 
-
-
-<img width="1723" alt="Screenshot 2026-01-21 at 11 00 24 PM" src="https://github.ibm.com/user-attachments/assets/0a281141-d396-42a3-9570-e214d21d3f71" />
-
-
-
+<img width="1546" height="612" alt="image" src="https://github.com/user-attachments/assets/2b581db8-ef5f-4069-af83-7f188cd156e4" />
 
 8. Now you can ask questions related to your document.
 
-
-
-<img width="681" alt="Screenshot 2026-01-21 at 11 00 43 PM" src="https://github.ibm.com/user-attachments/assets/74acefdf-31e8-4d6c-93f6-a11315886c61" />
-
-
-
+<img width="1544" height="1180" alt="image" src="https://github.com/user-attachments/assets/b61874bb-db44-40f9-9c2a-7951339959e7" />
 
 9. Monitor the logs of the <rag-nim-llm-0> pod in the rag namespace to observe AI responses.
 
