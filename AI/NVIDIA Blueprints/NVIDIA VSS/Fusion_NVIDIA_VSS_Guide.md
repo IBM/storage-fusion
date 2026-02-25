@@ -279,7 +279,7 @@ After deployment:
 1. Open the VSS UI.  
 2. Upload a sample video.  
 
-![image](https://github.ibm.com/user-attachments/assets/5974665c-8080-4e6c-b540-b61081cb6f20)
+<img width="1546" height="920" alt="image" src="https://github.com/user-attachments/assets/0c8c1ba8-9c74-41c2-b9bb-b4c8013336c0" />
 
 3. Select chunk size (recommended: 5 seconds).  
 4. Configure prompts as needed. The examples below are templates — adjust them based on the type of video being uploaded and the level of technical detail required.
@@ -320,7 +320,7 @@ After deployment:
     ```
 6. Click **Summarize**.  
 
-![image](https://github.ibm.com/user-attachments/assets/b293bcf7-8e4f-4742-8998-bf5aa95d7cb1)
+<img width="1546" height="940" alt="image" src="https://github.com/user-attachments/assets/758294eb-0c13-43c8-bbf0-df0418d4f864" />
 
 To monitor processing:
 
@@ -330,15 +330,15 @@ oc logs -f vss-vss-deployment-<pod-id> -n default
 
 Once complete, the summary appears in the UI.
 
-<img width="770" alt="Screenshot 2026-02-25 at 11 20 04 AM" src="https://github.ibm.com/user-attachments/assets/002f640d-9d5f-4a2f-8e9d-586bbfb2c1a3" />
+<img width="1538" height="924" alt="image" src="https://github.com/user-attachments/assets/8d5ad6e1-8725-420e-b777-52d350b37bc7" />
 
 You can Ask natural language questions  
 
-![image](https://github.ibm.com/user-attachments/assets/0cd2e9be-bc41-4c94-9936-e86b609e6c32)
+<img width="1540" height="926" alt="image" src="https://github.com/user-attachments/assets/6e6ebdd7-3e36-406f-b536-f5cce784c97c" />
 
 Higlights can also be generated for the uploaded video file.
 
-![image](https://github.ibm.com/user-attachments/assets/a6118d90-c00e-466b-8d73-25d8e79971d0)
+<img width="1552" height="936" alt="image" src="https://github.com/user-attachments/assets/f5dc2903-ea66-4dc5-9013-61c8cc9dfd75" />
 
 # What We Achieved
 
