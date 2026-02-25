@@ -409,5 +409,4 @@ Error: failed to create typed patch object (rag/rag-nv-ingest; apps/v1, Kind=Dep
 - Common deployment issues and solutions can be found in the [NVIDIA troubleshooting guide](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/troubleshooting.md)
 - To uninstall the deployment, follow the guidance [here](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/deploy-helm.md#uninstall-a-deployment)
 
-
 **Acknowledgments:** Thanks to Sandeep Zende for his collaboration in validating this blueprint on IBM Fusion HCI.
