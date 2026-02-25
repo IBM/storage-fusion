@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llmops-config
+  namespace: llmops-platform
+  labels:
+    app.kubernetes.io/name: llmops-platform
+data:
+  cas-endpoint: "https://console-ibm-spectrum-fusion-ns.apps.f77l035.fusion.tadn.ibm.com"
+  cas-vector-store-id: "patent"  # Optional - will auto-discover if empty
+  cas-use-mcp: "false"  # Use REST API (false) or MCP protocol (true) - REST recommended
+  llm-endpoint: "http://granite-llm-predictor.default-dsc.svc.cluster.local:8080/v1/completions"
+  default-top-k: "5"
+
+

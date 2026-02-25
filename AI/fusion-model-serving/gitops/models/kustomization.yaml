@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Namespace will be automatically set by ArgoCD from Application CR's destination.namespace
+# This allows you to specify the namespace in the Application CR itself
+# Remove the hardcoded namespace to let ArgoCD handle it
+
+resources:
+  - rbac.yaml
+  - inferenceservice-config.yaml
+  - missing-crds.yaml
+  - kserve-model-serving.yaml
+
+# Labels are dynamically set from Application CR via Kustomize patches
+# See fusion-model-serving/gitops/model-serving.yaml for label configuration
+commonLabels:
+  app.kubernetes.io/name: llmops-models
+  validated-patterns.io/pattern: llmops-platform
+
+# ConfigMap generator for model configuration
+# NOTE: MODEL_NAME and InferenceService name are configured in the Application CR
+# See fusion-model-serving/gitops/model-serving.yaml
+configMapGenerator:
+  - name: model-config
+    literals:
+      - MODEL_NAME=ibm-granite/granite-3.2-8b-instruct
+    options:
+      disableNameSuffixHash: true

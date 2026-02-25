@@ -1,0 +1,110 @@
+---
+# ============================================================================
+# LLM Model Serving Application - GitOps Configuration
+# ============================================================================
+# Deploys LLM model serving on OpenShift AI with KServe
+#
+# QUICK START - Change these 5 values:
+# 1. Application name (metadata.name) - Your app identifier
+# 2. Labels (in Patch 1) - Match application name
+# 3. Model name (in Patch 2) - HuggingFace model path
+# 4. InferenceService name (in Patch 3) - Kubernetes-compatible name
+# 5. Namespace (spec.destination.namespace) - Target deployment namespace
+#
+# All other resources inherit labels automatically via commonLabels!
+# ============================================================================
+#
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llmops-models
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: llmops-models
+    validated-patterns.io/pattern: llmops-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # IMPORTANT: Replace <your-username> with your GitHub username after forking the repository
+    repoURL: https://github.com/<your-username>/storage-fusion.git
+    targetRevision: main
+    path: AI/fusion-model-serving/gitops/models
+    kustomize:
+      # ============================================================================
+      # CUSTOMIZATION SECTION - Only 3 patches needed!
+      # ============================================================================
+      # Patch 1: Labels (propagate to all resources)
+      # Patch 2: Model name (HuggingFace model path)
+      # Patch 3: InferenceService (name, labels, GPU/memory resources)
+      #
+      # InferenceService Name Conversion Rules:
+      #   - Take the part after "/" in MODEL_NAME
+      #   - Replace dots (.) with dashes (-)
+      #   - Convert to lowercase
+      #
+      # Examples:
+      #   ibm-granite/granite-3.2-8b-instruct → granite-3-2-8b-instruct
+      #   meta-llama/Meta-Llama-3.1-8B-Instruct → meta-llama-3-1-8b-instruct
+      #   mistralai/Mistral-7B-Instruct-v0.2 → mistral-7b-instruct-v0-2
+      # ============================================================================
+      patches:
+        # Patch 1: Override commonLabels in Kustomization
+        # This automatically applies to ALL resources
+        - target:
+            kind: Kustomization
+          patch: |-
+            - op: replace
+              path: /commonLabels/app.kubernetes.io~1name
+              value: llmops-models
+            - op: replace
+              path: /commonLabels/validated-patterns.io~1pattern
+              value: llmops-platform
+        
+        # Patch 2: Set the MODEL_NAME in ConfigMap
+        - target:
+            kind: ConfigMap
+            name: model-config
+          patch: |-
+            - op: replace
+              path: /data/MODEL_NAME
+              value: ibm-granite/granite-3.2-8b-instruct
+        
+        # Patch 3: Configure InferenceService (name, labels, resources)
+        # All InferenceService customizations in ONE patch
+        - target:
+            kind: InferenceService
+          patch: |-
+            - op: replace
+              path: /metadata/name
+              value: granite-3-2-8b-instruct
+            - op: replace
+              path: /metadata/labels/model
+              value: granite
+            - op: replace
+              path: /spec/predictor/containers/0/resources/limits/nvidia.com~1gpu
+              value: "1"
+            - op: replace
+              path: /spec/predictor/containers/0/resources/limits/memory
+              value: "16Gi"
+            - op: replace
+              path: /spec/predictor/containers/0/resources/requests/nvidia.com~1gpu
+              value: "1"
+            - op: replace
+              path: /spec/predictor/containers/0/resources/requests/memory
+              value: "16Gi"
+
+  destination:
+    server: https://kubernetes.default.svc
+    # CUSTOMIZE THIS: Change to your desired namespace
+    # Common options: default-dsc (OpenShift AI default), or create your own namespace
+    namespace: test-model-serving
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+

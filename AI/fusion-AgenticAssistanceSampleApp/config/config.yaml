@@ -1,0 +1,63 @@
+# LLMOps Platform Configuration
+
+# CAS Configuration
+cas:
+  endpoint: "https://console-ibm-spectrum-fusion-ns.apps.f77l035.fusion.tadn.ibm.com"
+  api_key: "${CAS_API_KEY}"  # Set via environment variable
+  timeout: 30
+  default_top_k: 5
+  search_type: "hybrid"  # semantic, keyword, or hybrid
+  use_mcp: false  # Use MCP protocol (true) or REST API (false) - REST API recommended for better compatibility
+
+# OpenShift AI / KServe Configuration
+# Using default-dsc namespace (Data Science Cluster)
+llm:
+  endpoint: "http://localhost:8081/v1/completions"  # Port-forwarded from cluster
+  models:
+    - name: "granite"
+      endpoint: "http://localhost:8081/v1/completions"  # Port-forwarded from cluster
+      default: true
+  default_parameters:
+    max_new_tokens: 512
+    temperature: 0.7
+    top_p: 0.9
+
+# Prompt Configuration
+prompts:
+  git_repo: "https://github.ibm.com/ProjectAbell/Fusion-AI.git"
+  git_path: "prompts"
+  current_version: "v2"
+  auto_reload: true
+
+# Monitoring Configuration
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+  grafana:
+    enabled: true
+    dashboard_path: "monitoring/grafana-dashboard.json"
+
+# GitOps Configuration
+gitops:
+  enabled: true
+  argocd_namespace: "openshift-gitops"
+  sync_policy: "automated"
+  prune: true
+  self_heal: true
+
+# Deployment Configuration
+deployment:
+  namespace: "llmops-platform"
+  chat_app_name: "llmops-chat-app"
+  llm_namespace: "default-dsc"
+
+# Application Configuration
+app:
+  # Enable RAG features
+  enable_rag: true
+  # Default number of documents to retrieve
+  default_top_k: 5
+  # Enable conversation memory
+  use_memory: false
+
