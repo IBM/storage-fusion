@@ -95,6 +95,7 @@ The following operators must be installed and in a Ready state:
     - Provides KServe, ODH Model Controller, and AI platform components.
   - Red Hat OpenShift Service Mesh 3
     - Required for KServe networking and internal traffic management.
+
 #### Access and Permissions
   - `oc` CLI configured and authenticated to your OpenShift cluster
   - Cluster-admin or sufficient RBAC to create namespaces, roles, and Argo CD Applications
@@ -453,4 +454,5 @@ By leveraging OpenShift GitOps (Argo CD), model serving becomes declarative, ver
 Running the stack on IBM Fusion HCI simplifies GPU enablement, storage integration, and operator readiness, providing a consistent path from experimentation to scalable AI deployments.
 
 Platform operators manage infrastructure, while GitOps governs model lifecycle, creating a clean separation of responsibilities for reliable AI operations.
+
 
