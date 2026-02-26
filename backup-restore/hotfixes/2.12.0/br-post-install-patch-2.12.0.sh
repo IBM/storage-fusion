@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.11.0 release.
-HOTFIX_NUMBER=1
+HOTFIX_NUMBER=2
 EXPECTED_VERSION=2.12.0
 
 source br-2.12.0patch-offline-mirror.sh
@@ -90,6 +90,21 @@ get_oadp_version() {
     oc get csv  -l operators.coreos.com/redhat-oadp-operator.${BR_NS} -n "$BR_NS" -o json | jq .items[0].spec.version
 }
 
+set_deployment_image() {
+    name=$1
+    container=$2
+    image=$3
+    echo "${name} ${container} ${image}"
+    if (oc -n "$BR_NS" get deployment/"${name}" -o yaml >$DIR/"${name}".save.yaml); then
+        echo "Patching deployment/${name} image..."
+        [ -z "$DRY_RUN" ] && oc -n "$BR_NS" set image deployment/"${name}" "${container}"="${image}"
+        [ -n "$DRY_RUN" ] && oc -n "$BR_NS" set image deployment/"${name}" "${container}"="${image}" --dry-run=client -o yaml >$DIR/"${name}".patch.yaml
+        oc -n "$BR_NS" rollout status --timeout=65s deployment/"${name}"
+    else
+        echo "ERROR: Failed to save original deployment/${name}. Skipped updates."
+    fi
+}
+
 set_velero_image() {
     OADP_VERSION=$(get_oadp_version)
     if [[ $OADP_VERSION == *"1.4"* ]]; then
@@ -159,13 +174,20 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
     exit 0
 fi
 
+# update transaction-manager
+tm_image=$(build_icr_path ${TRANSACTIONMANAGER})
+set_deployment_image transaction-manager transaction-manager ${tm_image}
+
+hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
+update_hotfix_configmap ${hotfix}
+
+echo "Please verify that the pods for the following deployment have successfully restarted:"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
+
 # update oadp velero
 oadp_velero_14=$(build_icr_path ${OADP_VELERO_14})
 oadp_velero_15=""
 set_velero_image ${oadp_velero_14} ${oadp_velero_15}
-
-hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
-update_hotfix_configmap ${hotfix}
 
 echo "Please verify that the pods for the following deployment have successfully restarted for Openshift 4.18 and lower:"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"

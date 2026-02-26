@@ -5,6 +5,7 @@ usage() {
 }
 
 OADP_VELERO_14=fbr-velero@sha256:379a6d6a6dbe78fd09c3aa91b2f3fb44dff514ff5d62a1654cc1b3a126b8aee9
+TRANSACTIONMANAGER=guardian-transaction-manager@sha256:7bb7230a0e6fedf318e7670698575b91b211dd6e457ae7ac33665ae8c1992d48
 
 # build icr path from the docker image path
 build_icr_path() {
@@ -35,6 +36,7 @@ copy_images() {
 
 declare -a IMAGES=(
   $OADP_VELERO_14
+  $TRANSACTIONMANAGER
 )
 
 declare -a FUSIONIMAGES_HCI=()
