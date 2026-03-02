@@ -8,7 +8,6 @@ kind: Kustomization
 resources:
   - rbac.yaml
   - inferenceservice-config.yaml
-  - missing-crds.yaml
   - kserve-model-serving.yaml
 
 # Labels are dynamically set from Application CR via Kustomize patches
