@@ -1,7 +1,7 @@
 # GitOps-Driven Model Serving on Red Hat OpenShift AI with OpenShift GitOps (Argo CD) on IBM Fusion HCI
 Model serving is where machine learning delivers real value, enabling applications to consume trained models through scalable, production-ready inference endpoints.
 
-In this blog, we walk through a structured, GitOps-native approach to serving open-source LLMs on Red Hat OpenShift AI (RHOAI) using KServe and vLLM. Deployments are fully declarative and managed through Red Hat OpenShift GitOps (Argo CD), making model rollouts as simple as committing a YAML change. Running the stack on IBM Fusion HCI further simplifies GPU, storage, and operator readiness for enterprise AI workloads.
+In this blog, we walk through a structured, GitOps-native approach to serving open-source LLMs on Red Hat OpenShift AI (RHOAI) using KServe and vLLM. Deployments are fully declarative and managed through Red Hat OpenShift GitOps (which provides Argo CD), making model rollouts as simple as committing a YAML change. Running the stack on IBM Fusion HCI further simplifies GPU, storage, and operator readiness for enterprise AI workloads.
 
 By the end of this guide, you will have:
   - A GitOps-managed InferenceService deployment using Red Hat OpenShift GitOps
@@ -14,7 +14,7 @@ Instead of manually creating InferenceServices and configuring serving runtimes,
 ### Model Serving with Red Hat OpenShift AI
 Red Hat OpenShift AI (RHOAI) extends the capabilities of Red Hat OpenShift to deliver a consistent, enterprise-ready hybrid AI and MLOps platform. It provides tooling across the full lifecycle of AI/ML workloads, including training, serving, monitoring, and managing models and AI-enabled applications.
 
-For details, refer to the official documentation: [Red Hat OpenShift AI Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.2)
+For details, refer to the official documentation: [Red Hat OpenShift AI Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed)
 
 ### Why GitOps for Model Serving?
 
@@ -65,9 +65,9 @@ Before deploying the GitOps-based model serving stack on IBM Fusion HCI, ensure 
     
 #### GPU Enablement (Required for LLM Serving)
 If serving GPU-backed models such as vLLM-based LLMs, the following components must be installed:
-  - NVIDIA GPU Operator
   - Node Feature Discovery (NFD) for hardware detection
-  - Worker nodes labeled with: `nvidia.com/gpu.present=true`
+  - NVIDIA GPU Operator
+  - Worker nodes automatically labeled by the NVIDIA GPU Operator (for example: nvidia.com/gpu.present=true)
     
 Verify GPU availability:
 ```bash
@@ -94,8 +94,8 @@ The following operators must be installed and in a Ready state:
   - Red Hat OpenShift AI (RHOAI)
     - Provides KServe, ODH Model Controller, and AI platform components.
   - Red Hat OpenShift Service Mesh 3
-    - Required for KServe networking and internal traffic management.
-
+    - Required if using Service Mesh-based KServe networking configuration.
+    
 #### Access and Permissions
   - `oc` CLI configured and authenticated to your OpenShift cluster
   - Cluster-admin or sufficient RBAC to create namespaces, roles, and Argo CD Applications
@@ -109,7 +109,7 @@ After verifying that all prerequisites are satisfied, ensure you can access the 
 ```bash
 oc login --token=<TOKEN> --server=<API_SERVER>
 ```
-To allow the GitOps application to create required resources (namespaces, roles, rolebindings, and KServe custom resources), grant elevated permissions to the Argo CD application controller:
+To allow the GitOps application to create required resources (namespaces, roles, rolebindings, and KServe custom resources), temporarily grant cluster-admin permissions (lab environments only) to the Argo CD application controller:
 ```bash
 oc adm policy add-cluster-role-to-user cluster-admin \
   -z openshift-gitops-argocd-application-controller \
@@ -167,17 +167,16 @@ The Application name defaults to llmops-models but can be customized in the Appl
 
 This creates an Argo CD Application (llmops-models) in the openshift-gitops namespace, which points to:
   - **Git repository path:** fusion-model-serving/gitops/models
-  - **Target namespace**: test-model-serving (default)
+  - **Target namespace**: model-serving (default)
 The target namespace can be customized directly in the Application manifest by modifying `spec.destination.namespace`.
 
 
 
 Once applied, Argo CD will automatically:
-  - **Create the target namespace** (test-model-serving) where all model-serving resources will be deployed.
-  - **Provision RBAC permissions** (ServiceAccounts, Roles, RoleBindings) required for KServe and model pods to run securely.
-  - **Generate ConfigMaps** such as model-config, which defines the model to be served — by default ibm-granite/granite-3.2-8b-instruct.
-  - **Deploy the InferenceService CR**, triggering OpenShift AI + KServe to launch the Granite predictor workload on IBM Fusion HCI.
-  - **Create Kubernetes Services** (via KServe) and optionally expose them externally using OpenShift Routes.
+  - **Create the target namespace** (model-serving) if namespace auto-creation is enabled in the sync policy.
+  - **Provision RBAC permissions** (Roles, RoleBindings) required for KServe and model pods to run securely.
+  - **Deploy the InferenceService CR**, triggering OpenShift AI + KServe to launch the predictor workload on IBM Fusion HCI.- by default ibm-granite/granite-3.2-8b-instruct.
+  - **Create internal Kubernetes Services** (via KServe), and external access is optional and must be configured separately using OpenShift Routes.
 
 Any drift from the declared Git state is automatically corrected by Argo CD.
 
@@ -192,19 +191,22 @@ Watch the deployment progress:
 oc get application llmops-models -n openshift-gitops
 
 # Monitor InferenceService
-oc get inferenceservice -n test-model-serving
+oc get inferenceservice -n model-serving
 
 # Watch pod creation
-oc get pods -n test-model-serving -w
+oc get pods -n model-serving -w
 ```
 
 #### Model Deployment Phases
 
-During startup, the model typically moves through these states:
-  - **Pending** - Waiting for scheduling onto a GPU-enabled Fusion HCI worker node
-  - **ContainerCreating** - Container image pulling and initialization
-  - **Running** - vLLM container started, and model download begins
-  - **Ready** - Model fully loaded and serving inference traffic
+During startup, the model-serving workload typically moves through these states:
+
+- Pending: Waiting for scheduling onto a GPU-enabled Fusion HCI worker node
+- ContainerCreating: Container image pulling and initialization
+- Running: vLLM container started, and model download begins
+- Ready: Model fully loaded and serving inference traffic
+
+These states primarily reflect the lifecycle of the predictor pod created by the KServe InferenceService, with final readiness determined by the InferenceService status.
 
 
 ## Argo CD Application View
@@ -232,7 +234,7 @@ The application should display:
 - **Health Status:** `Healthy`
 - All Kubernetes resources managed under GitOps
 
-<img width="3102" height="1642" alt="model-serving" src="https://github.com/user-attachments/assets/56de81c6-85b5-4e8a-9b50-0ba6a9fd2af1" />
+<p align="center"><img width="3102" height="1642" alt="model-serving" src="https://github.com/user-attachments/assets/56de81c6-85b5-4e8a-9b50-0ba6a9fd2af1" /></p>
 
 
 ---
@@ -283,7 +285,7 @@ This is useful when multiple models are deployed, but only one should be made ex
 When executed, the `expose-model.sh` script automates the entire external exposure process by:
   - Validating resources - Confirms that the InferenceService and its backing Kubernetes Service are present
   - Creating an OpenShift Route - Sets up an edge-terminated TLS Route for secure access
-  - Enabling HTTPS connectivity - Ensures traffic is encrypted using TLS termination at the router
+  - Enabling HTTPS connectivity - Ensures TLS termination at the OpenShift ingress router
   - Printing the model endpoint URL - Outputs the external HTTPS URL for immediate use
   - Generating test commands - Provides ready-to-run curl examples to verify the deployment
 
@@ -304,7 +306,8 @@ Found InferenceServices:
   - granite-3-2-8b-instruct
 
 Processing: granite-3-2-8b-instruct
-  ✓ Exposed at: https://granite-3-2-8b-instruct-external-test-model-serving.apps.cluster.example.com
+route/granite-3-2-8b-instruct-external created
+✓ Exposed at: https://granite-3-2-8b-instruct-external-test-model-serving.apps.f07d005.fusion.tadn.ibm.com
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Successfully exposed 1 InferenceService(s)!
@@ -312,7 +315,7 @@ Successfully exposed 1 InferenceService(s)!
 
 Test your models:
   granite-3-2-8b-instruct:
-    curl -k https://granite-3-2-8b-instruct-external-test-model-serving.apps.cluster.example.com/v1/models -H 'Authorization: Bearer EMPTY'
+    curl -k https://granite-3-2-8b-instruct-external-test-model-serving.apps.f07d005.fusion.tadn.ibm.com/v1/models -H 'Authorization: Bearer EMPTY'
 ```
 
 #### Testing External Access
@@ -320,26 +323,21 @@ Test your models:
 Once exposed, test your model with OpenAI-compatible API calls:
 
 ```bash
-# Get the route URL
-ROUTE_URL=$(oc get route granite-3-2-8b-instruct-external -n test-model-serving -o jsonpath='{.spec.host}')
-
 # List available models
-curl -k https://${ROUTE_URL}/v1/models \
+curl -k https://granite-3-2-8b-instruct-external-test-model-serving.apps.f07d005.fusion.tadn.ibm.com/v1/models \
   -H "Authorization: Bearer EMPTY"
 
 # Test chat completions
-curl -k -X POST https://${ROUTE_URL}/v1/chat/completions \
+curl -k -X POST https://granite-3-2-8b-instruct-external-test-model-serving.apps.f07d005.fusion.tadn.ibm.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer EMPTY" \
   -d '{
     "model": "ibm-granite/granite-3.2-8b-instruct",
     "messages": [
-      {"role": "user", "content": "Explain about Red Hat Openshift AI"}
+      {"role": "user", "content": "Explain about Red Hat OpenShift AI operator"}
     ],
-    "max_tokens": 200,
-    "temperature": 0.7
+    "max_tokens": 200
   }'
-
 ```
 ---
 
@@ -351,7 +349,7 @@ Instead of editing multiple YAML files, model name, resources, and metadata are 
 
 All customization happens in the Argo CD Application manifest, while the base templates remain reusable and unchanged.
 
-Customization is grouped into three key areas.
+Customization is grouped into two key areas.
 
 ### 1. Application Identity and Labels
 The first customization controls the labels applied across all resources deployed by this application.
@@ -378,36 +376,12 @@ For example:
 ``` value: text-generation-serving```
 
 This ensures that all resources deployed by Argo CD automatically carry the correct application identity.
-### 2. Selecting the Model to Serve
 
-The model served by this deployment is configured through the model-config ConfigMap.
+### 2. Configuring the Model and InferenceService Deployment
 
-The Argo CD Application YAML includes a patch that sets the Hugging Face model reference:
-```
-- target:
-    kind: ConfigMap
-    name: model-config
-  patch: |-
-    - op: replace
-      path: /data/MODEL_NAME
-      value: ibm-granite/granite-3.2-8b-instruct
-```
-Updating the MODEL_NAME value is sufficient to deploy a different model from Hugging Face. The serving runtime automatically consumes this configuration through environment injection into the InferenceService.
+The model name and all InferenceService settings are configured together in a single patch. The model is set directly as an environment variable on the container — no ConfigMap is involved. This avoids naming conflicts when multiple models are deployed to the same namespace.
 
-For example, to serve Mistral:
-
-```
-value: mistralai/Mistral-7B-Instruct-v0.2
-```
-At runtime, the InferenceService reads the model reference from this ConfigMap and dynamically pulls the model during startup. 
-
-This approach enables fully Git-driven model switching, requiring only a single configuration change without modifying the serving manifests.
-
-### 3. Configuring the InferenceService Deployment
-
-This patch customizes the deployed InferenceService by defining its service identity, model labeling, and runtime resource requirements. All updates are applied together in a single patch to ensure consistent serving behavior.
-
-In the Application YAML, the following patch defines these values:
+In the Application YAML, the following patch defines the model identity, resource requirements, and serving configuration:
 ```
 - target:
     kind: InferenceService
@@ -418,6 +392,9 @@ In the Application YAML, the following patch defines these values:
     - op: replace
       path: /metadata/labels/model
       value: granite
+    - op: replace
+      path: /spec/predictor/containers/0/env/0/value
+      value: ibm-granite/granite-3.2-8b-instruct
     - op: replace
       path: /spec/predictor/containers/0/resources/limits/nvidia.com~1gpu
       value: "1"
@@ -434,6 +411,7 @@ In the Application YAML, the following patch defines these values:
 
   - `metadata.name` defines the Kubernetes InferenceService name, which becomes the serving endpoint identifier.
   - `labels.model` adds a model-family label (granite) for tracking, filtering, and observability.
+  - `env[0].value` sets the Hugging Face model ID (`MODEL`) passed directly to the vLLM container — no ConfigMap required. To serve a different model, update this value only. For example, to serve Mistral: `value: mistralai/Mistral-7B-Instruct-v0.2`
   - `limits.nvidia.com/gpu` sets the maximum GPU count the serving container can consume during inference.
   - `limits.memory` caps the memory usage to prevent resource exhaustion or OOM termination.
   - `requests.nvidia.com/gpu` ensures the pod is scheduled only on nodes with an available GPU by reserving one.
@@ -441,7 +419,7 @@ In the Application YAML, the following patch defines these values:
 
 By configuring both requests and limits, this patch ensures predictable GPU-backed model serving and makes the application flexible enough to support anything from lightweight models to GPU-heavy LLM workloads.
 
-Ensure that the requested GPU and memory values align with the actual node capacity. 
+Ensure that the requested GPU and memory values align with the actual node capacity.
 If insufficient resources are available, the InferenceService will remain Pending.
 
 ---
@@ -454,5 +432,3 @@ By leveraging OpenShift GitOps (Argo CD), model serving becomes declarative, ver
 Running the stack on IBM Fusion HCI simplifies GPU enablement, storage integration, and operator readiness, providing a consistent path from experimentation to scalable AI deployments.
 
 Platform operators manage infrastructure, while GitOps governs model lifecycle, creating a clean separation of responsibilities for reliable AI operations.
-
-
