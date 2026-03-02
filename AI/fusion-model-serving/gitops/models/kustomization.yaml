@@ -3,26 +3,26 @@ kind: Kustomization
 
 # Namespace will be automatically set by ArgoCD from Application CR's destination.namespace
 # This allows you to specify the namespace in the Application CR itself
-# Remove the hardcoded namespace to let ArgoCD handle it
 
 resources:
   - rbac.yaml
   - inferenceservice-config.yaml
-  - missing-crds.yaml
   - kserve-model-serving.yaml
 
 # Labels are dynamically set from Application CR via Kustomize patches
-# See fusion-model-serving/gitops/model-serving.yaml for label configuration
+# See fusion-model-serving/gitops/model-serving-application.yaml for label configuration
 commonLabels:
   app.kubernetes.io/name: llmops-models
   validated-patterns.io/pattern: llmops-platform
 
-# ConfigMap generator for model configuration
-# NOTE: MODEL_NAME and InferenceService name are configured in the Application CR
-# See fusion-model-serving/gitops/model-serving.yaml
-configMapGenerator:
-  - name: model-config
-    literals:
-      - MODEL_NAME=ibm-granite/granite-3.2-8b-instruct
-    options:
-      disableNameSuffixHash: true
+# NOTE: MODEL_NAME is set directly as an env value in the InferenceService spec.
+# Patched per-model via the Application CR (Patch 2).
+# See fusion-model-serving/gitops/model-serving-application.yaml
+#
+# MULTI-MODEL / SAME-NAMESPACE:
+# The model-serving-application.yaml template includes ignoreDifferences for the
+# shared resources (Role, RoleBinding, inferenceservice-config ConfigMap) so that
+# multiple Applications in the same namespace do not report OutOfSync due to
+# ArgoCD tracking-id annotation ownership differences.
+# CreateOnly=true on rbac.yaml and inferenceservice-config.yaml ensures only the
+# first Application creates them; subsequent Applications skip creation silently.
