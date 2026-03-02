@@ -1,10 +1,10 @@
 
 # GitOps-Driven Installation of Red Hat OpenShift AI on IBM Fusion with Argo CD
-Artificial Intelligence workloads are rapidly becoming a core part of modern enterprise platforms. Organizations require a scalable, Kubernetes-native way to build, train, deploy, and manage machine learning models efficiently across hybrid cloud environments.
+Artificial Intelligence workloads are rapidly becoming a core part of modern enterprise platforms. Organizations require a scalable, Kubernetes-native platform to build, train, deploy, and manage machine learning models efficiently across hybrid cloud environments.
 
 Red Hat OpenShift AI (RHOAI) extends Red Hat OpenShift with an enterprise-grade hybrid AI and MLOps platform, with tooling across the full AI/ML lifecycle, including training, serving, monitoring, and managing models.
 
-IBM Fusion HCI provides the infrastructure foundation for AI workloads, while OpenShift GitOps (Argo CD) enables a declarative and continuously reconciled deployment model.
+IBM Fusion HCI provides the infrastructure foundation for AI workloads, while OpenShift GitOps (Argo CD) enables declarative, continuously reconciled deployments.
 
 In this blog, we demonstrate how to install Red Hat OpenShift AI on IBM Fusion using Argo CD, ensuring a version-controlled and self-healing operator lifecycle.
 
@@ -42,7 +42,7 @@ The following operators must be installed before proceeding:
   - Red Hat OpenShift GitOps Operator (Argo CD) - for GitOps-driven deployment and continuous sync
   - Node Feature Discovery (NFD) - to detect node hardware capabilities (such as GPUs)
   - NVIDIA GPU Operator (required only if GPU-based workloads are planned) - to enable GPU acceleration for training and serving
-  - Red Hat OpenShift Service Mesh 3 Operator - required for model serving components (KServe) and internal traffic management.
+  - Red Hat OpenShift Service Mesh 3 Operator (optional) – required if using KServe with service mesh–based traffic management.
 
 #### Access and Permissions
 
@@ -63,7 +63,8 @@ oc adm policy add-cluster-role-to-user cluster-admin \
   -z openshift-gitops-argocd-application-controller \
   -n openshift-gitops
 ```
-This ensures the Argo CD controller can successfully reconcile all manifests defined in this guide.
+This grants full cluster privileges to the Argo CD controller. Use with caution.
+This ensures the Argo CD controller can reconcile all manifests defined in this guide.
 
 **NOTE:** This approach is suitable for lab or proof-of-concept environments.
 In production, use a dedicated ServiceAccount with scoped RBAC permissions aligned with organizational security policies.
@@ -129,10 +130,10 @@ Expected output:
 ```bash
 argocd.argoproj.io/openshift-gitops patched
 ```
-This configuration enables Argo CD to accurately evaluate Operator lifecycle resources and OpenShift AI custom resources, ensuring the Application transitions to Healthy only after:
-  - The ClusterServiceVersion reaches Succeeded
-  - DSCInitialization reaches Ready
-  - DataScienceCluster reaches Ready
+This configuration enables Argo CD to accurately evaluate Operator lifecycle resources and OpenShift AI custom resources, ensuring the Application transitions to Healthy only after the defined health conditions are met, including:
+  - ClusterServiceVersion = Succeeded
+  - DSCInitialization = Ready
+  - DataScienceCluster = Ready
 
 
 ## Bootstrapping the Installation with an Argo CD Application
@@ -181,7 +182,7 @@ Navigate to:
 <p align="center"><img width="309" alt="argocd" src="https://github.com/user-attachments/assets/437f0463-61d9-4e11-86b0-af2a65a9c3a9" /><p>
 
 
-This opens the Argo CD dashboard, where the rhoai-install application will appear once synchronization completes.
+This opens the Argo CD dashboard, where the rhoai-install application appears once synchronization completes.
 When prompted, log in using your OpenShift (OCP) credentials via the integrated OAuth authentication.
 
 
@@ -194,20 +195,19 @@ Once synchronization completes successfully, the application should display:
 
 <img width="3442" height="1834" alt="rhoai_gitops" src="https://github.com/user-attachments/assets/d8402b93-e16d-4565-a4ef-11dcabaebabd" />
 
-
 A synced and Healthy state confirms that the desired configuration stored in Git matches the live cluster state and that the OpenShift AI components are functioning as expected.
 
 ## How Argo CD Drives the Installation Flow
 
 After the Application is applied, Argo CD orchestrates the installation sequence using the manifests defined in Git.
 
-All manifests are organized with Kustomize (`kustomization.yaml`), allowing Argo CD to apply resources in a predictable GitOps sequence:
+All manifests are organized with Kustomize (`kustomization.yaml`), allowing Argo CD to apply resources declaratively. The operator must become ready before the DataScienceCluster resource becomes Healthy:
   - Install the operator (operator.yaml)
   - Initialize the platform (dsc.yaml)
 
 
   ### Operator Installation Through GitOps 
-The installation begins with `operator.yaml`, which installs the Red Hat OpenShift AI operator through OLM (Namespace, OperatorGroup, and Subscription). By default, the Red Hat OpenShift AI operator installs from the fast-3.x update channel.
+The installation begins with `operator.yaml`, which installs the Red Hat OpenShift AI operator through OLM (Namespace, OperatorGroup, and Subscription). In this example, the operator installs from the fast-3.x update channel as defined in `operator.yaml`.
 
 Argo CD monitors the operator installation until the ClusterServiceVersion reaches the Succeeded phase. Once the operator is ready, the DataScienceCluster custom resource triggers deployment of all dependent OpenShift AI components through the operator’s reconciliation loop.
 
@@ -229,9 +229,9 @@ This makes the DataScienceCluster the central place to customize exactly what ge
   ####  Components Enabled in This Setup (Managed)
 In this configuration, the following core services are enabled:
   - **Dashboard** – provides the OpenShift AI user interface
-  - **Workbenches** – enables notebook environments, deployed into rhods-notebooks
-  - **KServe** – activates model serving, with Headless deployment mode
-      - **NIM integration** is also enabled under KServe
+  - **Workbenches** – enables notebook environments created within user projects
+  - **KServe** – activates model serving using raw deployment mode
+      - **NIM integration** (if configured and supported by your RHOAI version)
   - **Model Registry** – deployed into rhoai-model-registries for managing model metadata
   - **TrustyAI** – enables responsible AI evaluation, with restricted execution and no online access
   - **AI Pipelines** – provides workflow and pipeline orchestration
@@ -254,9 +254,6 @@ Marking these as Removed ensures they are not installed at all, reducing cluster
 ## Final Outcome: A Fully GitOps-Managed AI Platform on Fusion
 Using this approach, Red Hat OpenShift AI is installed and managed declaratively on IBM Fusion through a single Argo CD Application resource.
 
-The entire lifecycle, including installation, upgrades, configuration drift correction, and component enablement, is now managed declaratively through Git.
+The entire operator and platform lifecycle — including installation, upgrades, drift correction, and component enablement — is managed declaratively through Git.
 
-The operator lifecycle, health monitoring, and platform configuration are fully controlled from Git, ensuring consistency across environments.
-
-This establishes a scalable and production-ready deployment model for enterprise AI workloads.
-
+This establishes a scalable and GitOps-driven deployment model suitable for enterprise AI workloads.
