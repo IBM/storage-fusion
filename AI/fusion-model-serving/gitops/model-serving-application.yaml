@@ -4,12 +4,16 @@
 # ============================================================================
 # Deploys LLM model serving on OpenShift AI with KServe
 #
-# QUICK START - Change these 5 values:
+# QUICK START - Change these 4 values:
 # 1. Application name (metadata.name) - Your app identifier
 # 2. Labels (in Patch 1) - Match application name
-# 3. Model name (in Patch 2) - HuggingFace model path
-# 4. InferenceService name (in Patch 3) - Kubernetes-compatible name
-# 5. Namespace (spec.destination.namespace) - Target deployment namespace
+# 3. InferenceService name + MODEL_NAME (in Patch 2) - model identity
+# 4. Namespace (spec.destination.namespace) - Target deployment namespace
+#
+# MULTI-MODEL / SAME-NAMESPACE:
+# MODEL_NAME is set directly as an env value on the InferenceService — no ConfigMap.
+# This means no ConfigMap naming conflicts when multiple models share the same namespace.
+# Each Application only needs a unique InferenceService name and MODEL_NAME value.
 #
 # All other resources inherit labels automatically via commonLabels!
 # ============================================================================
@@ -29,15 +33,14 @@ spec:
   source:
     # IMPORTANT: Replace <your-username> with your GitHub username after forking the repository
     repoURL: https://github.com/<your-username>/storage-fusion.git
-    targetRevision: main
+    targetRevision: master
     path: AI/fusion-model-serving/gitops/models
     kustomize:
       # ============================================================================
-      # CUSTOMIZATION SECTION - Only 3 patches needed!
+      # CUSTOMIZATION SECTION - Only 2 patches needed!
       # ============================================================================
       # Patch 1: Labels (propagate to all resources)
-      # Patch 2: Model name (HuggingFace model path)
-      # Patch 3: InferenceService (name, labels, GPU/memory resources)
+      # Patch 2: InferenceService — name, MODEL_NAME env value, labels, GPU/memory resources
       #
       # InferenceService Name Conversion Rules:
       #   - Take the part after "/" in MODEL_NAME
@@ -46,7 +49,6 @@ spec:
       #
       # Examples:
       #   ibm-granite/granite-3.2-8b-instruct → granite-3-2-8b-instruct
-      #   meta-llama/Meta-Llama-3.1-8B-Instruct → meta-llama-3-1-8b-instruct
       #   mistralai/Mistral-7B-Instruct-v0.2 → mistral-7b-instruct-v0-2
       # ============================================================================
       patches:
@@ -61,18 +63,10 @@ spec:
             - op: replace
               path: /commonLabels/validated-patterns.io~1pattern
               value: llmops-platform
-        
-        # Patch 2: Set the MODEL_NAME in ConfigMap
-        - target:
-            kind: ConfigMap
-            name: model-config
-          patch: |-
-            - op: replace
-              path: /data/MODEL_NAME
-              value: ibm-granite/granite-3.2-8b-instruct
-        
-        # Patch 3: Configure InferenceService (name, labels, resources)
-        # All InferenceService customizations in ONE patch
+
+        # Patch 2: Configure InferenceService — name, MODEL_NAME, labels, resources
+        # MODEL_NAME is set directly as env value (no ConfigMap needed).
+        # Change /metadata/name and /spec/predictor/containers/0/env/0/value together.
         - target:
             kind: InferenceService
           patch: |-
@@ -82,6 +76,9 @@ spec:
             - op: replace
               path: /metadata/labels/model
               value: granite
+            - op: replace
+              path: /spec/predictor/containers/0/env/0/value
+              value: ibm-granite/granite-3.2-8b-instruct
             - op: replace
               path: /spec/predictor/containers/0/resources/limits/nvidia.com~1gpu
               value: "1"
@@ -99,8 +96,31 @@ spec:
     server: https://kubernetes.default.svc
     # CUSTOMIZE THIS: Change to your desired namespace
     # Common options: default-dsc (OpenShift AI default), or create your own namespace
-    namespace: test-model-serving
-  
+    namespace: model-serving
+
+  # Ignore diff on shared resources that may be owned by another Application
+  # in the same namespace (e.g. when deploying multiple models to the same namespace).
+  # ArgoCD will not report OutOfSync for annotation/label differences on these resources.
+  ignoreDifferences:
+    - group: rbac.authorization.k8s.io
+      kind: Role
+      name: argocd-manager
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1tracking-id
+        - /metadata/labels
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      name: argocd-manager
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1tracking-id
+        - /metadata/labels
+    - group: ""
+      kind: ConfigMap
+      name: inferenceservice-config
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1tracking-id
+        - /metadata/labels
+
   syncPolicy:
     automated:
       prune: true
