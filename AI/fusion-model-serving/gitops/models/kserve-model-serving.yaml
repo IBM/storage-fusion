@@ -1,24 +1,22 @@
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
+  # Base name — patched per-model via model-serving-application.yaml (Patch 2)
   name: granite-llm
-  # Namespace will be set by Kustomize from Application CR's destination.namespace
-  # Labels (app.kubernetes.io/name, validated-patterns.io/pattern) will be automatically added by commonLabels in kustomization.yaml
-  # Keep resource-specific labels below for model identification
+  # Namespace set by ArgoCD from Application CR destination.namespace
+  # commonLabels (app.kubernetes.io/name, validated-patterns.io/pattern) auto-applied by kustomization.yaml
   labels:
     app: llm-serving
     model: granite
     version: "1.0"
   annotations:
-    # Ensure this is created after ConfigMap
     argocd.argoproj.io/sync-wave: "0"
 spec:
   predictor:
     serviceAccountName: default
     containers:
     - name: kserve-container
-      # Using vLLM which supports Hugging Face models and OpenAI-compatible API
-      # Publicly available image, no pull secret needed
+      # vLLM serves Hugging Face models with an OpenAI-compatible API
       image: vllm/vllm-openai:latest
       imagePullPolicy: Always
       resources:
@@ -31,29 +29,26 @@ spec:
           memory: "16Gi"
           cpu: "4"
       env:
-      # Load model from Hugging Face Hub - model name comes from ConfigMap
+      # MODEL is patched per-Application via /spec/predictor/containers/0/env/0/value in Patch 2
+      # No ConfigMap needed — value is set directly to avoid naming conflicts in shared namespaces
       - name: MODEL
-        valueFrom:
-          configMapKeyRef:
-            name: model-config
-            key: MODEL_NAME
+        value: "ibm-granite/granite-3.2-8b-instruct"
       - name: HF_HOME
-        value: "/tmp/hf_cache"  # Use writable directory for Hugging Face cache
+        value: "/tmp/hf_cache"
       - name: VLLM_CACHE_ROOT
-        value: "/tmp/vllm_cache"  # Use writable directory for vLLM cache
+        value: "/tmp/vllm_cache"
       - name: HOME
-        value: "/tmp"  # Set home to writable directory
-      # vLLM uses OpenAI-compatible API format
+        value: "/tmp"
       args:
       - --model
-      - $(MODEL)  # Reference the MODEL environment variable
+      - $(MODEL)
       - --host
       - "0.0.0.0"
       - --port
       - "8080"
       - --api-key
-      - "EMPTY"  # vLLM requires API key, but we can use a dummy value
-      - --trust-remote-code  # Required for some models
+      - "EMPTY"
+      - --trust-remote-code
       - --gpu-memory-utilization
-      - "0.75"  # Use 75% of GPU memory instead of default 90% to avoid memory errors
+      - "0.75"
 
