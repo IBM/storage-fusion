@@ -230,7 +230,7 @@ fi
 resolve_hub_connection $HUB
 
 # update transaction-manager
-tm_image=$(build_icr_path ${TRANSACTIONMANAGER})
+tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
 set_deployment_image transaction-manager transaction-manager "${tm_image}"
 set_deployment_image dbr-controller dbr-controller "${tm_image}"
 
@@ -239,9 +239,10 @@ update_hotfix_configmap ${hotfix}
 
 echo "Please verify that the pods for the following deployment have successfully restarted:"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
 
 # update oadp velero
-oadp_velero_14=$(build_icr_path ${OADP_VELERO_14})
+oadp_velero_14=$(build_icr_path ${BNR_PREFIX} ${OADP_VELERO_14})
 oadp_velero_15=""
 set_velero_image ${oadp_velero_14} ${oadp_velero_15}
 
