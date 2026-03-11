@@ -11,6 +11,28 @@ SDS_PREFIX="cp.icr.io/cp/fusion-sds"
 OADP_VELERO_14=fbr-velero@sha256:379a6d6a6dbe78fd09c3aa91b2f3fb44dff514ff5d62a1654cc1b3a126b8aee9
 TRANSACTIONMANAGER=guardian-transaction-manager@sha256:7bb7230a0e6fedf318e7670698575b91b211dd6e457ae7ac33665ae8c1992d48
 
+#check_cmd:
+# Returns:
+#   0 on finding the command
+#   1 if the command does not exist
+check_cmd ()
+{
+   type $1 > /dev/null
+   echo $?
+}
+
+check_for_required_dependencies_mirror() {
+    REQUIREDCOMMANDS=("skopeo")
+    echo -e "Checking for required commands: ${REQUIREDCOMMANDS[*]}"
+    for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
+        IS_COMMAND=$(check_cmd $COMMAND)
+        if [ $IS_COMMAND -ne 0 ]; then
+            echo "ERROR: $COMMAND command not found, install $COMMAND command to apply patch"
+            exit $IS_COMMAND
+        fi
+    done
+}
+
 # build icr path from the docker image path
 build_icr_path() {
   prefix="${1}"
@@ -73,6 +95,8 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
      usage
      exit 1
   fi
+
+  check_for_required_dependencies_mirror
 
   if [ -z "${2}" ]; then
     LOG=/tmp/$(basename "${0}")_log.txt
