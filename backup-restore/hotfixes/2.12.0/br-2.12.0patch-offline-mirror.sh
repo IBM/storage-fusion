@@ -72,7 +72,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
   else
     LOG=${2}
   fi
-  
+
   touch ${LOG}
   exec &> >(tee -a $LOG)
   echo -e "Logging to $LOG\n"

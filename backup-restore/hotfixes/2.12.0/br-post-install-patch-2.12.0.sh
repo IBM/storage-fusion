@@ -2,8 +2,7 @@
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.0 release.
 HOTFIX_NUMBER=3
 EXPECTED_VERSION=2.12.0
-
-source br-2.12.0patch-offline-mirror.sh
+IMAGE_SOURCE="br-2.12.0patch-offline-mirror.sh"
 
 patch_usage() {
     echo "Patches the Fusion Backup & Restore install to ${EXPECTED_VERSION} hotfix ${HOTFIX_NUMBER}".
@@ -53,6 +52,16 @@ while [[ $# -gt 0 ]]; do
         ;;
     esac
 done
+
+if [ ! -f "$IMAGE_SOURCE" ]; then
+    echo "Container image sourcefile ${IMAGE_SOURCE} is missing. The hotfix"
+    echo "requires the container image source file to execute. This file can"
+    echo "be found on the hotfix repository."
+    # file not found is errno 2
+    exit 2
+fi
+
+source "${IMAGE_SOURCE}"
 
 # use selected directory for saving logs, patches, and old values
 # if not, use the default generated directory
