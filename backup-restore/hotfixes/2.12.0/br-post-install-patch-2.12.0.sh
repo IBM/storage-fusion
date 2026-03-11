@@ -84,9 +84,9 @@ update_hotfix_configmap() {
     applied_on=$(date '+%Y-%m-%dT%TZ')
     if (oc -n "$BR_NS" get configmap bnr-hotfixes -o yaml 1>$DIR/bnr-hotfixes.save.yaml 2>&1); then
         patch="[{\"op\": \"add\", \"path\": \"/data/${hotfix}-applied-on\", \"value\": \"${applied_on}\"}]"
-        oc -n "$BR_NS" patch configmap bnr-hotfixes --type=json -p "${patch}" "${DRY_RUN}" -o yaml >$DIR/bnr-hotfixes.patch.yaml
+        oc -n "$BR_NS" ${DRY_RUN} patch configmap bnr-hotfixes --type=json -p "${patch}" -o yaml >$DIR/bnr-hotfixes.patch.yaml
     else
-        oc -n "$BR_NS" create configmap bnr-hotfixes --from-literal="${hotfix}"-applied-on="${applied_on}" "${DRY_RUN}" -o yaml >$DIR/bnr-hotfixes.patch.yaml
+        oc -n "$BR_NS" ${DRY_RUN} create configmap bnr-hotfixes --from-literal="${hotfix}"-applied-on="${applied_on}" -o yaml >$DIR/bnr-hotfixes.patch.yaml
     fi
 }
 
@@ -101,7 +101,7 @@ set_deployment_image() {
     echo "${name} ${container} ${image}"
     if (oc -n "$BR_NS" get deployment/"${name}" -o yaml >$DIR/"${name}".save.yaml); then
         echo "Patching deployment/${name} image..."
-        oc -n "$BR_NS" set image deployment/"${name}" "${container}"="${image}" "${DRY_RUN}" -o yaml >$DIR/"${name}".patch.yaml
+        oc -n "$BR_NS" ${DRY_RUN} set image deployment/"${name}" "${container}"="${image}" -o yaml >$DIR/"${name}".patch.yaml
         oc -n "$BR_NS" rollout status --timeout=65s deployment/"${name}"
     else
         echo "ERROR: Failed to save original deployment/${name}. Skipped updates."
@@ -123,7 +123,7 @@ set_velero_image() {
     if (oc -n "$BR_NS" get dpa velero -o yaml >$DIR/velero.save.yaml); then
         echo "Patching deployment/velero image..."
         patch="[{\"op\": \"replace\", \"path\": \"/spec/unsupportedOverrides/veleroImageFqin\", \"value\":\"${image}\"}, {\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp14\", \"value\": \"${oadp_velero_14}\"},{\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp15\", \"value\": \"${oadp_velero_15}\"}]"
-        oc -n "$BR_NS" patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" "${DRY_RUN}" -o yaml >$DIR/velero.patch.yaml
+        oc -n "$BR_NS" ${DRY_RUN} patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" -o yaml >$DIR/velero.patch.yaml
         echo "Velero Deployement is restarting with replacement image"
         oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
     fi
@@ -143,10 +143,10 @@ resolve_hub_connection() {
         echo "Triggering reconcile of agent operator and mirroring cross-cluster communication configmap values"
         AGENT_NAME=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.name 2>/dev/null)
         # twice to deal with the state-1 issue
-        oc label --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" forceupdate="true" "${DRY_RUN}"
-        oc label --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" forceupdate- "${DRY_RUN}"
-        oc label --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" forceupdate="true" "${DRY_RUN}"
-        oc label --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" forceupdate- "${DRY_RUN}"
+        oc label --namespace "${BR_NS}" ${DRY_RUN} "dataprotectionagent/${AGENT_NAME}" forceupdate="true"
+        oc label --namespace "${BR_NS}" ${DRY_RUN} "dataprotectionagent/${AGENT_NAME}" forceupdate-
+        oc label --namespace "${BR_NS}" ${DRY_RUN} "dataprotectionagent/${AGENT_NAME}" forceupdate="true"
+        oc label --namespace "${BR_NS}" ${DRY_RUN} "dataprotectionagent/${AGENT_NAME}" forceupdate-
 
         # and mirror the required values to configmap guardian-configmap
         CONNECTION_NAME=$(oc get --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" -o jsonpath='{.spec.connectionName}')
@@ -154,7 +154,7 @@ resolve_hub_connection() {
         HUB_CLUSTER_NAME=$(oc get --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" -o jsonpath='{.spec.hubClusterName}')
         KAFKA_ENDPOINT=$(oc get --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" -o jsonpath='{.spec.transactionManager.kafkaService}')
         KAFKA_PORT=$(oc get --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" -o jsonpath='{.spec.transactionManager.kafkaPort}')
-        oc set data --namespace "${BR_NS}" "configmap/guardian-configmap" connectionName="${CONNECTION_NAME}" hubEndPointURL="${HUB_ENDPOINT_URL}" hubClusterName="${HUB_CLUSTER_NAME}" kafka-service="${KAFKA_ENDPOINT}" kafka-port="${KAFKA_PORT}" "${DRY_RUN}" -o yaml >$DIR/guardian-configmap.patch.yaml
+        oc set data --namespace "${BR_NS}" ${DRY_RUN} "configmap/guardian-configmap" connectionName="${CONNECTION_NAME}" hubEndPointURL="${HUB_ENDPOINT_URL}" hubClusterName="${HUB_CLUSTER_NAME}" kafka-service="${KAFKA_ENDPOINT}" kafka-port="${KAFKA_PORT}" -o yaml >$DIR/guardian-configmap.patch.yaml
     fi
 }
 
@@ -194,13 +194,13 @@ if [ -z "$ISF_NS" ]; then
 fi
 
 if BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null) && [ -n "$BR_NS" ]
-  then 
+  then
   HUB=true
 else
   BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
 fi
 
-if [ -z "$BR_NS" ] 
+if [ -z "$BR_NS" ]
  then
     echo "ERROR: No B&R installation found. Exiting."
     exit 1
@@ -208,7 +208,7 @@ fi
 
 AGENTCSV=$(oc -n "$BR_NS" get csv -o name | grep ibm-dataprotectionagent)
 VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-headers)
-if [ -z "$VERSION" ] 
+if [ -z "$VERSION" ]
   then
     echo "ERROR: Could not get B&R version. Skipped updates"
     exit 0
