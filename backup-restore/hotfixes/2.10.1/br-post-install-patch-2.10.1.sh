@@ -308,6 +308,19 @@ for COMMAND in "${REQUIREDCOMMANDS[@]}"; do
     fi
 done
 
+echo -e "Checking for required version of oc 4.10+"
+OC_VERSION=$(oc version --client -o json | jq -r '.clientVersion.gitVersion')
+MAJOR=$(echo "${OC_VERSION}" | sed 's/v//' | cut -d. -f1)
+MINOR=$(echo "${OC_VERSION}" | sed 's/v//' | cut -d. -f2)
+if [ "${MAJOR}" -lt 4 ]; then
+    echo "Detected oc client version ${OC_VERSION}. Minimum 4.10"
+    exit 1
+fi
+if [ "${MINOR}" -lt 10 ]; then
+    echo "Detected oc client version ${OC_VERSION}. Minimum 4.10"
+    exit 1
+fi
+
 oc whoami > /dev/null || ( 
     echo "Not logged in to your cluster"
     exit 1
@@ -319,11 +332,11 @@ if [ -z "$ISF_NS" ]; then
     exit 1
 fi
 
-BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
-if [ -n "$BR_NS" ]; then
-    HUB=true
+if BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null) && [ -n "$BR_NS" ]
+  then 
+  HUB=true
 else
-    BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
+  BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
 fi
 
 if [ -z "$BR_NS" ]; then

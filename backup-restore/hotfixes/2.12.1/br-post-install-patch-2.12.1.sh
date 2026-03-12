@@ -1,8 +1,7 @@
 #!/bin/bash
-# Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.0 release.
-HOTFIX_NUMBER=3
-EXPECTED_VERSION=2.12.0
-IMAGE_SOURCE="br-2.12.0patch-offline-mirror.sh"
+# Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.1 release.
+HOTFIX_NUMBER=1
+EXPECTED_VERSION=2.12.1
 
 patch_usage() {
     echo "Patches the Fusion Backup & Restore install to ${EXPECTED_VERSION} hotfix ${HOTFIX_NUMBER}".
@@ -52,16 +51,6 @@ while [[ $# -gt 0 ]]; do
         ;;
     esac
 done
-
-if [ ! -f "$IMAGE_SOURCE" ]; then
-    echo "Container image sourcefile ${IMAGE_SOURCE} is missing. The hotfix"
-    echo "requires the container image source file to execute. This file can"
-    echo "be found on the hotfix repository."
-    # file not found is errno 2
-    exit 2
-fi
-
-source "${IMAGE_SOURCE}"
 
 # use selected directory for saving logs, patches, and old values
 # if not, use the default generated directory
@@ -228,26 +217,3 @@ fi
 
 # make hub/cluster spoke connection settings to reconcile and resolve to the configmap
 resolve_hub_connection $HUB
-
-# update transaction-manager
-tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
-set_deployment_image transaction-manager transaction-manager "${tm_image}"
-set_deployment_image dbr-controller dbr-controller "${tm_image}"
-
-hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
-update_hotfix_configmap ${hotfix}
-
-echo "Please verify that the pods for the following deployment have successfully restarted:"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
-
-# update oadp velero
-oadp_velero_14=$(build_icr_path ${BNR_PREFIX} ${OADP_VELERO_14})
-oadp_velero_15=""
-set_velero_image ${oadp_velero_14} ${oadp_velero_15}
-
-echo "Please verify that the pods for the following deployment have successfully restarted for OpenShift 4.18 and lower:"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"
-
-echo "Please verify that the pods for the following daemonsets have successfully restarted for OpenShift 4.18 and lower:"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "node-agent"

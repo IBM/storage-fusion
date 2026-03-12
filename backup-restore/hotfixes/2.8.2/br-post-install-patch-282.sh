@@ -19,12 +19,11 @@ if [ -z "$ISF_NS" ]; then
     exit 1
 fi
 
-BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
-if [ -n "$BR_NS" ]
- then
- HUB=true
+if BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null) && [ -n "$BR_NS" ]
+  then 
+  HUB=true
 else
-   BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
+  BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
 fi
 
 if [ -z "$BR_NS" ] 
