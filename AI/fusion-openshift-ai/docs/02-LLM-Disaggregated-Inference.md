@@ -732,7 +732,7 @@ This visibility allows inference behaviour to be analyzed at a component level r
 ---
 
 ## References
-- TechXchange blog post: 
+- TechXchange blog post: https://community.ibm.com/community/user/blogs/harichandana-kotha/2026/03/30/disaggregated-llm-inference-on-ibm-fusion-hci
 - Red Hat OpenShift AI: [**Red Hat OpenShift AI**](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed)
 - Deploying models by using Distributed Inference with llm-d: [**Deploying models by using Distributed Inference with llm-d**](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.0/html/deploying_models/deploying_models#deploying-models-using-distributed-inference_rhoai-user)
 
