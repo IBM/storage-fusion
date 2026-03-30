@@ -179,7 +179,7 @@ Navigate to:
 
 **Red Hat Applications → OpenShift GitOps → Cluster Argo CD**
 
-<p align="center"><img width="309" alt="argocd" src="https://github.ibm.com/user-attachments/assets/dea3a452-98bc-428c-a011-c666609cd5b5" /><p>
+<p align="center"><img width="309" alt="argocd" src="https://github.com/user-attachments/assets/437f0463-61d9-4e11-86b0-af2a65a9c3a9" /><p>
 
 
 This opens the Argo CD dashboard, where the rhoai-install application appears once synchronization completes.
@@ -193,7 +193,7 @@ Once synchronization completes successfully, the application should display:
   - Health Status: Healthy
   - All associated Kubernetes resources reconciled under GitOps management
 
-![rhoai_gitops](https://github.ibm.com/user-attachments/assets/73f93b72-b275-41d8-b175-88d86843dba1)
+<img width="3442" height="1834" alt="rhoai_gitops" src="https://github.com/user-attachments/assets/d8402b93-e16d-4565-a4ef-11dcabaebabd" />
 
 A synced and Healthy state confirms that the desired configuration stored in Git matches the live cluster state and that the OpenShift AI components are functioning as expected.
 
@@ -257,4 +257,3 @@ Using this approach, Red Hat OpenShift AI is installed and managed declaratively
 The entire operator and platform lifecycle — including installation, upgrades, drift correction, and component enablement — is managed declaratively through Git.
 
 This establishes a scalable and GitOps-driven deployment model suitable for enterprise AI workloads.
-
