@@ -1,7 +1,5 @@
-# Disaggregated LLM Inference on IBM Fusion HCI: Prefill-Decode Separation and KV Cache Optimization
-
-## Introduction
-
+# Running Disaggregated LLM Inference on IBM Fusion HCI
+## Prefill–Decode Separation, KV Cache Affinity, and What the Metrics Show
 
 Getting an LLM to respond is straightforward. Getting it to respond consistently at scale, with observable performance, that’s where most deployments run into trouble.
 
@@ -12,6 +10,28 @@ Red Hat OpenShift AI 3.0 introduces a new inference architecture built around ll
 Running this stack on IBM Fusion HCI further simplifies GPU, storage, and operator readiness for enterprise AI workloads.
 
 This blog walks through the prerequisites, the `LLMInferenceService` CR configuration with full Prefill-Decode separation, the authentication setup via Red Hat Connectivity Link, and two rounds of load testing with real Prometheus metrics. The model used was `mistralai/Ministral-3-8B-Instruct-2512`, deployed in the `llm-model-serving` namespace on IBM Fusion HCI running OpenShift 4.19+.
+
+---
+
+## Executive Summary
+
+This article presents a practical, metrics-driven walkthrough of running disaggregated
+LLM inference using Red Hat OpenShift AI’s llm-d architecture on IBM Fusion HCI.
+
+Using the `mistralai/Ministral-3-8B-Instruct-2512` model, we demonstrate:
+- How prefill–decode separation changes GPU utilization and request behavior
+- How KV cache–aware scheduling reduces redundant computation and improves latency
+- How the Endpoint Picker Protocol (EPP) scheduler makes phase‑aware routing decisions
+- Which Prometheus metrics validate correct disaggregated inference behavior
+
+Rather than focusing on theoretical benefits, this post uses real load tests and
+observable signals—prefill token spikes, sustained decode throughput, asymmetric cache
+hits, and improved time‑to‑first‑token—to confirm that the architecture behaves as expected
+under concurrent load.
+
+The goal is to give AI platform and MLOps engineers a clear mental model of how
+disaggregated inference works in practice, when it provides measurable benefits, and
+how to reason about its performance using production‑grade telemetry.
 
 ---
 
@@ -728,6 +748,20 @@ This visibility allows inference behaviour to be analyzed at a component level r
 **Scheduler tuning is workload-dependent** prioritize cache scoring for repeated prompts, and queue depth for highly varied workloads.
 
 **IBM Fusion HCI simplifies operations** with reliable GPU infrastructure and seamless OpenShift integration, reducing deployment and troubleshooting overhead.
+
+---
+
+## Final Thoughts
+
+Disaggregated LLM inference shifts inference from a black box to an observable,
+schedulable pipeline.
+
+For AI platform and MLOps teams, this enables disciplined scaling:
+aligning GPU resources to inference phases, preserving cache locality,
+and validating performance with telemetry rather than intuition.
+
+As LLM workloads mature into sustained production systems, architectures that
+expose—and optimize for—these internal behaviors will become increasingly important.
 
 ---
 
