@@ -15,6 +15,7 @@ set -e
 TRANSACTIONMANAGER=guardian-transaction-manager@sha256:25bfde6b666b864ee90541ca872c61d4f6be0b19da22fb7edf8c4156992955ec
 OADP_VELERO_14=fbr-velero@sha256:1fd0dc018672507b24148a0fe71e69f91ab31576c7fa070c599d7a446b5095aa
 OADP_VELERO_15=fbr-velero15@sha256:7a57d50f9c1b6a338edf310c5e69182ac98ec6338376b4ddc0474ff7e592f4f4
+IDP_AGENT_OPERATOR=idp-agent-operator@sha256:7f1b66ca1876c23c3705da181499ba3ec015d90e3b8ea9b455af78763814cfa6
 
 JOBMANAGER=guardian-job-manager@sha256:62fb326d26758d531f1912bd28238468f616553dfec99e2d704729f6caf39349
 BACKUPSERVICE=guardian-backup-service@sha256:6517b55c0c3ab8aa44f2e5cc4554ee3efb49211f7eb8840623c4160076485611
@@ -30,6 +31,10 @@ declare -a IMAGES=(
   $BACKUPSERVICE
 )
 
+declare -a CPOPENIMAGES=(
+  $IDP_AGENT_OPERATOR
+)
+
 declare -a FUSIONIMAGES_HCI=(
   "$ISFDATAPROTECTION_HCI"
 )
@@ -42,6 +47,12 @@ for IMAGE in "${IMAGES[@]}"; do
   DESTINATION=docker://$TARGET_PATH/cp/bnr/$IMAGE
   echo -e "Copying\n Image: $IMAGE\n Destination: docker://$TARGET_PATH/cp/bnr/$IMAGE\n"
   skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/$IMAGE $DESTINATION
+done
+
+for IMAGE in "${CPOPENIMAGES[@]}"; do
+  DESTINATION=docker://$TARGET_PATH/cpopen/$IMAGE
+  echo -e "Copying\n Image: $IMAGE\n Destination: docker://$TARGET_PATH/cpopen/$IMAGE\n"
+  skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/$IMAGE $DESTINATION
 done
 
 for FUSIONHCIIMAGE in "${FUSIONIMAGES_HCI[@]}"; do
