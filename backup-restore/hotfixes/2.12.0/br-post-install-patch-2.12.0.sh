@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.0 release.
-HOTFIX_NUMBER=3
+HOTFIX_NUMBER=4
 EXPECTED_VERSION=2.12.0
 IMAGE_SOURCE="br-2.12.0patch-offline-mirror.sh"
 
@@ -192,6 +192,46 @@ check_for_required_dependencies() {
     fi
 }
 
+# Updates operator CSVs
+update_operator_csv() {
+    name="$1"
+    deployment_name="$2"
+    image="$3"
+    csv_ns="$BR_NS"
+
+    if (oc get csv -n "$csv_ns" "$name" -o yaml > "$DIR/${name}.save.yaml"); then
+        echo "Scaling down deployment: $deployment_name ..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=0
+
+        echo "Patching clusterserviceversion/$name (deployment: $deployment_name, image: $image) ..."
+        dep_index=$(oc get csv -n "$csv_ns" "$name" -o json | jq "[.spec.install.spec.deployments[].name] | index(\"$deployment_name\")")
+
+        if [[ "$dep_index" == "null" ]]; then
+            echo "ERROR: Deployment '$deployment_name' not found in CSV $name"
+            return 1
+        fi
+        patches=()
+        container_index=0
+        for cname in $(oc get csv -n "$csv_ns" "$name" -o json \
+            | jq -r ".spec.install.spec.deployments[$dep_index].spec.template.spec.containers[].name"); do
+            if [[ "$cname" == "manager" ]]; then
+                patches+=("{\"op\":\"replace\",\"path\":\"/spec/install/spec/deployments/${dep_index}/spec/template/spec/containers/${container_index}/image\",\"value\":\"${image}\"}")
+            fi
+            ((container_index++))
+        done
+
+        patch_json="[$(IFS=,; echo "${patches[*]}")]"
+        [ -z "$DRY_RUN" ] &&  oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json"
+        [ -n "$DRY_RUN" ] && oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json" --dry-run=client -o yaml > "$DIR/${name}.patch.yaml"
+
+        echo "Scaling up deployment: $deployment_name ..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=1
+
+    else
+        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
+    fi
+}
+
 check_for_required_dependencies
 
 oc whoami > /dev/null || ( echo "Not logged in to your cluster" ; exit 1)
@@ -229,17 +269,19 @@ fi
 # make hub/cluster spoke connection settings to reconcile and resolve to the configmap
 resolve_hub_connection $HUB
 
+# update idp-agent-operator
+guardianidpagentoperator_img=$(build_icr_path ${CPOPEN_PREFIX} ${IDP_AGENT_OPERATOR})
+update_operator_csv ibm-dataprotectionagent.v2.12.0 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
+
 # update transaction-manager
 tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
 set_deployment_image transaction-manager transaction-manager "${tm_image}"
 set_deployment_image dbr-controller dbr-controller "${tm_image}"
 
-hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
-update_hotfix_configmap ${hotfix}
-
 echo "Please verify that the pods for the following deployment have successfully restarted:"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manager"
 
 # update oadp velero
 oadp_velero_14=$(build_icr_path ${BNR_PREFIX} ${OADP_VELERO_14})
@@ -251,3 +293,6 @@ printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"
 
 echo "Please verify that the pods for the following daemonsets have successfully restarted for OpenShift 4.18 and lower:"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "node-agent"
+
+hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
+update_hotfix_configmap ${hotfix}

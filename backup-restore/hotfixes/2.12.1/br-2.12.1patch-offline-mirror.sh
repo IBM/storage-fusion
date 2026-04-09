@@ -9,9 +9,8 @@ HCI_PREFIX="cp.icr.io/cp/fusion-hci"
 SDS_PREFIX="cp.icr.io/cp/fusion-sds"
 CPOPEN_PREFIX="icr.io/cpopen"
 
-OADP_VELERO_14=fbr-velero@sha256:379a6d6a6dbe78fd09c3aa91b2f3fb44dff514ff5d62a1654cc1b3a126b8aee9
-TRANSACTIONMANAGER=guardian-transaction-manager@sha256:7bb7230a0e6fedf318e7670698575b91b211dd6e457ae7ac33665ae8c1992d48
-IDP_AGENT_OPERATOR=idp-agent-operator@sha256:ed13cba6e1821d300846a165ad8b1228dd39c79ec2f0008a8649b157eeab518e
+
+IDP_AGENT_OPERATOR=idp-agent-operator@sha256:a12594769e8c0e718280875a22006265385e6d866b7b4507d6065e16a0dfd5bf
 
 
 #check_cmd:
@@ -73,8 +72,6 @@ copy_images() {
 }
 
 declare -a IMAGES=(
-  $OADP_VELERO_14
-  $TRANSACTIONMANAGER
 )
 
 declare -a CPOPENIMAGES=(
@@ -96,7 +93,6 @@ for IMAGE in "${IMAGES[@]}"; do
   ICR_PATH=
   ICR_IMAGE_PATHS+=($(build_icr_path ${BNR_PREFIX} ${IMAGE}))
 done
-
 
 for IMAGE in "${CPOPENIMAGES[@]}"; do
   ICR_PATH=
