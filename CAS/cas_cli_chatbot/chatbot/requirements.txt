@@ -1,0 +1,24 @@
+# Core dependencies
+requests>=2.31.0
+PyYAML>=6.0.1
+python-dateutil>=2.8.2
+
+# CLI and UI
+prompt_toolkit>=3.0.43
+rich>=13.7.0
+
+# OpenAI integration
+openai>=1.12.0
+
+# HTTP client with retry support
+urllib3>=2.0.0
+
+# Additional utilities
+python-dotenv>=1.0.0  # For environment variable support
+
+# Optional: Development dependencies (uncomment if needed)
+# pytest>=7.4.0
+# pytest-cov>=4.1.0
+# black>=23.12.0
+# flake8>=6.1.0
+# mypy>=1.8.0
