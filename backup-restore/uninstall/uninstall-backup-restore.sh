@@ -3,7 +3,7 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
-VERSION=2025111052150  # Use YYYYMMDDhhmm UTC
+VERSION=202601302100  # Use YYYYMMDDhhmm UTC
 LOG=/tmp/$(basename $0)_log.txt
 rm -f "$LOG"
 exec &> >(tee -a $LOG)
@@ -12,7 +12,7 @@ echo Logging to $LOG
 echo "VERSION: $VERSION"
 echo "ARGUMENTS:" "$@"
 
-USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
+USAGE="Usage: $0 [-u] [-d] [-b <Backup and Restore Name Space>]
        -u to uninstall a spoke installation before uninstalling hub 
        -f to delete CRs in Fusion namespace
        -d to create DeleteBackupRequest to delete backups. Use this only if you plan to uninstall Fusion
@@ -101,7 +101,7 @@ print_heading()
    ELAPSED_MIN=$((  $ELAPSED_TIME / 60 ))
    ELAPSED_SEC=$((  $ELAPSED_TIME % 60 ))
   echo -e "===================================================================================================="
-  echo "$(date) $ELAPSED_MIN:$ELAPSED_SEC $@"
+  echo "$(date) $ELAPSED_MIN:$ELAPSED_SEC" "$@"
   echo -e "===================================================================================================="
 }
 
@@ -228,6 +228,10 @@ if [ "$SKIP_ISF_CRS" == "true" ]
      [ -n "$BSL_SECRET" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' secret $BSL_SECRET
 fi
 
+print_heading "Delete any networkpolicies CRs"
+oc delete networkpolicies -n "${NAMESPACE}" --all --timeout=60s
+print_heading "Delete any networkpolicysets CRs"
+oc delete networkpolicysets -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardiancopybackups CRs"
 oc delete guardiancopybackups -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardiancopyrestores CRs"
