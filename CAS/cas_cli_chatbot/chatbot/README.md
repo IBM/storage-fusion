@@ -1,13 +1,14 @@
-    # CAS Chatbot - Enterprise Edition v2.0.0
+    # CAS Chatbot - Enterprise Edition v3.0.0
 
 An advanced, enterprise-grade CLI application for managing Cloud Application Services (CAS) with multi-provider LLM integration, comprehensive user management, and domain administration.
 
 ## 🌟 Features
 
 ### Core Capabilities
-- **Multi-Source User Management**: Manage users from OpenShift (OCP) and Keycloak (IDP)
+- **Multi-Source User Management**: Manage users from OpenShift (OCP)
 - **Domain Administration**: List, select, and manage domain access controls
 - **LLM Integration**: Support for multiple LLM providers (NVIDIA, OpenAI, Ollama, Granite)
+- **Query Vector Stores**: Retrieve raw vector chunks and sources
 - **Intelligent Caching**: Performance optimization with TTL-based caching
 - **Session Management**: Persistent session history with export capabilities
 - **Health Monitoring**: Comprehensive health checks for all services
@@ -26,7 +27,6 @@ An advanced, enterprise-grade CLI application for managing Cloud Application Ser
 - Python 3.8 or higher
 - OpenShift CLI (`oc`) installed and configured
 - Access to OpenShift cluster
-- (Optional) Keycloak/IDP instance for external user management
 - (Optional) LLM provider API keys
 
 ## 🚀 Quick Start
@@ -37,8 +37,8 @@ An advanced, enterprise-grade CLI application for managing Cloud Application Ser
 # Clone repo
 git clone https://github.com/IBM/storage-fusion.git
 
-# Go to the chatbot-v2 directory
-cd CAS/cas_cli_chatbot/chatbot-v2
+# Go to the chatbot directory
+cd CAS/cas_cli_chatbot/chatbot
 
 # Create virtual environment
 python3 -m venv venv
@@ -61,6 +61,13 @@ nano config.yaml  # Edit with your settings
 console_url: "https://console-openshift-console.apps.your-cluster.com"
 oc_username: "your-username"
 oc_password: "your-password"
+cas_url: "https://console-ibm-spectrum-fusion-ns.apps.<your-cluster>.com/<cas-endpoint>"
+```
+
+**LLM configuration (if using; below is an example for NVIDIA):**
+```yaml
+nvidia_llm_url: "<nvidia-endpoint>"
+nvidia_model: "meta/llama-3.2-1b-instruct"
 ```
 
 **Using environment variables (recommended for secrets):**
@@ -73,13 +80,91 @@ export OC_PASSWORD="your-password"
 ### 3. Run the Application
 
 ```bash
-python main.py
+python3 main.py
+```
+
+#### Quick Commands
+
+Once the application starts, try these commands:
+
+```bash
+# See all commands
+help
+
+# List users
+users list
+
+# Select a user
+users select
+
+# List domains
+domains list
+
+# Select a domain
+domains select
+
+# Ask a question
+query ask
+
+# View session stats
+session stats
+
+# Exit
+exit
+```
+
+#### Example Workflow
+
+This is an example of how to retrieve raw chunks from a vector store and feed it into an LLM for a more context-informed answer.
+
+```bash
+# 1. Start the application
+python3 main.py
+
+# 2. Select a user (if not configured)
+cas> users select
+Select user (type to search): admin
+
+# 3. Select a vector store
+admin> vector_stores select
+Select vector_stores (type to search): gt20
+
+# 4. Assign user to vector store
+admin@production-vector-stores> vector_stores assign
+Enter username to assign: developer1
+
+# 5. Retrieve raw chunks related to query
+admin@production-domain> casapi vector_search
+Enter your query: What is the recommended PTF for IBM Storage Virtualize long term support release 8.5.0?
+
+Retrieving text chunks...
+Chunk 1: [filename: example.pdf] [file ID: 1234567]
+{related info}
+Chunk 2: [filename: example2.pdf] [file ID: 8901234]
+{info that matches query more closely}
+...
+
+# 6. Get LLM-generated answer from that specific file
+admin@production-domain> casapi query file
+Enter the vector store ID: gt20
+Enter the file ID: 8901234
+Enter your query: What is the recommended PTF for IBM Storage Virtualize long term support release 8.5.0?
+
+Getting AI response...
+{LLM-generated answer}
+
+# 7 View session statistics
+admin@production-domain> session stats
+
+# 8. Export session
+admin@production-domain> session export
+Enter filename: my-session-2025-01-01.json
 ```
 
 ## 📁 Project Structure
 
 ```
-cas-chatbot/
+chatbot/
 ├── main.py                     # Application entry point
 ├── config.yaml                 # Configuration file
 ├── requirements.txt            # Python dependencies
@@ -110,22 +195,30 @@ cas-chatbot/
 
 ### Available Commands
 
-#### User Management
+#### New CAS API Functions
 ```bash
-users list       # List all users (OCP + IDP)
-users ocp        # List OpenShift users only
-users idp        # List Keycloak/IDP users
-users select     # Select/switch active user
-users sync       # Force refresh user lists
+casapi list_vector_stores   # Show available vector stores by users
+casapi vector_search        # Retrieve relevant chunks without LLM processing
+casapi vector_search        # filter Retrieve specific chunks using filters
+casapi show_file_content    # Show the content of a specified file
+casapi vector_stores info   # Show vector store info from CAS API
+casapi query file           # Query a specific file from a vector store
 ```
 
-#### Domain Management
+#### User Management
 ```bash
-domains list     # List all available domains
-domains select   # Select a domain to work with
-domains info     # Show detailed domain information
-domains users    # Show users assigned to current domain
-domains assign   # Assign user to current domain
+users list       # List all users (OCP)
+users ocp        # List OpenShift users 
+users select     # Select/switch active user
+```
+
+#### Vector Store Management
+```bash
+vector_stores list     # List all available domains
+vector_stores select   # Select a domain to work with
+vector_stores info     # Show detailed domain information
+vector_stores users    # Show users assigned to current domain
+vector_stores assign   # Assign user to current domain
 ```
 
 #### Query & LLM
@@ -152,36 +245,6 @@ health           # Run health checks on all services
 clear            # Clear screen
 help             # Show all available commands
 exit/quit        # Exit application
-```
-
-### Example Workflow
-
-```bash
-# 1. Start the application
-python main.py
-
-# 2. Select a user
-cas> users select
-Select user (type to search): admin
-
-# 3. Select a domain
-admin> domains select
-Select domain (type to search): production-domain
-
-# 4. Assign user to domain
-admin@production-domain> domains assign
-Enter username to assign: developer1
-
-# 5. Ask a query
-admin@production-domain> query ask
-Enter your query: What are the recent changes in this domain?
-
-# 6. View session statistics
-admin@production-domain> session stats
-
-# 7. Export session
-admin@production-domain> session export
-Enter filename: my-session-2025-01-01.json
 ```
 
 ## ⚙️ Configuration Reference
@@ -420,7 +483,7 @@ Run with specific config:
 
 ```bash
 # Modify main.py to accept --config argument
-python main.py --config config.prod.yaml
+python3 main.py --config config.prod.yaml
 ```
 
 ## 📚 API Integration Examples

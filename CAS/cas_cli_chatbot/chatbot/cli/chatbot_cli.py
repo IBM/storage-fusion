@@ -83,9 +83,9 @@ class ChatbotCLI:
         self.session_manager = session_manager
 
         # CLI state
-        self.current_user = self.config.get("oc_username")
+        self.current_user = config.get("oc_username")
         self.user_type = "ocp"
-        self.current_vector_store = self.config.get("default_vector_store")
+        self.current_vector_store = config.get("default_vector_store")
         self.running = True
 
         # Setup prompt session
@@ -100,7 +100,7 @@ class ChatbotCLI:
             # Welcome to CAS Chatbot CLI
 
             **Features:**
-            - Multi-user management (OCP & IDP)
+            - Multi-user management (OCP)
             - Vector store administration
             - LLM-powered queries
             - Session persistence
@@ -738,12 +738,13 @@ class ChatbotCLI:
                 self.console.print("[bold cyan]Retrieving text chunks...[/]\n")
                 for chunk_idx, item in enumerate(search_result.get("data", []), start=1):
                     filename = item.get("filename", "unknown")
+                    file_id = item.get("file_id", "unknown")
                     for chunk in item.get("content", []):
                         text = chunk.get("text", "No text")
                         cleaned_text = re.sub(r"\s+", " ", text).strip()
 
                         self.console.print(
-                            f"[bold]Chunk {chunk_idx}:[/bold] \\[filename: {filename}] {cleaned_text}\n")
+                            f"[bold]Chunk {chunk_idx}:[/bold] \\[filename: {filename}]\n\\[file ID: {file_id}]\n{cleaned_text}\n")
             else:
                 return
 
@@ -814,13 +815,13 @@ class ChatbotCLI:
                 self.console.print("[bold cyan]Retrieving text chunks...[/]\n")
                 for chunk_idx, item in enumerate(search_result.get("data", []), start=1):
                     filename = item.get("filename", "unknown")
+                    file_id = item.get("file_id", "unknown")
                     for chunk in item.get("content", []):
                         text = chunk.get("text", "No text")
-                        cleaned_text = re.sub(r"\s+", " ", text).strip()
+                        cleaned_text = text.replace("\r\n", "\n").strip()
 
                         self.console.print(
-                            f"[bold]Chunk {chunk_idx}:[/bold] \\[filename: {filename}] {cleaned_text}\n"
-                        )
+                            f"[bold]Chunk {chunk_idx}:[/bold]\n\\[filename: {filename}]\n\\[file ID: {file_id}]\n{cleaned_text}\n")
             else: 
                 return
             
@@ -867,19 +868,21 @@ class ChatbotCLI:
                 username=self.current_user,
                 user_type=self.user_type,
             )
-            print(type(file_content))
 
             # Check file content retrieval result
             if self._retrieved_result_valid(file_content, "File content retrieval"):
                 self.console.print("[bold cyan]Retrieving file content...[/]\n")
+                filename = file_content.get("filename", "unknown")
+                file_id = file_content.get("file_id", "unknown")
+                self.console.print(f"[bold]\\[filename: {filename}]\n\\[file ID: {file_id}]\n[/bold]")
+                
+                for chunk in file_content.get("content", "unknown"):
+                    for text in chunk["text"].splitlines():
+                        cleaned_text = text.strip()
+                        self.console.print(cleaned_text)
             else: 
                 return
-
-            filename=file_content.get("filename", "unknown")
-            self.console.print(
-                f"[bold bright_magenta]\\[filename: {filename}]:[/]"
-            )
-
+            
             # Save to session
             self.session_manager.add_file_lookup(
                 user=self.current_user,
@@ -1052,7 +1055,7 @@ class ChatbotCLI:
             return False
         
         self.console.print(f"[green]✓ {content_type} succeeded for user: {self.current_user}[/]\n")
-        self.logger.info(f"F{content_type} succeeded for {self.current_user}")
+        self.logger.info(f"{content_type} succeeded for {self.current_user}")
 
         return True
     
@@ -1131,9 +1134,7 @@ class ChatbotCLI:
             'help': self.display_help,
             'users list': self.cmd_users_list,
             'users ocp': self.cmd_users_ocp,
-            # 'users idp': self.cmd_users_idp,
             'users select': self.cmd_users_select,
-            #'users sync': self.cmd_users_sync,
             'vector_stores list': self.cmd_vector_stores_list,
             'vector_stores select': self.cmd_vector_stores_select,
             'vector_stores info': self.cmd_vector_stores_info,

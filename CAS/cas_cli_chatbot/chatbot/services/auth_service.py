@@ -35,7 +35,7 @@ class AuthService:
         self.username = config.get("oc_username")
         self.password = config.get("oc_password")
         self.console_url = config.get("console_url")
-        self.token = config.get("oc_token")
+        self.token = None #config.get("oc_token")
         self.token_expiry = None
 
         # Configuration
@@ -190,4 +190,5 @@ class AuthService:
         # Clear cache
         if self.cache_service:
             self.cache_service.delete('auth_token')
+
 
