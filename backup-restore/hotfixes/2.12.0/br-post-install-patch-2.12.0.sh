@@ -217,7 +217,7 @@ update_operator_csv() {
             if [[ "$cname" == "manager" ]]; then
                 patches+=("{\"op\":\"replace\",\"path\":\"/spec/install/spec/deployments/${dep_index}/spec/template/spec/containers/${container_index}/image\",\"value\":\"${image}\"}")
             fi
-            ((container_index++))
+            ((container_index++)) || true
         done
 
         patch_json="[$(IFS=,; echo "${patches[*]}")]"
