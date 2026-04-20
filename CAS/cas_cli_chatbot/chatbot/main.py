@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from utils.config_loader import ConfigLoader
+from utils.config_manager import ConfigManager
 from utils.logger import LoggerFactory
 from utils.health_check import HealthChecker
 from services.auth_service import AuthService
@@ -59,42 +60,30 @@ def initialize_services(config: dict, logger: logging.Logger) -> dict:
         # Core services
         services['cache'] = CacheService(config=config, logger=logger)
         services['metrics'] = MetricsService(config=config, logger=logger)
-        services['auth'] = AuthService(
-            config=config,
-            logger=logger,
-            cache_service=services['cache']
-        )
-
-        # User authentication manager for user-specific queries
-        from services.user_auth_manager import UserAuthenticationManager
-        services['user_auth'] = UserAuthenticationManager(config=config, logger=logger)
+        services['auth'] = AuthService(config=config,
+                                       logger=logger,
+                                       cache_service=services['cache'])
 
         # Business logic services
-        services['user'] = UserService(
-            config=config,
-            auth_service=services['auth'],
-            logger=logger,
-            cache_service=services['cache']
-        )
+        services['user'] = UserService(config=config,
+                                       auth_service=services['auth'],
+                                       logger=logger,
+                                       cache_service=services['cache'])
 
         services['vector store'] = VectorStoreService(
             config=config,
             auth_service=services['auth'],
             logger=logger,
-            cache_service=services['cache']
-        )
+            cache_service=services['cache'])
 
-        services['query'] = QueryService(
-            config=config,
-            logger=logger,
-            cache_service=services['cache']
-        )
+        services['query'] = QueryService(config=config,
+                                         auth_service=services['auth'],
+                                         logger=logger,
+                                         cache_service=services['cache'])
 
-        services['llm'] = LLMService(
-            config=config,
-            logger=logger,
-            metrics_service=services['metrics']
-        )
+        services['llm'] = LLMService(config=config,
+                                     logger=logger,
+                                     metrics_service=services['metrics'])
 
         console.print("[bold green]✓ All services initialized successfully[/]")
         return services
@@ -132,7 +121,8 @@ def run_health_checks(services: dict, logger: logging.Logger) -> bool:
     if all_healthy:
         console.print("[bold green]✓ All health checks passed[/]")
     else:
-        console.print("[bold yellow]⚠ Some services are unhealthy but continuing...[/]")
+        console.print(
+            "[bold yellow]⚠ Some services are unhealthy but continuing...[/]")
 
     return all_healthy
 
@@ -148,17 +138,20 @@ def main():
     logger = None
 
     try:
-        # Load configuration
-        console.print(f"[bold cyan]Loading configuration from {config_path}...[/]")
+        # Interactive configuration setup
+        config_manager = ConfigManager(config_path)
+        config = config_manager.setup_interactive()
+
+        # Load and validate configuration
+        console.print(f"\n[bold cyan]Validating configuration...[/]")
         config_loader = ConfigLoader(config_path)
-        config = config_loader.load()
 
         # Validate configuration
         if not config_loader.validate(config):
             console.print("[bold red]Configuration validation failed![/]")
             return 1
 
-        console.print("[bold green]✓ Configuration loaded and validated[/]")
+        console.print("[bold green]✓ Configuration validated[/]")
 
         # Setup logging
         log_config = config.get('logging', {})
@@ -167,49 +160,67 @@ def main():
             log_file=log_config.get("file", "cas_chatbot.log"),
             level=log_config.get("level", "INFO"),
             max_bytes=log_config.get("max_bytes", 10485760),
-            backup_count=log_config.get("backup_count", 5)
-        )
+            backup_count=log_config.get("backup_count", 5))
 
         logger.info("=" * 60)
         logger.info("CAS Chatbot Application Starting")
         logger.info("=" * 60)
-
-        # Initialize services
-        services = initialize_services(config, logger)
-
-        # Run health checks
-        run_health_checks(services, logger)
 
         # Initialize error handler and session manager
         error_handler = ErrorHandler(logger=logger, console=console)
         session_manager = SessionManager(
             config=config,
             logger=logger,
-            session_file=config.get('session', {}).get('file', 'session_history.json')
-        )
+            session_file=config.get('session', {}).get('file',
+                                                       'session_history.json'))
 
-        # Authenticate
-        console.print("\n[bold yellow]Authenticating...[/]")
+        # Initialize services
+        services = initialize_services(config, logger)
+
+        # Authenticate and fetch bearer token
+        console.print("\n[bold yellow]Authenticating with OpenShift...[/]")
         try:
             success = services['auth'].authenticate()
             if success:
-                console.print("[bold green]✓ Authentication successful[/]")
+                # Verify token was obtained
+                if services['auth'].token:
+                    console.print("[bold green]✓ Authentication successful[/]")
+                    console.print(f"[dim]Bearer token obtained and cached[/]")
+                else:
+                    console.print(
+                        "[bold red]✗ Failed to retrieve bearer token[/]")
+                    console.print(
+                        "[yellow]You cannot use commands until your token is valid.[/]"
+                    )
+                    console.print(
+                        "[yellow]Please check your credentials and try again.[/]"
+                    )
+                    return 1
             else:
                 console.print("[bold red]✗ Authentication failed[/]")
+                console.print(
+                    "[yellow]You cannot use commands until your token is valid.[/]"
+                )
+                console.print(
+                    "[yellow]Please check your credentials and try again.[/]")
                 return 1
         except Exception as e:
             error_handler.handle_error(e, "Authentication")
+            console.print(
+                "[yellow]You cannot use commands until your token is valid.[/]")
             return 1
 
+        # Run health checks
+        run_health_checks(services, logger)
+
         # Initialize CLI
-        cli = ChatbotCLI(
-            services=services,
-            config=config,
-            logger=logger,
-            console=console,
-            error_handler=error_handler,
-            session_manager=session_manager
-        )
+        cli = ChatbotCLI(services=services,
+                         config=config,
+                         logger=logger,
+                         console=console,
+                         error_handler=error_handler,
+                         session_manager=session_manager,
+                         config_manager=config_manager)
 
         # Run CLI loop
         logger.info("Starting CLI interface")

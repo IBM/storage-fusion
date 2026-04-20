@@ -35,8 +35,9 @@ class AuthService:
         self.username = config.get("oc_username")
         self.password = config.get("oc_password")
         self.console_url = config.get("console_url")
-        self.token = None #config.get("oc_token")
+        self.token = None  # Bearer token fetched once at login
         self.token_expiry = None
+        self.token_fetch_attempted = False  # Track if we've tried to fetch token
 
         # Configuration
         self.allow_self_signed = config.get("allow_self_signed", True)
@@ -76,10 +77,10 @@ class AuthService:
 
     def authenticate(self) -> bool:
         """
-        Authenticate with OpenShift cluster
+        Authenticate with OpenShift cluster and fetch bearer token once
 
         Returns:
-            True if authentication successful
+            True if authentication successful and token obtained
 
         Raises:
             AuthenticationError: If authentication fails
@@ -88,6 +89,9 @@ class AuthService:
         if self.token and self._is_token_valid():
             self.logger.info("Using cached authentication token")
             return True
+
+        # Mark that we're attempting to fetch token
+        self.token_fetch_attempted = True
 
         try:
             api_url = self.get_api_url_from_console()
@@ -103,19 +107,26 @@ class AuthService:
                                     timeout=30)
 
             if result.returncode != 0:
+                self.logger.error(f"OC login failed: {result.stderr}")
                 raise AuthenticationError(f"Login failed: {result.stderr}")
 
-            # Get token
+            # Fetch bearer token immediately after successful login
+            self.logger.info("Fetching bearer token...")
             token_result = subprocess.run(['oc', 'whoami', '-t'],
                                           capture_output=True,
                                           text=True,
                                           timeout=10)
 
             if token_result.returncode != 0:
+                self.logger.error("Failed to retrieve bearer token")
                 raise AuthenticationError(
                     "Failed to retrieve authentication token")
 
             self.token = token_result.stdout.strip()
+
+            if not self.token:
+                self.logger.error("Bearer token is empty")
+                raise AuthenticationError("Bearer token is empty")
 
             # Set token expiry (default 24 hours for OCP tokens)
             self.token_expiry = datetime.now() + timedelta(hours=24)
@@ -126,10 +137,11 @@ class AuthService:
                                        self.token,
                                        ttl_seconds=86400)
 
-            self.logger.info("Successfully authenticated with OpenShift")
+            self.logger.info("Successfully authenticated and obtained bearer token")
             return True
 
         except subprocess.TimeoutExpired:
+            self.logger.error("Authentication timed out")
             raise AuthenticationError("Authentication timed out")
         except Exception as e:
             self.logger.error(f"Authentication failed: {e}")
@@ -155,18 +167,26 @@ class AuthService:
 
         try:
             self.authenticate()
-            # if self.keycloak_url:
-            #     self.get_keycloak_token(force_refresh=True)
             self.logger.info("Tokens refreshed successfully")
         except Exception as e:
             self.logger.error(f"Token refresh failed: {e}")
             raise
 
+    def has_valid_token(self) -> bool:
+        """
+        Check if a valid bearer token exists
+        
+        Returns:
+            True if token exists and is valid, False otherwise
+        """
+        return bool(self.token and self._is_token_valid())
+
     def get_token_info(self) -> dict:
         """Get information about current tokens"""
         info = {
             'oc_authenticated': bool(self.token),
-            # 'keycloak_authenticated': bool(self.keycloak_token)
+            'token_valid': self.has_valid_token(),
+            'token_fetch_attempted': self.token_fetch_attempted
         }
 
         if self.token_expiry:

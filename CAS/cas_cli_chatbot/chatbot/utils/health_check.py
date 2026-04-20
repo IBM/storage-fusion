@@ -87,7 +87,8 @@ class HealthChecker:
             return self._unhealthy("Service not initialized")
 
         try:
-            vector_stores = vector_store_service.list_vector_stores()
+            namespace = vector_store_service.config.get('cas_namespace')
+            vector_stores = vector_store_service.list_vector_stores(namespace)
             return self._healthy(f"{len(vector_stores)} vector stores available")
         except Exception as e:
             return self._unhealthy(f"Cannot fetch vector stores: {str(e)}")
