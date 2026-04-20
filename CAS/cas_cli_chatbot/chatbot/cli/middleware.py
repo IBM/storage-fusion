@@ -150,30 +150,6 @@ class SessionManager:
         self.save()
         self.logger.debug(f"File lookup added to session: file {file_id} in vector store {vector_store_id}")
 
-    def add_assignment(self, vector_store: str, user: str):
-        """Add a vector store assignment to history"""
-        entry = {
-            'timestamp': datetime.now().isoformat(),
-            'vector_store': vector_store,
-            'user': user
-        }
-
-        self.history.setdefault('assignments', []).append(entry)
-        self.save()
-        self.logger.debug(f"Assignment added to session: {user} -> {vector_store}")
-    
-    def add_unassignment(self, vector_store: str, user: str):
-        """Add a vector store unassignment to history"""
-        entry = {
-            'timestamp': datetime.now().isoformat(),
-            'vector_store': vector_store,
-            'user': user
-        }
-
-        self.history.setdefault('assignments', []).append(entry)
-        self.save()
-        self.logger.debug(f"Unassignment added to session: {user} -> {vector_store}")
-
     def add_event(self, event_type: str, details: Dict[str, Any]):
         """Add a general event to history"""
         entry = {

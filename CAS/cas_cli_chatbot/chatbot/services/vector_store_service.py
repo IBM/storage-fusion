@@ -14,8 +14,12 @@ from rich.console import Console
 class VectorStoreService:
     """Enhanced vector store management service with proper user assignment"""
 
-    def __init__(self, config: dict, auth_service, logger: logging.Logger,
-                 cache_service=None, console: Console = None):
+    def __init__(self,
+                 config: dict,
+                 auth_service,
+                 logger: logging.Logger,
+                 cache_service=None,
+                 console: Console = None):
         self.config = config
         self.auth_service = auth_service
         self.logger = logger
@@ -26,21 +30,24 @@ class VectorStoreService:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         # Setup API base URL
-        console_url = self.auth_service.config.get("console_url")
-        if console_url.endswith("/"):
-            console_url = console_url[:-1]
-        self.api_base = f"{console_url}/cas/api/v1"
+        # console_url = self.auth_service.config.get("console_url")
+        # if console_url.endswith("/"):
+        #     console_url = console_url[:-1]
+        # self.api_base = f"{console_url}/cas/api/v1"
 
         # In-memory storage for vector store assignments (local cache)
         # Format: {vector_store_name: {ocp_users: [...], keycloak_users: [...]}}
         self.vector_store_assignments = {}
 
         # Cache TTL
-        self.cache_ttl = config.get('cache', {}).get('domain_cache_ttl', 300)  # 5 minutes
+        self.cache_ttl = config.get('cache', {}).get('domain_cache_ttl',
+                                                     300)  # 5 minutes
 
         self.logger.info("Vector Search Service initialized")
 
-    def list_vector_stores(self, namespace: str = "ibm-cas", use_cache: bool = True) -> List[str]:
+    def list_vector_stores(self,
+                           namespace: str = "ibm-cas",
+                           use_cache: bool = True) -> List[str]:
         """
         Fetch vector stores from OpenShift
 
@@ -57,30 +64,34 @@ class VectorStoreService:
         if use_cache and self.cache_service:
             cached = self.cache_service.get(cache_key)
             if cached is not None:
-                self.logger.debug(f"Retrieved {len(cached)} vector stores from cache")
+                self.logger.debug(
+                    f"Retrieved {len(cached)} vector stores from cache")
                 return cached
 
         try:
-            self.logger.info(f"Fetching vector stores from namespace: {namespace}")
-
+            # Fetch vector_stores using oc command
             result = subprocess.run(
                 ["oc", "get", "domains", "-n", namespace, "-o", "json"],
                 check=True,
                 capture_output=True,
-                timeout=30
-            )
+                timeout=30)
 
             data = json.loads(result.stdout.decode())
-            vector_stores = [item["metadata"]["name"] for item in data.get("items", [])]
+            vector_stores = [
+                item["metadata"]["name"] for item in data.get("items", [])
+            ]
 
             vector_stores.sort()
 
-            self.console.print(f"[green]✓ Fetched {len(vector_stores)} vector_stores from {namespace}[/]")
-            self.logger.info(f"Fetched {len(vector_stores)} vector_stores")
+            self.console.print(
+                f"[green]✓ Fetched {len(vector_stores)} vector_stores from {namespace}[/]"
+            )
 
             # Cache results
             if self.cache_service:
-                self.cache_service.set(cache_key, vector_stores, ttl_seconds=self.cache_ttl)
+                self.cache_service.set(cache_key,
+                                       vector_stores,
+                                       ttl_seconds=self.cache_ttl)
 
             return vector_stores
 
@@ -96,7 +107,9 @@ class VectorStoreService:
             self.logger.error(f"Error fetching vector stores: {e}")
             return []
 
-    def get_vector_store_details(self, vector_store_name: str, namespace: str = "ibm-cas") -> Optional[Dict]:
+    def get_vector_store_details(self,
+                                 vector_store_name: str,
+                                 namespace: str = "ibm-cas") -> Optional[Dict]:
         """
         Get detailed information about a vector store including assigned users
 
@@ -108,25 +121,33 @@ class VectorStoreService:
             Vector store details or None if not found
         """
         try:
-            result = subprocess.run(
-                ["oc", "get", "domain", vector_store_name, "-n", namespace, "-o", "json"],
-                capture_output=True,
-                timeout=10
-            )
+            result = subprocess.run([
+                "oc", "get", "domain", vector_store_name, "-n", namespace, "-o",
+                "json"
+            ],
+                                    capture_output=True,
+                                    timeout=10)
 
             if result.returncode == 0:
                 data = json.loads(result.stdout.decode())
 
                 # Get assigned users for this vector store
-                ocp_users, keycloak_users = self.get_assigned_users_detailed(vector_store_name)
+                ocp_users, keycloak_users = self.get_assigned_users_detailed(
+                    vector_store_name)
 
                 return {
-                    'name': vector_store_name,
-                    'namespace': namespace,
-                    'created': data.get('metadata', {}).get('creationTimestamp'),
-                    'uid': data.get('metadata', {}).get('uid'),
-                    'spec': data.get('spec', {}),
-                    'status': data.get('status', {}),
+                    'name':
+                        vector_store_name,
+                    'namespace':
+                        namespace,
+                    'created':
+                        data.get('metadata', {}).get('creationTimestamp'),
+                    'uid':
+                        data.get('metadata', {}).get('uid'),
+                    'spec':
+                        data.get('spec', {}),
+                    'status':
+                        data.get('status', {}),
                     'assigned_users': {
                         'ocp': ocp_users,
                         'keycloak': keycloak_users,
@@ -138,201 +159,9 @@ class VectorStoreService:
 
         return None
 
-    def assign_users_to_vector_store(self, vector_store_name: str, users: List[str],
-                               user_types: Optional[Dict[str, str]] = None) -> bool:
-        """
-        Assign users to a vector store (OCP or Keycloak)
-
-        Args:
-            vector_store_name: Name of the vector store
-            users: List of usernames to assign
-            user_types: Dict mapping username -> user_type ("ocp" or "keycloak")
-                       If not provided, will auto-detect
-
-        Returns:
-            True if successful, False otherwise
-        """
-        if not users:
-            self.logger.warning("No users provided for assignment")
-            return False
-
-        self.logger.info(f"Assigning {len(users)} user(s) to vector store: {vector_store_name}")
-
-        try:
-            # Initialize vector store in assignment dict if not exists
-            if vector_store_name not in self.vector_store_assignments:
-                self.vector_store_assignments[vector_store_name] = {
-                    'ocp_users': [],
-                    'keycloak_users': [],
-                    'assignments': []
-                }
-
-            # Categorize users by type
-            ocp_users_to_add = []
-            keycloak_users_to_add = []
-
-            for user in users:
-                if user_types and user in user_types:
-                    user_type = user_types[user]
-                else:
-                    # Auto-detect user type (this should be done by caller ideally)
-                    user_type = "ocp"  # Default to OCP
-
-                if user_type == "ocp":
-                    if user not in self.vector_store_assignments[vector_store_name]['ocp_users']:
-                        ocp_users_to_add.append(user)
-                elif user_type == "keycloak":
-                    if user not in self.vector_store_assignments[vector_store_name]['keycloak_users']:
-                        keycloak_users_to_add.append(user)
-
-            # Try to assign via CAS API first
-            api_success = self._assign_via_cas_api(vector_store_name, users)
-
-            # Also maintain local assignment records
-            self.vector_store_assignments[vector_store_name]['ocp_users'].extend(ocp_users_to_add)
-            self.vector_store_assignments[vector_store_name]['keycloak_users'].extend(keycloak_users_to_add)
-
-            for user in users:
-                user_type = user_types.get(user, "ocp") if user_types else "ocp"
-                self.vector_store_assignments[vector_store_name]['assignments'].append({
-                    'username': user,
-                    'user_type': user_type,
-                    'assigned_at': __import__('datetime').datetime.now().isoformat()
-                })
-
-            self.console.print(f"[green]✓ Successfully assigned {len(users)} user(s) to vector store {vector_store_name}[/]")
-            self.logger.info(f"Users assigned to {vector_store_name}: {users}")
-
-            # Invalidate cache
-            if self.cache_service:
-                self.cache_service.delete(f"vector_store_users_{vector_store_name}")
-
-            return True
-
-        except Exception as e:
-            self.console.print(f"[red]✗ Error assigning users: {e}[/]")
-            self.logger.error(f"Error assigning users: {e}")
-            return False
-
-    def _assign_via_cas_api(self, vector_store_name: str, users: List[str]) -> bool:
-        """
-        Attempt to assign users via CAS API
-
-        Args:
-            vector_store_name: Vector store name
-            users: List of usernames
-
-        Returns:
-            True if API call successful
-        """
-        try:
-            url = f"{self.api_base}/resource-access-controls"
-
-            self.logger.info(f"Assigning users via CAS API: {url}")
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.auth_service.token}"
-            }
-
-            payload = {
-                "users": {"add": [{"name": u} for u in users]},
-                "groups": {"add": []},
-                "type": "Vector store",
-                "name": vector_store_name
-            }
-
-            resp = requests.post(
-                url,
-                json=payload,
-                headers=headers,
-                verify=False,
-                timeout=30
-            )
-
-            if resp.status_code in [200, 201]:
-                self.logger.info(f"CAS API assignment successful for {vector_store_name}")
-                return True
-            else:
-                error_msg = f"CAS API failed: {resp.status_code} {resp.text}"
-                self.logger.warning(error_msg)
-                return False
-
-        except Exception as e:
-            self.logger.warning(f"CAS API assignment failed: {e}")
-            return False
-
-    def unassign_users_from_vector_store(self, vector_store_name: str, users: List[str]) -> bool:
-        """
-        Remove users from a vector store
-
-        Args:
-            vector_store_name: Name of the vector store
-            users: List of usernames to remove
-
-        Returns:
-            True if successful, False otherwise
-        """
-        if not users:
-            self.logger.warning("No users provided for unassignment")
-            return False
-
-        self.logger.info(f"Removing {len(users)} user(s) from vector store: {vector_store_name}")
-
-        try:
-            url = f"{self.api_base}/resource-access-controls"
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.auth_service.token}"
-            }
-
-            payload = {
-                "users": {"remove": [{"name": u} for u in users]},
-                "groups": {"remove": []},
-                "type": "Domain",
-                "name": vector_store_name
-            }
-
-            resp = requests.post(
-                url,
-                json=payload,
-                headers=headers,
-                verify=False,
-                timeout=30
-            )
-
-            if resp.status_code in [200, 201]:
-                # Remove from local assignment tracking
-                if vector_store_name in self.vector_store_assignments:
-                    for user in users:
-                        if user in self.vector_store_assignments[vector_store_name]['ocp_users']:
-                            self.vector_store_assignments[vector_store_name]['ocp_users'].remove(user)
-                        if user in self.vector_store_assignments[vector_store_name]['keycloak_users']:
-                            self.vector_store_assignments[vector_store_name]['keycloak_users'].remove(user)
-
-                        self.vector_store_assignments[vector_store_name]['assignments'] = [
-                            a for a in self.vector_store_assignments[vector_store_name]['assignments']
-                            if a['username'] != user
-                        ]
-
-                self.console.print(f"[green]✓ Successfully removed {len(users)} user(s) from vector store {vector_store_name}[/]")
-
-                # Invalidate cache
-                if self.cache_service:
-                    self.cache_service.delete(f"domain_users_{vector_store_name}")
-
-                return True
-            else:
-                self.console.print(f"[red]✗ Failed: {resp.status_code} {resp.text}[/]")
-                return False
-
-        except Exception as e:
-            self.console.print(f"[red]✗ Error: {e}[/]")
-            self.logger.error(f"Error removing users: {e}")
-            return False
-
-    def get_assigned_users(self, vector_store_name: str, use_cache: bool = True) -> List[str]:
+    def get_assigned_users(self,
+                           vector_store_name: str,
+                           use_cache: bool = True) -> List[str]:
         """
         Fetch all assigned users for a vector store (OCP + Keycloak)
 
@@ -349,29 +178,26 @@ class VectorStoreService:
         if use_cache and self.cache_service:
             cached = self.cache_service.get(cache_key)
             if cached is not None:
-                self.logger.debug(f"Retrieved assigned users from cache for {vector_store_name}")
+                self.logger.debug(
+                    f"Retrieved assigned users from cache for {vector_store_name}"
+                )
                 return cached
 
         # Get from local assignment tracking first
         users = []
         if vector_store_name in self.vector_store_assignments:
-            users.extend(self.vector_store_assignments[vector_store_name]['ocp_users'])
-            users.extend(self.vector_store_assignments[vector_store_name]['keycloak_users'])
+            users.extend(
+                self.vector_store_assignments[vector_store_name]['ocp_users'])
+            users.extend(self.vector_store_assignments[vector_store_name]
+                         ['keycloak_users'])
 
         # Try to fetch from CAS API as well
         try:
             #TODO: "Could not reach CAS API" error probably due to wrong URL
             url = f"{self.api_base}/resource-access-controls"
-            headers = {
-                "Authorization": f"Bearer {self.auth_service.token}"
-            }
+            headers = {"Authorization": f"Bearer {self.auth_service.token}"}
 
-            resp = requests.get(
-                url,
-                headers=headers,
-                verify=False,
-                timeout=30
-            )
+            resp = requests.get(url, headers=headers, verify=False, timeout=30)
 
             if resp.status_code == 200:
                 data = resp.json()
@@ -379,7 +205,8 @@ class VectorStoreService:
                 # Filter entries by vector_store_name
                 vector_store_entries = [
                     entry for entry in data.get("items", [])
-                    if entry.get("type") == "Domain" and entry.get("name") == vector_store_name
+                    if entry.get("type") == "Domain" and
+                    entry.get("name") == vector_store_name
                 ]
 
                 api_users = []
@@ -390,13 +217,19 @@ class VectorStoreService:
                 all_users = sorted(set(users + api_users))
 
                 if all_users:
-                    self.console.print(f"[green]✓ Vector store '{vector_store_name}' has {len(all_users)} assigned user(s)[/]")
+                    self.console.print(
+                        f"[green]✓ Vector store '{vector_store_name}' has {len(all_users)} assigned user(s)[/]"
+                    )
                 else:
-                    self.console.print(f"[yellow]ℹ No users assigned to vector store '{vector_store_name}'[/]")
+                    self.console.print(
+                        f"[yellow]ℹ No users assigned to vector store '{vector_store_name}'[/]"
+                    )
 
                 # Cache results
                 if self.cache_service:
-                    self.cache_service.set(cache_key, all_users, ttl_seconds=self.cache_ttl)
+                    self.cache_service.set(cache_key,
+                                           all_users,
+                                           ttl_seconds=self.cache_ttl)
 
                 return all_users
 
@@ -406,15 +239,21 @@ class VectorStoreService:
         # If no API results, use local tracking
         if users:
             users = sorted(set(users))
-            self.console.print(f"[cyan]Vector store '{vector_store_name}' assigned users: {', '.join(users)}[/]")
+            self.console.print(
+                f"[cyan]Vector store '{vector_store_name}' assigned users: {', '.join(users)}[/]"
+            )
 
             # Cache results
             if self.cache_service:
-                self.cache_service.set(cache_key, users, ttl_seconds=self.cache_ttl)
+                self.cache_service.set(cache_key,
+                                       users,
+                                       ttl_seconds=self.cache_ttl)
 
             return users
         else:
-            self.console.print(f"[yellow]ℹ No users currently assigned to vector store '{vector_store_name}'[/]")
+            self.console.print(
+                f"[yellow]ℹ No users currently assigned to vector store '{vector_store_name}'[/]"
+            )
             return []
 
     def get_assigned_users_detailed(self, vector_store_name: str) -> tuple:
@@ -431,8 +270,10 @@ class VectorStoreService:
         keycloak_users = []
 
         if vector_store_name in self.vector_store_assignments:
-            ocp_users = self.vector_store_assignments[vector_store_name].get('ocp_users', [])
-            keycloak_users = self.vector_store_assignments[vector_store_name].get('keycloak_users', [])
+            ocp_users = self.vector_store_assignments[vector_store_name].get(
+                'ocp_users', [])
+            keycloak_users = self.vector_store_assignments[
+                vector_store_name].get('keycloak_users', [])
 
         return ocp_users, keycloak_users
 
@@ -459,17 +300,21 @@ class VectorStoreService:
         Args:
             vector_store_name: Name of the vector store
         """
-        ocp_users, keycloak_users = self.get_assigned_users_detailed(vector_store_name)
+        ocp_users, keycloak_users = self.get_assigned_users_detailed(
+            vector_store_name)
 
         table_data = {
-            'Vector store': vector_store_name,
-            'OCP Users': ', '.join(ocp_users) if ocp_users else 'None',
-            'Keycloak Users': ', '.join(keycloak_users) if keycloak_users else 'None',
-            'Total Users': len(ocp_users) + len(keycloak_users)
+            'Vector store':
+                vector_store_name,
+            'OCP Users':
+                ', '.join(ocp_users) if ocp_users else 'None',
+            'Keycloak Users':
+                ', '.join(keycloak_users) if keycloak_users else 'None',
+            'Total Users':
+                len(ocp_users) + len(keycloak_users)
         }
 
         info_str = "\n".join([f"{k}: {v}" for k, v in table_data.items()])
         self.console.print(f"\n[cyan]{info_str}[/]\n")
 
         return table_data
-    

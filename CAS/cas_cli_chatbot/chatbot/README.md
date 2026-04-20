@@ -61,7 +61,7 @@ nano config.yaml  # Edit with your settings
 console_url: "https://console-openshift-console.apps.your-cluster.com"
 oc_username: "your-username"
 oc_password: "your-password"
-cas_url: "https://console-ibm-spectrum-fusion-ns.apps.<your-cluster>.com/<cas-endpoint>"
+cas_url: "https://console-ibm-spectrum-fusion-ns.apps.<your-cluster>.com/cas/api/v1"
 ```
 
 **LLM configuration (if using; below is an example for NVIDIA):**
