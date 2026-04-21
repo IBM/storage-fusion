@@ -3,12 +3,12 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
-VERSION=202601302100  # Use YYYYMMDDhhmm UTC
-LOG=/tmp/$(basename $0)_log.txt
+VERSION=202604212140  # Use YYYYMMDDhhmm UTC
+LOG=/tmp/$(basename "$0")_log.txt
 rm -f "$LOG"
-exec &> >(tee -a $LOG)
+exec &> >(tee -a "$LOG")
 
-echo Logging to $LOG
+echo Logging to "$LOG"
 echo "VERSION: $VERSION"
 echo "ARGUMENTS:" "$@"
 
@@ -75,7 +75,7 @@ do
   esac
 done
 
-CNT_NS=$(echo $NAMESPACE | wc -w)
+CNT_NS=$(echo "$NAMESPACE" | wc -w)
 if  [ $CNT_NS -gt 1 ]
  then
         echo "ERROR:" "$CNT_NS candidate namespaces ' $NAMESPACE '. Use '-b' option" >&2
@@ -126,20 +126,20 @@ add_lables()
    oc -n "$1" label $2 $3 uninstall-host="$(hostname -f)" --overwrite 2>/dev/null
 }
 
-add_lables "$NAMESPACE" dataprotectionagent --all
-add_lables "$NAMESPACE" dataprotectionserver --all
-add_lables "$ISF_NS" fusionserviceinstances 'ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance'
-add_lables "$NAMESPACE" namespace "$NAMESPACE"
-
 CONNECTION=$(oc -n "$NAMESPACE" get cm guardian-configmap -o custom-columns="CONN:data.connectionName" --no-headers)
 if [ -n "$CONNECTION" ]
   then
-     HUB_STATUS=$(oc -n $"NAMESPACE" get dataprotectionagent -o custom-columns=H:status.hubStatus --no-headers)
+     HUB_STATUS=$(oc -n "$NAMESPACE" get dataprotectionagent -o custom-columns=H:status.hubStatus --no-headers)
      if [ "$HUB_STATUS" == "Found" ] && [ "$FORCE" != "true" ]
       then
          err_exit 'Hub exist, uninstall hub first or use -u option to force uninstall spoke'
      fi
 fi
+
+add_lables "$NAMESPACE" dataprotectionagent --all
+add_lables "$NAMESPACE" dataprotectionserver --all
+add_lables "$ISF_NS" fusionserviceinstances 'ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance'
+add_lables "$NAMESPACE" namespace "$NAMESPACE"
 
 IGNORE_DBR_STATES="DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant|CancelPending"
 if [ "$SKIP" != true ]
