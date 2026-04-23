@@ -252,7 +252,7 @@ class TestCASAPICommands:
     @pytest.mark.cli
     def test_casapi_vector_search_retrieves_chunks(self, chatbot_cli):
         """TC-CLI-015: Verify casapi vector_search retrieves text chunks"""
-        chatbot_cli.session.prompt = Mock(return_value='test query')
+        chatbot_cli.session.prompt = Mock(side_effect=['test query', '5'])
         chatbot_cli.current_vector_store = 'vector-store-1'
         chatbot_cli.services['auth'].has_valid_token.return_value = True
         chatbot_cli.services['query'].query_vector_store.return_value = {
