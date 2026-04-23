@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from openai import OpenAI
 from rich.console import Console
+from chatbot.utils.validators import InputValidator, ValidationError
 
 console = Console()
 
@@ -36,6 +37,13 @@ class LLMService:
         Returns:
             LLM response or None if all providers fail
         """
+        # Validate input
+        try:
+            user_query = InputValidator.validate_query(user_query, "user_query")
+        except ValidationError as e:
+            console.print(f"[red]Input validation failed: {e}[/red]")
+            self.logger.error(f"Input validation failed: {e}")
+            return None
         
         # Safely serialize the search_result
         query_data = self._serialize_search_result(search_result)

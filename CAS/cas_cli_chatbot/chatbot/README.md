@@ -1,689 +1,579 @@
-    # CAS Chatbot - Enterprise Edition v3.0.0
+# CAS Chatbot CLI
 
-An advanced, enterprise-grade CLI application for managing Cloud Application Services (CAS) with multi-provider LLM integration, comprehensive user management, and domain administration.
+Technical CLI for exploring and demonstrating the **new CAS vector search API**.
 
-## 🌟 Features
+This chatbot is designed to show how to work with CAS vector stores directly from the terminal. The primary workflow is no longer based on the older semantic-search-oriented CAS flow. Instead, this CLI is centered on the **new vector search CAS API**, which returns relevant chunks from a selected vector store and can optionally feed a specific retrieved document into an LLM for follow-up analysis.
 
-### Core Capabilities
-- **Multi-Source User Management**: Manage users from OpenShift (OCP)
-- **Domain Administration**: List, select, and manage domain access controls
-- **LLM Integration**: Support for multiple LLM providers (NVIDIA, OpenAI, Ollama, Granite)
-- **Query Vector Stores**: Retrieve raw vector chunks and sources
-- **Intelligent Caching**: Performance optimization with TTL-based caching
-- **Session Management**: Persistent session history with export capabilities
-- **Health Monitoring**: Comprehensive health checks for all services
-- **Metrics Tracking**: Real-time performance metrics and statistics
+## Why this README exists
 
-### Advanced Features
-- **Automatic Token Refresh**: Intelligent token management with expiry tracking
-- **Retry Logic**: Robust error handling with automatic retries
-- **Environment Variables**: Support for environment-based configuration
-- **Rich CLI Interface**: Beautiful terminal UI with autocomplete and fuzzy search
-- **Structured Logging**: Rotating log files with configurable levels
-- **Rate Limiting**: Protect external services with configurable rate limits
+This README replaces the older positioning of the chatbot as a broad enterprise CLI. The most important thing to know now is:
 
-## 📋 Prerequisites
+- the chatbot is a **CAS vector search client**
+- it is intended to **show how to use the new CAS API**
+- it supports **vector-store-first workflows**
+- it can surface **file name and file ID per chunk**
+- it can optionally layer on **LLM summarization or question answering for a specific file**
+- it is the recommended direction as the **old semantic search CAS API is being deprecated**
 
-- Python 3.8 or higher
+## Overview
+
+At a high level, the chatbot does four things:
+
+1. Authenticates to OpenShift / CAS
+2. Creates or updates configuration interactively from the terminal at startup
+3. Discovers vector stores available in the configured namespace
+4. Lets the user query the new CAS vector search API and work from the returned chunks
+
+The key search behavior is implemented in `services/query_service.py`, where the CLI sends a request to:
+
+```text
+POST {cas_url}/vector_stores/{vector_store}/search
+```
+
+with a payload shaped like:
+
+```json
+{
+  "query": "What is the recommended PTF for IBM Storage Virtualize 8.5.0?",
+  "max_num_results": 5,
+  "enable_source": false,
+  "enable_content_metadata": false
+}
+```
+
+The chatbot also supports filtered vector search by including a `filters` object in the same request body.
+
+## Migration note: semantic search is deprecated
+
+If you previously used this chatbot as a client for the older semantic search CAS API, the recommended path is to move to the new vector search API.
+
+### Old direction
+- semantic-search-oriented workflows
+- less explicit vector-store-first interaction
+- older CAS API usage that is being phased out
+
+### New direction
+- explicit **vector store selection**
+- direct **`/vector_stores/{vector_store}/search`** CAS API usage
+- raw chunk retrieval as the first-class operation
+- chunk output that includes **file name** and **file ID**
+- optional file-specific LLM usage after retrieval, not before
+- better alignment with current CAS API capabilities
+
+This README assumes the new model: **search the vector store first, inspect the returned chunks, then optionally refine or summarize from a specific document**.
+
+## Primary capabilities
+
+### CAS vector search
+The CLI can query the new CAS vector search endpoint and return the most relevant chunks from the active vector store.
+
+### Chunk-level source visibility
+Search results can show the source file name and file ID for each returned chunk. This is useful because relevant chunks may come from different files, and the user can decide which source to inspect further.
+
+### Filtered vector search
+The CLI can submit the same query with filter criteria, allowing more precise retrieval when the API supports those filters.
+
+### File-level follow-up workflows
+After finding relevant chunks, the user can retrieve file content or run an LLM-assisted file query against a specific document.
+
+### Interactive configuration at startup
+The chatbot can create or update `config.yaml` from the terminal when it starts. The project is moving away from requiring users to manually hand-edit configuration before first use.
+
+### Optional LLM enhancement
+The chatbot can call an LLM provider after retrieval to help summarize or answer questions based on a specific retrieved file. This is optional and not required for raw vector search.
+
+## Prerequisites
+
+- Python 3.8+
 - OpenShift CLI (`oc`) installed and configured
-- Access to OpenShift cluster
-- (Optional) LLM provider API keys
+- Network access to the target OpenShift / CAS environment
+- Valid credentials for OpenShift / CAS authentication
+- Optional: credentials or endpoints for one or more LLM providers
 
-## 🚀 Quick Start
+## Repository location
 
-### 1. Clone and Setup
+From the main repository:
 
 ```bash
-# Clone repo
-git clone https://github.com/IBM/storage-fusion.git
-
-# Go to the chatbot directory
 cd CAS/cas_cli_chatbot/chatbot
+```
 
-# Create virtual environment
+## Setup
+
+### 1. Create a virtual environment
+
+```bash
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
+```
 
-# Install dependencies
+### 2. Install dependencies
+
+```bash
 pip3 install -r requirements.txt
 ```
 
-### 2. Configuration
+### 3. Start the chatbot and configure from the terminal
 
-```bash
-# Copy and edit configuration
-cp config.yaml.sample config.yaml
-nano config.yaml  # Edit with your settings
-```
+Do **not** treat manual `config.yaml` editing as the primary setup path.
 
-**Minimum required configuration:**
-```yaml
-console_url: "https://console-openshift-console.apps.your-cluster.com"
-oc_username: "your-username"
-oc_password: "your-password"
-cas_url: "https://console-ibm-spectrum-fusion-ns.apps.<your-cluster>.com/cas/api/v1"
-```
-
-**LLM configuration (if using; below is an example for NVIDIA):**
-```yaml
-nvidia_llm_url: "<nvidia-endpoint>"
-nvidia_model: "meta/llama-3.2-1b-instruct"
-```
-
-**Using environment variables (recommended for secrets):**
-```bash
-export OPENAI_API_KEY="sk-your-key"
-export KEYCLOAK_CLIENT_SECRET="your-secret"
-export OC_PASSWORD="your-password"
-```
-
-### 3. Run the Application
+Start the chatbot:
 
 ```bash
 python3 main.py
 ```
 
-#### Quick Commands
+On startup, the chatbot uses the interactive configuration flow in `utils/config_manager.py` to:
 
-Once the application starts, try these commands:
+- detect whether `config.yaml` already exists
+- prompt for OpenShift credentials if needed
+- prompt for CAS API settings
+- create `config.yaml` from `config.yaml.sample` when no config exists
+- update stored configuration if the current config is incomplete or the user chooses to replace it
 
-```bash
-# See all commands
-help
+This is the preferred configuration path.
 
-# List users
-users list
+### Configuration reference
 
-# Select a user
-users select
+If you need to understand available settings, use these files as the source of truth:
 
-# List domains
-domains list
+- `config.yaml.sample`
+- `utils/config_manager.py`
+- `LLM_SETUP.md`
 
-# Select a domain
-domains select
+If there are additional internal setup conventions your team wants documented, add them here:
 
-# Ask a question
-query ask
-
-# View session stats
-session stats
-
-# Exit
-exit
+```text
+TODO: Add internal guidance for environment-specific configuration details.
 ```
 
-#### Example Workflow
+## Configuration behavior
 
-This is an example of how to retrieve raw chunks from a vector store and feed it into an LLM for a more context-informed answer.
+The sample file is `config.yaml.sample`, but the preferred user experience is to let the chatbot create or update `config.yaml` interactively at startup.
 
-```bash
-# 1. Start the application
-python3 main.py
+### What the startup configuration flow currently prompts for
 
-# 2. Select a user (if not configured)
-cas> users select
-Select user (type to search): admin
+Based on `ConfigManager.prompt_for_credentials()`:
 
-# 3. Select a vector store
-admin> vector_stores select
-Select vector_stores (type to search): gt20
+- OpenShift console URL
+- OpenShift username
+- OpenShift password
+- CAS API URL
+- CAS namespace
 
-# 4. Assign user to vector store
-admin@production-vector-stores> vector_stores assign
-Enter username to assign: developer1
+The tool also attempts to auto-generate a CAS API URL from the OpenShift console URL and asks the user whether to accept it.
 
-# 5. Retrieve raw chunks related to query
-admin@production-domain> casapi vector_search
-Enter your query: What is the recommended PTF for IBM Storage Virtualize long term support release 8.5.0?
+### Recommended vector search settings
 
-Retrieving text chunks...
-Chunk 1: [filename: example.pdf] [file ID: 1234567]
-{related info}
-Chunk 2: [filename: example2.pdf] [file ID: 8901234]
-{info that matches query more closely}
-...
+These options map directly to the vector search request body used by the CLI:
 
-# 6. Get LLM-generated answer from that specific file
-admin@production-domain> casapi query file
-Enter the vector store ID: gt20
-Enter the file ID: 8901234
-Enter your query: What is the recommended PTF for IBM Storage Virtualize long term support release 8.5.0?
-
-Getting AI response...
-{LLM-generated answer}
-
-# 7 View session statistics
-admin@production-domain> session stats
-
-# 8. Export session
-admin@production-domain> session export
-Enter filename: my-session-2025-01-01.json
+```yaml
+enable_source: true
+enable_content_metadata: true
+default_limit: 5
 ```
 
-## 📁 Project Structure
+In `QueryService.query_vector_store()`, the request payload includes:
 
-```
-chatbot/
-├── main.py                     # Application entry point
-├── config.yaml                 # Configuration file
-├── requirements.txt            # Python dependencies
-├── README.md                   # This file
-├── cli/
-│   ├── __init__.py
-│   ├── chatbot_cli.py         # Main CLI interface
-│   └── middleware.py          # Error handling & session management
-├── services/
-│   ├── __init__.py
-│   ├── auth_service.py        # Authentication service
-│   ├── user_service.py        # User management
-│   ├── domain_service.py      # Domain management
-│   ├── query_service.py       # Query service
-│   ├── llm_service.py         # LLM integration
-│   ├── cache_service.py       # Caching layer
-│   └── metrics_service.py     # Metrics tracking
-├── utils/
-│   ├── __init__.py
-│   ├── config_loader.py       # Configuration management
-│   ├── logger.py              # Logging utilities
-│   └── health_check.py        # Health check utilities
-└── logs/
-    └── cas_chatbot.log        # Application logs
-```
+- `query`
+- `max_num_results`
+- `enable_source`
+- `enable_content_metadata`
 
-## 🎯 Usage Guide
+In `QueryService.query_with_filters()`, the same payload is used with an additional:
 
-### Available Commands
+- `filters`
 
-#### New CAS API Functions
-```bash
-casapi list_vector_stores   # Show available vector stores by users
-casapi vector_search        # Retrieve relevant chunks without LLM processing
-casapi vector_search        # filter Retrieve specific chunks using filters
-casapi show_file_content    # Show the content of a specified file
-casapi vector_stores info   # Show vector store info from CAS API
-casapi query file           # Query a specific file from a vector store
-```
+### Optional LLM configuration
 
-#### User Management
-```bash
-users list       # List all users (OCP)
-users ocp        # List OpenShift users 
-users select     # Select/switch active user
-```
+If you want LLM-assisted follow-up after retrieval, configure one or more LLM providers. The project already supports interactive LLM setup logic as documented in `LLM_SETUP.md`.
 
-#### Vector Store Management
-```bash
-vector_stores list     # List all available domains
-vector_stores select   # Select a domain to work with
-vector_stores info     # Show detailed domain information
-vector_stores users    # Show users assigned to current domain
-vector_stores assign   # Assign user to current domain
-```
-
-#### Query & LLM
-```bash
-query ask        # Ask a question using LLM
-query history    # View query history
-```
-
-#### Session Management
-```bash
-session view     # View current session status
-session history  # Show session history
-session stats    # Display session statistics
-session export   # Export session to file
-session clear    # Clear session history
-```
-
-#### System Commands
-```bash
-config show      # Show current configuration (sanitized)
-config reload    # Reload configuration from file
-metrics          # Display application metrics
-health           # Run health checks on all services
-clear            # Clear screen
-help             # Show all available commands
-exit/quit        # Exit application
-```
-
-## ⚙️ Configuration Reference
-
-### Core Settings
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `console_url` | OpenShift console URL | Required |
-| `oc_username` | OpenShift username | Required |
-| `oc_password` | OpenShift password | Required |
-| `cas_url` | CAS API endpoint | Required |
-| `default_table` | Default CAS table | `gt20` |
-
-### LLM Providers
-
-Configure multiple providers with fallback:
+Example settings present in `config.yaml.sample` include:
 
 ```yaml
 llm_provider_sequence: ["nvidia", "openai", "ollama"]
 
-# NVIDIA Configuration
-nvidia_llm_url: "http://your-nvidia-endpoint"
-nvidia_model: "meta/llama3-8b-instruct"
-
-# OpenAI Configuration
-openai_api_key: "${OPENAI_API_KEY}"
+openai_api_key: "${OPENAI_API_KEY:}"
 openai_model: "gpt-3.5-turbo"
 
-# Ollama Configuration
+nvidia_llm_url: "<nvidia-endpoint>"
+nvidia_model: "meta/llama3-8b-instruct"
+ngc_api_key: "<your-ngc-api-key>"
+
 ollama_host: "http://localhost:11434"
 ollama_model: "llama3"
 ```
 
-### Caching
-
-```yaml
-cache:
-  default_ttl: 300              # 5 minutes
-  max_entries: 1000
-  user_cache_ttl: 600           # 10 minutes
-  domain_cache_ttl: 300         # 5 minutes
-```
-
-### Logging
-
-```yaml
-logging:
-  level: "INFO"                 # DEBUG, INFO, WARNING, ERROR, CRITICAL
-  file: "logs/cas_chatbot.log"
-  max_bytes: 10485760           # 10MB
-  backup_count: 5
-  console_output: false
-  structured: false             # JSON format
-```
-
-## 🔒 Security Best Practices
-
-1. **Never commit credentials**: Use environment variables or `.env` files
-2. **Restrict file permissions**: `chmod 600 config.yaml`
-3. **Use service accounts**: Prefer service accounts over personal credentials
-4. **Rotate tokens**: Implement regular token rotation
-5. **Enable SSL verification**: Set `allow_self_signed: false` in production
-
-### Using .env File
-
-Create a `.env` file (add to `.gitignore`):
+Use environment variables for secrets where possible.
 
 ```bash
-OC_PASSWORD=your-secure-password
-OPENAI_API_KEY=sk-your-openai-key
-KEYCLOAK_CLIENT_SECRET=your-keycloak-secret
-NGC_API_KEY=your-nvidia-key
+export OPENAI_API_KEY="sk-..."
+export OC_PASSWORD="your-password"
 ```
 
-Update config.yaml to use environment variables:
+## How startup works
 
-```yaml
-oc_password: "${OC_PASSWORD}"
-openai_api_key: "${OPENAI_API_KEY}"
-client_secret: "${KEYCLOAK_CLIENT_SECRET}"
-```
+The CLI is intentionally **vector-store-first**.
 
-## 📊 Monitoring & Observability
+When the application starts, it authenticates, checks service health, and then guides the user toward selecting a vector store. This behavior is documented in `VECTOR_STORE_STARTUP_SELECTION.md`.
 
-### Health Checks
+Startup flow:
 
-Run comprehensive health checks:
+1. Start `python3 main.py`
+2. Create or update configuration interactively if needed
+3. Validate configuration
+4. Authenticate with OpenShift / CAS
+5. Run health checks
+6. Display available vector stores
+7. Check whether `default_vector_store` is configured
+8. If accessible, allow the user to use it immediately
+9. Otherwise, let the user select an accessible vector store interactively
+10. Optionally prompt for LLM configuration if none exists
+
+This matters because all meaningful search operations depend on having an active vector store.
+
+## Running the CLI
+
+From the `chatbot/` directory:
 
 ```bash
-cas> health
+python3 main.py
 ```
 
-Health checks include:
-- Authentication service status
-- Cache service statistics
-- User service connectivity
-- Domain service availability
-- LLM provider status
-- OpenShift CLI availability
+## Core CLI commands
 
-### Metrics
+The command set is defined in `cli/chatbot_cli.py`.
 
-View application metrics:
+### Vector store commands
 
 ```bash
-cas> metrics
+vector stores list
+vector stores select
+vector stores info
 ```
 
-Tracked metrics:
-- Request counts by service
-- Response times (min, max, avg, p95, p99)
-- Cache hit/miss rates
-- Error counts by type
-- Uptime
+Use these commands to inspect what is available and to set the active vector store.
 
-### Logs
-
-Logs are stored in `logs/cas_chatbot.log` with automatic rotation:
+### Vector search commands
 
 ```bash
-# View logs
-tail -f logs/cas_chatbot.log
-
-# Search for errors
-grep ERROR logs/cas_chatbot.log
-
-# View specific service logs
-grep "UserService" logs/cas_chatbot.log
+vector search
+vector search filter
+show file content
 ```
 
-## 🐛 Troubleshooting
+These commands are the core of the new CAS API workflow.
 
-### Common Issues
-
-#### 1. Authentication Failed
-
-**Error**: `Authentication failed: Login failed`
-
-**Solutions**:
-- Verify credentials in `config.yaml`
-- Check OpenShift cluster URL is correct
-- Ensure `oc` CLI is installed: `oc version`
-- Test manual login: `oc login <api-url> -u <username> -p <password>`
-
-#### 2. Cannot Fetch Users
-
-**Error**: `Failed to fetch OCP users`
-
-**Solutions**:
-- Ensure you're authenticated: `oc whoami`
-- Check cluster permissions: `oc auth can-i list users`
-- Verify network connectivity to cluster
-
-#### 3. LLM Provider Failures
-
-**Error**: `All LLM providers failed`
-
-**Solutions**:
-- Check provider URLs are accessible
-- Verify API keys are correct
-- Check provider is in `llm_provider_sequence`
-- Review logs for specific error messages
-
-#### 4. Cache Issues
-
-**Problem**: Stale data being displayed
-
-**Solutions**:
-```bash
-# Clear cache and force refresh
-cas> users sync
-cas> domains sync
-
-# Or restart the application
-```
-
-#### 5. Configuration Errors
-
-**Error**: `Configuration validation failed`
-
-**Solutions**:
-- Validate YAML syntax: `python -c "import yaml; yaml.safe_load(open('config.yaml'))"`
-- Check required fields are present
-- Verify URLs start with `http://` or `https://`
-- Check numeric values are positive integers
-
-### Debug Mode
-
-Enable debug logging for detailed troubleshooting:
-
-```yaml
-logging:
-  level: "DEBUG"
-```
-
-Or set environment variable:
-```bash
-export LOG_LEVEL=DEBUG
-python main.py
-```
-
-## 🔧 Advanced Configuration
-
-### Custom Cache TTL per Service
-
-```yaml
-cache:
-  default_ttl: 300
-  user_cache_ttl: 600      # Users change less frequently
-  domain_cache_ttl: 180    # Domains change more frequently
-```
-
-### Rate Limiting
-
-Protect external services:
-
-```yaml
-rate_limit:
-  enabled: true
-  max_requests: 100
-  time_window: 60  # seconds
-```
-
-### Multiple Environment Support
-
-Create environment-specific configs:
+### LLM-assisted query commands
 
 ```bash
-config.dev.yaml
-config.staging.yaml
-config.prod.yaml
+llm query ask
+llm query file
 ```
 
-Run with specific config:
+These are optional follow-up workflows after retrieval.
+
+### Query history and session commands
 
 ```bash
-# Modify main.py to accept --config argument
-python3 main.py --config config.prod.yaml
+query history
+query export
+session view
+session history
+session stats
+session export
+session clear
 ```
 
-## 📚 API Integration Examples
-
-### Query Service Integration
-
-```python
-from services.query_service import QueryService
-
-query_service = QueryService(config, logger)
-results = query_service.query_table(table="gt20", limit=10)
-```
-
-### User Service Integration
-
-```python
-from services.user_service import UserService
-
-user_service = UserService(config, auth_service, logger)
-ocp_users = user_service.list_oc_users()
-keycloak_users = user_service.list_keycloak_users()
-```
-
-### Domain Service Integration
-
-```python
-from services.domain_service import DomainService
-
-domain_service = DomainService(config, auth_service, logger)
-domains = domain_service.list_domains()
-domain_service.assign_users_to_domain("my-domain", ["user1", "user2"])
-```
-
-## 🧪 Testing
-
-### Manual Testing Checklist
-
-- [ ] Authentication successful
-- [ ] Users can be listed from OCP
-- [ ] Users can be listed from Keycloak
-- [ ] Domains can be listed
-- [ ] User can be assigned to domain
-- [ ] Query can be executed with LLM
-- [ ] Session is persisted
-- [ ] Metrics are tracking
-- [ ] Health checks pass
-
-### Performance Testing
-
-Monitor metrics after operations:
+### System and troubleshooting commands
 
 ```bash
-cas> metrics
+config show
+config reload
+metrics
+health
+help
+clear
+exit
+quit
 ```
 
-Expected performance:
-- User list retrieval: < 2s (cached: < 100ms)
-- Domain list retrieval: < 3s (cached: < 100ms)
-- LLM query: 5-30s (depending on provider)
+## Recommended usage model
 
-## 📝 Development Guide
+The recommended mental model for this chatbot is:
 
-### Adding a New Command
+1. select a vector store
+2. run vector search
+3. inspect returned chunks, including file names and file IDs
+4. either narrow the same question with a filter or target a specific file
+5. optionally use an LLM for a quick answer grounded in that file
 
-1. Add command to `COMMANDS` dict in `chatbot_cli.py`
-2. Implement handler method: `cmd_<name>(self)`
-3. Add command to `execute_command()` mapping
+That is the core behavior this README is documenting and that the CLI is intended to demonstrate.
 
-Example:
+## End-to-end workflow: raw vector search first
 
-```python
-# In ChatbotCLI class
-COMMANDS = {
-    # ... existing commands
-    'backup create': 'Create a backup of current configuration'
+This is the primary workflow the chatbot is meant to showcase.
+
+```bash
+# Start the CLI
+python3 main.py
+
+# View available vector stores
+vector stores list
+
+# Select a vector store
+vector stores select
+```
+
+Example interactive selection:
+
+```text
+Select vector store/domain (type to search): vs-123
+✓ Selected vector store: vs-123
+```
+
+Run a search:
+
+```bash
+vector search
+```
+
+Example prompt:
+
+```text
+[admin@vs-123] Enter your query: What is the recommended PTF for IBM Storage Virtualize long term support release 8.5.0?
+```
+
+At this point, the CLI sends a request to:
+
+```text
+POST /vector_stores/vs-123/search
+```
+
+and displays matching chunks returned by the CAS API.
+
+A typical result display can include source information per chunk, for example:
+
+```text
+Retrieving text chunks...
+
+Chunk 1: [filename: storage-virtualize-release-notes.pdf] [file ID: 1234567]
+<chunk text from that file>
+
+Chunk 2: [filename: support-matrix.pdf] [file ID: 8901234]
+<chunk text from a different file>
+```
+
+The important point is that **file name and file ID may vary from chunk to chunk**. This lets the user see exactly which documents are contributing to the result set.
+
+## End-to-end workflow: ask the same question again with a filter
+
+After vector search reveals which file looks most relevant, the user can run the same question again with a filter to focus on one source.
+
+For example, imagine raw vector search returned:
+
+- `storage-virtualize-release-notes.pdf` with file ID `1234567`
+- `support-matrix.pdf` with file ID `8901234`
+
+Now the user can run:
+
+```bash
+vector search filter
+```
+
+Then enter:
+
+```text
+Query: What is the recommended PTF for IBM Storage Virtualize long term support release 8.5.0?
+Filter key: file_name
+Filter type: eq
+Filter value: storage-virtualize-release-notes.pdf
+```
+
+Conceptually, the request body becomes:
+
+```json
+{
+  "query": "What is the recommended PTF for IBM Storage Virtualize long term support release 8.5.0?",
+  "filters": {
+    "key": "file_name",
+    "type": "eq",
+    "value": "storage-virtualize-release-notes.pdf"
+  },
+  "max_num_results": 5,
+  "enable_source": true,
+  "enable_content_metadata": true
 }
-
-def cmd_backup_create(self):
-    """Create configuration backup"""
-    # Implementation
-    pass
-
-def execute_command(self, command: str):
-    command_map = {
-        # ... existing mappings
-        'backup create': self.cmd_backup_create
-    }
 ```
 
-### Adding a New Service
+This is useful when the first vector search shows a promising file and the user wants more chunks specifically from that file.
 
-1. Create service file in `services/`
-2. Implement service class
-3. Initialize in `main.py`
-4. Inject into CLI
+> Note: the exact filter keys supported by your CAS environment may vary. Replace `file_name` with the correct field if your deployment uses a different filter key.
+
+## End-to-end workflow: target one file with `llm query file`
+
+Once vector search has shown the user a promising source document, they can use that exact document as LLM input.
+
+Run:
+
+```bash
+llm query file
+```
+
+The CLI then prompts for:
+
+- vector store ID
+- file ID
+- query text
 
 Example:
 
-```python
-# services/backup_service.py
-class BackupService:
-    def __init__(self, config, logger):
-        self.config = config
-        self.logger = logger
-    
-    def create_backup(self):
-        # Implementation
-        pass
-
-# main.py
-backup_service = BackupService(config, logger)
-services['backup'] = backup_service
+```text
+[admin@vs-123] Enter the vector store ID (might be same as vector store name): vs-123
+[admin@vs-123] Enter the file ID: 1234567
+[admin@vs-123] Enter your query: What is the recommended PTF for IBM Storage Virtualize long term support release 8.5.0?
 ```
 
-## 🤝 Contributing
+This workflow lets the user feed **that particular document** to the LLM and get a quick answer, instead of asking the LLM to reason over the entire result set.
 
-Contributions are welcome! Please follow these guidelines:
+### Why this matters
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Update documentation
-6. Submit a pull request
+This pattern is one of the best demonstrations of the new CAS API flow:
 
-### Code Style
+1. use **vector search** to discover relevant chunks
+2. observe **file name + file ID** for each chunk
+3. use **vector search filter** to focus on a specific file if needed
+4. use **llm query file** with the selected file ID for a targeted answer
 
-- Follow PEP 8 guidelines
-- Use type hints where appropriate
-- Add docstrings to all functions/classes
-- Keep functions focused and small
+That is both technically clear and operationally useful.
 
-### Commit Messages
+## CAS API behavior used by this CLI
 
-Use conventional commits:
-```
-feat: add user search functionality
-fix: resolve cache invalidation issue
-docs: update configuration guide
-refactor: improve error handling in auth service
+The technical heart of this chatbot is the new vector search endpoint.
+
+### Search endpoint
+
+```text
+POST {cas_url}/vector_stores/{vector_store}/search
 ```
 
-## 📄 License
+### Headers
 
-This project is proprietary software. All rights reserved.
+```http
+Authorization: Bearer <token>
+Content-Type: application/json
+```
 
-## 🆘 Support
+### Request body used by `query_vector_store()`
 
-### Getting Help
+```json
+{
+  "query": "<user query>",
+  "max_num_results": 5,
+  "enable_source": false,
+  "enable_content_metadata": false
+}
+```
 
-1. Check this README first
-2. Review logs in `logs/cas_chatbot.log`
-3. Check configuration in `config.yaml`
-4. Run health checks: `cas> health`
+### Request body used by `query_with_filters()`
 
-### Reporting Issues
+```json
+{
+  "query": "<user query>",
+  "filters": {
+    "key": "<field>",
+    "type": "eq",
+    "value": "<value>"
+  },
+  "max_num_results": 5,
+  "enable_source": false,
+  "enable_content_metadata": false
+}
+```
 
-When reporting issues, include:
-- Error message and stack trace
-- Relevant configuration (sanitized)
-- Log excerpts
-- Steps to reproduce
-- Expected vs actual behavior
+### Notes
 
-## 🗺️ Roadmap
+- the bearer token comes from the authentication service
+- the active vector store is either selected interactively or taken from `default_vector_store`
+- request timeout is controlled by `request_timeout`
+- TLS verification behavior depends on `allow_self_signed`
 
-### Planned Features
+## Operational notes
 
-- [ ] Web UI dashboard
-- [ ] RESTful API server mode
-- [ ] Advanced query analytics
-- [ ] User role management
-- [ ] Audit logging
-- [ ] Multi-cluster support
-- [ ] Configuration validation tool
-- [ ] Automated testing suite
-- [ ] Docker containerization
-- [ ] Helm chart for deployment
+### Authentication
+The CLI requires a valid bearer token before vector store listing or search operations will succeed.
 
-### Version History
+### Accessible vector stores
+The CLI distinguishes between:
+- all vector stores in the namespace
+- vector stores the current user can access
 
-**v2.0.0** (Current)
-- Enhanced CLI with advanced features
-- Multi-provider LLM support
-- Intelligent caching system
-- Comprehensive metrics tracking
-- Health monitoring
-- Session management
-- Improved error handling
+A vector store may exist but still not be usable if the current user lacks access.
 
-**v1.0.0**
-- Initial release
-- Basic user management
-- Domain administration
-- Simple LLM integration
+### Caching
+Query and vector store lookups may be cached depending on configuration.
 
-## 📞 Contact
+### Health checks
+Use the `health` command to inspect the state of configured services.
 
-For questions or support, contact your system administrator or the development team.
+## Troubleshooting
 
----
+### I expected to edit `config.yaml` manually
+That is no longer the preferred path. Start the chatbot and use the interactive setup flow first. Review `config.yaml.sample`, `utils/config_manager.py`, and `LLM_SETUP.md` for configuration reference.
 
-**Built with ❤️ for enterprise cloud management**
+### No vector stores appear
+Possible causes:
+- wrong `cas_namespace`
+- OpenShift access issue
+- no vector stores deployed in the namespace
+- failed authentication
+
+### Authentication succeeds but search fails
+Check:
+- `cas_url`
+- whether the token is valid
+- whether the user has access to the selected vector store
+- network / TLS settings such as `allow_self_signed`
+
+### No results are returned
+This usually means:
+- the query is too broad or too specific
+- the selected vector store does not contain relevant content
+- filter criteria are too restrictive
+
+Try:
+- changing query wording
+- increasing `default_limit`
+- enabling source and content metadata
+- switching vector stores
+- using the first search to identify a likely file, then applying a filter
+
+### LLM commands do not work
+Raw vector search does not require LLM configuration, but LLM-assisted commands do. Configure at least one provider in `config.yaml` or through the startup LLM setup flow if enabled.
+
+## Files worth reading
+
+- `README.md` - this document
+- `config.yaml.sample` - configuration reference
+- `VECTOR_STORE_STARTUP_SELECTION.md` - startup selection behavior
+- `LLM_SETUP.md` - optional LLM configuration flow
+- `utils/config_manager.py` - interactive configuration behavior
+- `services/query_service.py` - CAS vector search request logic
+- `cli/chatbot_cli.py` - CLI commands and interaction model
+
+## Summary
+
+This chatbot should be understood as a **technical demonstration client for the new CAS vector search API**.
+
+Use it when you want to:
+
+- configure the tool interactively from the terminal
+- authenticate to CAS
+- select a vector store
+- run direct vector search requests
+- inspect raw retrieved chunks
+- see the file name and file ID associated with each chunk
+- apply filters to focus on a specific source
+- pass a specific file into an LLM workflow for a quick answer
+
+If you are moving away from the deprecated semantic search approach, this CLI demonstrates the current CAS search model: **retrieve first, inspect sources, refine, then optionally summarize with an LLM**.

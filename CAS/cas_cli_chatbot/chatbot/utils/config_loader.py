@@ -7,6 +7,13 @@ import yaml
 import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+# Default configuration constants
+DEFAULT_LOG_MAX_BYTES = 10485760  # 10MB
+DEFAULT_LOG_BACKUP_COUNT = 5
+DEFAULT_CACHE_TTL = 300  # 5 minutes in seconds
+DEFAULT_CACHE_MAX_ENTRIES = 1000
+DEFAULT_METRICS_MAX_SAMPLES = 100
+
 
 
 class ConfigurationError(Exception):
@@ -209,19 +216,19 @@ class ConfigLoader:
             'logging': {
                 'level': 'INFO',
                 'file': 'cas_chatbot.log',
-                'max_bytes': 10485760,
-                'backup_count': 5
+                'max_bytes': DEFAULT_LOG_MAX_BYTES,
+                'backup_count': DEFAULT_LOG_BACKUP_COUNT
             },
             'cache': {
-                'default_ttl': 300,
-                'max_entries': 1000
+                'default_ttl': DEFAULT_CACHE_TTL,
+                'max_entries': DEFAULT_CACHE_MAX_ENTRIES
             },
             'session': {
                 'file': 'session_history.json',
                 'auto_save': True
             },
             'metrics': {
-                'max_samples': 100
+                'max_samples': DEFAULT_METRICS_MAX_SAMPLES
             },
             'allow_self_signed': True
         }

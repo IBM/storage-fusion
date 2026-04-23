@@ -6,6 +6,7 @@ import subprocess
 import json
 import logging
 from typing import List, Dict, Optional
+from chatbot.utils.validators import InputValidator, ValidationError
 
 
 class UserService:
@@ -87,6 +88,13 @@ class UserService:
         Returns:
             User details dictionary or None if not found
         """
+        # Validate input
+        try:
+            username = InputValidator.validate_username(username, "username")
+        except ValidationError as e:
+            self.logger.error(f"Input validation failed: {e}")
+            return None
+        
         # Try OCP
         try:
             result = subprocess.run(
@@ -120,6 +128,13 @@ class UserService:
         Returns:
             List of matching usernames
         """
+        # Validate input
+        try:
+            query = InputValidator.validate_query(query, "query")
+        except ValidationError as e:
+            self.logger.error(f"Input validation failed: {e}")
+            return []
+        
         query_lower = query.lower()
 
         ocp_users = self.list_oc_users(use_cache=use_cache)
