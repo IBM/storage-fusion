@@ -243,7 +243,7 @@ class TestQueryServiceFilteredQueries:
         mock_response.raise_for_status = Mock()
         mock_post.return_value = mock_response
 
-        filters = {'key': 'filename', 'operator': 'eq', 'value': 'test.pdf'}
+        filters = {'key': 'filename', 'type': 'eq', 'value': 'test.pdf'}
         query_service = QueryService(sample_config,
                                      mock_logger,
                                      auth_service=mock_auth_service)
@@ -267,7 +267,7 @@ class TestQueryServiceFilteredQueries:
         mock_response.raise_for_status = Mock()
         mock_post.return_value = mock_response
 
-        filters = {'key': 'filename', 'operator': 'eq', 'value': 'test.pdf'}
+        filters = {'key': 'filename', 'type': 'eq', 'value': 'test.pdf'}
         query_service = QueryService(sample_config,
                                      mock_logger,
                                      auth_service=mock_auth_service)
