@@ -9,6 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from rich.console import Console
+# Constants
+MAX_QUERY_PREVIEW_LENGTH = 50
+
 
 
 class ErrorHandler:
@@ -80,26 +83,27 @@ class SessionManager:
         self.config = config
         self.logger = logger
         self.session_file = Path(session_file)
-        self.history = self._load()
-
-        # Initialize session metadata if new
-        if 'session_start' not in self.history:
-            self.history['session_start'] = datetime.now().isoformat()
-            self.history['queries'] = []
-            self.history['assignments'] = []
-            self.history['events'] = []
-
-    def _load(self) -> Dict:
-        """Load session history from file"""
+        
+        # Delete old session file if it exists
         if self.session_file.exists():
             try:
-                with open(self.session_file, 'r') as f:
-                    data = json.load(f)
-                    self.logger.info(f"Loaded session from {self.session_file}")
-                    return data
+                self.session_file.unlink()
+                self.logger.info(f"Deleted old session file: {self.session_file}")
             except Exception as e:
-                self.logger.warning(f"Failed to load session: {e}")
+                self.logger.warning(f"Failed to delete old session file: {e}")
+        
+        # Create new session history with proper type annotations
+        self.history: Dict[str, Any] = {
+            'session_start': datetime.now().isoformat(),
+            'queries': [],
+            'assignments': [],
+            'events': []
+        }
+        self.logger.info(f"Created new session starting at {self.history['session_start']}")
 
+    def _load(self) -> Dict:
+        """Load session history from file (deprecated - now creates fresh session)"""
+        # This method is kept for compatibility but no longer loads old sessions
         return {}
 
     def save(self):
@@ -130,7 +134,7 @@ class SessionManager:
 
         self.history.setdefault('queries', []).append(entry)
         self.save()
-        self.logger.debug(f"Query added to session: {query[:50]}")
+        self.logger.debug(f"Query added to session: {query[:MAX_QUERY_PREVIEW_LENGTH]}")
 
     def add_file_lookup(self, user: str, vector_store_id: str, file_id: str,
                   file_content: str = "", user_type: str = "ocp", authenticated: bool = False):
@@ -167,27 +171,22 @@ class SessionManager:
 
     def get_queries(self, limit: Optional[int] = None) -> List[Dict]:
         """Get query history"""
-        queries = self.history.get('queries', [])
+        queries: List[Dict] = self.history.get('queries', [])
         return queries[-limit:] if limit else queries
 
-    def get_assignments(self, limit: Optional[int] = None) -> List[Dict]:
-        """Get assignment history"""
-        assignments = self.history.get('assignments', [])
-        return assignments[-limit:] if limit else assignments
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get session statistics"""
-        queries = self.history.get('queries', [])
-        assignments = self.history.get('assignments', [])
+        queries: List[Dict] = self.history.get('queries', [])
 
-        # Count unique users and vector stores
-        unique_users = set(q.get('user') for q in queries if q.get('user'))
-        unique_vector_stores = set(a.get('vector_store') for a in assignments if a.get('vector_store'))
+        # Count unique vector stores from queries
+        unique_vector_stores = set(
+            q.get('vector_store') for q in queries
+            if isinstance(q, dict) and q.get('vector_store')
+        )
 
         return {
             'total_queries': len(queries),
-            'total_assignments': len(assignments),
-            'unique_users': len(unique_users),
             'unique_vector_stores': len(unique_vector_stores),
             'session_start': self.history.get('session_start', 'Unknown'),
             'last_updated': self.history.get('last_updated', 'Unknown')
@@ -241,7 +240,7 @@ class RateLimiter:
         """
         self.max_requests = max_requests
         self.time_window = time_window
-        self.requests = []
+        self.requests: List[float] = []
 
     def can_proceed(self) -> bool:
         """Check if request can proceed"""

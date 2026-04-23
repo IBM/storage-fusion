@@ -9,6 +9,7 @@ import json
 import logging
 from typing import List, Dict, Optional, Any
 from rich.console import Console
+from chatbot.utils.validators import InputValidator, ValidationError
 
 
 class VectorStoreService:
@@ -19,7 +20,7 @@ class VectorStoreService:
                  auth_service,
                  logger: logging.Logger,
                  cache_service=None,
-                 console: Console = None):
+                 console: Optional[Console] = None):
         self.config = config
         self.auth_service = auth_service
         self.logger = logger
@@ -35,9 +36,8 @@ class VectorStoreService:
         #     console_url = console_url[:-1]
         # self.api_base = f"{console_url}/cas/api/v1"
 
-        # In-memory storage for vector store assignments (local cache)
-        # Format: {vector_store_name: {ocp_users: [...], keycloak_users: [...]}}
-        self.vector_store_assignments = {}
+        # In-memory storage for domain assignments (local cache)
+        self.vector_store_assignments: Dict[str, Dict[str, List[str]]] = {}
 
         # Cache TTL
         self.cache_ttl = config.get('cache', {}).get('domain_cache_ttl',
@@ -58,6 +58,13 @@ class VectorStoreService:
         Returns:
             List of vector store names
         """
+        # Validate input
+        try:
+            namespace = InputValidator.validate_namespace(namespace, "namespace")
+        except ValidationError as e:
+            self.logger.error(f"Input validation failed: {e}")
+            return []
+        
         cache_key = f"domains_{namespace}"
 
         # Check cache
@@ -120,6 +127,14 @@ class VectorStoreService:
         Returns:
             Vector store details or None if not found
         """
+        # Validate inputs
+        try:
+            vector_store_name = InputValidator.validate_vector_store_name(vector_store_name, "vector_store_name")
+            namespace = InputValidator.validate_namespace(namespace, "namespace")
+        except ValidationError as e:
+            self.logger.error(f"Input validation failed: {e}")
+            return None
+        
         try:
             result = subprocess.run([
                 "oc", "get", "domain", vector_store_name, "-n", namespace, "-o",
@@ -132,8 +147,7 @@ class VectorStoreService:
                 data = json.loads(result.stdout.decode())
 
                 # Get assigned users for this vector store
-                ocp_users, keycloak_users = self.get_assigned_users_detailed(
-                    vector_store_name)
+                users = self.get_assigned_users(vector_store_name, namespace)
 
                 return {
                     'name':
@@ -149,9 +163,8 @@ class VectorStoreService:
                     'status':
                         data.get('status', {}),
                     'assigned_users': {
-                        'ocp': ocp_users,
-                        'keycloak': keycloak_users,
-                        'total': len(ocp_users) + len(keycloak_users)
+                        'users': users,
+                        'total': len(users)
                     }
                 }
         except Exception as e:
@@ -161,17 +174,27 @@ class VectorStoreService:
 
     def get_assigned_users(self,
                            vector_store_name: str,
+                           namespace: str = "ibm-cas",
                            use_cache: bool = True) -> List[str]:
         """
-        Fetch all assigned users for a vector store (OCP + Keycloak)
+        Fetch all assigned users for a vector store from the domain resource
 
         Args:
             vector_store_name: Name of the vector store
+            namespace: Kubernetes namespace
             use_cache: Use cached results if available
 
         Returns:
-            List of assigned usernames
+            List of validated assigned usernames
         """
+        # Validate inputs
+        try:
+            vector_store_name = InputValidator.validate_vector_store_name(vector_store_name, "vector_store_name")
+            namespace = InputValidator.validate_namespace(namespace, "namespace")
+        except ValidationError as e:
+            self.logger.error(f"Input validation failed: {e}")
+            return []
+        
         cache_key = f"domain_users_{vector_store_name}"
 
         # Check cache
@@ -183,99 +206,85 @@ class VectorStoreService:
                 )
                 return cached
 
-        # Get from local assignment tracking first
-        users = []
-        if vector_store_name in self.vector_store_assignments:
-            users.extend(
-                self.vector_store_assignments[vector_store_name]['ocp_users'])
-            users.extend(self.vector_store_assignments[vector_store_name]
-                         ['keycloak_users'])
-
-        # Try to fetch from CAS API as well
         try:
-            #TODO: "Could not reach CAS API" error probably due to wrong URL
-            url = f"{self.api_base}/resource-access-controls"
-            headers = {"Authorization": f"Bearer {self.auth_service.token}"}
+            # Fetch CRAC using oc command
+            result = subprocess.run([
+                "oc", "get", "casresourceaccesscontrols.cas.isf.ibm.com", "-n", namespace, "-o",
+                "json"
+            ],
+                                    capture_output=True,
+                                    timeout=10)
 
-            resp = requests.get(url, headers=headers, verify=False, timeout=30)
+            if result.returncode == 0:
+                data = json.loads(result.stdout.decode())
 
-            if resp.status_code == 200:
-                data = resp.json()
+                items = data.get('items', [])
 
-                # Filter entries by vector_store_name
-                vector_store_entries = [
-                    entry for entry in data.get("items", [])
-                    if entry.get("type") == "Domain" and
-                    entry.get("name") == vector_store_name
+                # Find the CasResourceAccessControl for this specific vector store
+                item = None
+                for resource in items:
+                    resource_ref = resource.get('spec',
+                                                {}).get('resourceRef', {})
+                    if resource_ref.get('name') == vector_store_name:
+                        item = resource
+                        break
+
+                if not item:
+                    self.logger.warning(
+                        f"No CasResourceAccessControl found for vector store '{vector_store_name}'"
+                    )
+                    return []
+
+                # Extract assigned users from spec.subjects.users
+                users = item.get('spec', {}).get('subjects',
+                                                 {}).get('users', [])
+                usernames = [
+                    user.get('name') for user in users if user.get('name')
                 ]
 
-                api_users = []
-                for entry in vector_store_entries:
-                    api_users += [u["name"] for u in entry.get("users", [])]
+                # Check validation status from status.conditions
+                validated_users = []
+                conditions = item.get('status', {}).get('conditions', [])
+                for condition in conditions:
+                    if condition.get(
+                            'type') == 'ValidatedUsers' and condition.get(
+                                'status') == 'True':
+                        # Users are validated
+                        validated_users = usernames
+                        break
 
-                # Merge with local users
-                all_users = sorted(set(users + api_users))
+                # Update the in-memory cache
+                self.vector_store_assignments[vector_store_name] = {
+                    'ocp_users': validated_users,
+                }
 
-                if all_users:
+                if validated_users:
                     self.console.print(
-                        f"[green]✓ Vector store '{vector_store_name}' has {len(all_users)} assigned user(s)[/]"
+                        f"[green]✓ Vector store '{vector_store_name}' has {len(validated_users)} validated user(s)[/]"
                     )
                 else:
                     self.console.print(
-                        f"[yellow]ℹ No users assigned to vector store '{vector_store_name}'[/]"
+                        f"[yellow]ℹ No validated users assigned to vector store '{vector_store_name}'[/]"
                     )
 
                 # Cache results
                 if self.cache_service:
                     self.cache_service.set(cache_key,
-                                           all_users,
+                                           validated_users,
                                            ttl_seconds=self.cache_ttl)
 
-                return all_users
+                return validated_users
 
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"Failed to fetch domain {vector_store_name}: {e}")
         except Exception as e:
-            self.logger.warning(f"Could not fetch from CAS API: {e}")
+            self.logger.error(f"Error fetching assigned users: {e}")
 
-        # If no API results, use local tracking
-        if users:
-            users = sorted(set(users))
-            self.console.print(
-                f"[cyan]Vector store '{vector_store_name}' assigned users: {', '.join(users)}[/]"
-            )
-
-            # Cache results
-            if self.cache_service:
-                self.cache_service.set(cache_key,
-                                       users,
-                                       ttl_seconds=self.cache_ttl)
-
-            return users
-        else:
-            self.console.print(
-                f"[yellow]ℹ No users currently assigned to vector store '{vector_store_name}'[/]"
-            )
-            return []
-
-    def get_assigned_users_detailed(self, vector_store_name: str) -> tuple:
-        """
-        Get assigned users separated by type (OCP and Keycloak)
-
-        Args:
-            vector_store_name: Name of the vector store
-
-        Returns:
-            Tuple of (ocp_users, keycloak_users)
-        """
-        ocp_users = []
-        keycloak_users = []
-
-        if vector_store_name in self.vector_store_assignments:
-            ocp_users = self.vector_store_assignments[vector_store_name].get(
-                'ocp_users', [])
-            keycloak_users = self.vector_store_assignments[
-                vector_store_name].get('keycloak_users', [])
-
-        return ocp_users, keycloak_users
+        self.console.print(
+            f"[yellow]ℹ Could not fetch users for vector store '{vector_store_name}'[/]"
+        )
+        return []
 
     def sync_vector_stores(self, namespace: str = "ibm-cas") -> int:
         """
@@ -292,29 +301,3 @@ class VectorStoreService:
 
         vector_stores = self.list_vector_stores(namespace, use_cache=False)
         return len(vector_stores)
-
-    def display_vector_store_assignments(self, vector_store_name: str):
-        """
-        Display formatted vector store assignments
-
-        Args:
-            vector_store_name: Name of the vector store
-        """
-        ocp_users, keycloak_users = self.get_assigned_users_detailed(
-            vector_store_name)
-
-        table_data = {
-            'Vector store':
-                vector_store_name,
-            'OCP Users':
-                ', '.join(ocp_users) if ocp_users else 'None',
-            'Keycloak Users':
-                ', '.join(keycloak_users) if keycloak_users else 'None',
-            'Total Users':
-                len(ocp_users) + len(keycloak_users)
-        }
-
-        info_str = "\n".join([f"{k}: {v}" for k, v in table_data.items()])
-        self.console.print(f"\n[cyan]{info_str}[/]\n")
-
-        return table_data

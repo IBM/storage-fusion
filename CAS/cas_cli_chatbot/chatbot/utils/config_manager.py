@@ -46,7 +46,7 @@ class ConfigManager:
     def prompt_for_credentials(self) -> Dict[str, str]:
         """Interactively prompt user for OC credentials and CAS configuration"""
         console.print("\n[bold cyan]OpenShift Configuration Setup[/]")
-        console.print("Please provide your OpenShift cluster credentials:\n")
+        console.print("\nPlease provide your OpenShift cluster credentials:\n")
 
         console_url = Prompt.ask(
             "[yellow]Console URL[/] [cyan](Ex: https://console-openshift-console.apps.<your-cluster>.openshiftapps.com)[/]"
@@ -77,10 +77,14 @@ class ConfigManager:
 
             if not use_generated:
                 cas_url = Prompt.ask("[yellow]Enter CAS URL manually[/]")
+                # Strip trailing slash if present
+                cas_url = cas_url.rstrip('/')
                 namespace: str = Prompt.ask("[yellow]Enter CAS Namespace[/]")
         except ValueError as e:
             console.print(f"[yellow]⚠ Could not auto-generate CAS URL: {e}[/]")
             cas_url = Prompt.ask("[yellow]CAS URL[/]")
+            # Strip trailing slash if present
+            cas_url = cas_url.rstrip('/')
 
         return {
             'console_url': console_url,
@@ -112,11 +116,14 @@ class ConfigManager:
 
     def save_config(self, config: Dict[str, Any], backup: bool = True):
         """Save configuration to file"""
-        if backup and self.config_path.exists():
-            backup_path = self.config_path.with_suffix('.yaml.bak')
-            import shutil
-            shutil.copy2(self.config_path, backup_path)
-            console.print(f"[dim]Created backup: {backup_path}[/]")
+        if self.config_path.exists():
+            if backup:
+                backup_path = self.config_path.with_suffix('.yaml.bak')
+                import shutil
+                shutil.copy2(self.config_path, backup_path)
+                console.print(f"[dim]Created backup: {backup_path}[/]")
+            # Delete the old config file
+            self.config_path.unlink()
 
         with open(self.config_path, 'w') as f:
             yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
@@ -144,6 +151,7 @@ class ConfigManager:
                 )
                 console.print(f"  Console URL: {config.get('console_url')}")
                 console.print(f"  Username: {config.get('oc_username')}")
+                console.print(f"  CAS Namespace: {config.get('cas_namespace')}")
 
                 use_existing = Confirm.ask(
                     "\n[yellow]Use existing configuration?[/]", default=True)
@@ -365,6 +373,37 @@ class ConfigManager:
             yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
         
         console.print("[bold green]✓ LLM configuration saved[/]")
+
+    def reset_llm_config(self):
+        """
+        Reset LLM configuration to default/empty state
+        Clears all LLM provider settings 
+        """
+        if not self.config_path.exists():
+            return
+        
+        # Load current config
+        with open(self.config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        
+        # Clear LLM-related settings
+        llm_keys = [
+            'llm_provider_sequence',
+            'openai_api_key',
+            'openai_model',
+            'ollama_host',
+            'ollama_model',
+            'nvidia_llm_url',
+            'nvidia_model'
+        ]
+        
+        for key in llm_keys:
+            if key in config:
+                del config[key]
+        
+        # Save config
+        with open(self.config_path, 'w') as f:
+            yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
 
     def _extract_cluster_from_console_url(self, console_url: str) -> str:
         """

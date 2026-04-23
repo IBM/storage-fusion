@@ -1,0 +1,34 @@
+# Configuration files with credentials
+chatbot/config.yaml
+chatbot/config1.yaml
+*.env
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+venv/
+chatbot/venv/
+
+# Session files
+session_history.json
+chatbot/session_history.json
+chatbot/session_export.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+

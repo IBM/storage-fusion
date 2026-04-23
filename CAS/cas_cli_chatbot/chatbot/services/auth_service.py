@@ -22,6 +22,13 @@ class ConfigurationError(Exception):
 
 class AuthService:
     """Enhanced authentication service with caching and retry logic"""
+    
+    # Constants
+    DEFAULT_TOKEN_REFRESH_THRESHOLD = 300  # 5 minutes in seconds
+    DEFAULT_OC_LOGIN_TIMEOUT = 30  # seconds
+    DEFAULT_OC_WHOAMI_TIMEOUT = 10  # seconds
+    OPENSHIFT_API_PORT = 6443
+    DEFAULT_TOKEN_EXPIRY_HOURS = 24  # hours
 
     def __init__(self,
                  config: dict,
@@ -41,8 +48,10 @@ class AuthService:
 
         # Configuration
         self.allow_self_signed = config.get("allow_self_signed", True)
-        self.token_refresh_threshold = config.get("token_refresh_threshold",
-                                                  300)  # 5 minutes
+        self.token_refresh_threshold = config.get(
+            "token_refresh_threshold",
+            self.DEFAULT_TOKEN_REFRESH_THRESHOLD
+        )
 
         # Validate required fields
         self._validate_config()
@@ -68,7 +77,7 @@ class AuthService:
             if host.startswith("console-openshift-console.apps."):
                 api_host = host.replace("console-openshift-console.apps.",
                                         "api.")
-                return f"https://{api_host}:6443"
+                return f"https://{api_host}:{self.OPENSHIFT_API_PORT}"
 
             raise ValueError("Unsupported OpenShift Console URL format")
 
@@ -104,7 +113,7 @@ class AuthService:
             ],
                                     capture_output=True,
                                     text=True,
-                                    timeout=30)
+                                    timeout=self.DEFAULT_OC_LOGIN_TIMEOUT)
 
             if result.returncode != 0:
                 self.logger.error(f"OC login failed: {result.stderr}")
@@ -115,7 +124,7 @@ class AuthService:
             token_result = subprocess.run(['oc', 'whoami', '-t'],
                                           capture_output=True,
                                           text=True,
-                                          timeout=10)
+                                          timeout=self.DEFAULT_OC_WHOAMI_TIMEOUT)
 
             if token_result.returncode != 0:
                 self.logger.error("Failed to retrieve bearer token")
@@ -129,7 +138,7 @@ class AuthService:
                 raise AuthenticationError("Bearer token is empty")
 
             # Set token expiry (default 24 hours for OCP tokens)
-            self.token_expiry = datetime.now() + timedelta(hours=24)
+            self.token_expiry = datetime.now() + timedelta(hours=self.DEFAULT_TOKEN_EXPIRY_HOURS)
 
             # Cache token if cache service available
             if self.cache_service:

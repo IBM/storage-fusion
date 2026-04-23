@@ -28,7 +28,24 @@ class CacheEntry:
 
 class CacheService:
     """
-    In-memory cache service with TTL and statistics
+    Thread-safe in-memory cache service with TTL and statistics
+    
+    This class provides a thread-safe caching mechanism with the following features:
+    - Time-to-live (TTL) support for automatic expiration
+    - LRU-style eviction when max entries is reached
+    - Pattern-based cache clearing
+    - Hit/miss statistics tracking
+    
+    Thread Safety:
+    - All public methods are protected by a single lock (self.lock)
+    - Private methods (_evict_oldest) must be called while holding the lock
+    - Statistics counters are updated atomically within lock-protected sections
+    - Cache dictionary operations are always performed within lock context
+    
+    Usage:
+        cache = CacheService(config, logger)
+        cache.set("key", "value", ttl_seconds=300)
+        value = cache.get("key")
     """
 
     def __init__(self, config: Dict, logger: Optional[logging.Logger] = None):
@@ -139,7 +156,11 @@ class CacheService:
                 self.logger.info(f"Cleared {len(keys_to_delete)} entries matching '{pattern}'")
 
     def _evict_oldest(self):
-        """Evict oldest entry from cache"""
+        """
+        Evict oldest entry from cache
+        
+        Note: This method must be called while holding self.lock
+        """
         if not self.cache:
             return
 
@@ -163,17 +184,23 @@ class CacheService:
                 self.logger.info(f"Cleaned up {len(expired_keys)} expired entries")
 
     def get_statistics(self) -> Dict[str, Any]:
-        """Get cache statistics"""
+        """Get cache statistics with atomic reads"""
         with self.lock:
-            total_requests = self.hits + self.misses
-            hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0
+            # Read all values atomically within the lock
+            entries = len(self.cache)
+            hits = self.hits
+            misses = self.misses
+            evictions = self.evictions
+            
+            total_requests = hits + misses
+            hit_rate = (hits / total_requests * 100) if total_requests > 0 else 0
 
             return {
-                'entries': len(self.cache),
-                'hits': self.hits,
-                'misses': self.misses,
+                'entries': entries,
+                'hits': hits,
+                'misses': misses,
                 'hit_rate_percent': round(hit_rate, 2),
-                'evictions': self.evictions,
+                'evictions': evictions,
                 'max_entries': self.max_entries
             }
 

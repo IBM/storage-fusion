@@ -7,22 +7,35 @@ Main entry point with improved error handling and initialization
 import sys
 import logging
 from pathlib import Path
+
+# Add parent directory to Python path to allow imports when running as script
+if __name__ == "__main__":
+    parent_dir = Path(__file__).resolve().parent.parent
+    if str(parent_dir) not in sys.path:
+        sys.path.insert(0, str(parent_dir))
+
 from rich.console import Console
 from rich.panel import Panel
 
-from utils.config_loader import ConfigLoader
-from utils.config_manager import ConfigManager
-from utils.logger import LoggerFactory
-from utils.health_check import HealthChecker
-from services.auth_service import AuthService
-from services.user_service import UserService
-from services.vector_store_service import VectorStoreService
-from services.query_service import QueryService
-from services.llm_service import LLMService
-from services.cache_service import CacheService
-from services.metrics_service import MetricsService
-from cli.chatbot_cli import ChatbotCLI
-from cli.middleware import ErrorHandler, SessionManager
+from chatbot.utils.config_loader import ConfigLoader
+from chatbot.utils.config_manager import ConfigManager
+from chatbot.utils.logger import LoggerFactory
+from chatbot.utils.health_check import HealthChecker
+from chatbot.services.auth_service import AuthService
+from chatbot.services.user_service import UserService
+from chatbot.services.vector_store_service import VectorStoreService
+from chatbot.services.query_service import QueryService
+from chatbot.services.llm_service import LLMService
+from chatbot.services.cache_service import CacheService
+from chatbot.services.metrics_service import MetricsService
+from chatbot.cli.chatbot_cli import ChatbotCLI
+from chatbot.cli.middleware import ErrorHandler, SessionManager
+# Constants
+SEPARATOR_LINE_LENGTH = 60
+EXIT_CODE_KEYBOARD_INTERRUPT = 130
+DEFAULT_LOG_MAX_BYTES = 10485760  # 10MB
+DEFAULT_LOG_BACKUP_COUNT = 5
+
 
 console = Console()
 
@@ -32,9 +45,9 @@ def display_banner():
     banner = """
     ╔═══════════════════════════════════════════════════════════╗
     ║                                                           ║
-    ║           CAS Chatbot - Enterprise Edition               ║
-    ║           Multi-Provider LLM Integration                 ║
-    ║           Version 2.0.0                                  ║
+    ║           CAS Chatbot - Enterprise Edition                ║
+    ║           Multi-Provider LLM Integration                  ║
+    ║           Version 2.0.0                                   ║
     ║                                                           ║
     ╚═══════════════════════════════════════════════════════════╝
     """
@@ -52,7 +65,7 @@ def initialize_services(config: dict, logger: logging.Logger) -> dict:
     Returns:
         Dictionary of initialized services
     """
-    console.print("[bold yellow]Initializing services...[/]")
+    console.print("\n[bold yellow]Initializing services...[/]")
 
     services = {}
 
@@ -143,7 +156,7 @@ def main():
         config = config_manager.setup_interactive()
 
         # Load and validate configuration
-        console.print(f"\n[bold cyan]Validating configuration...[/]")
+        console.print(f"\n[bold cyan]Validating configuration...[/]\n")
         config_loader = ConfigLoader(config_path)
 
         # Validate configuration
@@ -159,12 +172,12 @@ def main():
             name="cas_chatbot",
             log_file=log_config.get("file", "cas_chatbot.log"),
             level=log_config.get("level", "INFO"),
-            max_bytes=log_config.get("max_bytes", 10485760),
-            backup_count=log_config.get("backup_count", 5))
+            max_bytes=log_config.get("max_bytes", DEFAULT_LOG_MAX_BYTES),
+            backup_count=log_config.get("backup_count", DEFAULT_LOG_BACKUP_COUNT))
 
-        logger.info("=" * 60)
+        logger.info("=" * SEPARATOR_LINE_LENGTH)
         logger.info("CAS Chatbot Application Starting")
-        logger.info("=" * 60)
+        logger.info("=" * SEPARATOR_LINE_LENGTH)
 
         # Initialize error handler and session manager
         error_handler = ErrorHandler(logger=logger, console=console)
@@ -230,7 +243,7 @@ def main():
 
         # Cleanup
         logger.info("Application shutting down")
-        console.print("\n[bold cyan]Thank you for using CAS Chatbot![/]")
+        console.print("\n[bold cyan]Thank you for using CAS Chatbot!\n[/]")
 
         return exit_code
 
@@ -238,7 +251,7 @@ def main():
         console.print("\n\n[bold yellow]Application interrupted by user[/]")
         if logger:
             logger.info("Application interrupted by user")
-        return 130
+        return EXIT_CODE_KEYBOARD_INTERRUPT
 
     except Exception as e:
         console.print(f"\n[bold red]Fatal error: {str(e)}[/]")
