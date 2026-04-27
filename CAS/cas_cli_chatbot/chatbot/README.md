@@ -82,6 +82,18 @@ The chatbot can create or update `config.yaml` from the terminal when it starts.
 ### Optional LLM enhancement
 The chatbot can call an LLM provider after retrieval to help summarize or answer questions based on a specific retrieved file. This is optional and not required for raw vector search.
 
+## Additional Resources
+
+### CAS Data Source Configuration
+For information on how to create a data source and connect it to a domain/vector store for searching, refer to the official IBM documentation:
+
+**[Configuring Content Aware Storage (CAS)](https://www.ibm.com/docs/en/fusion-hci-systems/2.12.x?topic=cas-configuring-content-aware-storage)**
+
+This guide covers:
+- Creating and configuring CAS data sources
+- Connecting data sources to domains/vector stores
+- Setting up the infrastructure needed for vector search operations
+
 ## Prerequisites
 
 - Python 3.8+
@@ -141,11 +153,7 @@ If you need to understand available settings, use these files as the source of t
 - `utils/config_manager.py`
 - `LLM_SETUP.md`
 
-If there are additional internal setup conventions your team wants documented, add them here:
-
-```text
-TODO: Add internal guidance for environment-specific configuration details.
-```
+For environment-specific configuration details and CAS data source setup, refer to the [Additional Resources](#additional-resources) section above.
 
 ## Configuration behavior
 
