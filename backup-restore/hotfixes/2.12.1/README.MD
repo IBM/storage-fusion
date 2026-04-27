@@ -8,7 +8,7 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 ## Hotfix 3 (Latest)
 
-**Release Date:** Latest hotfix for 2.12.1
+**Release Date:** Apr 27th, 2026
 
 ### Issues Fixed
 
@@ -30,7 +30,7 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 ### Issues Fixed
 
 1. **Force idp-agent-operator to reconcile spoke-hub communication settings due to incorrect state-1 mirroring of ConfigMap guardian-configmap**  (#69600)
-   - 
+
 
 ## Installation
 
