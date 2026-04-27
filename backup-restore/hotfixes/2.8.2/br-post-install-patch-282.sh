@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.8.2 release.
 # Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
-# Version 04-24-2025
+# Version 04-27-2026
 
 mkdir -p /tmp/br-post-install-patch-282
 if [ "$?" -eq 0 ]
