@@ -38,8 +38,8 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 Before applying the hotfix, download the following files:
 
-- `br-post-install-patch-2.12.1.sh` 
-- `br-2.12.1patch-offline-mirror.sh` 
+- [`br-post-install-patch-2.12.1.sh`](br-post-install-patch-2.12.1.sh) 
+- [`br-2.12.1patch-offline-mirror.sh`](br-2.12.1patch-offline-mirror.sh) 
 
 ### Installation Steps
 
