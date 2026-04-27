@@ -38,8 +38,8 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 Before applying the hotfix, download the following files:
 
-- `br-post-install-patch-2.12.1.sh` - Main hotfix installation script
-- `br-2.12.1patch-offline-mirror.sh` - Offline image mirroring script (for air-gapped environments)
+- `br-post-install-patch-2.12.1.sh` 
+- `br-2.12.1patch-offline-mirror.sh` 
 
 ### Installation Steps
 
@@ -78,10 +78,11 @@ If your environment does not have direct internet access, mirror the hotfix imag
 
 **Installation procedure:**
 
-1. **Download the hotfix script** to your local system:
+1. **Download the hotfix scripts** to your local system:
    ```bash
-   # Verify the script is present
+   # Verify the scripts are present
    ls -lh br-post-install-patch-2.12.1.sh
+   ls -lh br-2.12.1patch-offline-mirror.sh
    ```
 
 2. **Make the script executable:**
@@ -91,12 +92,12 @@ If your environment does not have direct internet access, mirror the hotfix imag
 
 3. **Execute the hotfix script** with the appropriate deployment type flag:
 
-   **For HCI (Hyperconverged Infrastructure) deployments:**
+   **For HCI deployments:**
    ```bash
    ./br-post-install-patch-2.12.1.sh -hci
    ```
 
-   **For SDS (Software-Defined Storage) deployments:**
+   **For SDS deployments:**
    ```bash
    ./br-post-install-patch-2.12.1.sh -sds
    ```
