@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=8
+HOTFIX_NUMBER=9
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -354,7 +354,7 @@ update_operator_csv ibm-dataprotectionagent.v2.11.0 ibm-dataprotectionagent-cont
 
 
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:25bfde6b666b864ee90541ca872c61d4f6be0b19da22fb7edf8c4156992955ec
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:06b9f642bc070af576345ce418d01e5b7bb9b10d2fbc284b2d72e2f91b65869b
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
