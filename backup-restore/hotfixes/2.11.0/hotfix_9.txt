@@ -1,0 +1,3 @@
+This hotfix fixes the following Backup & Restore issues:
+
+1. Fixes rbdsnapshot typo - ceph storage was getting filled up fast with daily vm backups (#71802)
