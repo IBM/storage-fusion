@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.1 release.
-HOTFIX_NUMBER=2
+HOTFIX_NUMBER=3
 EXPECTED_VERSION=2.12.1
 IMAGE_SOURCE="br-2.12.1patch-offline-mirror.sh"
 
@@ -273,8 +273,15 @@ resolve_hub_connection $HUB
 guardianidpagentoperator_img=$(build_icr_path ${CPOPEN_PREFIX} ${IDP_AGENT_OPERATOR})
 update_operator_csv ibm-dataprotectionagent.v2.12.1 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
 
+# update transaction-manager
+tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
+set_deployment_image transaction-manager transaction-manager "${tm_image}"
+set_deployment_image dbr-controller dbr-controller "${tm_image}"
+
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
 
 echo "Please verify that the pods for the following deployment have successfully restarted:"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manager"
