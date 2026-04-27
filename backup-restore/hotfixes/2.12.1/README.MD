@@ -6,7 +6,7 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
-## Hotfix 3 (Latest)
+## Hotfix hotfix-2.12.1.3 (Latest)
 
 **Release Date:** Apr 27th, 2026
 
@@ -18,14 +18,14 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 3. **Slow service protection backup** (#71410) 
    
 
-## Hotfix 2
+## Hotfix hotfix-2.12.1.2
 
 ### Issues Fixed
 
 1. **Fix issue with missing fields in guardian-configmap which causes spoke upgrades to be stuck** (#69600)
   
 
-## Hotfix 1
+## Hotfix hotfix-2.12.1.1
 
 ### Issues Fixed
 
