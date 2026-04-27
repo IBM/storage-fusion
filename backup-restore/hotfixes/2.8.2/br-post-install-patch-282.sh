@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.8.2 release.
 # Refer to https://www.ibm.com/support/pages/node/7178519 for additional information.
-# Version 02-14-2025
+# Version 04-24-2025
 
 mkdir -p /tmp/br-post-install-patch-282
 if [ "$?" -eq 0 ]
@@ -104,7 +104,7 @@ fi
 if (oc get deployment -n $BR_NS transaction-manager -o yaml > $DIR/transaction-manager-deployment.save.yaml)
   then
     echo "Patching transaction-manager image..."
-    oc set image deployment/transaction-manager -n $BR_NS transaction-manager=cp.icr.io/cp/fbr/guardian-transaction-manager@sha256:f36aee1f693461c4f9f00faef090757c218a0dfa5ec7827e8663022639857a6f
+    oc set image deployment/transaction-manager -n $BR_NS transaction-manager=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:2f649cca24d80e766079ff7819bcf9ae13646e3733c8e6dcdd06c7f5fa9a598d
 else
     echo "ERROR: Failed to save original transaction-manager deployment. Skipped updates."
 fi
