@@ -20,7 +20,6 @@ MAX_QUERY_HISTORY_DISPLAY = 20
 MAX_QUERY_PREVIEW_LENGTH = 50
 
 
-
 def cmd_vector_stores_list(self):
     """List vector stores accessible to user and all available vector stores in namespace"""
     all_vector_stores = self.services['vector store'].list_vector_stores(
@@ -128,8 +127,8 @@ def cmd_vector_stores_info(self):
 
         info_table.add_row("Vector Store Name",
                            vector_store_info.get('name', 'N/A'))
-        info_table.add_row("Namespace", vector_store_info.get('namespace',
-                                                              'N/A'))
+        info_table.add_row("Namespace",
+                           vector_store_info.get('namespace', 'N/A'))
         info_table.add_row("Created", vector_store_info.get('created', 'N/A'))
 
         assigned = vector_store_info.get('assigned_users', {})
@@ -137,8 +136,8 @@ def cmd_vector_stores_info(self):
         total = assigned.get('total', 0)
 
         info_table.add_row("Total Assigned Users", str(total))
-        info_table.add_row("Users",
-                           ", ".join(ocp_users) if ocp_users else "[dim]None[/]")
+        info_table.add_row(
+            "Users", ", ".join(ocp_users) if ocp_users else "[dim]None[/]")
 
         self.console.print(info_table)
     else:
@@ -185,23 +184,18 @@ def cmd_query_history(self):
     table.add_column("#", style="dim", width=TABLE_COLUMN_WIDTH_INDEX)
     table.add_column("Time", style="cyan", width=TABLE_COLUMN_WIDTH_TIME)
     table.add_column("User", style="green", width=TABLE_COLUMN_WIDTH_USER)
-    table.add_column("Vector Store", style="yellow", width=TABLE_COLUMN_WIDTH_VECTOR_STORE)
+    table.add_column("Vector Store",
+                     style="yellow",
+                     width=TABLE_COLUMN_WIDTH_VECTOR_STORE)
     table.add_column("Query", style="white")
 
     for idx, q in enumerate(queries[-MAX_QUERY_HISTORY_DISPLAY:], 1):
         query_text = q.get('query', 'N/A')
-        display_query = (
-            query_text[:MAX_QUERY_PREVIEW_LENGTH] + "..."
-            if len(query_text) > MAX_QUERY_PREVIEW_LENGTH
-            else query_text
-        )
-        table.add_row(
-            str(idx),
-            q.get('timestamp', 'N/A'),
-            q.get('user', 'N/A'),
-            q.get('vector store', 'N/A'),
-            display_query
-        )
+        display_query = (query_text[:MAX_QUERY_PREVIEW_LENGTH] +
+                         "..." if len(query_text) > MAX_QUERY_PREVIEW_LENGTH
+                         else query_text)
+        table.add_row(str(idx), q.get('timestamp', 'N/A'), q.get('user', 'N/A'),
+                      q.get('vector store', 'N/A'), display_query)
 
     self.console.print(table)
 
@@ -329,12 +323,13 @@ def cmd_vector_search(self) -> None:
     limit_str = self._get_input(
         f"[{self.current_user}@{self.current_vector_store or 'global'}] Enter the number of chunks to retrieve: "
     )
-    
+
     # Convert limit to integer
     try:
         limit = int(limit_str) if limit_str else None
     except ValueError:
-        self.console.print(f"[red]✗ Invalid limit value: '{limit_str}'. Must be a number.[/]")
+        self.console.print(
+            f"[red]✗ Invalid limit value: '{limit_str}'. Must be a number.[/]")
         return
 
     self.console.print("\n[bold cyan]Performing vector search...[/]\n")
@@ -378,12 +373,13 @@ def cmd_vector_search_filter(self):
     limit_str = self._get_input(
         f"[{self.current_user}@{self.current_vector_store or 'global'}] Enter the number of chunks to retrieve: "
     )
-    
+
     # Convert limit to integer
     try:
         limit = int(limit_str) if limit_str else None
     except ValueError:
-        self.console.print(f"[red]✗ Invalid limit value: '{limit_str}'. Must be a number.[/]")
+        self.console.print(
+            f"[red]✗ Invalid limit value: '{limit_str}'. Must be a number.[/]")
         return
 
     self.console.print(
@@ -416,11 +412,12 @@ def cmd_vector_search_filter(self):
         if self._retrieved_result_valid(search_result, "Query"):
             self._display_search_chunks(search_result)
 
-            self.session_manager.add_query(user=self.current_user,
-                                           query=query,
-                                           vector_store=self.current_vector_store,
-                                           user_type=self.user_type,
-                                           authenticated=True)
+            self.session_manager.add_query(
+                user=self.current_user,
+                query=query,
+                vector_store=self.current_vector_store,
+                user_type=self.user_type,
+                authenticated=True)
 
             self.logger.info(
                 f"Filtered query completed successfully for {self.current_user}"
@@ -430,8 +427,7 @@ def cmd_vector_search_filter(self):
         self.error_handler.handle_error(
             e, f"Filtered query execution for user {self.current_user}")
     except Exception as e:
-        self.logger.critical(
-            f"Unexpected error in filtered vector search: {e}")
+        self.logger.critical(f"Unexpected error in filtered vector search: {e}")
         self.error_handler.handle_error(
             e, f"Unexpected filtered query error for user {self.current_user}")
 
