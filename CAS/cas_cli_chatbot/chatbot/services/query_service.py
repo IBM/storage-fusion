@@ -66,13 +66,14 @@ class QueryService:
         try:
             user_query = InputValidator.validate_query(user_query, "user_query")
             if vector_store:
-                vector_store = InputValidator.validate_vector_store_name(vector_store, "vector_store")
+                vector_store = InputValidator.validate_vector_store_name(
+                    vector_store, "vector_store")
             if limit is not None:
                 limit = InputValidator.validate_limit(limit, "limit")
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
             return ResponseFormatter.validation_error(str(e))
-        
+
         # Check if bearer token is valid before proceeding
         token_check = self._check_bearer_token()
         if not token_check['valid']:
@@ -87,8 +88,7 @@ class QueryService:
         bearer_token = self.auth_service.token if self.auth_service else None
         if not bearer_token:
             return ResponseFormatter.authentication_error(
-                "Failed to obtain bearer token from auth service"
-            )
+                "Failed to obtain bearer token from auth service")
 
         # Build cache key with query hash to avoid collisions
         query_hash = hashlib.md5(user_query.encode()).hexdigest()[:8]
@@ -144,7 +144,8 @@ class QueryService:
 
         except requests.exceptions.Timeout:
             self.logger.error(f"Query timed out: {vector_store}")
-            return ResponseFormatter.timeout_error("Vector store query", self.timeout)
+            return ResponseFormatter.timeout_error("Vector store query",
+                                                   self.timeout)
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Network error during query: {e}")
             return ResponseFormatter.network_error(str(e))
@@ -176,13 +177,14 @@ class QueryService:
             user_query = InputValidator.validate_query(user_query, "user_query")
             filters = InputValidator.validate_filters(filters, "filters")
             if vector_store:
-                vector_store = InputValidator.validate_vector_store_name(vector_store, "vector_store")
+                vector_store = InputValidator.validate_vector_store_name(
+                    vector_store, "vector_store")
             if limit is not None:
                 limit = InputValidator.validate_limit(limit, "limit")
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
             return ResponseFormatter.validation_error(str(e))
-        
+
         # Check if bearer token is valid before proceeding
         token_check = self._check_bearer_token()
         if not token_check['valid']:
@@ -190,29 +192,32 @@ class QueryService:
                 f"Token validation failed: {token_check['error']}")
             return ResponseFormatter.authentication_error(token_check['error'])
 
+        vector_store = vector_store or self.default_vector_store
         limit = limit or self.default_limit
-        
+
         # Build cache key with query and filter hash
         query_hash = hashlib.md5(user_query.encode()).hexdigest()[:8]
-        filter_hash = hashlib.md5(json.dumps(filters, sort_keys=True).encode()).hexdigest()[:8]
-        cache_key = f"query_filter_{vector_store}_{limit}_{query_hash}_{filter_hash}"
-        
+        filter_hash = hashlib.md5(json.dumps(
+            filters, sort_keys=True).encode()).hexdigest()[:8]
+        cache_key = (
+            f"query_filter_{vector_store}_{limit}_{query_hash}_{filter_hash}")
+
         # Check cache
         if use_cache and self.cache_service:
             cached = self.cache_service.get(cache_key)
             if cached is not None:
                 self.logger.debug(
-                    f"Retrieved filtered query results from cache: {vector_store}")
+                    f"Retrieved filtered query results from cache: {vector_store}"
+                )
                 return cached
-        
+
         url = f"{self.cas_url}/vector_stores/{vector_store}/search"
 
         # Get bearer token from auth service
         bearer_token = self.auth_service.token if self.auth_service else None
         if not bearer_token:
             return ResponseFormatter.authentication_error(
-                "Failed to obtain bearer token from auth service"
-            )
+                "Failed to obtain bearer token from auth service")
 
         headers = {
             "Authorization": f"Bearer {bearer_token}",
@@ -256,7 +261,8 @@ class QueryService:
 
         except requests.exceptions.Timeout:
             self.logger.error(f"Filtered query timed out: {vector_store}")
-            return ResponseFormatter.timeout_error("Filtered vector store query", self.timeout)
+            return ResponseFormatter.timeout_error(
+                "Filtered vector store query", self.timeout)
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Network error during filtered query: {e}")
             return ResponseFormatter.network_error(str(e))
@@ -264,8 +270,7 @@ class QueryService:
             self.logger.error(f"Filtered query failed: {e}")
             return ResponseFormatter.internal_error(str(e))
 
-    def list_vector_stores(self,
-                           use_cache: bool = True) -> list:
+    def list_vector_stores(self, use_cache: bool = True) -> list:
         """
         List available vector stores using admin token
 
@@ -294,7 +299,8 @@ class QueryService:
         # Get bearer token from auth service
         bearer_token = self.auth_service.token if self.auth_service else None
         if not bearer_token:
-            self.logger.error("Cannot list vector stores: no bearer token available")
+            self.logger.error(
+                "Cannot list vector stores: no bearer token available")
             return []
 
         limit = self.config.get('default_limit', 10)
@@ -331,7 +337,8 @@ class QueryService:
             self.logger.error(f"Failed to list vector stores: {e}")
             return []
 
-    def get_vector_store_info(self, vector_store: str) -> Optional[Dict[str, Any]]:
+    def get_vector_store_info(self,
+                              vector_store: str) -> Optional[Dict[str, Any]]:
         """
         Get information about a specific vector store using user token
 
@@ -343,11 +350,12 @@ class QueryService:
         """
         # Validate inputs
         try:
-            vector_store = InputValidator.validate_vector_store_name(vector_store, "vector_store")
+            vector_store = InputValidator.validate_vector_store_name(
+                vector_store, "vector_store")
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
             return None
-        
+
         # Check if bearer token is valid before proceeding
         token_check = self._check_bearer_token()
         if not token_check['valid']:
@@ -358,7 +366,8 @@ class QueryService:
         # Get bearer token from auth service
         bearer_token = self.auth_service.token if self.auth_service else None
         if not bearer_token:
-            self.logger.error("Cannot get vector store info: no bearer token available")
+            self.logger.error(
+                "Cannot get vector store info: no bearer token available")
             return None
 
         url = f"{self.cas_url}/vector_stores?limit={self.config.get('default_limit', 10)}&order={self.config.get('default_order', 'desc')}"
@@ -389,17 +398,19 @@ class QueryService:
             self.logger.error(f"Failed to get vector store info: {e}")
             return None
 
-    def get_file_content(self, vector_store_id: str, file_id: str) -> Dict[str, Any]:
+    def get_file_content(self, vector_store_id: str,
+                         file_id: str) -> Dict[str, Any]:
         """Returns all the content (text chunks) for a specific vector store and file by their IDs"""
 
         # Validate inputs
         try:
-            vector_store_id = InputValidator.validate_vector_store_name(vector_store_id, "vector_store_id")
+            vector_store_id = InputValidator.validate_vector_store_name(
+                vector_store_id, "vector_store_id")
             file_id = InputValidator.validate_file_id(file_id, "file_id")
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
             return ResponseFormatter.validation_error(str(e))
-        
+
         # Check if bearer token is valid before proceeding
         token_check = self._check_bearer_token()
         if not token_check['valid']:
@@ -450,10 +461,13 @@ class QueryService:
             return result
 
         except requests.exceptions.Timeout:
-            self.logger.error(f"File content retrieval timed out for file '{file_id}'")
-            return ResponseFormatter.timeout_error("File content retrieval", self.timeout)
+            self.logger.error(
+                f"File content retrieval timed out for file '{file_id}'")
+            return ResponseFormatter.timeout_error("File content retrieval",
+                                                   self.timeout)
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Network error during file content retrieval: {e}")
+            self.logger.error(
+                f"Network error during file content retrieval: {e}")
             return ResponseFormatter.network_error(str(e))
         except Exception as e:
             error_msg = f"File content retrieval failed: {str(e)}"
