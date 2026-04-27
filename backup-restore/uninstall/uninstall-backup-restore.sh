@@ -3,16 +3,16 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
-VERSION=2025111052150  # Use YYYYMMDDhhmm UTC
-LOG=/tmp/$(basename $0)_log.txt
+VERSION=202604212140  # Use YYYYMMDDhhmm UTC
+LOG=/tmp/$(basename "$0")_log.txt
 rm -f "$LOG"
-exec &> >(tee -a $LOG)
+exec &> >(tee -a "$LOG")
 
-echo Logging to $LOG
+echo Logging to "$LOG"
 echo "VERSION: $VERSION"
 echo "ARGUMENTS:" "$@"
 
-USAGE="Usage: $0 [-u] [-d] [-b <Bakup and Restore Name Space>]
+USAGE="Usage: $0 [-u] [-d] [-b <Backup and Restore Name Space>]
        -u to uninstall a spoke installation before uninstalling hub 
        -f to delete CRs in Fusion namespace
        -d to create DeleteBackupRequest to delete backups. Use this only if you plan to uninstall Fusion
@@ -75,7 +75,7 @@ do
   esac
 done
 
-CNT_NS=$(echo $NAMESPACE | wc -w)
+CNT_NS=$(echo "$NAMESPACE" | wc -w)
 if  [ $CNT_NS -gt 1 ]
  then
         echo "ERROR:" "$CNT_NS candidate namespaces ' $NAMESPACE '. Use '-b' option" >&2
@@ -101,7 +101,7 @@ print_heading()
    ELAPSED_MIN=$((  $ELAPSED_TIME / 60 ))
    ELAPSED_SEC=$((  $ELAPSED_TIME % 60 ))
   echo -e "===================================================================================================="
-  echo "$(date) $ELAPSED_MIN:$ELAPSED_SEC $@"
+  echo "$(date) $ELAPSED_MIN:$ELAPSED_SEC" "$@"
   echo -e "===================================================================================================="
 }
 
@@ -126,20 +126,20 @@ add_lables()
    oc -n "$1" label $2 $3 uninstall-host="$(hostname -f)" --overwrite 2>/dev/null
 }
 
-add_lables "$NAMESPACE" dataprotectionagent --all
-add_lables "$NAMESPACE" dataprotectionserver --all
-add_lables "$ISF_NS" fusionserviceinstances 'ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance'
-add_lables "$NAMESPACE" namespace "$NAMESPACE"
-
 CONNECTION=$(oc -n "$NAMESPACE" get cm guardian-configmap -o custom-columns="CONN:data.connectionName" --no-headers)
 if [ -n "$CONNECTION" ]
   then
-     HUB_STATUS=$(oc -n $"NAMESPACE" get dataprotectionagent -o custom-columns=H:status.hubStatus --no-headers)
+     HUB_STATUS=$(oc -n "$NAMESPACE" get dataprotectionagent -o custom-columns=H:status.hubStatus --no-headers)
      if [ "$HUB_STATUS" == "Found" ] && [ "$FORCE" != "true" ]
       then
          err_exit 'Hub exist, uninstall hub first or use -u option to force uninstall spoke'
      fi
 fi
+
+add_lables "$NAMESPACE" dataprotectionagent --all
+add_lables "$NAMESPACE" dataprotectionserver --all
+add_lables "$ISF_NS" fusionserviceinstances 'ibm-backup-restore-service-instance ibm-backup-restore-agent-service-instance'
+add_lables "$NAMESPACE" namespace "$NAMESPACE"
 
 IGNORE_DBR_STATES="DeleteBackupRequestFailed|Cancelled|Completed|FailedValidation|Processed|Redundant|CancelPending"
 if [ "$SKIP" != true ]
@@ -228,6 +228,10 @@ if [ "$SKIP_ISF_CRS" == "true" ]
      [ -n "$BSL_SECRET" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' secret $BSL_SECRET
 fi
 
+print_heading "Delete any networkpolicies CRs"
+oc delete networkpolicies -n "${NAMESPACE}" --all --timeout=60s
+print_heading "Delete any networkpolicysets CRs"
+oc delete networkpolicysets -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardiancopybackups CRs"
 oc delete guardiancopybackups -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any existing guardiancopyrestores CRs"

@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=7
+HOTFIX_NUMBER=8
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -183,6 +183,46 @@ set_velero_image() {
     fi
 }
 
+# Updates operator CSVs
+update_operator_csv() {
+    name="$1"
+    deployment_name="$2"
+    image="$3"
+    csv_ns="$BR_NS"
+
+    if (oc get csv -n "$csv_ns" "$name" -o yaml > "$DIR/${name}.save.yaml"); then
+        echo "Scaling down deployment: $deployment_name ..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=0
+
+        echo "Patching clusterserviceversion/$name (deployment: $deployment_name, image: $image) ..."
+        dep_index=$(oc get csv -n "$csv_ns" "$name" -o json | jq "[.spec.install.spec.deployments[].name] | index(\"$deployment_name\")")
+
+        if [[ "$dep_index" == "null" ]]; then
+            echo "ERROR: Deployment '$deployment_name' not found in CSV $name"
+            return 1
+        fi
+        patches=()
+        container_index=0
+        for cname in $(oc get csv -n "$csv_ns" "$name" -o json \
+            | jq -r ".spec.install.spec.deployments[$dep_index].spec.template.spec.containers[].name"); do
+            if [[ "$cname" == "manager" ]]; then
+                patches+=("{\"op\":\"replace\",\"path\":\"/spec/install/spec/deployments/${dep_index}/spec/template/spec/containers/${container_index}/image\",\"value\":\"${image}\"}")
+            fi
+            ((container_index++)) || true
+        done
+
+        patch_json="[$(IFS=,; echo "${patches[*]}")]"
+        [ -z "$DRY_RUN" ] &&  oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json"
+        [ -n "$DRY_RUN" ] && oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json" --dry-run=client -o yaml > "$DIR/${name}.patch.yaml"
+
+        echo "Scaling up deployment: $deployment_name ..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=1
+
+    else
+        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
+    fi
+}
+
 update_isf_operator_csv() {
     name=$1
     image=$2
@@ -306,6 +346,12 @@ fi
 [ "$PATCH" == "HCI" ] && isfdataprotection_img=cp.icr.io/cp/fusion-hci/isf-data-protection-operator@sha256:63bdb2f47b02366fe39f98bb5d811878b44feed235bca22e0f16586a387c9a80
 [ "$PATCH" == "SDS" ] && isfdataprotection_img=cp.icr.io/cp/fusion-sds/isf-data-protection-operator@sha256:bdfe6ba1101d1de4dab81e513b2f4c7492da19b26186d20ee58d955689cb0be3
 update_isf_operator_csv isf-operator.v2.11.0 "${isfdataprotection_img}"
+
+
+# update idp-agent-operator
+guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:7f1b66ca1876c23c3705da181499ba3ec015d90e3b8ea9b455af78763814cfa6
+update_operator_csv ibm-dataprotectionagent.v2.11.0 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
+
 
 update_tm_env
 transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:25bfde6b666b864ee90541ca872c61d4f6be0b19da22fb7edf8c4156992955ec
