@@ -1,0 +1,13 @@
+apiVersion: v2
+name: fusion-openshift-ai
+description: Helm chart for installing Red Hat OpenShift AI operator and DataScienceCluster
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - openshift-ai
+  - rhoai
+  - operator
+  - datasciencecluster
+  - opendatahub
+
