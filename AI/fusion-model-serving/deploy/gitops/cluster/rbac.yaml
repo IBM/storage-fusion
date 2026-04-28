@@ -1,0 +1,55 @@
+# RBAC for ArgoCD to deploy KServe InferenceServices.
+# Namespace set by ArgoCD from Application CR destination.namespace.
+# commonLabels auto-applied by kustomization.yaml.
+# CreateOnly=true: only the first Application in a namespace creates these resources.
+# Subsequent Applications skip them — no ownership conflict between ArgoCD Applications.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argocd-manager
+  annotations:
+    argocd.argoproj.io/sync-options: CreateOnly=true
+rules:
+- apiGroups:
+  - serving.kserve.io
+  resources:
+  - inferenceservices
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-manager
+  annotations:
+    argocd.argoproj.io/sync-options: CreateOnly=true
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argocd-manager
+subjects:
+- kind: ServiceAccount
+  name: openshift-gitops-argocd-application-controller
+  namespace: openshift-gitops
+

@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Namespace will be automatically set by ArgoCD from the Application destination namespace.
+# This allows namespace selection to remain user-facing in the Application manifest.
+
+resources:
+  - rbac.yaml
+  - inferenceservice-config.yaml
+  - kserve-model-serving.yaml
+
+# Labels are dynamically set from the Argo CD Application via Kustomize patches.
+# See fusion-model-serving/applications/model-serving-application.yaml for label configuration.
+commonLabels:
+  app.kubernetes.io/name: llmops-models
+  validated-patterns.io/pattern: llmops-platform
+
+# NOTE: MODEL_NAME is set directly as an env value in the InferenceService spec.
+# It is patched per model through the Application manifests.
+# See fusion-model-serving/applications/model-serving-application.yaml.
+#
+# MULTI-MODEL / SAME-NAMESPACE:
+# The model-serving Application template includes ignoreDifferences for the
+# shared resources (Role, RoleBinding, inferenceservice-config ConfigMap) so that
+# multiple Applications in the same namespace do not report OutOfSync due to
+# ArgoCD tracking-id annotation ownership differences.
+# CreateOnly=true on rbac.yaml and inferenceservice-config.yaml ensures only the
+# first Application creates them; subsequent Applications skip creation silently.
+

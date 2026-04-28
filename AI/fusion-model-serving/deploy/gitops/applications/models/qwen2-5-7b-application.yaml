@@ -1,0 +1,111 @@
+---
+# ============================================================================
+# Qwen 2.5 7B Instruct Model Serving Application - GitOps Configuration
+# ============================================================================
+# Configuration for deploying Alibaba Cloud's Qwen 2.5 7B Instruct model
+#
+# Model: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct
+# This is an open-source model that does NOT require HuggingFace authentication
+#
+# RESOURCE REQUIREMENTS:
+# - 1 GPU (A100, H100, or similar)
+# - 16Gi memory
+# - Deployment time: ~3-5 minutes
+# - Context length: 128K tokens (configurable)
+# ============================================================================
+#
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: qwen2-5-7b-model
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: qwen2-5-7b-model
+    validated-patterns.io/pattern: llmops-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # IMPORTANT: Replace <your-username> with your GitHub username after forking the repository
+    repoURL: https://github.com/<your-username>/storage-fusion.git
+    targetRevision: main
+    path: AI/fusion-model-serving/deploy/gitops/cluster
+    kustomize:
+      patches:
+        # Patch 1: Override commonLabels in Kustomization
+        - target:
+            kind: Kustomization
+          patch: |-
+            - op: replace
+              path: /commonLabels/app.kubernetes.io~1name
+              value: qwen2-5-7b-model
+            - op: replace
+              path: /commonLabels/validated-patterns.io~1pattern
+              value: llmops-platform
+
+        # Patch 2: Configure InferenceService for Qwen 2.5 7B
+        # This is an open-source model - no HF_TOKEN needed
+        - target:
+            kind: InferenceService
+          patch: |-
+            - op: replace
+              path: /metadata/name
+              value: qwen2-5-7b-instruct
+            - op: replace
+              path: /metadata/labels/model
+              value: qwen
+            - op: replace
+              path: /spec/predictor/containers/0/env/0/value
+              value: Qwen/Qwen2.5-7B-Instruct
+            - op: replace
+              path: /spec/predictor/containers/0/resources/limits/nvidia.com~1gpu
+              value: "1"
+            - op: replace
+              path: /spec/predictor/containers/0/resources/limits/memory
+              value: "16Gi"
+            - op: replace
+              path: /spec/predictor/containers/0/resources/requests/nvidia.com~1gpu
+              value: "1"
+            - op: replace
+              path: /spec/predictor/containers/0/resources/requests/memory
+              value: "16Gi"
+            - op: add
+              path: /spec/predictor/containers/0/args/-
+              value: "--max-model-len"
+            - op: add
+              path: /spec/predictor/containers/0/args/-
+              value: "32768"
+
+  destination:
+    server: https://kubernetes.default.svc
+    # Deploy to model-serving namespace
+    namespace: model-serving
+
+  # Ignore diff on shared resources
+  ignoreDifferences:
+    - group: rbac.authorization.k8s.io
+      kind: Role
+      name: argocd-manager
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1tracking-id
+        - /metadata/labels
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      name: argocd-manager
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1tracking-id
+        - /metadata/labels
+    - group: ""
+      kind: ConfigMap
+      name: inferenceservice-config
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1tracking-id
+        - /metadata/labels
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

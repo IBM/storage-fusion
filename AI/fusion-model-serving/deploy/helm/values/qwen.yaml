@@ -1,0 +1,26 @@
+labels:
+  appName: qwen2-5-7b-model
+  pattern: llmops-platform
+  app: llm-serving
+
+metadata:
+  version: "1.0"
+
+model:
+  name: qwen2-5-7b-instruct
+  label: qwen
+  repository: Qwen/Qwen2.5-7B-Instruct
+  extraArgs:
+    - --max-model-len
+    - "32768"
+
+resources:
+  limits:
+    nvidia.com/gpu: "1"
+    memory: "16Gi"
+    cpu: "4"
+  requests:
+    nvidia.com/gpu: "1"
+    memory: "16Gi"
+    cpu: "4"
+

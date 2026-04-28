@@ -1,0 +1,12 @@
+{{- $existingConfigMap := lookup "v1" "ConfigMap" .Release.Namespace "inferenceservice-config" -}}
+{{- if and .Values.inferenceServiceConfig.create (not $existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inferenceservice-config
+  labels:
+{{ include "fusion-model-serving.commonLabels" . | indent 4 }}
+data:
+  enabled: {{ .Values.inferenceServiceConfig.enabled | quote }}
+{{- end }}
+

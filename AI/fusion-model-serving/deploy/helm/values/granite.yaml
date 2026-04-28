@@ -1,0 +1,23 @@
+labels:
+  appName: granite-3-2-8b-model
+  pattern: llmops-platform
+  app: llm-serving
+
+metadata:
+  version: "1.0"
+
+model:
+  name: granite-3-2-8b-instruct
+  label: granite
+  repository: ibm-granite/granite-3.2-8b-instruct
+
+resources:
+  limits:
+    nvidia.com/gpu: "1"
+    memory: "16Gi"
+    cpu: "4"
+  requests:
+    nvidia.com/gpu: "1"
+    memory: "16Gi"
+    cpu: "4"
+
