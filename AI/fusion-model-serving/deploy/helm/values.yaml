@@ -1,0 +1,60 @@
+# Generic values file for deploying any supported model with this chart.
+# Copy this file or override these settings with `-f <custom-values.yaml>`.
+# Preset examples are available under `values/`.
+
+nameOverride: ""
+fullnameOverride: ""
+
+labels:
+  # Logical application label applied to all resources.
+  appName: custom-model-serving
+  # Pattern label used across the Fusion examples.
+  pattern: llmops-platform
+  # Additional app label on the InferenceService.
+  app: llm-serving
+
+serviceAccount:
+  create: false
+  name: default
+
+inferenceServiceConfig:
+  # Creates the namespace-scoped `inferenceservice-config` ConfigMap only if it does not already exist.
+  create: true
+  enabled: "true"
+
+metadata:
+  # InferenceService metadata label.
+  version: "1.0"
+
+model:
+  # Kubernetes resource name for the InferenceService.
+  name: your-model-name
+  # Short model label added to metadata.labels.model.
+  label: your-model-label
+  # Hugging Face model identifier passed to vLLM.
+  repository: org/model-name
+  image: vllm/vllm-openai:latest
+  imagePullPolicy: Always
+  gpuMemoryUtilization: "0.75"
+  apiKey: "EMPTY"
+  # Extra vLLM args, for example:
+  # extraArgs:
+  #   - --max-model-len
+  #   - "32768"
+  extraArgs: []
+
+resources:
+  limits:
+    nvidia.com/gpu: "1"
+    memory: "16Gi"
+    cpu: "4"
+  requests:
+    nvidia.com/gpu: "1"
+    memory: "16Gi"
+    cpu: "4"
+
+cache:
+  hfHome: /tmp/hf_cache
+  vllmCacheRoot: /tmp/vllm_cache
+  home: /tmp
+

@@ -1,0 +1,43 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ include "fusion-model-serving.fullname" . }}
+  labels:
+{{ include "fusion-model-serving.commonLabels" . | indent 4 }}
+    app: {{ .Values.labels.app | quote }}
+    model: {{ .Values.model.label | quote }}
+    version: {{ .Values.metadata.version | quote }}
+spec:
+  predictor:
+    serviceAccountName: {{ .Values.serviceAccount.name }}
+    containers:
+      - name: kserve-container
+        image: {{ .Values.model.image }}
+        imagePullPolicy: {{ .Values.model.imagePullPolicy }}
+        resources:
+{{- toYaml .Values.resources | nindent 10 }}
+        env:
+          - name: MODEL
+            value: {{ .Values.model.repository | quote }}
+          - name: HF_HOME
+            value: {{ .Values.cache.hfHome | quote }}
+          - name: VLLM_CACHE_ROOT
+            value: {{ .Values.cache.vllmCacheRoot | quote }}
+          - name: HOME
+            value: {{ .Values.cache.home | quote }}
+        args:
+          - --model
+          - $(MODEL)
+          - --host
+          - "0.0.0.0"
+          - --port
+          - "8080"
+          - --api-key
+          - {{ .Values.model.apiKey | quote }}
+          - --trust-remote-code
+          - --gpu-memory-utilization
+          - {{ .Values.model.gpuMemoryUtilization | quote }}
+{{- with .Values.model.extraArgs }}
+{{ toYaml . | nindent 10 }}
+{{- end }}
+

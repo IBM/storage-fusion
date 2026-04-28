@@ -1,0 +1,13 @@
+apiVersion: v2
+name: fusion-model-serving
+description: Helm chart for deploying KServe-based LLM model serving on OpenShift AI
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - kserve
+  - vllm
+  - llm
+  - openshift-ai
+  - model-serving
+

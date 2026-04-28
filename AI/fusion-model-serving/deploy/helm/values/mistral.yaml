@@ -1,0 +1,26 @@
+labels:
+  appName: ministral-3-8b-model
+  pattern: llmops-platform
+  app: llm-serving
+
+metadata:
+  version: "1.0"
+
+model:
+  name: ministral-3-8b-instruct
+  label: ministral
+  repository: mistralai/Ministral-3-8B-Instruct-2512
+  extraArgs:
+    - --max-model-len
+    - "32768"
+
+resources:
+  limits:
+    nvidia.com/gpu: "1"
+    memory: "16Gi"
+    cpu: "4"
+  requests:
+    nvidia.com/gpu: "1"
+    memory: "16Gi"
+    cpu: "4"
+

@@ -1,0 +1,15 @@
+# ConfigMap required by ODH Model Controller webhook validation
+# This ConfigMap is required for the webhook to allow InferenceService creation
+#
+# NOTE: CreateOnly=true ensures that when multiple model Applications share the same
+# namespace, only the first Application creates this ConfigMap. Subsequent Applications
+# skip it without conflict — no ownership fight between ArgoCD Applications.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inferenceservice-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-options: CreateOnly=true
+data:
+  enabled: "true"
