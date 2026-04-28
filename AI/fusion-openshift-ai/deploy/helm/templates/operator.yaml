@@ -1,0 +1,37 @@
+{{- if .Values.namespace.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace.name }}
+  labels:
+{{ include "fusion-openshift-ai.labels" . | indent 4 }}
+---
+{{- end }}
+{{- if .Values.operatorGroup.create }}
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .Values.operatorGroup.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+{{ include "fusion-openshift-ai.labels" . | indent 4 }}
+spec:
+  upgradeStrategy: {{ .Values.operatorGroup.upgradeStrategy }}
+---
+{{- end }}
+{{- if .Values.subscription.create }}
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{ .Values.subscription.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+{{ include "fusion-openshift-ai.labels" . | indent 4 }}
+spec:
+  channel: {{ .Values.subscription.channel }}
+  name: {{ .Values.subscription.name }}
+  source: {{ .Values.subscription.source }}
+  sourceNamespace: {{ .Values.subscription.sourceNamespace }}
+  installPlanApproval: {{ .Values.subscription.installPlanApproval }}
+{{- end }}
+

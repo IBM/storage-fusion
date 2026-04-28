@@ -1,0 +1,57 @@
+nameOverride: ""
+fullnameOverride: ""
+
+namespace:
+  create: false
+  name: redhat-ods-operator
+
+operatorGroup:
+  create: true
+  name: rhods-operator
+  upgradeStrategy: Default
+
+subscription:
+  create: true
+  name: rhods-operator
+  channel: stable-3.x
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+
+dataScienceCluster:
+  create: true
+  name: default-dsc
+  annotations: {}
+  components:
+    aipipelines:
+      managementState: Managed
+    dashboard:
+      managementState: Managed
+    feastoperator:
+      managementState: Managed
+    kserve:
+      managementState: Managed
+      modelsAsService:
+        managementState: Removed
+      nim:
+        managementState: Managed
+    kueue:
+      managementState: Removed
+    llamastackoperator:
+      managementState: Removed
+    mlflowoperator:
+      managementState: Removed
+    modelregistry:
+      managementState: Managed
+      registriesNamespace: rhoai-model-registries
+    ray:
+      managementState: Managed
+    trainer:
+      managementState: Removed
+    trainingoperator:
+      managementState: Managed
+    trustyai:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+

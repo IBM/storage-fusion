@@ -1,0 +1,20 @@
+{{- if .Values.dataScienceCluster.create }}
+apiVersion: datasciencecluster.opendatahub.io/v2
+kind: DataScienceCluster
+metadata:
+  name: {{ .Values.dataScienceCluster.name }}
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "5"
+  labels:
+{{ include "fusion-openshift-ai.labels" . | indent 4 }}
+{{- with .Values.dataScienceCluster.annotations }}
+  annotations:
+{{ toYaml . | nindent 4 }}
+{{- end }}
+spec:
+  components:
+{{ toYaml .Values.dataScienceCluster.components | nindent 4 }}
+{{- end }}
+
