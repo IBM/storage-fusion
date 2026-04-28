@@ -34,7 +34,7 @@ spec:
     # IMPORTANT: Replace <your-username> with your GitHub username after forking the repository
     repoURL: https://github.com/<your-username>/storage-fusion.git
     targetRevision: master
-    path: AI/fusion-model-serving/gitops/models
+    path: AI/fusion-model-serving/deploy/gitops/cluster
     kustomize:
       # ============================================================================
       # CUSTOMIZATION SECTION - Only 2 patches needed!

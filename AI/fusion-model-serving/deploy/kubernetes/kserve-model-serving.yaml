@@ -1,0 +1,50 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite-llm
+  namespace: model-serving
+  labels:
+    app: llm-serving
+    model: granite
+    version: "1.0"
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  predictor:
+    serviceAccountName: default
+    containers:
+    - name: kserve-container
+      # vLLM serves Hugging Face models with an OpenAI-compatible API
+      image: vllm/vllm-openai:latest
+      imagePullPolicy: Always
+      resources:
+        limits:
+          nvidia.com/gpu: "1"
+          memory: "16Gi"
+          cpu: "4"
+        requests:
+          nvidia.com/gpu: "1"
+          memory: "16Gi"
+          cpu: "4"
+      env:
+      - name: MODEL
+        value: "ibm-granite/granite-3.2-8b-instruct"
+      - name: HF_HOME
+        value: "/tmp/hf_cache"
+      - name: VLLM_CACHE_ROOT
+        value: "/tmp/vllm_cache"
+      - name: HOME
+        value: "/tmp"
+      args:
+      - --model
+      - $(MODEL)
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --api-key
+      - "EMPTY"
+      - --trust-remote-code
+      - --gpu-memory-utilization
+      - "0.75"
+

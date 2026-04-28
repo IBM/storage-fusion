@@ -13,10 +13,11 @@ spec:
 
     workbenches:
       managementState: Managed
-      workbenchNamespace: rhods-notebooks
 
     kserve:
       managementState: Managed
+      modelsAsService:
+        managementState: Removed
       rawDeploymentServiceConfig: Headless
 
       nim:
@@ -31,10 +32,6 @@ spec:
 
     trustyai:
       managementState: Managed
-      eval:
-        lmeval:
-          permitCodeExecution: deny
-          permitOnline: deny
 
     aipipelines:
       managementState: Managed
@@ -56,5 +53,3 @@ spec:
 
     kueue:
       managementState: Removed
-      defaultClusterQueueName: default
-      defaultLocalQueueName: default

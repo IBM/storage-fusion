@@ -205,7 +205,7 @@ oc get gateway -n openshift-ingress openshift-ai-inference -o yaml
 
 ## Step 1: Configure Authentication First
 
-**Critical ordering requirement:** Authentication via Red Hat Connectivity Link must be configured **before deploying the LLMInferenceService**. In OpenShift AI 3.0 and later, authentication and authorization are automatically enabled for LLMInferenceService resources when Red Hat Connectivity Link is configured. 
+Authentication via Red Hat Connectivity Link must be configured before deploying the LLMInferenceService. In OpenShift AI 3.0 and later, authentication and authorization are automatically enabled for LLMInferenceService resources when Red Hat Connectivity Link is configured. 
 
 ### Create the Kuadrant CR
 

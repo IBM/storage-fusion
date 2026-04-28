@@ -18,7 +18,7 @@ metadata:
   name: rhods-operator
   namespace: redhat-ods-operator
 spec:
-  channel: fast-3.x # Options: fast-3.x, stable-3.x, eus-3.x
+  channel: stable-3.x # Options: fast-3.x, eus-3.x
   name: rhods-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace
