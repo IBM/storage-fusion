@@ -33,7 +33,7 @@ spec:
   source:
     # IMPORTANT: Replace <your-username> with your GitHub username after forking the repository
     repoURL: https://github.com/<your-username>/storage-fusion.git
-    targetRevision: main
+    targetRevision: master
     path: AI/fusion-model-serving/deploy/gitops/cluster
     kustomize:
       # ============================================================================
