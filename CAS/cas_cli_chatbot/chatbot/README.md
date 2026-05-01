@@ -59,7 +59,8 @@ The chatbot can call an LLM provider after retrieval to help summarize or answer
 ```bash
 vector stores list
 vector stores select
-vector stores info
+vector stores info users
+vector stores info files
 ```
 
 Use these commands to inspect what is available and to set the active vector store.
@@ -88,10 +89,7 @@ These are optional follow-up workflows after retrieval.
 
 ```bash
 query history
-query export
-session view
-session history
-session stats
+session info
 session export
 session clear
 ```
@@ -100,7 +98,6 @@ session clear
 
 ```bash
 config show
-config reload
 metrics
 health
 help

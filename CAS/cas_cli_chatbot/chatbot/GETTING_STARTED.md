@@ -211,9 +211,10 @@ help                    # Display all available commands
 Before you can search, you need to select a vector store:
 
 ```bash
-vector stores list      # List all available vector stores in your namespace
-vector stores select    # Interactively select a vector store to use
-vector stores info      # Show information about the currently selected vector store
+vector stores list          # List all available vector stores in your namespace
+vector stores select        # Interactively select a vector store to use
+vector stores info users    # Show user assignments and access for the selected vector store
+vector stores info files    # Show file counts, bytes, and storage details from CAS API
 ```
 
 **Example workflow:**
@@ -222,6 +223,8 @@ vector stores info      # Show information about the currently selected vector s
 # Review the available vector stores
 [admin] vector stores select
 # Choose a vector store from the interactive menu
+[admin@vs-123] vector stores info users
+# View user access information
 ```
 
 ### Vector Search Commands
@@ -272,7 +275,7 @@ Track and manage your search history:
 
 ```bash
 query history           # View your recent queries
-session history         # Show comprehensive session information
+session info            # Show comprehensive session information
 session export          # Export session data
 session clear           # Clear current session data
 ```
