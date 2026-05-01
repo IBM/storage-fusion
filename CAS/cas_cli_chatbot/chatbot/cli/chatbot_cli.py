@@ -259,35 +259,52 @@ class ChatbotCLI:
         silent: bool = False,
     ) -> bool:
         """Check if user has access to current vector store."""
+        
+        # Check 1: User must be selected
         if not self.current_user:
             if not silent:
                 self.console.print(
                     "[red]✗ No user selected. Select a user first with 'users select'[/]"
                 )
             return False
-
-        if vector_store:
-            if vector_store in self._accessible_vector_stores():
-                return True
-
+        
+        # Check 2: Vector store must be provided
+        if not vector_store:
             if not silent:
                 self.console.print(
-                    f"[red]✗ User '{self.current_user}' is not assigned to vector store/domain '{vector_store}'[/]"
+                    "[red]✗ A vector store/domain has not been selected[/]"
                 )
                 self.console.print(
-                    "[dim]Please add this user to the vector store in the Fusion UI[/]\n"
+                    "[dim]Please select a vector store first with 'vector_stores select'[/]\n"
                 )
-            self.logger.warning(
-                f"User {self.current_user} not in vector store {vector_store}")
+            self.logger.warning("A vector store/domain has not been selected")
             return False
-
+        
+        # Check 3: Vector store must exist
+        if vector_store not in self.services["vector store"].list_vector_stores(
+            self.current_namespace
+        ):
+            if not silent:
+                self.console.print(
+                    f"[red]✗ Vector store/domain '{vector_store}' not found[/]"
+                )
+            return False
+        
+        # Check 4: User must have access to vector store
+        if vector_store in self._accessible_vector_stores():
+            return True
+        
+        # User doesn't have access - show error and return False
         if not silent:
             self.console.print(
-                "[red]✗ A vector store/domain has not been selected[/]")
-            self.console.print(
-                "[dim]Please select a vector store first with 'vector_stores select'[/]\n"
+                f"[red]✗ User '{self.current_user}' is not assigned to vector store/domain '{vector_store}'[/]"
             )
-        self.logger.warning("A vector store/domain has not been selected")
+            self.console.print(
+                "[dim]Please add this user to the vector store in the Fusion UI[/]\n"
+            )
+        self.logger.warning(
+            f"User {self.current_user} not in vector store {vector_store}"
+        )
         return False
 
     def _retrieved_result_valid(self, result, content_type: str) -> bool:

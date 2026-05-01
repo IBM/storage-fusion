@@ -159,13 +159,9 @@ class ConfigManager:
                 if use_existing:
                     return config
                 else:
-                    console.print("\n[cyan]Setting up new credentials...[/]")
+                    console.print("\n[cyan]Replacing existing credentials...[/]")
                     credentials = self.prompt_for_credentials()
-                    config['console_url'] = credentials['console_url']
-                    config['oc_username'] = credentials['oc_username']
-                    config['oc_password'] = credentials['oc_password']
-                    config['cas_url'] = credentials['cas_url']
-                    config['cas_namespace'] = credentials['cas_namespace']
+                    config = self.create_config_from_sample(credentials)
 
                     self.save_config(config)
                     return config
@@ -175,11 +171,7 @@ class ConfigManager:
                     "\n[yellow]⚠ Configuration file found but credentials not configured[/]"
                 )
                 credentials = self.prompt_for_credentials()
-                config['console_url'] = credentials['console_url']
-                config['oc_username'] = credentials['oc_username']
-                config['oc_password'] = credentials['oc_password']
-                config['cas_url'] = credentials['cas_url']
-                config['cas_namespace'] = credentials['cas_namespace']
+                config = self.create_config_from_sample(credentials)
 
                 self.save_config(config)
                 return config

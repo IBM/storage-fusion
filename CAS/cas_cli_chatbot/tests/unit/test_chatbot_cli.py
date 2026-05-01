@@ -62,6 +62,8 @@ def chatbot_cli(mock_services, sample_config, mock_logger, mock_console,
                          session_manager=mock_session_manager)
         cli.console = mock_console
         cli._accessible_vector_stores = Mock(return_value=sample_vector_stores)
+        # Configure list_vector_stores to return sample_vector_stores when called
+        mock_services['vector store'].list_vector_stores.return_value = sample_vector_stores
         return cli
 
 

@@ -296,7 +296,7 @@ def _accessible_vector_stores(self) -> list[str]:
     if not self._check_token():
         return []
 
-    vector_stores = self.services['query'].list_vector_stores()
+    vector_stores = self.services['query'].list_vector_stores(use_cache=False)
 
     if not vector_stores:
         return []
