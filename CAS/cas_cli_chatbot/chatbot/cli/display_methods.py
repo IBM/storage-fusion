@@ -52,21 +52,23 @@ def display_help(self, command: Optional[str] = None):
             k for k in self.COMMANDS.keys() if k.startswith('vector stores')
         ],
         'Vector search': [
-            k for k in self.COMMANDS.keys()
-            if k.startswith('vector search') or
+            k for k in self.COMMANDS.keys() if k.startswith('vector search') or
             k.startswith('show file content')
         ],
         'Queries': [
             k for k in self.COMMANDS.keys()
             if k.startswith('query') or k.startswith('llm')
         ],
-        'Session': [
-            k for k in self.COMMANDS.keys() if k.startswith('session')
-        ],
+        'Session': [k for k in self.COMMANDS.keys() if k.startswith('session')],
         'System': [
             k for k in self.COMMANDS.keys() if k in [
-                'help', 'config show', 'config reload', 'metrics', 'health',
-                'clear', 'exit', 
+                'help',
+                'config show',
+                'config reload',
+                'metrics',
+                'health',
+                'clear',
+                'exit',
             ]
         ]
     }
@@ -142,22 +144,41 @@ def _clean_chunk_text(self, text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _display_search_chunks(self, search_result: Dict, show_metadata: bool = True) -> None:
+def _display_search_chunks(self,
+                           search_result: Dict,
+                           show_metadata: bool = True) -> None:
     """Display search result chunks with formatting"""
     self.console.print("\n[bold cyan]Retrieving text chunks...[/]\n")
 
     for chunk_idx, item in enumerate(search_result.get("data", []), start=1):
-        filename = item.get("filename", self.UNKNOWN_FILENAME)
-        file_id = item.get("file_id", self.UNKNOWN_FILE_ID)
+        # Build file_info with known fields
+        file_info = {
+            "filename": item.get("filename", self.UNKNOWN_FILENAME),
+            "file_id": item.get("file_id", self.UNKNOWN_FILE_ID),
+        }
+
+        # Add metadata fields if present
+        metadata = item.get("metadata", {})
+        if metadata:
+            file_info.update(metadata)
+
+        # Add all dynamic attributes if present
+        attributes = item.get("attributes", {})
+        if attributes:
+            for attr_key, attr_value in attributes.items():
+                file_info[f"attr_{attr_key}"] = attr_value
 
         for chunk in item.get("content", []):
             text = chunk.get("text", self.NO_TEXT_PLACEHOLDER)
             cleaned_text = self._clean_chunk_text(text)
 
             if show_metadata:
+                # Format file_info as readable key-value pairs
+                metadata_str = "\n".join(
+                    [f"  {k}: {v}" for k, v in file_info.items()])
                 self.console.print(
-                    f"[bold]Chunk {chunk_idx}:[/bold]\n\\[filename: {filename}]\n"
-                    f"\\[file ID: {file_id}]\n{cleaned_text}\n")
+                    f"[bold]Chunk {chunk_idx}:[/bold]\n\n{metadata_str}\n\n{cleaned_text}\n"
+                )
             else:
                 self.console.print(
                     f"[bold]Chunk {chunk_idx}:[/bold]\n{cleaned_text}\n")

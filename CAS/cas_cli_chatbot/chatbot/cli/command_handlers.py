@@ -332,10 +332,6 @@ def cmd_vector_search(self) -> None:
             f"[red]✗ Invalid limit value: '{limit_str}'. Must be a number.[/]")
         return
 
-    # Ask user if they want metadata displayed
-    show_metadata = Confirm.ask(
-        "\n[cyan]Display metadata (file ID and filename)?[/]", default=True)
-
     self.console.print("\n[bold cyan]Performing vector search...[/]\n")
 
     try:
@@ -345,7 +341,7 @@ def cmd_vector_search(self) -> None:
             data = search_result.get("data", [])
             if data:
                 self._display_search_chunks(search_result,
-                                            show_metadata=show_metadata)
+                                            show_metadata=True)
                 self._record_successful_query(query)
             else:
                 self.console.print(
@@ -405,10 +401,6 @@ def cmd_vector_search_filter(self):
 
     query_filter = {"key": key, "type": operator, "value": value}
 
-    # Ask user if they want metadata displayed
-    show_metadata = Confirm.ask(
-        "\n[cyan]Display metadata (file ID and filename)?[/]", default=True)
-
     try:
         self.logger.info(
             f"Executing filtered query for user {self.current_user} ({self.user_type})"
@@ -422,7 +414,7 @@ def cmd_vector_search_filter(self):
 
         if self._retrieved_result_valid(search_result, "Query"):
             self._display_search_chunks(search_result,
-                                        show_metadata=show_metadata)
+                                        show_metadata=True)
 
             self.session_manager.add_query(
                 user=self.current_user,
