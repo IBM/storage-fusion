@@ -120,7 +120,7 @@ class QueryService:
                 "enable_source":
                     self.config.get("enable_source", False),
                 "enable_content_metadata":
-                    self.config.get("enable_content_metadata", False)
+                    self.config.get("enable_content_metadata", False),
             }
 
             response = requests.post(

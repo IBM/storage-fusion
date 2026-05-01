@@ -332,6 +332,10 @@ def cmd_vector_search(self) -> None:
             f"[red]✗ Invalid limit value: '{limit_str}'. Must be a number.[/]")
         return
 
+    # Ask user if they want metadata displayed
+    show_metadata = Confirm.ask(
+        "\n[cyan]Display metadata (file ID and filename)?[/]", default=True)
+
     self.console.print("\n[bold cyan]Performing vector search...[/]\n")
 
     try:
@@ -340,7 +344,8 @@ def cmd_vector_search(self) -> None:
         if search_result:
             data = search_result.get("data", [])
             if data:
-                self._display_search_chunks(search_result)
+                self._display_search_chunks(search_result,
+                                            show_metadata=show_metadata)
                 self._record_successful_query(query)
             else:
                 self.console.print(
@@ -386,7 +391,9 @@ def cmd_vector_search_filter(self):
         "\n[bold cyan]Performing vector search with filter...[/]\n")
 
     self.console.print("Enter your filter (key, type, value) \n")
-    key = self.session.prompt(" - key: ").strip()
+    key = self.session.prompt(
+        " - key (file_id, file_size, file_path, file_name, file_type, file_created, file_modified, attributes): "
+    ).strip()
     operator = self.session.prompt(
         " - type (eq, ne, gt, gte, lt, lte, in, nin, contains): ").strip()
     raw_value = self.session.prompt(" - value: ").strip()
@@ -397,6 +404,10 @@ def cmd_vector_search_filter(self):
         value = raw_value
 
     query_filter = {"key": key, "type": operator, "value": value}
+
+    # Ask user if they want metadata displayed
+    show_metadata = Confirm.ask(
+        "\n[cyan]Display metadata (file ID and filename)?[/]", default=True)
 
     try:
         self.logger.info(
@@ -410,7 +421,8 @@ def cmd_vector_search_filter(self):
             limit=limit)
 
         if self._retrieved_result_valid(search_result, "Query"):
-            self._display_search_chunks(search_result)
+            self._display_search_chunks(search_result,
+                                        show_metadata=show_metadata)
 
             self.session_manager.add_query(
                 user=self.current_user,
@@ -629,7 +641,6 @@ def execute_command(self, command: str):
         'health': self.cmd_health,
         'clear': self.cmd_clear,
         'exit': lambda: setattr(self, 'running', False),
-        'quit': lambda: setattr(self, 'running', False)
     }
 
     handler = command_map.get(command)

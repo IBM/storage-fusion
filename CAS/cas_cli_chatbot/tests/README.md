@@ -48,8 +48,7 @@ tests/
 ### 1. Install Test Dependencies
 
 ```bash
-# From the project root
-cd chatbot
+cd CAS/cas_cli_chatbot
 pip install -r requirements.txt
 ```
 

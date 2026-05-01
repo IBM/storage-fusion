@@ -252,7 +252,8 @@ class TestCASAPICommands:
 
     @pytest.mark.unit
     @pytest.mark.cli
-    def test_casapi_vector_search_retrieves_chunks(self, chatbot_cli):
+    @patch('chatbot.cli.command_handlers.Confirm.ask', return_value=True)
+    def test_casapi_vector_search_retrieves_chunks(self, mock_confirm, chatbot_cli):
         """TC-CLI-015: Verify casapi vector_search retrieves text chunks"""
         chatbot_cli.session.prompt = Mock(side_effect=['test query', '5'])
         chatbot_cli.current_vector_store = 'vector-store-1'
@@ -279,10 +280,12 @@ class TestCASAPICommands:
 
         chatbot_cli.services['query'].query_vector_store.assert_called_once()
         chatbot_cli.console.print.assert_called()
+        mock_confirm.assert_called_once()
 
     @pytest.mark.unit
     @pytest.mark.cli
-    def test_casapi_vector_search_filter_applies_filters(self, chatbot_cli):
+    @patch('chatbot.cli.command_handlers.Confirm.ask', return_value=True)
+    def test_casapi_vector_search_filter_applies_filters(self, mock_confirm, chatbot_cli):
         """TC-CLI-016: Verify casapi vector_search filter applies filters correctly"""
         chatbot_cli._get_input = Mock(side_effect=['test query', '5'])
         chatbot_cli.session.prompt = Mock(
@@ -297,6 +300,7 @@ class TestCASAPICommands:
         chatbot_cli.cmd_vector_search_filter()
 
         chatbot_cli.services['query'].query_with_filters.assert_called_once()
+        mock_confirm.assert_called_once()
 
     @pytest.mark.unit
     @pytest.mark.cli
@@ -598,12 +602,6 @@ class TestCommandExecution:
         chatbot_cli.execute_command('exit')
 
         assert chatbot_cli.running is False
-
-    @pytest.mark.unit
-    @pytest.mark.cli
-    def test_quit_command_stops_cli_loop(self, chatbot_cli):
-        """Test quit command stops CLI loop"""
-        chatbot_cli.execute_command('quit')
 
     @pytest.mark.unit
     @pytest.mark.cli

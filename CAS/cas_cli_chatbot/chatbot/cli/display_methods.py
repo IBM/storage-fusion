@@ -66,7 +66,7 @@ def display_help(self, command: Optional[str] = None):
         'System': [
             k for k in self.COMMANDS.keys() if k in [
                 'help', 'config show', 'config reload', 'metrics', 'health',
-                'clear', 'exit', 'quit'
+                'clear', 'exit', 
             ]
         ]
     }
@@ -142,7 +142,7 @@ def _clean_chunk_text(self, text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _display_search_chunks(self, search_result: Dict) -> None:
+def _display_search_chunks(self, search_result: Dict, show_metadata: bool = True) -> None:
     """Display search result chunks with formatting"""
     self.console.print("\n[bold cyan]Retrieving text chunks...[/]\n")
 
@@ -154,9 +154,13 @@ def _display_search_chunks(self, search_result: Dict) -> None:
             text = chunk.get("text", self.NO_TEXT_PLACEHOLDER)
             cleaned_text = self._clean_chunk_text(text)
 
-            self.console.print(
-                f"[bold]Chunk {chunk_idx}:[/bold]\n\\[filename: {filename}]\n"
-                f"\\[file ID: {file_id}]\n{cleaned_text}\n")
+            if show_metadata:
+                self.console.print(
+                    f"[bold]Chunk {chunk_idx}:[/bold]\n\\[filename: {filename}]\n"
+                    f"\\[file ID: {file_id}]\n{cleaned_text}\n")
+            else:
+                self.console.print(
+                    f"[bold]Chunk {chunk_idx}:[/bold]\n{cleaned_text}\n")
 
 
 def _build_prompt(self) -> str:

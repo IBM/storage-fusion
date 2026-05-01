@@ -97,8 +97,6 @@ class ChatbotCLI:
             "Clear screen",
         "exit":
             "Exit application",
-        "quit":
-            "Exit application",
     }
 
     def __init__(
@@ -288,6 +286,7 @@ class ChatbotCLI:
                 self.console.print(
                     f"[red]✗ Vector store/domain '{vector_store}' not found[/]"
                 )
+            self.current_vector_store = None
             return False
         
         # Check 4: User must have access to vector store
@@ -305,6 +304,7 @@ class ChatbotCLI:
         self.logger.warning(
             f"User {self.current_user} not in vector store {vector_store}"
         )
+        self.current_vector_store = None
         return False
 
     def _retrieved_result_valid(self, result, content_type: str) -> bool:
