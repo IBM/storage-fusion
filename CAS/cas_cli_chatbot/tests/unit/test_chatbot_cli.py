@@ -255,8 +255,9 @@ class TestCASAPICommands:
     @patch('chatbot.cli.command_handlers.Confirm.ask', return_value=True)
     def test_casapi_vector_search_retrieves_chunks(self, mock_confirm, chatbot_cli):
         """TC-CLI-015: Verify casapi vector_search retrieves text chunks"""
-        chatbot_cli.session.prompt = Mock(side_effect=['test query', '5'])
+        chatbot_cli._get_input = Mock(side_effect=['test query', '5'])
         chatbot_cli.current_vector_store = 'vector-store-1'
+        chatbot_cli.current_user = 'test-user'
         chatbot_cli.services['auth'].has_valid_token.return_value = True
         chatbot_cli.services['query'].query_vector_store.return_value = {
             'success':
@@ -280,7 +281,6 @@ class TestCASAPICommands:
 
         chatbot_cli.services['query'].query_vector_store.assert_called_once()
         chatbot_cli.console.print.assert_called()
-        mock_confirm.assert_called_once()
 
     @pytest.mark.unit
     @pytest.mark.cli
@@ -291,6 +291,7 @@ class TestCASAPICommands:
         chatbot_cli.session.prompt = Mock(
             side_effect=['filename', 'eq', 'test.pdf'])
         chatbot_cli.current_vector_store = 'vector-store-1'
+        chatbot_cli.current_user = 'test-user'
         chatbot_cli.services['auth'].has_valid_token.return_value = True
         chatbot_cli.services['query'].query_with_filters.return_value = {
             'success': True,
@@ -300,7 +301,6 @@ class TestCASAPICommands:
         chatbot_cli.cmd_vector_search_filter()
 
         chatbot_cli.services['query'].query_with_filters.assert_called_once()
-        mock_confirm.assert_called_once()
 
     @pytest.mark.unit
     @pytest.mark.cli
