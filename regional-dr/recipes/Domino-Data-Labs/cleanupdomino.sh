@@ -14,7 +14,7 @@ for i in domino-compute domino-platform; do
 done
 cat <<EOF
 
-Optional: cleanup endpointslices on target cluster:
+Optional for versions <4.20: cleanup endpointslices on target cluster:
 oc get endpointslices -n domino-platform | awk '/volsync-rsync/ {
 	system("oc delete endpointslice -n domino-platform "\$1)
 }'
