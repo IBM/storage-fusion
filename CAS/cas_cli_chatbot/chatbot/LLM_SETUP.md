@@ -93,10 +93,10 @@ The LLM setup prompt is called in `run()` after a vector store is successfully s
 ```
 ✓ Using vector store: vs-123
 
-Some commands use an LLM to enhance responses. Would you like to configure an LLM provider now? [y/N]: y
+Some commands use an LLM to enhance responses. Would you like to configure an LLM provider now? [y/n]: y
 
 LLM Provider Setup
-Some commands use an LLM to enhance responses (e.g., 'query ask').
+Some commands use an LLM to enhance responses (e.g., 'llm query ask').
 
 Available LLM Providers:
   1. OpenAI (requires API key)
@@ -113,7 +113,7 @@ Model (gpt-3.5-turbo):
 ✓ LLM configuration saved
 
 ✓ LLM configuration complete!
-You can now use commands like 'query ask' with LLM enhancement.
+You can now use commands like 'llm query ask' with LLM enhancement.
 ```
 
 ### Scenario 2: User with No LLM Configured (Declines Setup)

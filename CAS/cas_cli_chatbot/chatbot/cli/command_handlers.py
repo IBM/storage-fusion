@@ -518,7 +518,7 @@ def cmd_vector_stores_info_users_files(self):
     """Show detailed vector store information with assigned users"""
     if not self.current_vector_store:
         self.console.print(
-            "[red]✗ No vector stores/domains selected. Use 'vector_stores select' first.[/]"
+            "[red]✗ No vector stores/domains selected. Use 'vector stores select' first.[/]"
         )
         return
 

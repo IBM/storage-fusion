@@ -267,7 +267,7 @@ class ConfigManager:
             Dictionary with LLM configuration settings
         """
         console.print("\n[bold cyan]LLM Provider Setup[/]")
-        console.print("Some commands use an LLM to enhance responses (e.g., 'query ask').\n")
+        console.print("Some commands use an LLM to enhance responses (e.g., 'llm query ask').\n")
         
         console.print("[bold]Available LLM Providers:[/]")
         console.print("  [cyan]1.[/] OpenAI (requires API key)")

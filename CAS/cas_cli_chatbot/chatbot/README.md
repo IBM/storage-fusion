@@ -40,7 +40,7 @@ The chatbot also supports filtered vector search by including a `filters` object
 The CLI can query the CAS vector search endpoint and return the most relevant chunks from the active vector store.
 
 ### Chunk-Level Source Visibility
-Search results can show the source file name and file ID for each returned chunk. This is useful because relevant chunks may come from different files, and the user can decide which source to inspect further.
+Search results shows the source file name, file ID, and other metadata for each returned chunk. This is useful because relevant chunks may come from different files, and the user can decide which source to inspect further.
 
 ### Filtered Vector Search
 The CLI can submit the same query with filter criteria, allowing more precise retrieval when the API supports those filters.
@@ -49,7 +49,7 @@ The CLI can submit the same query with filter criteria, allowing more precise re
 After finding relevant chunks, the user can retrieve file content or run an LLM-assisted file query against a specific document.
 
 ### Interactive Configuration at Startup
-The chatbot can create or update `config.yaml` from the terminal when it starts. The project is moving away from requiring users to manually hand-edit configuration before first use.
+The chatbot can create or update `config.yaml` from the terminal when it starts.
 
 ### Optional LLM Enhancement
 The chatbot can call an LLM provider after retrieval to help summarize or answer questions based on a specific retrieved file. This is optional and not required for raw vector search.
@@ -113,7 +113,7 @@ The recommended mental model for this chatbot is:
 
 1. Select a vector store
 2. Run vector search
-3. Inspect returned chunks, including file names and file IDs
+3. Inspect returned chunks, including their metadata
 4. Either narrow the same question with a filter or target a specific file
 5. Optionally use an LLM for a quick answer grounded in that file
 
@@ -166,10 +166,16 @@ A typical result display can include source information per chunk, for example:
 ```text
 Retrieving text chunks...
 
-Chunk 1: [filename: storage-virtualize-release-notes.pdf] [file ID: 1234567]
+Chunk 1: 
+  [filename: storage-virtualize-release-notes.pdf] 
+  [file ID: 1234567]
+  ...
 <chunk text from that file>
 
-Chunk 2: [filename: support-matrix.pdf] [file ID: 8901234]
+Chunk 2: 
+  [filename: support-matrix.pdf] 
+  [file ID: 8901234]
+  ...
 <chunk text from a different file>
 ```
 
@@ -217,8 +223,6 @@ Conceptually, the request body becomes:
 
 This is useful when the first vector search shows a promising file and the user wants more chunks specifically from that file.
 
-> Note: the exact filter keys supported by your CAS environment may vary. Replace `file_name` with the correct field if your deployment uses a different filter key.
-
 ## End-to-End Workflow: Target One File with `llm query file`
 
 Once vector search has shown the user a promising source document, they can use that exact document as LLM input.
@@ -256,56 +260,10 @@ This pattern is one of the best demonstrations of the CAS API flow:
 
 That is both technically clear and operationally useful.
 
-## CAS API Behavior Used by This CLI
-
-The technical heart of this chatbot is the vector search endpoint.
-
-### Search Endpoint
-
-```text
-POST {cas_url}/vector_stores/{vector_store}/search
-```
-
-### Headers
-
-```http
-Authorization: Bearer <token>
-Content-Type: application/json
-```
-
-### Request Body Used by `query_vector_store()`
-
-```json
-{
-  "query": "<user query>",
-  "max_num_results": 5,
-  "enable_source": false,
-  "enable_content_metadata": false
-}
-```
-
-### Request Body Used by `query_with_filters()`
-
-```json
-{
-  "query": "<user query>",
-  "filters": {
-    "key": "<field>",
-    "type": "eq",
-    "value": "<value>"
-  },
-  "max_num_results": 5,
-  "enable_source": false,
-  "enable_content_metadata": false
-}
-```
-
 ### Notes
 
 - The bearer token comes from the authentication service
-- The active vector store is either selected interactively or taken from `default_vector_store`
-- Request timeout is controlled by `request_timeout`
-- TLS verification behavior depends on `allow_self_signed`
+- The active vector store is either selected interactively or taken from `default_vector_store` in the `config.yaml` if it already exists
 
 ## Operational Notes
 
@@ -347,8 +305,8 @@ Use it when you want to:
 - Select a vector store
 - Run direct vector search requests
 - Inspect raw retrieved chunks
-- See the file name and file ID associated with each chunk
-- Apply filters to focus on a specific source
+- See the metadata, such as file name and file ID, associated with each chunk
+- Apply filters to focus on specific sources
 - Pass a specific file into an LLM workflow for a quick answer
 
 The CLI demonstrates the CAS search model: **retrieve first, inspect sources, refine, then optionally summarize with an LLM**.

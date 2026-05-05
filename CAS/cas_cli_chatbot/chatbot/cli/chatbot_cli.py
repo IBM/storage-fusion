@@ -272,7 +272,7 @@ class ChatbotCLI:
                 self.console.print(
                     "[red]✗ A vector store/domain has not been selected[/]")
                 self.console.print(
-                    "[dim]Please select a vector store first with 'vector_stores select'[/]\n"
+                    "[dim]Please select a vector store first with 'vector stores select'[/]\n"
                 )
             self.logger.warning("A vector store/domain has not been selected")
             return False
