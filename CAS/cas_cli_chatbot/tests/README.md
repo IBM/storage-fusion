@@ -45,14 +45,24 @@ tests/
 
 ## 🚀 Installation
 
-### 1. Install Test Dependencies
+Run setup from the project root (`cas_cli_chatbot`).
+
+### 1. Create a Virtual Environment
 
 ```bash
-cd CAS/cas_cli_chatbot
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
+
+The root `requirements.txt` includes both application and test dependencies.
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Verify Installation
+### 3. Verify Installation
 
 ```bash
 pytest --version
@@ -63,7 +73,7 @@ pytest --version
 ### Run All Tests
 
 ```bash
-# From the chatbot directory
+# From the cas_cli_chatbot project root
 pytest
 
 # With verbose output
@@ -301,19 +311,15 @@ jobs:
         python-version: '3.9'
     
     - name: Install dependencies
-      run: |
-        cd chatbot
-        pip install -r requirements.txt
+      run: pip install -r requirements.txt
     
     - name: Run tests with coverage
-      run: |
-        cd chatbot
-        pytest --cov=chatbot --cov-report=xml --cov-report=term
+      run: pytest --cov=chatbot --cov-report=xml --cov-report=term
     
     - name: Upload coverage
       uses: codecov/codecov-action@v2
       with:
-        file: ./chatbot/coverage.xml
+        file: ./coverage.xml
 ```
 
 ## 🐛 Debugging Tests
@@ -396,12 +402,14 @@ def test_example():
 #### Import Errors
 
 ```bash
-# Ensure you're in the correct directory
-cd chatbot
+# Ensure you're in the project root
+pwd
 
-# Install in development mode
-pip install -e .
+# Install project dependencies
+pip install -r requirements.txt
 ```
+
+This repository is configured to run `pytest` from the project root, where `pytest.ini` and the importable `chatbot/` package are located.
 
 #### Fixture Not Found
 

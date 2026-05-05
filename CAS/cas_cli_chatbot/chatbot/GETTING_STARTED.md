@@ -14,11 +14,7 @@ Before you begin, ensure you have:
 
 ## Repository Location
 
-From the main repository:
-
-```bash
-cd CAS/cas_cli_chatbot/chatbot
-```
+Run setup from the `cas_cli_chatbot` project root.
 
 ## Quick Start
 
@@ -32,14 +28,15 @@ source venv/bin/activate
 ### 2. Install Dependencies
 
 ```bash
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 3. Start the Chatbot
 
-Simply run:
+From the project root, run:
 
 ```bash
+cd CAS/cas_cli_chatbot/chatbot
 python3 main.py
 ```
 
@@ -402,7 +399,7 @@ Once you have the chatbot running:
 3. Use `vector search` to run your first query
 4. Explore other commands with `help`
 
-For detailed usage examples and workflows, see the main [README.md](README.md).
+For detailed usage examples and workflows, see the package guide [README.md](README.md) and the project root guide [`../README.md`](../README.md).
 
 ## Additional Resources
 

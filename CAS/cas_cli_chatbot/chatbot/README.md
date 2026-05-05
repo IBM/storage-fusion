@@ -2,6 +2,8 @@
 
 Technical CLI for exploring and demonstrating the **CAS vector search API**.
 
+For project-level setup, dependency installation, and test execution, start with [`../README.md`](../README.md). This document focuses on CLI behavior, commands, and CAS workflows.
+
 This chatbot is designed to show how to work with CAS vector stores directly from the terminal. The CLI is centered on the **CAS vector search API**, which returns relevant chunks from a selected vector store and can optionally feed a specific retrieved document into an LLM for follow-up analysis.
 
 ## Overview
@@ -355,4 +357,6 @@ The CLI demonstrates the CAS search model: **retrieve first, inspect sources, re
 
 ## Getting Started
 
-For detailed instructions on how to deploy and configure the chatbot, see [GETTING_STARTED.md](GETTING_STARTED.md).
+For CLI setup and configuration details, see [GETTING_STARTED.md](GETTING_STARTED.md).
+
+For project-level installation, environment setup, and test commands, see [`../README.md`](../README.md) and [`../tests/README.md`](../tests/README.md).

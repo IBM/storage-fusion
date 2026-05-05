@@ -30,7 +30,7 @@ def cmd_vector_stores_list(self):
             "[yellow]No vector stores/domains found in OpenShift[/]")
         return
 
-    accessible_stores = self._accessible_vector_stores()
+    accessible_stores = self.get_accessible_vector_stores()
     self.render_vector_stores_tree(all_vector_stores, accessible_stores)
 
 
@@ -43,7 +43,7 @@ def cmd_vector_stores_select(self, vector_store_name: str | None = None):
         self.console.print("[red]No vector stores/domains available[/]")
         return
 
-    accessible_stores = self._accessible_vector_stores()
+    accessible_stores = self.get_accessible_vector_stores()
     self.cmd_vector_stores_list()
 
     if vector_store_name:
@@ -55,10 +55,11 @@ def cmd_vector_stores_select(self, vector_store_name: str | None = None):
             "Select vector store/domain (type to search): ",
             completer=completer).strip()
 
-    self._set_vector_store(selected, all_vector_stores, accessible_stores)
+    self.set_selected_vector_store(selected, all_vector_stores,
+                                   accessible_stores)
 
 
-def _set_vector_store(
+def set_selected_vector_store(
     self,
     selected: str,
     all_vector_stores: list,
@@ -99,7 +100,7 @@ def _set_vector_store(
         self.current_vector_store = None
 
 
-def cmd_vector_stores_info(self):
+def cmd_vector_stores_info_users(self):
     """Show detailed vector store information with assigned users"""
     if not self.current_vector_store:
         self.console.print(
@@ -146,7 +147,7 @@ def cmd_vector_stores_info(self):
         )
 
 
-def cmd_query_ask(self) -> None:
+def cmd_llm_query_ask(self) -> None:
     """Ask a query using LLM with user-specific authentication"""
     if not self._user_in_vector_store(self.current_vector_store):
         return
@@ -291,7 +292,7 @@ def cmd_clear(self):
     self.display_welcome()
 
 
-def _accessible_vector_stores(self) -> list[str]:
+def get_accessible_vector_stores(self) -> list[str]:
     """List vector_stores available to user"""
     if not self._check_token():
         return []
@@ -340,8 +341,7 @@ def cmd_vector_search(self) -> None:
         if search_result:
             data = search_result.get("data", [])
             if data:
-                self._display_search_chunks(search_result,
-                                            show_metadata=True)
+                self._display_search_chunks(search_result, show_metadata=True)
                 self._record_successful_query(query)
             else:
                 self.console.print(
@@ -413,8 +413,7 @@ def cmd_vector_search_filter(self):
             limit=limit)
 
         if self._retrieved_result_valid(search_result, "Query"):
-            self._display_search_chunks(search_result,
-                                        show_metadata=True)
+            self._display_search_chunks(search_result, show_metadata=True)
 
             self.session_manager.add_query(
                 user=self.current_user,
@@ -436,7 +435,7 @@ def cmd_vector_search_filter(self):
             e, f"Unexpected filtered query error for user {self.current_user}")
 
 
-def cmd_casapi_show_file_content(self):
+def cmd_show_file_content(self):
     """Returns all the content (text chunks) for a specific vector-store and file by their IDs"""
     if not self._user_in_vector_store(self.current_vector_store):
         return
@@ -463,7 +462,7 @@ def cmd_casapi_show_file_content(self):
             e, f"File content retrieval for user {self.current_user}")
 
 
-def cmd_casapi_query_file(self):
+def cmd_llm_query_file(self):
     """Query a specific file from a vector store using LLM"""
     if not self._user_in_vector_store(self.current_vector_store):
         return
@@ -510,7 +509,7 @@ def cmd_casapi_query_file(self):
             f"Query execution of specified file for user {self.current_user}")
 
 
-def cmd_casapi_vector_stores_info(self):
+def cmd_vector_stores_info_users_files(self):
     """Show detailed vector store information with assigned users"""
     if not self.current_vector_store:
         self.console.print(
@@ -554,7 +553,7 @@ def cmd_casapi_vector_stores_info(self):
         )
 
 
-def _prompt_vector_store_selection(self) -> None:
+def prompt_for_vector_store_selection(self) -> None:
     """Prompt user to select a vector store at startup."""
     vector_stores_list = self.services["vector store"].list_vector_stores(
         self.current_namespace)
@@ -615,14 +614,14 @@ def execute_command(self, command: str):
     command_map = {
         'vector search': self.cmd_vector_search,
         'vector search filter': self.cmd_vector_search_filter,
-        'show file content': self.cmd_casapi_show_file_content,
-        'vector stores info files': self.cmd_casapi_vector_stores_info,
-        'llm query file': self.cmd_casapi_query_file,
+        'show file content': self.cmd_show_file_content,
+        'vector stores info files': self.cmd_vector_stores_info_users_files,
+        'llm query file': self.cmd_llm_query_file,
         'help': self.display_help,
         'vector stores list': self.cmd_vector_stores_list,
         'vector stores select': self.cmd_vector_stores_select,
-        'vector stores info users': self.cmd_vector_stores_info,
-        'llm query ask': self.cmd_query_ask,
+        'vector stores info users': self.cmd_vector_stores_info_users,
+        'llm query ask': self.cmd_llm_query_ask,
         'llm setup': self.cmd_llm_setup,
         'query history': self.cmd_query_history,
         'session info': self.cmd_session_info,

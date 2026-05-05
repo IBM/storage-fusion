@@ -257,7 +257,7 @@ class ChatbotCLI:
         silent: bool = False,
     ) -> bool:
         """Check if user has access to current vector store."""
-        
+
         # Check 1: User must be selected
         if not self.current_user:
             if not silent:
@@ -265,34 +265,31 @@ class ChatbotCLI:
                     "[red]✗ No user selected. Select a user first with 'users select'[/]"
                 )
             return False
-        
+
         # Check 2: Vector store must be provided
         if not vector_store:
             if not silent:
                 self.console.print(
-                    "[red]✗ A vector store/domain has not been selected[/]"
-                )
+                    "[red]✗ A vector store/domain has not been selected[/]")
                 self.console.print(
                     "[dim]Please select a vector store first with 'vector_stores select'[/]\n"
                 )
             self.logger.warning("A vector store/domain has not been selected")
             return False
-        
+
         # Check 3: Vector store must exist
         if vector_store not in self.services["vector store"].list_vector_stores(
-            self.current_namespace
-        ):
+                self.current_namespace):
             if not silent:
                 self.console.print(
-                    f"[red]✗ Vector store/domain '{vector_store}' not found[/]"
-                )
+                    f"[red]✗ Vector store/domain '{vector_store}' not found[/]")
             self.current_vector_store = None
             return False
-        
+
         # Check 4: User must have access to vector store
-        if vector_store in self._accessible_vector_stores():
+        if vector_store in self.get_accessible_vector_stores():
             return True
-        
+
         # User doesn't have access - show error and return False
         if not silent:
             self.console.print(
@@ -302,8 +299,7 @@ class ChatbotCLI:
                 "[dim]Please add this user to the vector store in the Fusion UI[/]\n"
             )
         self.logger.warning(
-            f"User {self.current_user} not in vector store {vector_store}"
-        )
+            f"User {self.current_user} not in vector store {vector_store}")
         self.current_vector_store = None
         return False
 
@@ -418,7 +414,7 @@ class ChatbotCLI:
         displays.display_welcome(self)
 
         try:
-            handlers._prompt_vector_store_selection(self)
+            handlers.prompt_for_vector_store_selection(self)
         except Exception as e:
             self.logger.warning(f"Error during vector store selection: {e}")
             self.console.print(
@@ -502,14 +498,14 @@ class ChatbotCLI:
     def cmd_vector_stores_select(self, *args: Any, **kwargs: Any) -> Any:
         return handlers.cmd_vector_stores_select(self, *args, **kwargs)
 
-    def _set_vector_store(self, *args: Any, **kwargs: Any) -> Any:
-        return handlers._set_vector_store(self, *args, **kwargs)
+    def set_selected_vector_store(self, *args: Any, **kwargs: Any) -> Any:
+        return handlers.set_selected_vector_store(self, *args, **kwargs)
 
-    def cmd_vector_stores_info(self, *args: Any, **kwargs: Any) -> Any:
-        return handlers.cmd_vector_stores_info(self, *args, **kwargs)
+    def cmd_vector_stores_info_users(self, *args: Any, **kwargs: Any) -> Any:
+        return handlers.cmd_vector_stores_info_users(self, *args, **kwargs)
 
-    def cmd_query_ask(self, *args: Any, **kwargs: Any) -> Any:
-        return handlers.cmd_query_ask(self, *args, **kwargs)
+    def cmd_llm_query_ask(self, *args: Any, **kwargs: Any) -> Any:
+        return handlers.cmd_llm_query_ask(self, *args, **kwargs)
 
     def cmd_query_history(self, *args: Any, **kwargs: Any) -> Any:
         return handlers.cmd_query_history(self, *args, **kwargs)
@@ -532,8 +528,8 @@ class ChatbotCLI:
     def cmd_clear(self, *args: Any, **kwargs: Any) -> Any:
         return handlers.cmd_clear(self, *args, **kwargs)
 
-    def _accessible_vector_stores(self, *args: Any, **kwargs: Any) -> Any:
-        return handlers._accessible_vector_stores(self, *args, **kwargs)
+    def get_accessible_vector_stores(self, *args: Any, **kwargs: Any) -> Any:
+        return handlers.get_accessible_vector_stores(self, *args, **kwargs)
 
     def cmd_vector_search(self, *args: Any, **kwargs: Any) -> Any:
         return handlers.cmd_vector_search(self, *args, **kwargs)
@@ -541,17 +537,20 @@ class ChatbotCLI:
     def cmd_vector_search_filter(self, *args: Any, **kwargs: Any) -> Any:
         return handlers.cmd_vector_search_filter(self, *args, **kwargs)
 
-    def cmd_casapi_show_file_content(self, *args: Any, **kwargs: Any) -> Any:
-        return handlers.cmd_casapi_show_file_content(self, *args, **kwargs)
+    def cmd_show_file_content(self, *args: Any, **kwargs: Any) -> Any:
+        return handlers.cmd_show_file_content(self, *args, **kwargs)
 
-    def cmd_casapi_query_file(self, *args: Any, **kwargs: Any) -> Any:
-        return handlers.cmd_casapi_query_file(self, *args, **kwargs)
+    def cmd_llm_query_file(self, *args: Any, **kwargs: Any) -> Any:
+        return handlers.cmd_llm_query_file(self, *args, **kwargs)
 
-    def cmd_casapi_vector_stores_info(self, *args: Any, **kwargs: Any) -> Any:
-        return handlers.cmd_casapi_vector_stores_info(self, *args, **kwargs)
+    def cmd_vector_stores_info_users_files(self, *args: Any,
+                                           **kwargs: Any) -> Any:
+        return handlers.cmd_vector_stores_info_users_files(
+            self, *args, **kwargs)
 
-    def _prompt_vector_store_selection(self, *args: Any, **kwargs: Any) -> Any:
-        return handlers._prompt_vector_store_selection(self, *args, **kwargs)
+    def prompt_for_vector_store_selection(self, *args: Any,
+                                          **kwargs: Any) -> Any:
+        return handlers.prompt_for_vector_store_selection(self, *args, **kwargs)
 
     def cmd_llm_setup(self, *args: Any, **kwargs: Any) -> Any:
         return handlers.cmd_llm_setup(self, *args, **kwargs)

@@ -61,9 +61,11 @@ def chatbot_cli(mock_services, sample_config, mock_logger, mock_console,
                          error_handler=mock_error_handler,
                          session_manager=mock_session_manager)
         cli.console = mock_console
-        cli._accessible_vector_stores = Mock(return_value=sample_vector_stores)
+        cli.get_accessible_vector_stores = Mock(
+            return_value=sample_vector_stores)
         # Configure list_vector_stores to return sample_vector_stores when called
-        mock_services['vector store'].list_vector_stores.return_value = sample_vector_stores
+        mock_services[
+            'vector store'].list_vector_stores.return_value = sample_vector_stores
         return cli
 
 
@@ -170,7 +172,7 @@ class TestVectorStoreCommands:
                 }
             }
 
-        chatbot_cli.cmd_vector_stores_info()
+        chatbot_cli.cmd_vector_stores_info_users()
 
         chatbot_cli.services[
             'vector store'].get_vector_store_details.assert_called_once_with(
@@ -207,7 +209,7 @@ class TestQueryCommands:
         chatbot_cli.services['llm'].call_llm.return_value = 'LLM response'
         chatbot_cli._has_valid_llm_config = Mock(return_value=True)
 
-        chatbot_cli.cmd_query_ask()
+        chatbot_cli.cmd_llm_query_ask()
 
         chatbot_cli.session.prompt.assert_called()
         chatbot_cli.services['query'].query_vector_store.assert_called_once()
@@ -241,7 +243,7 @@ class TestQueryCommands:
         """TC-CLI-014: Verify query requires valid vector store selection"""
         chatbot_cli.current_vector_store = None
 
-        chatbot_cli.cmd_query_ask()
+        chatbot_cli.cmd_llm_query_ask()
 
         assert any('vector store' in str(call).lower()
                    for call in chatbot_cli.console.print.call_args_list)
@@ -253,7 +255,8 @@ class TestCASAPICommands:
     @pytest.mark.unit
     @pytest.mark.cli
     @patch('chatbot.cli.command_handlers.Confirm.ask', return_value=True)
-    def test_casapi_vector_search_retrieves_chunks(self, mock_confirm, chatbot_cli):
+    def test_casapi_vector_search_retrieves_chunks(self, mock_confirm,
+                                                   chatbot_cli):
         """TC-CLI-015: Verify casapi vector_search retrieves text chunks"""
         chatbot_cli._get_input = Mock(side_effect=['test query', '5'])
         chatbot_cli.current_vector_store = 'vector-store-1'
@@ -285,7 +288,8 @@ class TestCASAPICommands:
     @pytest.mark.unit
     @pytest.mark.cli
     @patch('chatbot.cli.command_handlers.Confirm.ask', return_value=True)
-    def test_casapi_vector_search_filter_applies_filters(self, mock_confirm, chatbot_cli):
+    def test_casapi_vector_search_filter_applies_filters(
+            self, mock_confirm, chatbot_cli):
         """TC-CLI-016: Verify casapi vector_search filter applies filters correctly"""
         chatbot_cli._get_input = Mock(side_effect=['test query', '5'])
         chatbot_cli.session.prompt = Mock(
@@ -317,7 +321,7 @@ class TestCASAPICommands:
             }
         }
 
-        chatbot_cli.cmd_casapi_show_file_content()
+        chatbot_cli.cmd_show_file_content()
 
         chatbot_cli.services['query'].get_file_content.assert_called_once()
         call_kwargs = chatbot_cli.services[
@@ -342,7 +346,7 @@ class TestCASAPICommands:
         chatbot_cli.services['llm'].call_llm.return_value = 'LLM response'
         chatbot_cli._has_valid_llm_config = Mock(return_value=True)
 
-        chatbot_cli.cmd_casapi_query_file()
+        chatbot_cli.cmd_llm_query_file()
 
         chatbot_cli.services['query'].get_file_content.assert_called_once()
         chatbot_cli.services['llm'].call_llm.assert_called_once()
@@ -619,7 +623,7 @@ class TestCommandExecution:
         chatbot_cli.services['auth'].has_valid_token.return_value = True
         chatbot_cli._has_valid_llm_config = Mock(return_value=True)
 
-        chatbot_cli.cmd_query_ask()
+        chatbot_cli.cmd_llm_query_ask()
 
         chatbot_cli._get_query_input.assert_called_once()
         chatbot_cli.services['query'].query_vector_store.assert_not_called()
@@ -631,7 +635,7 @@ class TestCommandExecution:
         chatbot_cli.current_vector_store = None
         chatbot_cli.current_user = 'test-user'
 
-        chatbot_cli.cmd_query_ask()
+        chatbot_cli.cmd_llm_query_ask()
 
         chatbot_cli.console.print.assert_called()
 
@@ -642,7 +646,7 @@ class TestCommandExecution:
         chatbot_cli.current_vector_store = 'vector-store-1'
         chatbot_cli.services['auth'].has_valid_token.return_value = False
 
-        chatbot_cli.cmd_query_ask()
+        chatbot_cli.cmd_llm_query_ask()
 
         chatbot_cli.console.print.assert_called()
 
@@ -652,7 +656,7 @@ class TestCommandExecution:
         """TC-CLI-045: Verify vector store list handles empty list"""
         chatbot_cli.services[
             'vector store'].list_vector_stores.return_value = []
-        chatbot_cli._accessible_vector_stores = lambda: []
+        chatbot_cli.get_accessible_vector_stores = lambda: []
 
         chatbot_cli.cmd_vector_stores_list()
 
@@ -674,7 +678,7 @@ class TestCommandExecution:
             'error': 'Connection failed'
         }
 
-        chatbot_cli.cmd_query_ask()
+        chatbot_cli.cmd_llm_query_ask()
 
         chatbot_cli.console.print.assert_called()
 
@@ -698,7 +702,7 @@ class TestCommandExecution:
         """TC-CLI-048: Verify error when user not in vector store"""
         chatbot_cli.current_vector_store = 'unauthorized-vs'
         chatbot_cli.current_user = 'test-user'
-        chatbot_cli._accessible_vector_stores = Mock(
+        chatbot_cli.get_accessible_vector_stores = Mock(
             return_value=['vector-store-1', 'vector-store-2'])
 
         result = chatbot_cli._user_in_vector_store('unauthorized-vs')
@@ -721,7 +725,7 @@ class TestCommandExecution:
                 }
             }
 
-        chatbot_cli.cmd_vector_stores_info()
+        chatbot_cli.cmd_vector_stores_info_users()
 
         chatbot_cli.services[
             'vector store'].get_vector_store_details.assert_called_once_with(
@@ -750,7 +754,7 @@ class TestCommandExecution:
         chatbot_cli._has_valid_llm_config = Mock(return_value=False)
         chatbot_cli._ensure_llm_configured = Mock(return_value=False)
 
-        chatbot_cli.cmd_query_ask()
+        chatbot_cli.cmd_llm_query_ask()
 
         chatbot_cli._ensure_llm_configured.assert_called_once()
         chatbot_cli.services['query'].query_vector_store.assert_not_called()
@@ -763,7 +767,7 @@ class TestCommandExecution:
         chatbot_cli.services['auth'].has_valid_token.return_value = True
         chatbot_cli._has_valid_llm_config = Mock(return_value=False)
 
-        chatbot_cli.cmd_casapi_query_file()
+        chatbot_cli.cmd_llm_query_file()
 
         chatbot_cli.services['query'].get_file_content.assert_not_called()
         chatbot_cli.services['llm'].call_llm.assert_not_called()
