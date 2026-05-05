@@ -5,7 +5,7 @@ This feature prompts users to select a vector store when the CLI starts, improvi
 
 ## Implementation Details
 
-### New Method: `_prompt_vector_store_selection()`
+### New Method: `prompt_for_vector_store_selection()`
 Located in `chatbot/cli/chatbot_cli.py`, this method handles the vector store selection flow at startup.
 
 ### Flow Logic
@@ -47,7 +47,7 @@ Located in `chatbot/cli/chatbot_cli.py`, this method handles the vector store se
 ```
 display_welcome()
     ↓
-_prompt_vector_store_selection()  ← NEW
+prompt_for_vector_store_selection()  ← NEW
     ↓
 Main CLI loop
 ```
@@ -134,5 +134,5 @@ Users can always change their vector store selection using:
 
 - The method returns `bool` indicating if a vector store was successfully selected
 - Uses `rich.prompt.Confirm` for yes/no prompts
-- Integrates with existing `_accessible_vector_stores()` method
+- Integrates with existing `get_accessible_vector_stores()` method
 - Handles all edge cases gracefully with appropriate user feedback

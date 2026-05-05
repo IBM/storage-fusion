@@ -132,13 +132,18 @@ def cmd_vector_stores_info_users(self):
                            vector_store_info.get('namespace', 'N/A'))
         info_table.add_row("Created", vector_store_info.get('created', 'N/A'))
 
-        assigned = vector_store_info.get('assigned_users', {})
+        assigned = vector_store_info.get('assigned', {})
         ocp_users = assigned.get('users', [])
-        total = assigned.get('total', 0)
+        total_users = assigned.get('total_users', 0)
 
-        info_table.add_row("Total Assigned Users", str(total))
+        groups = assigned.get('groups', [])
+        total_groups = assigned.get('total_groups', 0)
+
+        info_table.add_row("Total Assigned", str(total_users + total_groups))
         info_table.add_row(
             "Users", ", ".join(ocp_users) if ocp_users else "[dim]None[/]")
+        info_table.add_row("Groups",
+                           ", ".join(groups) if groups else "[dim]None[/]")
 
         self.console.print(info_table)
     else:

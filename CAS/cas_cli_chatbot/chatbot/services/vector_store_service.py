@@ -146,8 +146,9 @@ class VectorStoreService:
             if result.returncode == 0:
                 data = json.loads(result.stdout.decode())
 
-                # Get assigned users for this vector store
-                users = self.get_assigned_users(vector_store_name, namespace)
+                # Get assigned users and groups for this vector store
+                users = self.get_assigned_users(vector_store_name, namespace, use_cache=False)
+                groups = self.get_assigned_groups(vector_store_name, namespace, use_cache=False)
 
                 return {
                     'name':
@@ -162,15 +163,123 @@ class VectorStoreService:
                         data.get('spec', {}),
                     'status':
                         data.get('status', {}),
-                    'assigned_users': {
+                    'assigned': {
                         'users': users,
-                        'total': len(users)
+                        'total_users': len(users),
+                        'groups': groups,
+                        'total_groups': len(groups)
                     }
                 }
         except Exception as e:
             self.logger.error(f"Failed to get vector store details: {e}")
 
         return None
+
+    def _get_crac_for_vector_store(self, vector_store_name: str,
+                                   namespace: str) -> Optional[Dict[str, Any]]:
+        """Fetch the CasResourceAccessControl resource for a vector store."""
+        result = subprocess.run([
+            "oc", "get", "casresourceaccesscontrols.cas.isf.ibm.com", "-n",
+            namespace, "-o", "json"
+        ],
+                                capture_output=True,
+                                timeout=10)
+
+        if result.returncode != 0:
+            return None
+
+        data = json.loads(result.stdout.decode())
+        items = data.get('items', [])
+
+        for resource in items:
+            resource_ref = resource.get('spec', {}).get('resourceRef', {})
+            if resource_ref.get('name') == vector_store_name:
+                return resource
+
+        return None
+
+    def _get_validated_subjects(self,
+                                vector_store_name: str,
+                                namespace: str,
+                                subject_type: str,
+                                validation_type: str,
+                                assignment_key: str,
+                                cache_key_prefix: str,
+                                success_label: str) -> List[str]:
+        """Fetch validated assigned subjects for a vector store."""
+        try:
+            vector_store_name = InputValidator.validate_vector_store_name(
+                vector_store_name, "vector_store_name")
+            namespace = InputValidator.validate_namespace(namespace, "namespace")
+        except ValidationError as e:
+            self.logger.error(f"Input validation failed: {e}")
+            return []
+
+        cache_key = f"{cache_key_prefix}_{vector_store_name}"
+
+        if self.cache_service:
+            cached = self.cache_service.get(cache_key)
+            if cached is not None:
+                self.logger.debug(
+                    f"Retrieved assigned {subject_type} from cache for {vector_store_name}"
+                )
+                return cached
+
+        try:
+            item = self._get_crac_for_vector_store(vector_store_name, namespace)
+
+            if not item:
+                self.logger.warning(
+                    f"No CasResourceAccessControl found for vector store '{vector_store_name}'"
+                )
+                return []
+
+            subjects = item.get('spec', {}).get('subjects', {}).get(
+                subject_type, [])
+            subject_names = [
+                subject.get('name') for subject in subjects
+                if subject.get('name')
+            ]
+
+            validated_subjects = []
+            conditions = item.get('status', {}).get('conditions', [])
+            for condition in conditions:
+                if (condition.get('type') == validation_type
+                        and condition.get('status') == 'True'):
+                    validated_subjects = subject_names
+                    break
+
+            assignments = self.vector_store_assignments.setdefault(
+                vector_store_name, {})
+            assignments[assignment_key] = validated_subjects
+
+            if validated_subjects:
+                self.console.print(
+                    f"[green]✓ Vector store '{vector_store_name}' has {len(validated_subjects)} validated {success_label}(s)[/]"
+                )
+            else:
+                self.console.print(
+                    f"[yellow]ℹ No validated {success_label}s assigned to vector store '{vector_store_name}'[/]"
+                )
+
+            if self.cache_service:
+                self.cache_service.set(cache_key,
+                                       validated_subjects,
+                                       ttl_seconds=self.cache_ttl)
+
+            return validated_subjects
+
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"Failed to fetch domain {vector_store_name}: {e}")
+        except Exception as e:
+            self.logger.error(
+                f"Error fetching assigned {subject_type}: {e}")
+
+        self.console.print(
+            f"[yellow]ℹ Could not fetch {subject_type} for vector store '{vector_store_name}'[/]"
+        )
+        return []
 
     def get_assigned_users(self,
                            vector_store_name: str,
@@ -187,104 +296,44 @@ class VectorStoreService:
         Returns:
             List of validated assigned usernames
         """
-        # Validate inputs
-        try:
-            vector_store_name = InputValidator.validate_vector_store_name(vector_store_name, "vector_store_name")
-            namespace = InputValidator.validate_namespace(namespace, "namespace")
-        except ValidationError as e:
-            self.logger.error(f"Input validation failed: {e}")
-            return []
-        
-        cache_key = f"domain_users_{vector_store_name}"
+        if not use_cache and self.cache_service:
+            self.cache_service.delete(f"domain_users_{vector_store_name}")
 
-        # Check cache
-        if use_cache and self.cache_service:
-            cached = self.cache_service.get(cache_key)
-            if cached is not None:
-                self.logger.debug(
-                    f"Retrieved assigned users from cache for {vector_store_name}"
-                )
-                return cached
+        return self._get_validated_subjects(
+            vector_store_name=vector_store_name,
+            namespace=namespace,
+            subject_type='users',
+            validation_type='ValidatedUsers',
+            assignment_key='ocp_users',
+            cache_key_prefix='domain_users',
+            success_label='user')
 
-        try:
-            # Fetch CRAC using oc command
-            result = subprocess.run([
-                "oc", "get", "casresourceaccesscontrols.cas.isf.ibm.com", "-n", namespace, "-o",
-                "json"
-            ],
-                                    capture_output=True,
-                                    timeout=10)
+    def get_assigned_groups(self,
+                            vector_store_name: str,
+                            namespace: str = "ibm-cas",
+                            use_cache: bool = True) -> List[str]:
+        """
+        Fetch all assigned groups for a vector store from the domain resource
 
-            if result.returncode == 0:
-                data = json.loads(result.stdout.decode())
+        Args:
+            vector_store_name: Name of the vector store
+            namespace: Kubernetes namespace
+            use_cache: Use cached results if available
 
-                items = data.get('items', [])
+        Returns:
+            List of validated assigned group names
+        """
+        if not use_cache and self.cache_service:
+            self.cache_service.delete(f"domain_groups_{vector_store_name}")
 
-                # Find the CasResourceAccessControl for this specific vector store
-                item = None
-                for resource in items:
-                    resource_ref = resource.get('spec',
-                                                {}).get('resourceRef', {})
-                    if resource_ref.get('name') == vector_store_name:
-                        item = resource
-                        break
-
-                if not item:
-                    self.logger.warning(
-                        f"No CasResourceAccessControl found for vector store '{vector_store_name}'"
-                    )
-                    return []
-
-                # Extract assigned users from spec.subjects.users
-                users = item.get('spec', {}).get('subjects',
-                                                 {}).get('users', [])
-                usernames = [
-                    user.get('name') for user in users if user.get('name')
-                ]
-
-                # Check validation status from status.conditions
-                validated_users = []
-                conditions = item.get('status', {}).get('conditions', [])
-                for condition in conditions:
-                    if condition.get(
-                            'type') == 'ValidatedUsers' and condition.get(
-                                'status') == 'True':
-                        # Users are validated
-                        validated_users = usernames
-                        break
-
-                # Update the in-memory cache
-                self.vector_store_assignments[vector_store_name] = {
-                    'ocp_users': validated_users,
-                }
-
-                if validated_users:
-                    self.console.print(
-                        f"[green]✓ Vector store '{vector_store_name}' has {len(validated_users)} validated user(s)[/]"
-                    )
-                else:
-                    self.console.print(
-                        f"[yellow]ℹ No validated users assigned to vector store '{vector_store_name}'[/]"
-                    )
-
-                # Cache results
-                if self.cache_service:
-                    self.cache_service.set(cache_key,
-                                           validated_users,
-                                           ttl_seconds=self.cache_ttl)
-
-                return validated_users
-
-        except subprocess.CalledProcessError as e:
-            self.logger.error(
-                f"Failed to fetch domain {vector_store_name}: {e}")
-        except Exception as e:
-            self.logger.error(f"Error fetching assigned users: {e}")
-
-        self.console.print(
-            f"[yellow]ℹ Could not fetch users for vector store '{vector_store_name}'[/]"
-        )
-        return []
+        return self._get_validated_subjects(
+            vector_store_name=vector_store_name,
+            namespace=namespace,
+            subject_type='groups',
+            validation_type='ValidatedGroups',
+            assignment_key='groups',
+            cache_key_prefix='domain_groups',
+            success_label='group')
 
     def sync_vector_stores(self, namespace: str = "ibm-cas") -> int:
         """
