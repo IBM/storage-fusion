@@ -6,9 +6,9 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
-## Hotfix hotfix-2.12.1.3 (Latest)
+## Hotfix hotfix-2.12.1.4 (Latest)
 
-**Release Date:** Apr 27th, 2026
+**Release Date:** May 6th, 2026
 
 ### Issues Fixed
 
@@ -16,6 +16,7 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 1. **Fusion creates hundreds of pods during cleanup jobs** (#69959)
 2. **Backup jobs remain in pending state on spoke** (#71255)
 3. **Slow service protection backup** (#71410) 
+4. **Recipe exec hook fails with 'Connection broken IncompleteRead' error** (#66742)
    
 
 ## Hotfix hotfix-2.12.1.2
