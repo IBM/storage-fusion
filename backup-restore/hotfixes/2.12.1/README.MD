@@ -17,20 +17,32 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 2. **Backup jobs remain in pending state on spoke**
 3. **Slow service protection backup**
 4. **Recipe exec hook fails with 'Connection broken IncompleteRead' error**
+
+## Hotfix hotfix-2.12.1.4
+
+### Issues Fixed
+
+1. **Recipe exec hook fails with 'Connection broken IncompleteRead' error**
+
+## Hotfix hotfix-2.12.1.3
+
+### Issues Fixed
+
+1. **Slow service protection backup**
    
 
 ## Hotfix hotfix-2.12.1.2
 
 ### Issues Fixed
 
-1. **Fix issue with missing fields in guardian-configmap which causes spoke upgrades to be stuck** (#69600)
+1. **Fix issue with missing fields in guardian-configmap which causes spoke upgrades to be stuck**
   
 
 ## Hotfix hotfix-2.12.1.1
 
 ### Issues Fixed
 
-1. **Force idp-agent-operator to reconcile spoke-hub communication settings due to incorrect state-1 mirroring of ConfigMap guardian-configmap**  (#69600)
+1. **Force idp-agent-operator to reconcile spoke-hub communication settings due to incorrect state-1 mirroring of ConfigMap guardian-configmap**  
 
 
 ## Installation

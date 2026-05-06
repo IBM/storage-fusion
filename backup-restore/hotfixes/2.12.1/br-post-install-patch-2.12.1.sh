@@ -138,7 +138,7 @@ set_velero_image() {
     fi
 }
 
-# mirror spoke values to ConfigMap guardian-configmap (#69600)
+# mirror spoke values to ConfigMap guardian-configmap
 # most of the time this can be resolved by forcing reconciles due to state-1 incorrect behavior
 resolve_hub_connection() {
     # hub (bool) Whether the current cluster is a hub or spoke, this does not execute on hubs
