@@ -13,10 +13,10 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 ### Issues Fixed
 
 
-1. **Fusion creates hundreds of pods during cleanup jobs** (#69959)
-2. **Backup jobs remain in pending state on spoke** (#71255)
-3. **Slow service protection backup** (#71410) 
-4. **Recipe exec hook fails with 'Connection broken IncompleteRead' error** (#73500)
+1. **Fusion creates hundreds of pods during cleanup jobs**
+2. **Backup jobs remain in pending state on spoke**
+3. **Slow service protection backup**
+4. **Recipe exec hook fails with 'Connection broken IncompleteRead' error**
    
 
 ## Hotfix hotfix-2.12.1.2
