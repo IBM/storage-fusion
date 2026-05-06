@@ -1,4 +1,0 @@
-This hotfix fixes the following Backup & Restore issues:
-
-    1. Force idp-agent-operator to reconcile spoke-hub communication settings due to incorrect state-1 mirroring of ConfigMap guardian-configmap. (#69600)
-    2.  Recipe exec hook fails with 'Connection broken IncompleteRead' error.
