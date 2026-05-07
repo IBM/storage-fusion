@@ -5,44 +5,39 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 ## Overview
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
-
 ## Hotfix hotfix-2.12.1.4 (Latest)
 
-**Release Date:** May 6th, 2026
+**Release Date:** May 7th, 2026
 
 ### Issues Fixed
 
+1. **Force idp-agent-operator to reconcile spoke-hub communication settings due to incorrect state-1 mirroring of ConfigMap guardian-configmap**
+2. **Fix issue with missing fields in guardian-configmap which causes spoke upgrades to be stuck**
+3. **Fusion creates hundreds of pods during cleanup jobs**
+4. **Backup jobs remain in pending state on spoke**
+5. **Slow service protection backup**
+6. **Recipe exec hook fails with 'Connection broken IncompleteRead' error**
 
-1. **Fusion creates hundreds of pods during cleanup jobs**
-2. **Backup jobs remain in pending state on spoke**
-3. **Slow service protection backup**
-4. **Recipe exec hook fails with 'Connection broken IncompleteRead' error**
 
-## Hotfix hotfix-2.12.1.4
 
-### Issues Fixed
-
-1. **Recipe exec hook fails with 'Connection broken IncompleteRead' error**
 
 ## Hotfix hotfix-2.12.1.3
 
+**Release Date:** Apr 27th, 2026
 ### Issues Fixed
-
-1. **Slow service protection backup**
+1,2,3,4,5
    
 
 ## Hotfix hotfix-2.12.1.2
 
 ### Issues Fixed
-
-1. **Fix issue with missing fields in guardian-configmap which causes spoke upgrades to be stuck**
+1,2
   
 
 ## Hotfix hotfix-2.12.1.1
 
 ### Issues Fixed
-
-1. **Force idp-agent-operator to reconcile spoke-hub communication settings due to incorrect state-1 mirroring of ConfigMap guardian-configmap**  
+1
 
 
 ## Installation
