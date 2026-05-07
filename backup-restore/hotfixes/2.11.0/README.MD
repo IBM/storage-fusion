@@ -13,6 +13,7 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 ### Issues Fixed
 
 1. Added the early validation to check if the volume utilization is very high during backup, so it will not fail later on while restore. (#72776)
+2. Restore with BSL Region from latest BSL definition, not the BSL Region from the backup's inventory (#70938)
 
 ## Hotfix hotfix-2.11.0.9
 
