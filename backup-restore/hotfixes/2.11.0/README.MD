@@ -12,59 +12,59 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 ### Issues Fixed
 
-1. Added the early validation to check if the volume utilization is very high during backup, so it will not fail later on while restore. (#72776)
-2. Restore with BSL Region from latest BSL definition, not the BSL Region from the backup's inventory (#70938)
+1. Added the early validation to check if the volume utilization is very high during backup, so it will not fail later on while restore.
+2. Restore with BSL Region from latest BSL definition, not the BSL Region from the backup's inventory.
 
 ## Hotfix hotfix-2.11.0.9
 
 ### Issues Fixed
 
-1. Fixes rbdsnapshot typo - ceph storage was getting filled up fast with daily vm backups (#71802)
+1. Fixes rbdsnapshot typo - ceph storage was getting filled up fast with daily vm backups.
 
 ## Hotfix hotfix-2.11.0.8
 
 ### Issues Fixed
 
-1. Fixed issue with missing fields in guardian-configmap which causes spoke upgrades to be stuck. (#69600)
+1. Fixed issue with missing fields in guardian-configmap which causes spoke upgrades to be stuck.
 
 ## Hotfix hotfix-2.11.0.7
 
 ### Issues Fixed
 
-1. Change AWS S3 connections with OADP to use virtual host style urls instead of host path style by default for proxy compatibility. Proxy services may rely on the bucket in the url's subdomain for validation. Buckets with "." in their name will still default to path style for compatibility. S3 compatibles will continue to use path style urls. Path style format may be forced by adding "FORCEAWSPATHSTYLE" to .spec.transactionManager.testFlags in the DataProtectionAgent. (#68134)
+1. Change AWS S3 connections with OADP to use virtual host style urls instead of host path style by default for proxy compatibility. Proxy services may rely on the bucket in the url's subdomain for validation. Buckets with "." in their name will still default to path style for compatibility. S3 compatibles will continue to use path style urls. Path style format may be forced by adding "FORCEAWSPATHSTYLE" to .spec.transactionManager.testFlags in the DataProtectionAgent.
 
 ## Hotfix hotfix-2.11.0.6
 
 ### Issues Fixed
 
-1.  Restore fails with error Backup inventory info not returned from application service for applicationId (#59191)
-2.  Unable to restore pre 2.9 backup with 2.10.* (61073)
-3.  Backup fails intermittently with error Hit exception during "group/rg" : argument of type 'NoneType' is not iterable (61235, 62741))
-4.  Jobs taking long to go from CancelPending to Cancelled state (61518)
-5.  Alert triggered for old backup job completion (62403)
-6. Backup fails due to a timeout when deleting VolumeSnapshotContent (Issue: 64678)
+1.  Restore fails with error Backup inventory info not returned from application service for applicationId.
+2.  Unable to restore pre 2.9 backup with 2.10.*.
+3.  Backup fails intermittently with error Hit exception during "group/rg" : argument of type 'NoneType' is not iterable.
+4.  Jobs taking long to go from CancelPending to Cancelled state.
+5.  Alert triggered for old backup job completion.
+6. Backup fails due to a timeout when deleting VolumeSnapshotContent.
 
 ## Hotfix hotfix-2.11.0.5
 
 ### Issues Fixed
 
-1.  OADP datamover Pods get assigned to a node without the backup volumes when PV topology is a subset of the StorageClass topology with StorageClass field volumeBindingMode: WaitForFirstConsumer (Issue: 62485)
+1.  OADP datamover Pods get assigned to a node without the backup volumes when PV topology is a subset of the StorageClass topology with StorageClass field volumeBindingMode: WaitForFirstConsumer.
 
 
 ## Hotfix hotfix-2.11.0.3
 
 ### Issues Fixed
-1. Redis certificate expiration causes jobs to fail (Issue: 59690)
+1. Redis certificate expiration causes jobs to fail.
 
 ## Hotfix hotfix-2.11.0.2
 
 ### Issues Fixed
-1.  Fix KeyError while accessing intrinsic variable APP.namespace.name during restore.(Issue: 60235)
+1.  Fix KeyError while accessing intrinsic variable APP.namespace.name during restore.
 
 ## Hotfix hotfix-2.11.0.1
 
 ### Issues Fixed
-1.  Removed the validation for label, if label more than 63 character label will be truncated for Velero Backup CR.(Issue: 59712)
+1.  Removed the validation for label, if label more than 63 character label will be truncated for Velero Backup CR.
 
 
 ## Installation
