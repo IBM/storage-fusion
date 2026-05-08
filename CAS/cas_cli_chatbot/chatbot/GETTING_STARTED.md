@@ -55,10 +55,10 @@ When you first start the chatbot with `python3 main.py`, it will automatically:
    - **OpenShift console URL** - The URL of your OpenShift console
    - **OpenShift username** - Your OpenShift username
    - **OpenShift password** - Your OpenShift password
-   - **CAS API URL** - The CAS API endpoint URL (can be auto-generated)
-   - **CAS namespace** - The namespace where CAS is deployed
 3. Create the `config.yaml` file automatically
-4. Continue to the chatbot interface
+4. Authenticate with OpenShift and CAS
+5. Prompt you to select a vector store to query
+6. Continue to the chatbot interface
 
 The tool will also attempt to auto-generate a CAS API URL from your OpenShift console URL and ask if you want to use it.
 
@@ -256,6 +256,7 @@ Optional commands that use LLM providers for enhanced responses:
 ```bash
 llm query ask           # Ask a question using LLM with vector search context
 llm query file          # Query a specific file using LLM
+llm setup               # Set up LLM configuration
 ```
 
 **Example: Query a specific file**
@@ -305,7 +306,7 @@ Here's a recommended workflow for new users:
 
 3. **Select a vector store**
    ```bash
-   vector stores select
+   vector stores select <store_name>
    ```
 
 4. **Run your first search**
@@ -389,15 +390,6 @@ If you receive authentication errors during a session:
 1. The bearer token may have expired
 2. Restart the CLI to re-authenticate
 3. Check your OpenShift credentials are still valid
-
-## Next Steps
-
-Once you have the chatbot running:
-
-1. Use `vector stores list` to see available vector stores
-2. Use `vector stores select` to choose a vector store
-3. Use `vector search` to run your first query
-4. Explore other commands with `help`
 
 For detailed usage examples and workflows, see the package guide [README.md](README.md) and the project root guide [`../README.md`](../README.md).
 

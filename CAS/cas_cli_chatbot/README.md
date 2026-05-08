@@ -19,6 +19,8 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Using the Chatbot
+
 Refer to [chatbot/README.md](chatbot/README.md) and [GETTING_STARTED.md](GETTING_STARTED.md) for detailed usage of the chatbot.
 
 ## Running Tests

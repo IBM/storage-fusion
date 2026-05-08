@@ -27,8 +27,8 @@ with a payload shaped like:
 {
   "query": "What is the recommended PTF for IBM Storage Virtualize 8.5.0?",
   "max_num_results": 5,
-  "enable_source": false,
-  "enable_content_metadata": false
+  "enable_source": true,
+  "enable_content_metadata": true
 }
 ```
 
@@ -131,7 +131,7 @@ python3 main.py
 vector stores list
 
 # Select a vector store
-vector stores select
+vector stores select <store_name>
 ```
 
 Example interactive selection:

@@ -66,20 +66,20 @@ def display_help(self: DisplayMethodsCLIProtocol, command: str | None = None) ->
     table.add_column("Description", style="white")
 
     categories = {
-        "Vector stores": [
+        "Vector Stores": [
             k for k in self.COMMANDS.keys() if k.startswith("vector stores")
         ],
-        "Vector search": [
+        "Vector Search": [
             k
             for k in self.COMMANDS.keys()
             if k.startswith("vector search") or k.startswith("show file content")
         ],
-        "Queries": [
+        "LLM-Assisted Query": [
             k
             for k in self.COMMANDS.keys()
-            if k.startswith("query") or k.startswith("llm")
+            if k.startswith("llm")
         ],
-        "Session": [k for k in self.COMMANDS.keys() if k.startswith("session")],
+        "Session": [k for k in self.COMMANDS.keys() if k.startswith("session") or k.startswith("query history")],
         "System": [
             k
             for k in self.COMMANDS.keys()
