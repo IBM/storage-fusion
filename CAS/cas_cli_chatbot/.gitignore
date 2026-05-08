@@ -4,6 +4,7 @@ chatbot/config1.yaml
 *.env
 .env
 .env.*
+../../cas-datasource-domain/cas-config.env
 
 # Logs
 logs/
@@ -31,4 +32,6 @@ chatbot/session_export.json
 
 # OS
 .DS_Store
+../../../.DS_Store
+
 

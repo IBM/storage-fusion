@@ -2,8 +2,8 @@
 Input validation utilities for user-facing methods
 """
 
-from typing import Optional, Dict, Any, TYPE_CHECKING
 import re
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from chatbot.services.auth_service import AuthService
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 class ValidationError(Exception):
     """Validation error exception"""
+
     pass
 
 
@@ -26,22 +27,22 @@ class InputValidator:
     MAX_LIMIT = 100
 
     # Regex patterns
-    VECTOR_STORE_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
-    FILE_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
-    USERNAME_PATTERN = re.compile(r'^[a-zA-Z0-9._@-]+$')
+    VECTOR_STORE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+    FILE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+    USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9._@-]+$")
 
     @staticmethod
     def validate_query(query: str, field_name: str = "query") -> str:
         """
         Validate query string
-        
+
         Args:
             query: Query string to validate
             field_name: Name of the field for error messages
-            
+
         Returns:
             Validated and stripped query string
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -64,18 +65,17 @@ class InputValidator:
         return query
 
     @staticmethod
-    def validate_vector_store_name(name: str,
-                                   field_name: str = "vector_store") -> str:
+    def validate_vector_store_name(name: str, field_name: str = "vector_store") -> str:
         """
         Validate vector store name
-        
+
         Args:
             name: Vector store name to validate
             field_name: Name of the field for error messages
-            
+
         Returns:
             Validated vector store name
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -106,14 +106,14 @@ class InputValidator:
     def validate_file_id(file_id: str, field_name: str = "file_id") -> str:
         """
         Validate file ID
-        
+
         Args:
             file_id: File ID to validate
             field_name: Name of the field for error messages
-            
+
         Returns:
             Validated file ID
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -144,14 +144,14 @@ class InputValidator:
     def validate_username(username: str, field_name: str = "username") -> str:
         """
         Validate username
-        
+
         Args:
             username: Username to validate
             field_name: Name of the field for error messages
-            
+
         Returns:
             Validated username
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -179,17 +179,17 @@ class InputValidator:
         return username
 
     @staticmethod
-    def validate_limit(limit: Optional[int], field_name: str = "limit") -> int:
+    def validate_limit(limit: int | None, field_name: str = "limit") -> int:
         """
         Validate limit parameter
-        
+
         Args:
             limit: Limit value to validate
             field_name: Name of the field for error messages
-            
+
         Returns:
             Validated limit value
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -201,27 +201,30 @@ class InputValidator:
 
         if limit < InputValidator.MIN_LIMIT:
             raise ValidationError(
-                f"{field_name} must be at least {InputValidator.MIN_LIMIT}")
+                f"{field_name} must be at least {InputValidator.MIN_LIMIT}"
+            )
 
         if limit > InputValidator.MAX_LIMIT:
             raise ValidationError(
-                f"{field_name} cannot exceed {InputValidator.MAX_LIMIT}")
+                f"{field_name} cannot exceed {InputValidator.MAX_LIMIT}"
+            )
 
         return limit
 
     @staticmethod
-    def validate_filters(filters: Dict[str, Any],
-                         field_name: str = "filters") -> Dict[str, Any]:
+    def validate_filters(
+        filters: dict[str, Any], field_name: str = "filters"
+    ) -> dict[str, Any]:
         """
         Validate filter dictionary
-        
+
         Args:
             filters: Filter dictionary to validate
             field_name: Name of the field for error messages
-            
+
         Returns:
             Validated filters
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -232,17 +235,14 @@ class InputValidator:
             raise ValidationError(f"{field_name} must be a dictionary")
 
         # Validate required keys
-        required_keys = ['key', 'type', 'value']
+        required_keys = ["key", "type", "value"]
         for key in required_keys:
             if key not in filters:
-                raise ValidationError(
-                    f"{field_name} missing required key: {key}")
+                raise ValidationError(f"{field_name} missing required key: {key}")
 
         # Validate type (operator)
-        valid_types = [
-            'eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'in', 'nin', 'contains'
-        ]
-        if filters['type'] not in valid_types:
+        valid_types = ["eq", "ne", "gt", "gte", "lt", "lte", "in", "nin", "contains"]
+        if filters["type"] not in valid_types:
             raise ValidationError(
                 f"{field_name} has invalid type. Must be one of: {', '.join(valid_types)}"
             )
@@ -250,18 +250,17 @@ class InputValidator:
         return filters
 
     @staticmethod
-    def validate_namespace(namespace: str,
-                           field_name: str = "namespace") -> str:
+    def validate_namespace(namespace: str, field_name: str = "namespace") -> str:
         """
         Validate Kubernetes namespace
-        
+
         Args:
             namespace: Namespace to validate
             field_name: Name of the field for error messages
-            
+
         Returns:
             Validated namespace
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -277,7 +276,7 @@ class InputValidator:
             raise ValidationError(f"{field_name} cannot be empty")
 
         # Kubernetes namespace naming rules
-        if not re.match(r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?$', namespace):
+        if not re.match(r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", namespace):
             raise ValidationError(
                 f"{field_name} must follow Kubernetes naming rules (lowercase alphanumeric and hyphens)"
             )
@@ -292,46 +291,41 @@ class TokenValidator:
     """Centralized token validation utilities"""
 
     @staticmethod
-    def validate_bearer_token(
-            auth_service: Optional['AuthService']) -> Dict[str, Any]:
+    def validate_bearer_token(auth_service: Optional["AuthService"]) -> dict[str, Any]:
         """
         Check if bearer token is available and valid
-        
+
         Args:
             auth_service: Authentication service instance
-            
+
         Returns:
             Dict with 'valid' boolean and optional 'error' message
         """
         if auth_service is None:
-            return {
-                'valid': False,
-                'error': 'Authentication service not available'
-            }
+            return {"valid": False, "error": "Authentication service not available"}
 
         if not auth_service.has_valid_token():
             return {
-                'valid': False,
-                'error': 'No valid bearer token. Please authenticate first.'
+                "valid": False,
+                "error": "No valid bearer token. Please authenticate first.",
             }
 
-        return {'valid': True}
+        return {"valid": True}
 
     @staticmethod
     def check_token_with_message(
-        auth_service: Optional['AuthService'],
-        console=None,
-        error_message:
-        str = "[red]✗ Authentication failed. Please check your credentials.[/]"
+        auth_service: Optional["AuthService"],
+        console: Any = None,
+        error_message: str = "[red]✗ Authentication failed. Please check your credentials.[/]",
     ) -> bool:
         """
         Check token validity and optionally display error message
-        
+
         Args:
             auth_service: Authentication service instance
             console: Rich console for displaying messages (optional)
             error_message: Custom error message to display
-            
+
         Returns:
             True if token is valid, False otherwise
         """

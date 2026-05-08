@@ -24,8 +24,8 @@ default_limit: 5
 # ----------------------------------------------------------------------------
 # Query Configuration
 # ----------------------------------------------------------------------------
-enable_source: false
-enable_content_metadata: false
+enable_source: true
+enable_content_metadata: true
 
 # ----------------------------------------------------------------------------
 # LLM / AI Providers Configuration

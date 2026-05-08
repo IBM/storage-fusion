@@ -2,26 +2,35 @@
 Fixed Vector Store Service with proper user assignment for OCP and Keycloak users
 """
 
-import requests
-import urllib3
-import subprocess
 import json
 import logging
-from typing import List, Dict, Optional, Any
+import subprocess
+from typing import Any, Protocol, cast
+
+import urllib3
 from rich.console import Console
+
 from chatbot.utils.validators import InputValidator, ValidationError
+
+
+class CacheServiceProtocol(Protocol):
+    def get(self, key: str) -> Any: ...
+    def set(self, key: str, value: Any, ttl_seconds: int) -> None: ...
+    def delete(self, key: str) -> bool: ...
 
 
 class VectorStoreService:
     """Enhanced vector store management service with proper user assignment"""
 
-    def __init__(self,
-                 config: dict,
-                 auth_service,
-                 logger: logging.Logger,
-                 cache_service=None,
-                 console: Optional[Console] = None):
-        self.config = config
+    def __init__(
+        self,
+        config: dict[str, Any],
+        auth_service: Any,
+        logger: logging.Logger,
+        cache_service: CacheServiceProtocol | None = None,
+        console: Console | None = None,
+    ) -> None:
+        self.config: dict[str, Any] = config
         self.auth_service = auth_service
         self.logger = logger
         self.cache_service = cache_service
@@ -37,17 +46,18 @@ class VectorStoreService:
         # self.api_base = f"{console_url}/cas/api/v1"
 
         # In-memory storage for domain assignments (local cache)
-        self.vector_store_assignments: Dict[str, Dict[str, List[str]]] = {}
+        self.vector_store_assignments: dict[str, dict[str, list[str]]] = {}
 
         # Cache TTL
-        self.cache_ttl = config.get('cache', {}).get('domain_cache_ttl',
-                                                     300)  # 5 minutes
+        self.cache_ttl = config.get("cache", {}).get(
+            "domain_cache_ttl", 300
+        )  # 5 minutes
 
         self.logger.info("Vector Search Service initialized")
 
-    def list_vector_stores(self,
-                           namespace: str = "ibm-cas",
-                           use_cache: bool = True) -> List[str]:
+    def list_vector_stores(
+        self, namespace: str = "ibm-cas", use_cache: bool = True
+    ) -> list[str]:
         """
         Fetch vector stores from OpenShift
 
@@ -64,16 +74,18 @@ class VectorStoreService:
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
             return []
-        
+
         cache_key = f"domains_{namespace}"
 
         # Check cache
         if use_cache and self.cache_service:
             cached = self.cache_service.get(cache_key)
             if cached is not None:
+                cached_vector_stores = cast(list[str], cached)
                 self.logger.debug(
-                    f"Retrieved {len(cached)} vector stores from cache")
-                return cached
+                    f"Retrieved {len(cached_vector_stores)} vector stores from cache"
+                )
+                return cached_vector_stores
 
         try:
             # Fetch vector_stores using oc command
@@ -81,24 +93,19 @@ class VectorStoreService:
                 ["oc", "get", "domains", "-n", namespace, "-o", "json"],
                 check=True,
                 capture_output=True,
-                timeout=30)
+                timeout=30,
+            )
 
             data = json.loads(result.stdout.decode())
-            vector_stores = [
-                item["metadata"]["name"] for item in data.get("items", [])
-            ]
+            vector_stores = [item["metadata"]["name"] for item in data.get("items", [])]
 
             vector_stores.sort()
 
-            self.console.print(
-                f"[green]✓ Fetched {len(vector_stores)} vector_stores from {namespace}[/]"
-            )
-
             # Cache results
             if self.cache_service:
-                self.cache_service.set(cache_key,
-                                       vector_stores,
-                                       ttl_seconds=self.cache_ttl)
+                self.cache_service.set(
+                    cache_key, vector_stores, ttl_seconds=self.cache_ttl
+                )
 
             return vector_stores
 
@@ -114,9 +121,9 @@ class VectorStoreService:
             self.logger.error(f"Error fetching vector stores: {e}")
             return []
 
-    def get_vector_store_details(self,
-                                 vector_store_name: str,
-                                 namespace: str = "ibm-cas") -> Optional[Dict]:
+    def get_vector_store_details(
+        self, vector_store_name: str, namespace: str = "ibm-cas"
+    ) -> dict[str, Any] | None:
         """
         Get detailed information about a vector store including assigned users
 
@@ -129,87 +136,106 @@ class VectorStoreService:
         """
         # Validate inputs
         try:
-            vector_store_name = InputValidator.validate_vector_store_name(vector_store_name, "vector_store_name")
+            vector_store_name = InputValidator.validate_vector_store_name(
+                vector_store_name, "vector_store_name"
+            )
             namespace = InputValidator.validate_namespace(namespace, "namespace")
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
             return None
-        
+
         try:
-            result = subprocess.run([
-                "oc", "get", "domain", vector_store_name, "-n", namespace, "-o",
-                "json"
-            ],
-                                    capture_output=True,
-                                    timeout=10)
+            result = subprocess.run(
+                [
+                    "oc",
+                    "get",
+                    "domain",
+                    vector_store_name,
+                    "-n",
+                    namespace,
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+                timeout=10,
+            )
 
             if result.returncode == 0:
                 data = json.loads(result.stdout.decode())
 
                 # Get assigned users and groups for this vector store
-                users = self.get_assigned_users(vector_store_name, namespace, use_cache=False)
-                groups = self.get_assigned_groups(vector_store_name, namespace, use_cache=False)
+                users = self.get_assigned_users(
+                    vector_store_name, namespace, use_cache=False
+                )
+                groups = self.get_assigned_groups(
+                    vector_store_name, namespace, use_cache=False
+                )
 
                 return {
-                    'name':
-                        vector_store_name,
-                    'namespace':
-                        namespace,
-                    'created':
-                        data.get('metadata', {}).get('creationTimestamp'),
-                    'uid':
-                        data.get('metadata', {}).get('uid'),
-                    'spec':
-                        data.get('spec', {}),
-                    'status':
-                        data.get('status', {}),
-                    'assigned': {
-                        'users': users,
-                        'total_users': len(users),
-                        'groups': groups,
-                        'total_groups': len(groups)
-                    }
+                    "name": vector_store_name,
+                    "namespace": namespace,
+                    "created": data.get("metadata", {}).get("creationTimestamp"),
+                    "uid": data.get("metadata", {}).get("uid"),
+                    "spec": data.get("spec", {}),
+                    "status": data.get("status", {}),
+                    "assigned": {
+                        "users": users,
+                        "total_users": len(users),
+                        "groups": groups,
+                        "total_groups": len(groups),
+                    },
                 }
         except Exception as e:
             self.logger.error(f"Failed to get vector store details: {e}")
 
         return None
 
-    def _get_crac_for_vector_store(self, vector_store_name: str,
-                                   namespace: str) -> Optional[Dict[str, Any]]:
+    def _get_crac_for_vector_store(
+        self, vector_store_name: str, namespace: str
+    ) -> dict[str, Any] | None:
         """Fetch the CasResourceAccessControl resource for a vector store."""
-        result = subprocess.run([
-            "oc", "get", "casresourceaccesscontrols.cas.isf.ibm.com", "-n",
-            namespace, "-o", "json"
-        ],
-                                capture_output=True,
-                                timeout=10)
+        result = subprocess.run(
+            [
+                "oc",
+                "get",
+                "casresourceaccesscontrols.cas.isf.ibm.com",
+                "-n",
+                namespace,
+                "-o",
+                "json",
+            ],
+            capture_output=True,
+            timeout=10,
+        )
 
         if result.returncode != 0:
             return None
 
         data = json.loads(result.stdout.decode())
-        items = data.get('items', [])
+        items = data.get("items", [])
 
         for resource in items:
-            resource_ref = resource.get('spec', {}).get('resourceRef', {})
-            if resource_ref.get('name') == vector_store_name:
-                return resource
+            resource_ref = resource.get("spec", {}).get("resourceRef", {})
+            if resource_ref.get("name") == vector_store_name:
+                return cast(dict[str, Any], resource)
 
         return None
 
-    def _get_validated_subjects(self,
-                                vector_store_name: str,
-                                namespace: str,
-                                subject_type: str,
-                                validation_type: str,
-                                assignment_key: str,
-                                cache_key_prefix: str,
-                                success_label: str) -> List[str]:
+    def _get_validated_subjects(
+        self,
+        vector_store_name: str,
+        namespace: str,
+        subject_type: str,
+        validation_type: str,
+        assignment_key: str,
+        cache_key_prefix: str,
+        success_label: str,
+    ) -> list[str]:
         """Fetch validated assigned subjects for a vector store."""
         try:
             vector_store_name = InputValidator.validate_vector_store_name(
-                vector_store_name, "vector_store_name")
+                vector_store_name, "vector_store_name"
+            )
             namespace = InputValidator.validate_namespace(namespace, "namespace")
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
@@ -223,7 +249,7 @@ class VectorStoreService:
                 self.logger.debug(
                     f"Retrieved assigned {subject_type} from cache for {vector_store_name}"
                 )
-                return cached
+                return cast(list[str], cached)
 
         try:
             item = self._get_crac_for_vector_store(vector_store_name, namespace)
@@ -234,23 +260,24 @@ class VectorStoreService:
                 )
                 return []
 
-            subjects = item.get('spec', {}).get('subjects', {}).get(
-                subject_type, [])
+            subjects = item.get("spec", {}).get("subjects", {}).get(subject_type, [])
             subject_names = [
-                subject.get('name') for subject in subjects
-                if subject.get('name')
+                subject.get("name") for subject in subjects if subject.get("name")
             ]
 
             validated_subjects = []
-            conditions = item.get('status', {}).get('conditions', [])
+            conditions = item.get("status", {}).get("conditions", [])
             for condition in conditions:
-                if (condition.get('type') == validation_type
-                        and condition.get('status') == 'True'):
+                if (
+                    condition.get("type") == validation_type
+                    and condition.get("status") == "True"
+                ):
                     validated_subjects = subject_names
                     break
 
             assignments = self.vector_store_assignments.setdefault(
-                vector_store_name, {})
+                vector_store_name, {}
+            )
             assignments[assignment_key] = validated_subjects
 
             if validated_subjects:
@@ -263,28 +290,25 @@ class VectorStoreService:
                 )
 
             if self.cache_service:
-                self.cache_service.set(cache_key,
-                                       validated_subjects,
-                                       ttl_seconds=self.cache_ttl)
+                self.cache_service.set(
+                    cache_key, validated_subjects, ttl_seconds=self.cache_ttl
+                )
 
             return validated_subjects
 
         except subprocess.CalledProcessError as e:
-            self.logger.error(
-                f"Failed to fetch domain {vector_store_name}: {e}")
+            self.logger.error(f"Failed to fetch domain {vector_store_name}: {e}")
         except Exception as e:
-            self.logger.error(
-                f"Error fetching assigned {subject_type}: {e}")
+            self.logger.error(f"Error fetching assigned {subject_type}: {e}")
 
         self.console.print(
             f"[yellow]ℹ Could not fetch {subject_type} for vector store '{vector_store_name}'[/]"
         )
         return []
 
-    def get_assigned_users(self,
-                           vector_store_name: str,
-                           namespace: str = "ibm-cas",
-                           use_cache: bool = True) -> List[str]:
+    def get_assigned_users(
+        self, vector_store_name: str, namespace: str = "ibm-cas", use_cache: bool = True
+    ) -> list[str]:
         """
         Fetch all assigned users for a vector store from the domain resource
 
@@ -302,16 +326,16 @@ class VectorStoreService:
         return self._get_validated_subjects(
             vector_store_name=vector_store_name,
             namespace=namespace,
-            subject_type='users',
-            validation_type='ValidatedUsers',
-            assignment_key='ocp_users',
-            cache_key_prefix='domain_users',
-            success_label='user')
+            subject_type="users",
+            validation_type="ValidatedUsers",
+            assignment_key="ocp_users",
+            cache_key_prefix="domain_users",
+            success_label="user",
+        )
 
-    def get_assigned_groups(self,
-                            vector_store_name: str,
-                            namespace: str = "ibm-cas",
-                            use_cache: bool = True) -> List[str]:
+    def get_assigned_groups(
+        self, vector_store_name: str, namespace: str = "ibm-cas", use_cache: bool = True
+    ) -> list[str]:
         """
         Fetch all assigned groups for a vector store from the domain resource
 
@@ -329,11 +353,12 @@ class VectorStoreService:
         return self._get_validated_subjects(
             vector_store_name=vector_store_name,
             namespace=namespace,
-            subject_type='groups',
-            validation_type='ValidatedGroups',
-            assignment_key='groups',
-            cache_key_prefix='domain_groups',
-            success_label='group')
+            subject_type="groups",
+            validation_type="ValidatedGroups",
+            assignment_key="groups",
+            cache_key_prefix="domain_groups",
+            success_label="group",
+        )
 
     def sync_vector_stores(self, namespace: str = "ibm-cas") -> int:
         """

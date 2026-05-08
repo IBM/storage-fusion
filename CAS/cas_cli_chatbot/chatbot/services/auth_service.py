@@ -2,27 +2,37 @@
 Enhanced Authentication Service with token caching and retry logic
 """
 
-import subprocess
-import requests
 import logging
-from urllib.parse import urlparse
-from typing import Optional
+import subprocess
 from datetime import datetime, timedelta
-import re
+from os import PathLike
+from typing import Any, Protocol
+from urllib.parse import urlparse
+
 
 class AuthenticationError(Exception):
     """Authentication related errors"""
+
     pass
 
 
 class ConfigurationError(Exception):
     """Configuration related errors"""
+
     pass
+
+
+class CacheServiceProtocol(Protocol):
+    """Protocol for cache service used by authentication."""
+
+    def set(self, key: str, value: str, ttl_seconds: int) -> None: ...
+
+    def delete(self, key: str) -> bool: ...
 
 
 class AuthService:
     """Enhanced authentication service with caching and retry logic"""
-    
+
     # Constants
     DEFAULT_TOKEN_REFRESH_THRESHOLD = 300  # 5 minutes in seconds
     DEFAULT_OC_LOGIN_TIMEOUT = 30  # seconds
@@ -30,40 +40,42 @@ class AuthService:
     OPENSHIFT_API_PORT = 6443
     DEFAULT_TOKEN_EXPIRY_HOURS = 24  # hours
 
-    def __init__(self,
-                 config: dict,
-                 logger: logging.Logger,
-                 cache_service=None):
-        self.config = config
+    def __init__(
+        self,
+        config: dict[str, Any],
+        logger: logging.Logger,
+        cache_service: CacheServiceProtocol | None = None,
+    ) -> None:
+        self.config: dict[str, Any] = config
         self.logger = logger
         self.cache_service = cache_service
 
         # OpenShift credentials
-        self.username = config.get("oc_username")
-        self.password = config.get("oc_password")
-        self.console_url = config.get("console_url")
-        self.token = None  # Bearer token fetched once at login
-        self.token_expiry = None
+        self.username: str = str(config.get("oc_username"))
+        self.password: str = str(config.get("oc_password"))
+        self.console_url: str = str(config.get("console_url"))
+        self.token: str | None = None  # Bearer token fetched once at login
+        self.token_expiry: datetime | None = None
         self.token_fetch_attempted = False  # Track if we've tried to fetch token
 
         # Configuration
         self.allow_self_signed = config.get("allow_self_signed", True)
         self.token_refresh_threshold = config.get(
-            "token_refresh_threshold",
-            self.DEFAULT_TOKEN_REFRESH_THRESHOLD
+            "token_refresh_threshold", self.DEFAULT_TOKEN_REFRESH_THRESHOLD
         )
 
         # Validate required fields
         self._validate_config()
 
-    def _validate_config(self):
+    def _validate_config(self) -> None:
         """Validate authentication configuration"""
         required = ["oc_username", "oc_password", "console_url"]
         missing = [field for field in required if not self.config.get(field)]
 
         if missing:
             raise ConfigurationError(
-                f"Missing required auth config: {', '.join(missing)}")
+                f"Missing required auth config: {', '.join(missing)}"
+            )
 
     def get_api_url_from_console(self) -> str:
         """Extract API URL from OpenShift console URL"""
@@ -75,14 +87,13 @@ class AuthService:
                 raise ValueError("Invalid console URL - no hostname found")
 
             if host.startswith("console-openshift-console.apps."):
-                api_host = host.replace("console-openshift-console.apps.",
-                                        "api.")
+                api_host = host.replace("console-openshift-console.apps.", "api.")
                 return f"https://{api_host}:{self.OPENSHIFT_API_PORT}"
 
             raise ValueError("Unsupported OpenShift Console URL format")
 
         except Exception as e:
-            raise ConfigurationError(f"Failed to parse console URL: {e}")
+            raise ConfigurationError(f"Failed to parse console URL: {e}") from e
 
     def authenticate(self) -> bool:
         """
@@ -107,13 +118,22 @@ class AuthService:
 
             self.logger.info(f"Authenticating with OpenShift: {api_url}")
 
-            result = subprocess.run([
-                "oc", "login", api_url, "--username", self.username,
-                "--password", self.password, "--insecure-skip-tls-verify"
-            ],
-                                    capture_output=True,
-                                    text=True,
-                                    timeout=self.DEFAULT_OC_LOGIN_TIMEOUT)
+            login_command: list[str | bytes | PathLike[str] | PathLike[bytes]] = [
+                "oc",
+                "login",
+                api_url,
+                "--username",
+                self.username,
+                "--password",
+                self.password,
+                "--insecure-skip-tls-verify",
+            ]
+            result = subprocess.run(
+                login_command,
+                capture_output=True,
+                text=True,
+                timeout=self.DEFAULT_OC_LOGIN_TIMEOUT,
+            )
 
             if result.returncode != 0:
                 self.logger.error(f"OC login failed: {result.stderr}")
@@ -121,40 +141,45 @@ class AuthService:
 
             # Fetch bearer token immediately after successful login
             self.logger.info("Fetching bearer token...")
-            token_result = subprocess.run(['oc', 'whoami', '-t'],
-                                          capture_output=True,
-                                          text=True,
-                                          timeout=self.DEFAULT_OC_WHOAMI_TIMEOUT)
+            token_result = subprocess.run(
+                ["oc", "whoami", "-t"],
+                capture_output=True,
+                text=True,
+                timeout=self.DEFAULT_OC_WHOAMI_TIMEOUT,
+            )
 
             if token_result.returncode != 0:
                 self.logger.error("Failed to retrieve bearer token")
-                raise AuthenticationError(
-                    "Failed to retrieve authentication token")
+                raise AuthenticationError("Failed to retrieve authentication token")
 
-            self.token = token_result.stdout.strip()
+            token_output = token_result.stdout
+            if isinstance(token_output, bytes):
+                token_output = token_output.decode()
+
+            self.token = token_output.strip()
 
             if not self.token:
                 self.logger.error("Bearer token is empty")
                 raise AuthenticationError("Bearer token is empty")
 
             # Set token expiry (default 24 hours for OCP tokens)
-            self.token_expiry = datetime.now() + timedelta(hours=self.DEFAULT_TOKEN_EXPIRY_HOURS)
+            self.token_expiry = datetime.now() + timedelta(
+                hours=self.DEFAULT_TOKEN_EXPIRY_HOURS
+            )
 
             # Cache token if cache service available
             if self.cache_service:
-                self.cache_service.set('auth_token',
-                                       self.token,
-                                       ttl_seconds=86400)
+                self.cache_service.set("auth_token", self.token, ttl_seconds=86400)
 
             self.logger.info("Successfully authenticated and obtained bearer token")
             return True
 
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as e:
             self.logger.error("Authentication timed out")
-            raise AuthenticationError("Authentication timed out")
+            raise AuthenticationError("Authentication timed out") from e
         except Exception as e:
             self.logger.error(f"Authentication failed: {e}")
-            raise AuthenticationError(f"Authentication failed: {e}")
+            raise AuthenticationError(f"Authentication failed: {e}") from e
 
     def _is_token_valid(self) -> bool:
         """Check if current token is still valid"""
@@ -170,7 +195,7 @@ class AuthService:
 
         return True
 
-    def refresh_tokens(self):
+    def refresh_tokens(self) -> None:
         """Refresh all authentication tokens"""
         self.logger.info("Refreshing authentication tokens")
 
@@ -184,30 +209,30 @@ class AuthService:
     def has_valid_token(self) -> bool:
         """
         Check if a valid bearer token exists
-        
+
         Returns:
             True if token exists and is valid, False otherwise
         """
         return bool(self.token and self._is_token_valid())
 
-    def get_token_info(self) -> dict:
+    def get_token_info(self) -> dict[str, bool | int]:
         """Get information about current tokens"""
-        info = {
-            'oc_authenticated': bool(self.token),
-            'token_valid': self.has_valid_token(),
-            'token_fetch_attempted': self.token_fetch_attempted
+        info: dict[str, bool | int] = {
+            "oc_authenticated": bool(self.token),
+            "token_valid": self.has_valid_token(),
+            "token_fetch_attempted": self.token_fetch_attempted,
         }
 
         if self.token_expiry:
             time_left = (self.token_expiry - datetime.now()).total_seconds()
-            info['oc_token_expires_in'] = max(0, int(time_left))
+            info["oc_token_expires_in"] = max(0, int(time_left))
 
         return info
 
-    def logout(self):
+    def logout(self) -> None:
         """Logout and clear tokens"""
         try:
-            subprocess.run(['oc', 'logout'], capture_output=True, timeout=10)
+            subprocess.run(["oc", "logout"], capture_output=True, timeout=10)
             self.logger.info("Logged out from OpenShift")
         except Exception as e:
             self.logger.warning(f"Logout failed: {e}")
@@ -218,6 +243,4 @@ class AuthService:
 
         # Clear cache
         if self.cache_service:
-            self.cache_service.delete('auth_token')
-
-
+            self.cache_service.delete("auth_token")

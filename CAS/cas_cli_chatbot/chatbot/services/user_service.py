@@ -2,26 +2,41 @@
 Enhanced User Service with caching and improved error handling
 """
 
-import subprocess
 import json
 import logging
-from typing import List, Dict, Optional
+import subprocess
+from typing import Any, Protocol, cast
+
 from chatbot.utils.validators import InputValidator, ValidationError
+
+
+class CacheServiceProtocol(Protocol):
+    def get(self, key: str) -> Any: ...
+    def set(self, key: str, value: Any, ttl_seconds: int) -> None: ...
+    def delete(self, key: str) -> bool: ...
 
 
 class UserService:
     """Enhanced user service with caching support"""
 
-    def __init__(self, config: dict, auth_service, logger: logging.Logger, cache_service=None):
-        self.config = config
+    def __init__(
+        self,
+        config: dict[str, Any],
+        auth_service: Any,
+        logger: logging.Logger,
+        cache_service: CacheServiceProtocol | None = None,
+    ) -> None:
+        self.config: dict[str, Any] = config
         self.auth_service = auth_service
         self.logger = logger
         self.cache_service = cache_service
 
         # Cache TTL in seconds
-        self.cache_ttl = config.get('cache', {}).get('user_cache_ttl', 600)  # 10 minutes
+        self.cache_ttl = config.get("cache", {}).get(
+            "user_cache_ttl", 600
+        )  # 10 minutes
 
-    def list_oc_users(self, use_cache: bool = True) -> List[str]:
+    def list_oc_users(self, use_cache: bool = True) -> list[str]:
         """
         List all users in OpenShift cluster
 
@@ -37,8 +52,9 @@ class UserService:
         if use_cache and self.cache_service:
             cached = self.cache_service.get(cache_key)
             if cached is not None:
-                self.logger.debug(f"Retrieved {len(cached)} OCP users from cache")
-                return cached
+                cached_users = cast(list[str], cached)
+                self.logger.debug(f"Retrieved {len(cached_users)} OCP users from cache")
+                return cached_users
 
         try:
             self.logger.info("Fetching OCP users from cluster")
@@ -47,7 +63,7 @@ class UserService:
                 ["oc", "get", "users", "-o", "json"],
                 check=True,
                 capture_output=True,
-                timeout=30
+                timeout=30,
             )
 
             data = json.loads(result.stdout.decode())
@@ -78,7 +94,7 @@ class UserService:
             self.logger.error(f"Unexpected error fetching OCP users: {e}")
             return []
 
-    def get_user_details(self, username: str) -> Optional[Dict]:
+    def get_user_details(self, username: str) -> dict[str, Any] | None:
         """
         Get detailed information about a user
 
@@ -94,30 +110,30 @@ class UserService:
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
             return None
-        
+
         # Try OCP
         try:
             result = subprocess.run(
                 ["oc", "get", "user", username, "-o", "json"],
                 capture_output=True,
-                timeout=10
+                timeout=10,
             )
 
             if result.returncode == 0:
                 user_data = json.loads(result.stdout.decode())
                 return {
-                    'source': 'ocp',
-                    'username': username,
-                    'uid': user_data.get('metadata', {}).get('uid'),
-                    'created': user_data.get('metadata', {}).get('creationTimestamp'),
-                    'identities': user_data.get('identities', [])
+                    "source": "ocp",
+                    "username": username,
+                    "uid": user_data.get("metadata", {}).get("uid"),
+                    "created": user_data.get("metadata", {}).get("creationTimestamp"),
+                    "identities": user_data.get("identities", []),
                 }
         except Exception as e:
             self.logger.debug(f"User not found in OCP: {e}")
 
         return None
 
-    def search_users(self, query: str, use_cache: bool = True) -> List[str]:
+    def search_users(self, query: str, use_cache: bool = True) -> list[str]:
         """
         Search for users matching query
 
@@ -134,7 +150,7 @@ class UserService:
         except ValidationError as e:
             self.logger.error(f"Input validation failed: {e}")
             return []
-        
+
         query_lower = query.lower()
 
         ocp_users = self.list_oc_users(use_cache=use_cache)
@@ -146,7 +162,7 @@ class UserService:
 
         return matches
 
-    def sync_users(self) -> Dict[str, int]:
+    def sync_users(self) -> dict[str, int]:
         """
         Sync users from all sources (force cache refresh)
 
@@ -161,10 +177,7 @@ class UserService:
 
         # Fetch fresh data
         ocp_users = self.list_oc_users(use_cache=False)
-        stats = {
-            'ocp_count': len(ocp_users),
-            'total_unique': len(set(ocp_users))
-        }
+        stats = {"ocp_count": len(ocp_users), "total_unique": len(set(ocp_users))}
 
         self.logger.info(f"User sync complete: {stats}")
         return stats

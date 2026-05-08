@@ -4,9 +4,10 @@ Enhanced CAS Chatbot - Enterprise Edition
 Main entry point with improved error handling and initialization
 """
 
-import sys
 import logging
+import sys
 from pathlib import Path
+from typing import Any
 
 # Add parent directory to Python path to allow imports when running as script
 if __name__ == "__main__":
@@ -17,19 +18,20 @@ if __name__ == "__main__":
 from rich.console import Console
 from rich.panel import Panel
 
-from chatbot.utils.config_loader import ConfigLoader
-from chatbot.utils.config_manager import ConfigManager
-from chatbot.utils.logger import LoggerFactory
-from chatbot.utils.health_check import HealthChecker
-from chatbot.services.auth_service import AuthService
-from chatbot.services.user_service import UserService
-from chatbot.services.vector_store_service import VectorStoreService
-from chatbot.services.query_service import QueryService
-from chatbot.services.llm_service import LLMService
-from chatbot.services.cache_service import CacheService
-from chatbot.services.metrics_service import MetricsService
 from chatbot.cli.chatbot_cli import ChatbotCLI
 from chatbot.cli.middleware import ErrorHandler, SessionManager
+from chatbot.services.auth_service import AuthService
+from chatbot.services.cache_service import CacheService
+from chatbot.services.llm_service import LLMService
+from chatbot.services.metrics_service import MetricsService
+from chatbot.services.query_service import QueryService
+from chatbot.services.user_service import UserService
+from chatbot.services.vector_store_service import VectorStoreService
+from chatbot.utils.config_loader import ConfigLoader
+from chatbot.utils.config_manager import ConfigManager
+from chatbot.utils.health_check import HealthChecker
+from chatbot.utils.logger import LoggerFactory
+
 # Constants
 SEPARATOR_LINE_LENGTH = 60
 EXIT_CODE_KEYBOARD_INTERRUPT = 130
@@ -40,7 +42,7 @@ DEFAULT_LOG_BACKUP_COUNT = 5
 console = Console()
 
 
-def display_banner():
+def display_banner() -> None:
     """Display application banner"""
     banner = """
     ╔═══════════════════════════════════════════════════════════╗
@@ -54,7 +56,9 @@ def display_banner():
     console.print(Panel(banner, style="bold cyan"))
 
 
-def initialize_services(config: dict, logger: logging.Logger) -> dict:
+def initialize_services(
+    config: dict[str, Any], logger: logging.Logger
+) -> dict[str, Any]:
     """
     Initialize all services with dependency injection
 
@@ -67,36 +71,41 @@ def initialize_services(config: dict, logger: logging.Logger) -> dict:
     """
     console.print("\n[bold yellow]Initializing services...[/]")
 
-    services = {}
+    services: dict[str, Any] = {}
 
     try:
         # Core services
-        services['cache'] = CacheService(config=config, logger=logger)
-        services['metrics'] = MetricsService(config=config, logger=logger)
-        services['auth'] = AuthService(config=config,
-                                       logger=logger,
-                                       cache_service=services['cache'])
+        services["cache"] = CacheService(config=config, logger=logger)
+        services["metrics"] = MetricsService(config=config, logger=logger)
+        services["auth"] = AuthService(
+            config=config, logger=logger, cache_service=services["cache"]
+        )
 
         # Business logic services
-        services['user'] = UserService(config=config,
-                                       auth_service=services['auth'],
-                                       logger=logger,
-                                       cache_service=services['cache'])
-
-        services['vector store'] = VectorStoreService(
+        services["user"] = UserService(
             config=config,
-            auth_service=services['auth'],
+            auth_service=services["auth"],
             logger=logger,
-            cache_service=services['cache'])
+            cache_service=services["cache"],
+        )
 
-        services['query'] = QueryService(config=config,
-                                         auth_service=services['auth'],
-                                         logger=logger,
-                                         cache_service=services['cache'])
+        services["vector store"] = VectorStoreService(
+            config=config,
+            auth_service=services["auth"],
+            logger=logger,
+            cache_service=services["cache"],
+        )
 
-        services['llm'] = LLMService(config=config,
-                                     logger=logger,
-                                     metrics_service=services['metrics'])
+        services["query"] = QueryService(
+            config=config,
+            auth_service=services["auth"],
+            logger=logger,
+            cache_service=services["cache"],
+        )
+
+        services["llm"] = LLMService(
+            config=config, logger=logger, metrics_service=services["metrics"]
+        )
 
         console.print("[bold green]✓ All services initialized successfully[/]")
         return services
@@ -107,7 +116,7 @@ def initialize_services(config: dict, logger: logging.Logger) -> dict:
         raise
 
 
-def run_health_checks(services: dict, logger: logging.Logger) -> bool:
+def run_health_checks(services: dict[str, Any], logger: logging.Logger) -> bool:
     """
     Run health checks on all services
 
@@ -125,22 +134,21 @@ def run_health_checks(services: dict, logger: logging.Logger) -> bool:
 
     # Display results
     for service_name, status in results.items():
-        icon = "✓" if status['healthy'] else "✗"
-        color = "green" if status['healthy'] else "red"
+        icon = "✓" if status["healthy"] else "✗"
+        color = "green" if status["healthy"] else "red"
         console.print(f"[{color}]{icon} {service_name}: {status['message']}[/]")
 
-    all_healthy = all(r['healthy'] for r in results.values())
+    all_healthy = all(r["healthy"] for r in results.values())
 
     if all_healthy:
         console.print("[bold green]✓ All health checks passed[/]")
     else:
-        console.print(
-            "[bold yellow]⚠ Some services are unhealthy but continuing...[/]")
+        console.print("[bold yellow]⚠ Some services are unhealthy but continuing...[/]")
 
     return all_healthy
 
 
-def main():
+def main() -> int:
     """Main application entry point"""
 
     # Display banner
@@ -156,7 +164,7 @@ def main():
         config = config_manager.setup_interactive()
 
         # Load and validate configuration
-        console.print(f"\n[bold cyan]Validating configuration...[/]\n")
+        console.print("\n[bold cyan]Validating configuration...[/]\n")
         config_loader = ConfigLoader(config_path)
 
         # Validate configuration
@@ -167,13 +175,14 @@ def main():
         console.print("[bold green]✓ Configuration validated[/]")
 
         # Setup logging
-        log_config = config.get('logging', {})
+        log_config = config.get("logging", {})
         logger = LoggerFactory.create_logger(
             name="cas_chatbot",
             log_file=log_config.get("file", "cas_chatbot.log"),
             level=log_config.get("level", "INFO"),
             max_bytes=log_config.get("max_bytes", DEFAULT_LOG_MAX_BYTES),
-            backup_count=log_config.get("backup_count", DEFAULT_LOG_BACKUP_COUNT))
+            backup_count=log_config.get("backup_count", DEFAULT_LOG_BACKUP_COUNT),
+        )
 
         logger.info("=" * SEPARATOR_LINE_LENGTH)
         logger.info("CAS Chatbot Application Starting")
@@ -184,8 +193,8 @@ def main():
         session_manager = SessionManager(
             config=config,
             logger=logger,
-            session_file=config.get('session', {}).get('file',
-                                                       'session_history.json'))
+            session_file=config.get("session", {}).get("file", "session_history.json"),
+        )
 
         # Initialize services
         services = initialize_services(config, logger)
@@ -193,15 +202,14 @@ def main():
         # Authenticate and fetch bearer token
         console.print("\n[bold yellow]Authenticating with OpenShift...[/]")
         try:
-            success = services['auth'].authenticate()
+            success = services["auth"].authenticate()
             if success:
                 # Verify token was obtained
-                if services['auth'].token:
+                if services["auth"].token:
                     console.print("[bold green]✓ Authentication successful[/]")
-                    console.print(f"[dim]Bearer token obtained and cached[/]")
+                    console.print("[dim]Bearer token obtained and cached[/]")
                 else:
-                    console.print(
-                        "[bold red]✗ Failed to retrieve bearer token[/]")
+                    console.print("[bold red]✗ Failed to retrieve bearer token[/]")
                     console.print(
                         "[yellow]You cannot use commands until your token is valid.[/]"
                     )
@@ -214,26 +222,28 @@ def main():
                 console.print(
                     "[yellow]You cannot use commands until your token is valid.[/]"
                 )
-                console.print(
-                    "[yellow]Please check your credentials and try again.[/]")
+                console.print("[yellow]Please check your credentials and try again.[/]")
                 return 1
         except Exception as e:
             error_handler.handle_error(e, "Authentication")
             console.print(
-                "[yellow]You cannot use commands until your token is valid.[/]")
+                "[yellow]You cannot use commands until your token is valid.[/]"
+            )
             return 1
 
         # Run health checks
         run_health_checks(services, logger)
 
         # Initialize CLI
-        cli = ChatbotCLI(services=services,
-                         config=config,
-                         logger=logger,
-                         console=console,
-                         error_handler=error_handler,
-                         session_manager=session_manager,
-                         config_manager=config_manager)
+        cli = ChatbotCLI(
+            services=services,
+            config=config,
+            logger=logger,
+            console=console,
+            error_handler=error_handler,
+            session_manager=session_manager,
+            config_manager=config_manager,
+        )
 
         # Run CLI loop
         logger.info("Starting CLI interface")

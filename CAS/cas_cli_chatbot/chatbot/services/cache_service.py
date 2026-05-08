@@ -2,17 +2,16 @@
 Cache Service - In-memory caching with TTL support
 """
 
-import time
 import logging
-from typing import Any, Optional, Dict
-from datetime import datetime, timedelta
+import time
 from threading import Lock
+from typing import Any
 
 
 class CacheEntry:
     """Represents a cached entry with TTL"""
 
-    def __init__(self, value: Any, ttl_seconds: int = 300):
+    def __init__(self, value: Any, ttl_seconds: int = 300) -> None:
         self.value = value
         self.created_at = time.time()
         self.ttl_seconds = ttl_seconds
@@ -29,43 +28,47 @@ class CacheEntry:
 class CacheService:
     """
     Thread-safe in-memory cache service with TTL and statistics
-    
+
     This class provides a thread-safe caching mechanism with the following features:
     - Time-to-live (TTL) support for automatic expiration
     - LRU-style eviction when max entries is reached
     - Pattern-based cache clearing
     - Hit/miss statistics tracking
-    
+
     Thread Safety:
     - All public methods are protected by a single lock (self.lock)
     - Private methods (_evict_oldest) must be called while holding the lock
     - Statistics counters are updated atomically within lock-protected sections
     - Cache dictionary operations are always performed within lock context
-    
+
     Usage:
         cache = CacheService(config, logger)
         cache.set("key", "value", ttl_seconds=300)
         value = cache.get("key")
     """
 
-    def __init__(self, config: Dict, logger: Optional[logging.Logger] = None):
+    def __init__(
+        self, config: dict[str, Any], logger: logging.Logger | None = None
+    ) -> None:
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
-        self.cache: Dict[str, CacheEntry] = {}
+        self.cache: dict[str, CacheEntry] = {}
         self.lock = Lock()
 
         # Configuration
-        self.default_ttl = config.get('cache', {}).get('default_ttl', 300)
-        self.max_entries = config.get('cache', {}).get('max_entries', 1000)
+        self.default_ttl = config.get("cache", {}).get("default_ttl", 300)
+        self.max_entries = config.get("cache", {}).get("max_entries", 1000)
 
         # Statistics
         self.hits = 0
         self.misses = 0
         self.evictions = 0
 
-        self.logger.info(f"Cache service initialized (TTL: {self.default_ttl}s, Max: {self.max_entries})")
+        self.logger.info(
+            f"Cache service initialized (TTL: {self.default_ttl}s, Max: {self.max_entries})"
+        )
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """
         Get value from cache
 
@@ -93,7 +96,7 @@ class CacheService:
             self.logger.debug(f"Cache hit: {key} (age: {entry.get_age():.1f}s)")
             return entry.value
 
-    def set(self, key: str, value: Any, ttl_seconds: Optional[int] = None):
+    def set(self, key: str, value: Any, ttl_seconds: int | None = None) -> None:
         """
         Set value in cache
 
@@ -128,14 +131,14 @@ class CacheService:
                 return True
             return False
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear all cache entries"""
         with self.lock:
             count = len(self.cache)
             self.cache.clear()
             self.logger.info(f"Cache cleared ({count} entries)")
 
-    def clear_pattern(self, pattern: str):
+    def clear_pattern(self, pattern: str) -> None:
         """
         Clear entries matching pattern
 
@@ -144,21 +147,23 @@ class CacheService:
         """
         with self.lock:
             import fnmatch
+
             keys_to_delete = [
-                key for key in self.cache.keys()
-                if fnmatch.fnmatch(key, pattern)
+                key for key in self.cache.keys() if fnmatch.fnmatch(key, pattern)
             ]
 
             for key in keys_to_delete:
                 del self.cache[key]
 
             if keys_to_delete:
-                self.logger.info(f"Cleared {len(keys_to_delete)} entries matching '{pattern}'")
+                self.logger.info(
+                    f"Cleared {len(keys_to_delete)} entries matching '{pattern}'"
+                )
 
-    def _evict_oldest(self):
+    def _evict_oldest(self) -> None:
         """
         Evict oldest entry from cache
-        
+
         Note: This method must be called while holding self.lock
         """
         if not self.cache:
@@ -169,12 +174,11 @@ class CacheService:
         self.evictions += 1
         self.logger.debug(f"Evicted oldest entry: {oldest_key}")
 
-    def cleanup_expired(self):
+    def cleanup_expired(self) -> None:
         """Remove all expired entries"""
         with self.lock:
             expired_keys = [
-                key for key, entry in self.cache.items()
-                if entry.is_expired()
+                key for key, entry in self.cache.items() if entry.is_expired()
             ]
 
             for key in expired_keys:
@@ -183,7 +187,7 @@ class CacheService:
             if expired_keys:
                 self.logger.info(f"Cleaned up {len(expired_keys)} expired entries")
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get cache statistics with atomic reads"""
         with self.lock:
             # Read all values atomically within the lock
@@ -191,28 +195,28 @@ class CacheService:
             hits = self.hits
             misses = self.misses
             evictions = self.evictions
-            
+
             total_requests = hits + misses
             hit_rate = (hits / total_requests * 100) if total_requests > 0 else 0
 
             return {
-                'entries': entries,
-                'hits': hits,
-                'misses': misses,
-                'hit_rate_percent': round(hit_rate, 2),
-                'evictions': evictions,
-                'max_entries': self.max_entries
+                "entries": entries,
+                "hits": hits,
+                "misses": misses,
+                "hit_rate_percent": round(hit_rate, 2),
+                "evictions": evictions,
+                "max_entries": self.max_entries,
             }
 
-    def get_info(self, key: str) -> Optional[Dict[str, Any]]:
+    def get_info(self, key: str) -> dict[str, Any] | None:
         """Get information about a cache entry"""
         with self.lock:
             entry = self.cache.get(key)
             if entry:
                 return {
-                    'age_seconds': entry.get_age(),
-                    'ttl_seconds': entry.ttl_seconds,
-                    'expires_in': entry.ttl_seconds - entry.get_age(),
-                    'is_expired': entry.is_expired()
+                    "age_seconds": entry.get_age(),
+                    "ttl_seconds": entry.ttl_seconds,
+                    "expires_in": entry.ttl_seconds - entry.get_age(),
+                    "is_expired": entry.is_expired(),
                 }
             return None
