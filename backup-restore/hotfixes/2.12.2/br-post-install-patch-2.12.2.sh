@@ -1,8 +1,8 @@
 #!/bin/bash
-# Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.1 release.
-HOTFIX_NUMBER=4
-EXPECTED_VERSION=2.12.1
-IMAGE_SOURCE="br-2.12.1patch-offline-mirror.sh"
+# Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.2 release.
+HOTFIX_NUMBER=1
+EXPECTED_VERSION=2.12.2
+IMAGE_SOURCE="br-2.12.2patch-offline-mirror.sh"
 
 patch_usage() {
     echo "Patches the Fusion Backup & Restore install to ${EXPECTED_VERSION} hotfix ${HOTFIX_NUMBER}".
@@ -269,10 +269,6 @@ fi
 # make hub/cluster spoke connection settings to reconcile and resolve to the configmap
 resolve_hub_connection $HUB
 
-# update idp-agent-operator
-guardianidpagentoperator_img=$(build_icr_path ${CPOPEN_PREFIX} ${IDP_AGENT_OPERATOR})
-update_operator_csv ibm-dataprotectionagent.v2.12.1 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
-
 # update transaction-manager
 tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
 set_deployment_image transaction-manager transaction-manager "${tm_image}"
@@ -284,4 +280,3 @@ update_hotfix_configmap ${hotfix}
 echo "Please verify that the pods for the following deployment have successfully restarted:"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
-printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manager"

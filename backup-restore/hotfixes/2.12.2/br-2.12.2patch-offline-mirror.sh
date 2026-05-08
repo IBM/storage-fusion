@@ -9,9 +9,7 @@ HCI_PREFIX="cp.icr.io/cp/fusion-hci"
 SDS_PREFIX="cp.icr.io/cp/fusion-sds"
 CPOPEN_PREFIX="icr.io/cpopen"
 
-TRANSACTIONMANAGER=guardian-transaction-manager@sha256:bfbff98ffa547faa13e4d8ba3be0d25d466f2c8c2fe48314999799f338e11bb3
-IDP_AGENT_OPERATOR=idp-agent-operator@sha256:a12594769e8c0e718280875a22006265385e6d866b7b4507d6065e16a0dfd5bf
-
+TRANSACTIONMANAGER=guardian-transaction-manager@sha256:4f9042c6c1891147874f4539f8262c26346d8544f9e35d1936bdfc8c92201c88
 
 #check_cmd:
 # Returns:
@@ -52,12 +50,6 @@ copy_images() {
     skopeo copy --insecure-policy --preserve-digests --all docker://"$BNR_PREFIX"/"$IMAGE" "$DESTINATION"
   done
 
-  for IMAGE in "${CPOPENIMAGES[@]}"; do
-    DESTINATION=docker://$TARGET_PATH/cpopen/$IMAGE
-    echo -e "Copying\n Image: $(build_icr_path ${CPOPEN_PREFIX} ${IMAGE})\n Destination: docker://$TARGET_PATH/cpopen/$IMAGE\n"
-    skopeo copy --insecure-policy --preserve-digests --all docker://"$CPOPEN_PREFIX"/"$IMAGE" "$DESTINATION"
-  done
-
   for FUSIONHCIIMAGE in "${FUSIONIMAGES_HCI[@]}"; do
     DESTINATION=docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE
     echo -e "Copying\n Image: $(build_icr_path ${HCI_PREFIX} ${FUSIONHCIIMAGE})\n Destination: docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE\n"
@@ -75,10 +67,6 @@ declare -a IMAGES=(
   $TRANSACTIONMANAGER
 )
 
-declare -a CPOPENIMAGES=(
-  $IDP_AGENT_OPERATOR
-)
-
 declare -a FUSIONIMAGES_HCI=()
 
 declare -a FUSIONIMAGES_SDS=()
@@ -93,11 +81,6 @@ done
 for IMAGE in "${IMAGES[@]}"; do
   ICR_PATH=
   ICR_IMAGE_PATHS+=($(build_icr_path ${BNR_PREFIX} ${IMAGE}))
-done
-
-for IMAGE in "${CPOPENIMAGES[@]}"; do
-  ICR_PATH=
-  ICR_IMAGE_PATHS+=($(build_icr_path ${CPOPEN_PREFIX} ${IMAGE}))
 done
 
 for IMAGE in "${FUSIONIMAGES_SDS[@]}"; do
