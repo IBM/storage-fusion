@@ -13,7 +13,7 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 ### Issues Fixed
 
 1. **Handle transient network failure in check hook**
-2. **Second hotfix for issue: Handle transient network failure in check hook **
+2. **Second hotfix for issue: Handle transient network failure in check hook**
 
 # Hotfix hotfix-2.12.2.1 
 
