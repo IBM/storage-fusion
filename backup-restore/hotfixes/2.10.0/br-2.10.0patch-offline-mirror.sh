@@ -11,6 +11,34 @@ TARGET_PATH="$1"
 export TARGET_PATH
 set -e
 
+echo "Validating prerequisites..."
+
+if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    echo "ERROR: Bash 4.0 or higher required. Current version: ${BASH_VERSION}"
+    exit 1
+fi
+echo "Bash version: ${BASH_VERSION} - OK"
+
+if ! command -v skopeo &> /dev/null; then
+    echo "ERROR: skopeo command not found. Please install skopeo."
+    exit 1
+fi
+echo "skopeo command found - OK"
+
+detect_os() {
+    case "$(uname -s)" in
+        Darwin*) echo "macos" ;;
+        Linux*)  echo "linux" ;;
+        *)       echo "unknown" ;;
+    esac
+}
+OS_TYPE="$(detect_os)"
+
+if [[ "${OS_TYPE}" == "unknown" ]]; then
+    echo "WARNING: Unknown OS detected. Script tested on Linux and macOS only."
+fi
+echo "Detected OS: ${OS_TYPE}"
+
 BACKUPLOCATION=guardian-backup-location@sha256:5efd82d5e568cc3cd17cc1fd931d4228f87804683cffc87d34c81eec73dd4986
 BACKUPSERVICE=guardian-backup-service@sha256:2c8f3cd0fe7e2a5db9ba9fb5bb230266b960195ba76ebf0a9cf2cdb7e3c5ab98
 BACKUPPOLICY=guardian-backup-policy@sha256:7a6e5982598e093f6be50dbf89e7638ed67600403a7681e3fb328e27eab8360a
@@ -47,25 +75,26 @@ declare -a FUSIONIMAGES_SDS=(
 )
 
 for IMAGE in "${IMAGES[@]}"; do
-  DESTINATION=docker://$TARGET_PATH/cp/bnr/$IMAGE
-  echo -e "Copying\n Image: $IMAGE\n Destination: docker://$TARGET_PATH/cp/bnr/$IMAGE\n"
+  DESTINATION="docker://${TARGET_PATH}/cp/bnr/${IMAGE}"
+  echo -e "Copying\n Image: $IMAGE\n Destination: docker://${TARGET_PATH}/cp/bnr/${IMAGE}\n"
   skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/bnr/"$IMAGE" "$DESTINATION"
 done
 
 for CPOPENIMAGE in "${CPOPENIMAGES[@]}"; do
-  DESTINATION=docker://$TARGET_PATH/cpopen/$CPOPENIMAGE
-  echo -e "Copying\n Image: $CPOPENIMAGE\n Destination: docker://$TARGET_PATH/cpopen/$CPOPENIMAGE\n"
+  DESTINATION="docker://${TARGET_PATH}/cpopen/${CPOPENIMAGE}"
+  echo -e "Copying\n Image: $CPOPENIMAGE\n Destination: docker://${TARGET_PATH}/cpopen/${CPOPENIMAGE}\n"
   skopeo copy --insecure-policy --preserve-digests --all docker://icr.io/cpopen/"$CPOPENIMAGE" "$DESTINATION"
 done
 
 for FUSIONHCIIMAGE in "${FUSIONIMAGES_HCI[@]}"; do
-  DESTINATION=docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE
-  echo -e "Copying\n Image: $FUSIONHCIIMAGE\n Destination: docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE\n"
+  DESTINATION="docker://${TARGET_PATH}/cp/fusion-hci/${FUSIONHCIIMAGE}"
+  echo -e "Copying\n Image: $FUSIONHCIIMAGE\n Destination: docker://${TARGET_PATH}/cp/fusion-hci/${FUSIONHCIIMAGE}\n"
   skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fusion-hci/"$FUSIONHCIIMAGE" "$DESTINATION"
 done
 
 for FUSIONSDSIMAGE in "${FUSIONIMAGES_SDS[@]}"; do
-  DESTINATION=docker://$TARGET_PATH/cp/fusion-sds/$FUSIONSDSIMAGE
-  echo -e "Copying\n Image: $FUSIONSDSIMAGE\n Destination: docker://$TARGET_PATH/cp/fusion-sds/$FUSIONSDSIMAGE\n"
+  DESTINATION="docker://${TARGET_PATH}/cp/fusion-sds/${FUSIONSDSIMAGE}"
+  echo -e "Copying\n Image: $FUSIONSDSIMAGE\n Destination: docker://${TARGET_PATH}/cp/fusion-sds/${FUSIONSDSIMAGE}\n"
   skopeo copy --insecure-policy --preserve-digests --all docker://cp.icr.io/cp/fusion-sds/"$FUSIONSDSIMAGE" "$DESTINATION"
 done
+
