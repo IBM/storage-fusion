@@ -21,6 +21,12 @@ spec:
       excludedResourceTypes:
         - clusterserviceversions
         - pods 
+    - name: db2u-scc-resources
+      type: resource
+      includeClusterResources: true
+      includedResourceTypes:
+        - securitycontextconstraints.security.openshift.io
+      labelSelector: type=db2u
   hooks:
   - name: db2u-operator-check
     type: check
@@ -86,6 +92,7 @@ spec:
     sequence:
     - hook: db2u-operator-manager-exec/maintenance-mode-on
     - group: db2u-cluster-resources
+    - group: db2u-scc-resources
     - group: db2u-resources
     - hook: db2uclusters-pod-exec/suspend
     - group: db2u-volumes
@@ -94,6 +101,7 @@ spec:
   - name: restore
     sequence:
     - group: db2u-cluster-resources
+    - group: db2u-scc-resources
     - group: db2u-volumes
     - group: db2u-resources
     - hook: db2u-operator-check/replicasReady
