@@ -14,6 +14,14 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 1. **Handle transient network failure in check hook** (#73265)
 
+# Hotfix hotfix-2.12.2.1 
+
+**Release Date:** May 7th, 2026
+
+### Issues Fixed
+
+1. **Handle transient network failure in check hook** (#73265)
+2. **Second hotfix for issue 73265 Handle transient network failure in check hook** (#73265)
 
 ## Installation
 
