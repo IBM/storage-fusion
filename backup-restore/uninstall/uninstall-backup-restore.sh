@@ -3,7 +3,7 @@
 # Uninstall hub before uninstalling any of the spokes.
 # Make sure you are logged into the correct cluster.
 
-VERSION=202604212140  # Use YYYYMMDDhhmm UTC
+VERSION=202605102115  # Use YYYYMMDDhhmm UTC
 LOG=/tmp/$(basename "$0")_log.txt
 rm -f "$LOG"
 exec &> >(tee -a "$LOG")
@@ -228,6 +228,9 @@ if [ "$SKIP_ISF_CRS" == "true" ]
      [ -n "$BSL_SECRET" ] && oc -n "${ISF_NS}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' secret $BSL_SECRET
 fi
 
+print_heading "Disable any networkpolicysets"
+NPS=$(oc -n "${NAMESPACE}" get networkpolicysets -o name)
+[ -n "$NPS" ] && oc -n "${NAMESPACE}" patch --type json -p '[{"op": "replace", "path": "/spec/enabled", "value": false}]' $NPS
 print_heading "Delete any networkpolicies CRs"
 oc delete networkpolicies -n "${NAMESPACE}" --all --timeout=60s
 print_heading "Delete any networkpolicysets CRs"
@@ -286,11 +289,14 @@ if oc get redis redis -n "${NAMESPACE}" >/dev/null 2>&1; then
    oc patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' redis redis -n "${NAMESPACE}"
    oc delete redis redis -n "${NAMESPACE}"
 fi
-
 if oc get redis redis -n "${NAMESPACE}" >/dev/null 2>&1; then
-    echo "Redis instance still exists. You may need to deleted it manually."
+    echo "WARNING: Redis instance still exists. You may need to deleted it manually."
 fi
 
+NPS=$(oc -n "${NAMESPACE}" get networkpolicysets -o name)
+[ -n "$NPS" ] && oc -n "${NAMESPACE}" patch --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' $NPS
+NPS=$(oc -n "${NAMESPACE}" get networkpolicysets -o name)
+[ -n "$NPS" ] && echo "WARNING: $NPS still exist. You may need to deleted them manually."
 # Subscriptions for dependent operators
 SUBSCRIPTION_NAMES=$(oc -n "${NAMESPACE}" get subs --no-headers | cut -d" " -f1)
 
