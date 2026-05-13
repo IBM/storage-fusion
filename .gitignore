@@ -1,3 +1,5 @@
 .history/.idea/
 .idea/
+.env/
+config.yaml
 .history

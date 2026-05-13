@@ -1,0 +1,288 @@
+"""
+CLI Middleware - Error handling and session management
+"""
+
+import json
+import logging
+import traceback
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from rich.console import Console
+
+# Constants
+MAX_QUERY_PREVIEW_LENGTH = 50
+
+
+class ErrorHandler:
+    """Centralized error handling"""
+
+    def __init__(self, logger: logging.Logger, console: Console) -> None:
+        self.logger = logger
+        self.console = console
+        self.error_count = 0
+
+    def handle_error(self, error: Exception, context: str = "") -> None:
+        """
+        Handle an error with logging and user notification
+
+        Args:
+            error: The exception that occurred
+            context: Context information about where the error occurred
+        """
+        self.error_count += 1
+
+        error_msg = str(error)
+        error_type = type(error).__name__
+
+        # Log full traceback
+        self.logger.error(f"Error in {context}: {error_type}: {error_msg}")
+        self.logger.debug(traceback.format_exc())
+
+        # User-friendly error message
+        self.console.print(f"\n[bold red]✗ Error:[/] {error_msg}")
+
+        if context:
+            self.console.print(f"[dim]Context: {context}[/]")
+
+        # Suggest actions based on error type
+        suggestions = self._get_error_suggestions(error)
+        if suggestions:
+            self.console.print(f"[yellow]Suggestion:[/] {suggestions}")
+
+    def _get_error_suggestions(self, error: Exception) -> str:
+        """Get user-friendly suggestions based on error type"""
+        error_type = type(error).__name__
+
+        suggestions = {
+            "ConnectionError": "Check network connectivity and service availability",
+            "TimeoutError": "Service may be slow or unavailable. Try again later",
+            "AuthenticationError": "Check credentials in config.yaml",
+            "PermissionError": "Insufficient permissions. Check user access rights",
+            "FileNotFoundError": "Required file not found. Check file paths",
+            "KeyError": "Configuration may be incomplete. Review config.yaml",
+            "ValueError": "Invalid input provided. Check command parameters",
+            "subprocess.CalledProcessError": "External command failed. Check oc CLI installation",
+        }
+
+        return suggestions.get(error_type, "Check logs for more details")
+
+    def get_error_count(self) -> int:
+        """Get total error count"""
+        return self.error_count
+
+    def reset_count(self) -> None:
+        """Reset error counter"""
+        self.error_count = 0
+
+
+class SessionManager:
+    """Manage user session data and history"""
+
+    def __init__(
+        self,
+        config: dict[str, Any],
+        logger: logging.Logger,
+        session_file: str = "session_history.json",
+    ) -> None:
+        self.config: dict[str, Any] = config
+        self.logger = logger
+        self.session_file = Path(session_file)
+
+        # Delete old session file if it exists
+        if self.session_file.exists():
+            try:
+                self.session_file.unlink()
+                self.logger.info(f"Deleted old session file: {self.session_file}")
+            except Exception as e:
+                self.logger.warning(f"Failed to delete old session file: {e}")
+
+        # Create new session history with proper type annotations
+        self.history: dict[str, Any] = {
+            "session_start": datetime.now().isoformat(),
+            "queries": [],
+            "assignments": [],
+            "events": [],
+        }
+        self.logger.info(
+            f"Created new session starting at {self.history['session_start']}"
+        )
+
+    def _load(self) -> dict[str, Any]:
+        """Load session history from file (deprecated - now creates fresh session)"""
+        # This method is kept for compatibility but no longer loads old sessions
+        return {}
+
+    def save(self) -> None:
+        """Save session history to file"""
+        try:
+            self.history["last_updated"] = datetime.now().isoformat()
+
+            with open(self.session_file, "w") as f:
+                json.dump(self.history, f, indent=2)
+
+            self.logger.debug("Session saved")
+        except Exception as e:
+            self.logger.error(f"Failed to save session: {e}")
+
+    def add_query(
+        self,
+        user: str,
+        query: str,
+        vector_store: str | None = None,
+        answer: None | str = "",
+        user_type: str = "ocp",
+        authenticated: bool = False,
+    ) -> None:
+        """Add a query to history with authentication details"""
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "user": user,
+            "query": query,
+            "vector_store": vector_store,
+            "answer": answer,
+            "user_type": user_type,
+            "authenticated": authenticated,
+            "authenticated_at": datetime.now().isoformat() if authenticated else None,
+        }
+
+        self.history.setdefault("queries", []).append(entry)
+        self.save()
+        self.logger.debug(f"Query added to session: {query[:MAX_QUERY_PREVIEW_LENGTH]}")
+
+    def add_file_lookup(
+        self,
+        user: str,
+        vector_store_id: str,
+        file_id: str,
+        file_content: str = "",
+        user_type: str = "ocp",
+        authenticated: bool = False,
+    ) -> None:
+        """Add a file content retrieval to history with authentication details"""
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "user": user,
+            "vector_store_id": vector_store_id,
+            "file_id": file_id,
+            "file_content": file_content,
+            "user_type": user_type,
+            "authenticated": authenticated,
+            "authenticated_at": datetime.now().isoformat() if authenticated else None,
+        }
+
+        self.history.setdefault("file_lookups", []).append(entry)
+        self.save()
+        self.logger.debug(
+            f"File lookup added to session: file {file_id} in vector store {vector_store_id}"
+        )
+
+    def add_event(self, event_type: str, details: dict[str, Any]) -> None:
+        """Add a general event to history"""
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "type": event_type,
+            "details": details,
+        }
+
+        self.history.setdefault("events", []).append(entry)
+        self.save()
+
+    def get_history(self) -> dict[str, Any]:
+        """Get full session history"""
+        return self.history
+
+    def get_queries(self, limit: int | None = None) -> list[dict[str, Any]]:
+        """Get query history"""
+        queries: list[dict[str, Any]] = self.history.get("queries", [])
+        return queries[-limit:] if limit else queries
+
+    def get_statistics(self) -> dict[str, Any]:
+        """Get session statistics"""
+        queries: list[dict[str, Any]] = self.history.get("queries", [])
+
+        # Count unique vector stores from queries
+        unique_vector_stores = {
+            q.get("vector_store")
+            for q in queries
+            if isinstance(q, dict) and q.get("vector_store")
+        }
+
+        return {
+            "total_queries": len(queries),
+            "unique_vector_stores": len(unique_vector_stores),
+            "session_start": self.history.get("session_start", "Unknown"),
+            "last_updated": self.history.get("last_updated", "Unknown"),
+        }
+
+    def clear(self) -> None:
+        """Clear session history"""
+        self.history = {
+            "session_start": datetime.now().isoformat(),
+            "queries": [],
+            "assignments": [],
+            "events": [],
+        }
+        self.save()
+        self.logger.info("Session history cleared")
+
+    def export(self, filename: str) -> None:
+        """Export session to a file"""
+        export_data = {**self.history, "exported_at": datetime.now().isoformat()}
+
+        with open(filename, "w") as f:
+            json.dump(export_data, f, indent=2)
+
+        self.logger.info(f"Session exported to {filename}")
+
+    def import_session(self, filename: str) -> None:
+        """Import session from a file"""
+        with open(filename) as f:
+            imported_data = json.load(f)
+
+        # Merge with current session
+        for key in ["queries", "assignments", "events"]:
+            if key in imported_data:
+                self.history.setdefault(key, []).extend(imported_data[key])
+
+        self.save()
+        self.logger.info(f"Session imported from {filename}")
+
+
+class RateLimiter:
+    """Simple rate limiter for API calls"""
+
+    def __init__(self, max_requests: int, time_window: int):
+        """
+        Args:
+            max_requests: Maximum number of requests
+            time_window: Time window in seconds
+        """
+        self.max_requests = max_requests
+        self.time_window = time_window
+        self.requests: list[float] = []
+
+    def can_proceed(self) -> bool:
+        """Check if request can proceed"""
+        now = datetime.now().timestamp()
+
+        # Remove old requests
+        self.requests = [req for req in self.requests if now - req < self.time_window]
+
+        if len(self.requests) < self.max_requests:
+            self.requests.append(now)
+            return True
+
+        return False
+
+    def get_wait_time(self) -> float:
+        """Get time to wait before next request"""
+        if not self.requests:
+            return 0.0
+
+        oldest = min(self.requests)
+        now = datetime.now().timestamp()
+        wait = self.time_window - (now - oldest)
+
+        return max(0.0, wait)
