@@ -6,14 +6,22 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
-## Hotfix hotfix-2.12.2.1 (Latest)
+## Hotfix hotfix-2.12.2.2 (Latest)
+
+**Release Date:** May 10th, 2026
+
+### Issues Fixed
+
+1. **Handle transient network failure in check hook**
+2. **Second hotfix for issue: Handle transient network failure in check hook**
+
+# Hotfix hotfix-2.12.2.1 
 
 **Release Date:** May 7th, 2026
 
 ### Issues Fixed
 
-1. **Handle transient network failure in check hook** (#73265)
-
+1. **Handle transient network failure in check hook**
 
 ## Installation
 

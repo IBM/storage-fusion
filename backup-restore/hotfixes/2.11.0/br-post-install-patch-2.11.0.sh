@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=9
+HOTFIX_NUMBER=10
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -352,9 +352,47 @@ update_isf_operator_csv isf-operator.v2.11.0 "${isfdataprotection_img}"
 guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:7f1b66ca1876c23c3705da181499ba3ec015d90e3b8ea9b455af78763814cfa6
 update_operator_csv ibm-dataprotectionagent.v2.11.0 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
 
+update_guardian_configmap(){
+    echo "Saving original guardian-configmap yaml"
+    oc get configmap  -n $BR_NS guardian-configmap -o yaml > $DIR/guardian-configmap-original.yaml
+    echo adding the default value for volume Resize Threshold...
+    oc set data -n $BR_NS cm/guardian-configmap volumeResizeThreshold='95.0'
+}
 
+update_transaction_manager_clusterrole(){
+    echo "Updating transaction-manager-ibm-backup-restore ClusterRole with Prometheus API access..."
+    
+    # Check if ClusterRole exists
+    if ! oc get clusterrole transaction-manager-ibm-backup-restore &>/dev/null; then
+        echo "WARNING: ClusterRole transaction-manager-ibm-backup-restore not found. Skipping update."
+        return
+    fi
+    
+    # Save original ClusterRole
+    oc get clusterrole transaction-manager-ibm-backup-restore -o yaml > $DIR/transaction-manager-clusterrole-original.yaml
+    
+    # Check if the rule already exists
+    if oc get clusterrole transaction-manager-ibm-backup-restore -o yaml | grep -q "monitoring.coreos.com"; then
+        echo "Prometheus API rule already exists in ClusterRole. Skipping update."
+        return
+    fi
+    
+    # Add the new rule for Prometheus API access
+    patch='[{"op": "add", "path": "/rules/-", "value": {"verbs": ["get"], "apiGroups": ["monitoring.coreos.com"], "resources": ["prometheuses/api"], "resourceNames": ["k8s"]}}]'
+    
+    if [ -z "$DRY_RUN" ]; then
+        oc patch clusterrole transaction-manager-ibm-backup-restore --type='json' -p="${patch}"
+        echo "Successfully updated ClusterRole with Prometheus API access rule"
+    else
+        oc patch clusterrole transaction-manager-ibm-backup-restore --type='json' -p="${patch}" --dry-run=client -o yaml > $DIR/transaction-manager-clusterrole.patch.yaml
+        echo "Dry-run: ClusterRole patch saved to $DIR/transaction-manager-clusterrole.patch.yaml"
+    fi
+}
+
+update_guardian_configmap
+update_transaction_manager_clusterrole
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:06b9f642bc070af576345ce418d01e5b7bb9b10d2fbc284b2d72e2f91b65869b
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:04d60b053580cb0c8a6180c0fa51873f8ebc737d060d911889f97c3e1d7b2b7c
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
