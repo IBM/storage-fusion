@@ -12,31 +12,32 @@ Before you begin, ensure you have:
 - Valid credentials for OpenShift / CAS authentication
 - Optional: credentials or endpoints for one or more LLM providers (if you want LLM-assisted features)
 
-## Repository Location
-
-Run setup from the `cas_cli_chatbot` project root.
 
 ## Quick Start
 
-### 1. Create a Virtual Environment
+### 1. `cd` into the Project Root
+
+```bash
+cd CAS/cas_cli_chatbot
+```
+
+### 2. Create a Virtual Environment
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 2. Install Dependencies
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Start the Chatbot
-
-From the project root, run:
+### 4. Start the Chatbot
 
 ```bash
-cd CAS/cas_cli_chatbot/chatbot
+cd chatbot
 python3 main.py
 ```
 
