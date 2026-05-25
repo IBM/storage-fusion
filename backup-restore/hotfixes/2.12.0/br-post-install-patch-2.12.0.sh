@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.0 release.
-HOTFIX_NUMBER=4
+HOTFIX_NUMBER=5
 EXPECTED_VERSION=2.12.0
 IMAGE_SOURCE="br-2.12.0patch-offline-mirror.sh"
 
