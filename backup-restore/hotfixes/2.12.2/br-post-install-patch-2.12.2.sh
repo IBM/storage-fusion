@@ -269,6 +269,14 @@ fi
 # make hub/cluster spoke connection settings to reconcile and resolve to the configmap
 resolve_hub_connection $HUB
 
+update_guardian_configmap(){
+    echo "Saving original guardian-configmap yaml"
+    oc get configmap  -n $BR_NS guardian-configmap -o yaml > $DIR/guardian-configmap-original.yaml
+    echo adding the default value for volume Resize Threshold...
+    oc set data -n $BR_NS cm/guardian-configmap volumeResizeThreshold='95.0'
+}
+
+update_guardian_configmap
 # update transaction-manager
 tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
 set_deployment_image transaction-manager transaction-manager "${tm_image}"
