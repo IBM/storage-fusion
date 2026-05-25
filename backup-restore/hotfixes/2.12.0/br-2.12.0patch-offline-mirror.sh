@@ -11,7 +11,7 @@ CPOPEN_PREFIX="icr.io/cpopen"
 
 OADP_VELERO_14=fbr-velero@sha256:379a6d6a6dbe78fd09c3aa91b2f3fb44dff514ff5d62a1654cc1b3a126b8aee9
 TRANSACTIONMANAGER=guardian-transaction-manager@sha256:7bb7230a0e6fedf318e7670698575b91b211dd6e457ae7ac33665ae8c1992d48
-IDP_AGENT_OPERATOR=idp-agent-operator@sha256:ed13cba6e1821d300846a165ad8b1228dd39c79ec2f0008a8649b157eeab518e
+IDP_AGENT_OPERATOR=idp-agent-operator@sha256:7e4373cdc154a2f53ad872e13bd414de05dc58ccb2fefbe23a7ebf9ec3bb9655
 
 
 #check_cmd:
