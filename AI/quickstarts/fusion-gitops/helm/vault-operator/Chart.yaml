@@ -1,0 +1,24 @@
+apiVersion: v2
+name: vault-operator
+description: HashiCorp Vault Operator deployment for OpenShift with Fusion HCI storage integration
+type: application
+version: 1.0.0
+appVersion: "1.15.0"
+keywords:
+  - vault
+  - secrets
+  - hashicorp
+  - openshift
+  - operator
+home: https://github.com/ProjectAbell/Fusion-AI
+sources:
+  - https://github.com/hashicorp/vault
+  - https://github.com/hashicorp/vault-k8s
+maintainers:
+  - name: IBM Fusion Team
+    email: fusion-support@ibm.com
+annotations:
+  category: Security
+  licenses: MPL-2.0
+
+# Made with Bob

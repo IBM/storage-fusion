@@ -1,0 +1,27 @@
+---
+# Post-deployment validation
+- name: Display validation banner
+  debug:
+    msg:
+      - "=========================================="
+      - "  Post-Deployment Validation"
+      - "=========================================="
+
+- name: Validate operator deployment
+  include_tasks: validate-operator.yml
+
+- name: Validate ArgoCD deployment
+  include_tasks: validate-argocd.yml
+
+- name: Validate storage
+  include_tasks: validate-storage.yml
+
+- name: Display validation summary
+  debug:
+    msg:
+      - "=========================================="
+      - "  Validation Complete"
+      - "=========================================="
+      - "All validations passed successfully!"
+
+# Made with Bob

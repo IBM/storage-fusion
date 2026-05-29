@@ -1,0 +1,31 @@
+---
+# Pre-flight checks for Red Hat GitOps deployment
+- name: Display preflight check banner
+  debug:
+    msg:
+      - "=========================================="
+      - "  Pre-flight Checks"
+      - "=========================================="
+
+- name: Include cluster connectivity checks
+  include_tasks: check-cluster.yml
+
+- name: Include Fusion storage checks
+  include_tasks: check-fusion.yml
+  when: check_fusion_storage | default(true)
+
+- name: Include permissions checks
+  include_tasks: check-permissions.yml
+
+- name: Include prerequisites checks
+  include_tasks: check-prerequisites.yml
+
+- name: Display preflight check summary
+  debug:
+    msg:
+      - "=========================================="
+      - "  Pre-flight Checks Complete"
+      - "=========================================="
+      - "All checks passed successfully!"
+
+# Made with Bob

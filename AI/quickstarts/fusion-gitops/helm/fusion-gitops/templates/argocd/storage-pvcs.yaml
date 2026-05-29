@@ -1,0 +1,28 @@
+{{- if .Values.argocd.enabled }}
+{{- if .Values.argocd.repo.storage.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: argocd-repo-server-cache
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: repo-server
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "3"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  accessModes:
+    {{- toYaml .Values.argocd.repo.storage.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.argocd.repo.storage.size }}
+  storageClassName: {{ .Values.argocd.repo.storage.storageClassName | default .Values.storage.sharedStorageClass }}
+{{- end }}
+{{- end }}
+
+# NOTE: Redis persistent storage removed - not supported by ArgoCD operator
+# Redis uses ephemeral storage (emptyDir) automatically
+# Made with Bob

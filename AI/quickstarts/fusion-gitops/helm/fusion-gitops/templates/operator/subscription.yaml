@@ -1,0 +1,26 @@
+{{- if .Values.operator.enabled }}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{ .Values.operator.name }}
+  namespace: {{ .Values.operator.namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-3"
+spec:
+  channel: {{ .Values.operator.channel }}
+  installPlanApproval: {{ .Values.operator.installPlanApproval }}
+  name: {{ .Values.operator.name }}
+  source: {{ .Values.operator.source }}
+  sourceNamespace: {{ .Values.operator.sourceNamespace }}
+  {{- if .Values.operator.config }}
+  config:
+    {{- toYaml .Values.operator.config | nindent 4 }}
+  {{- end }}
+{{- end }}
+
+# Made with Bob

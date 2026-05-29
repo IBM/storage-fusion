@@ -1,0 +1,17 @@
+{{- if .Values.operator.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .Values.operator.name }}
+  namespace: {{ .Values.operator.namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-4"
+spec:
+  upgradeStrategy: Default
+{{- end }}
+
+# Made with Bob

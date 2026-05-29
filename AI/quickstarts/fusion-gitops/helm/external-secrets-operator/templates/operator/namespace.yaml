@@ -1,0 +1,6 @@
+{{- if .Values.operator.enabled }}
+# Namespace is created by deployment script, not by Helm
+# This prevents ownership conflicts
+{{- end }}
+
+# Made with Bob

@@ -1,0 +1,123 @@
+================================================================================
+  Red Hat GitOps Operator - Fusion HCI Integration
+================================================================================
+
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }} -n {{ .Release.Namespace }}
+  $ helm get all {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+================================================================================
+DEPLOYMENT STATUS
+================================================================================
+
+{{- if .Values.operator.install }}
+✓ GitOps Operator: Installing in namespace {{ include "fusion-gitops.operatorNamespace" . }}
+{{- end }}
+
+{{- if .Values.storage.createStorageClasses }}
+✓ Storage Classes: Creating Fusion HCI storage classes
+  - Block Storage: {{ .Values.storage.blockStorageClass }}
+  {{- if .Values.storage.file.enabled }}
+  - File Storage: {{ .Values.storage.fileStorageClass }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.argocd.enabled }}
+✓ ArgoCD Instance: Creating in namespace {{ include "fusion-gitops.argoCDNamespace" . }}
+  - Instance Name: {{ include "fusion-gitops.argoCDName" . }}
+  - Server Replicas: {{ .Values.argocd.server.replicas }}
+  - HA Enabled: {{ .Values.argocd.ha.enabled }}
+{{- end }}
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Wait for the GitOps operator to be ready:
+
+   kubectl wait --for=condition=Available deployment/gitops-operator-controller-manager \
+     -n {{ include "fusion-gitops.operatorNamespace" . }} --timeout=300s
+
+{{- if .Values.argocd.enabled }}
+
+2. Wait for ArgoCD components to be ready:
+
+   kubectl wait --for=condition=Available deployment/{{ include "fusion-gitops.argoCDName" . }}-server \
+     -n {{ include "fusion-gitops.argoCDNamespace" . }} --timeout=600s
+
+3. Get the ArgoCD admin password:
+
+   kubectl get secret {{ include "fusion-gitops.argoCDName" . }}-cluster \
+     -n {{ include "fusion-gitops.argoCDNamespace" . }} \
+     -o jsonpath='{.data.admin\.password}' | base64 -d && echo
+
+{{- if and (include "fusion-gitops.isOpenShift" .) .Values.argocd.server.route.enabled }}
+
+4. Access ArgoCD UI:
+
+   ARGOCD_URL=$(kubectl get route {{ include "fusion-gitops.argoCDName" . }}-server \
+     -n {{ include "fusion-gitops.argoCDNamespace" . }} \
+     -o jsonpath='{.spec.host}')
+   
+   echo "ArgoCD URL: https://$ARGOCD_URL"
+   echo "Username: admin"
+
+{{- else }}
+
+4. Access ArgoCD UI via port-forward:
+
+   kubectl port-forward svc/{{ include "fusion-gitops.argoCDName" . }}-server \
+     -n {{ include "fusion-gitops.argoCDNamespace" . }} 8080:443
+
+   Then open: https://localhost:8080
+   Username: admin
+
+{{- end }}
+
+5. Verify storage provisioning:
+
+   kubectl get pvc -n {{ include "fusion-gitops.argoCDNamespace" . }}
+
+{{- end }}
+
+================================================================================
+MONITORING
+================================================================================
+
+{{- if .Values.monitoring.enabled }}
+
+View ArgoCD metrics:
+
+  kubectl port-forward svc/{{ include "fusion-gitops.argoCDName" . }}-metrics \
+    -n {{ include "fusion-gitops.argoCDNamespace" . }} 8082:8082
+
+  Then open: http://localhost:8082/metrics
+
+{{- end }}
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+For more information, see:
+
+  - Architecture: docs/architecture.md
+  - Fusion Integration: docs/fusion-integration.md
+  - Troubleshooting: docs/troubleshooting.md
+  - GitHub: {{ .Chart.Home }}
+
+================================================================================
+SUPPORT
+================================================================================
+
+For issues or questions:
+
+  - GitHub Issues: {{ .Chart.Home }}/issues
+  - Documentation: {{ .Chart.Home }}/tree/main/docs
+
+================================================================================

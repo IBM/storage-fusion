@@ -1,0 +1,28 @@
+---
+# Wait for deployed resources to be ready
+- name: Wait for operator namespace
+  kubernetes.core.k8s_info:
+    kind: Namespace
+    name: openshift-gitops-operator
+  register: operator_ns
+  until: operator_ns.resources | length > 0
+  retries: 30
+  delay: 2
+  when: not dry_run
+
+- name: Wait for ArgoCD namespace
+  kubernetes.core.k8s_info:
+    kind: Namespace
+    name: "{{ helm_namespace }}"
+  register: argocd_ns
+  until: argocd_ns.resources | length > 0
+  retries: 30
+  delay: 2
+  when: not dry_run
+
+- name: Display wait completion
+  debug:
+    msg: "Namespaces are ready"
+  when: not dry_run
+
+# Made with Bob

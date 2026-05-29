@@ -1,0 +1,65 @@
+# Values file for deploying with OpenShift Data Foundation (ODF) storage
+# Use this when your cluster has ODF storage classes available
+#
+# PREREQUISITES: Ensure these storage classes exist in your cluster:
+#   - rook-cephfs (must support ReadWriteMany)
+#   - rook-cephfs (for ReadWriteOnce)
+#
+# Verify with: kubectl get storageclass
+
+# ============================================================================
+# Storage Configuration - ODF/Rook Ceph
+# ============================================================================
+storage:
+  # Default storage class for ReadWriteOnce volumes (block storage)
+  defaultStorageClass: rook-cephfs
+  
+  # Shared storage class for ReadWriteMany volumes (file storage)
+  # Required for ArgoCD repo server HA (multiple replicas)
+  sharedStorageClass: rook-cephfs
+  
+  # Block storage class for high-performance workloads
+  blockStorageClass: rook-cephfs
+
+# ============================================================================
+# ArgoCD Configuration with Persistent Storage
+# ============================================================================
+argocd:
+  enabled: true
+  
+  # Repository server configuration
+  repo:
+    replicas: 2  # HA requires RWX storage
+    
+    # Persistent storage for Git repository cache
+    storage:
+      enabled: true
+      size: 10Gi
+      # Use CephFS for ReadWriteMany (required for HA with multiple replicas)
+      storageClassName: rook-cephfs
+      mountPath: /home/argocd/caches
+      accessModes:
+        - ReadWriteMany
+  
+  # Redis configuration
+  # NOTE: Redis persistent storage is NOT supported by the ArgoCD operator
+  # Redis will automatically use ephemeral storage (emptyDir)
+  # This is a known limitation - operator does not support volumes/volumeMounts for Redis
+  redis:
+    # No storage configuration - Redis uses ephemeral storage automatically
+  
+  # Storage cleanup policy for helm uninstall
+  storage:
+    # PRODUCTION RECOMMENDATION: Keep default (false) to retain data
+    # Set to true only for dev/test environments where data loss is acceptable
+    deleteOnUninstall: false
+    
+    # BACKUP RECOMMENDATION: Set to true before uninstall to retain PVCs for backup
+    # This overrides deleteOnUninstall and always keeps PVCs
+    retainOnUninstall: false
+    
+    # Note: With both false (default), PVCs remain and can be reused on reinstall
+    # This is the safest option for production environments
+
+createDefaultProject: false
+# Made with Bob

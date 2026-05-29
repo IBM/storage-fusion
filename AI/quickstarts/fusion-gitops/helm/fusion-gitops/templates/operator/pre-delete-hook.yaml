@@ -1,0 +1,547 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gitops-operator-cleanup
+  namespace: {{ .Values.operator.namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gitops-operator-cleanup
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+rules:
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["subscriptions", "clusterserviceversions"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["argocds", "appprojects"]
+    verbs: ["get", "list", "delete", "patch"]
+  - apiGroups: ["pipelines.openshift.io"]
+    resources: ["gitopsservices"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get"]
+  # PVC permissions for storage cleanup
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "delete", "patch"]
+  # Pod permissions for verification
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  # Deployment/StatefulSet permissions for cleanup and verification
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "delete"]
+  # HPA permissions for cleanup
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gitops-operator-cleanup
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gitops-operator-cleanup
+subjects:
+  - kind: ServiceAccount
+    name: gitops-operator-cleanup
+    namespace: {{ .Values.operator.namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gitops-operator-cleanup
+  namespace: {{ .Values.operator.namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      name: gitops-operator-cleanup
+      labels:
+        {{- include "fusion-gitops.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: gitops-operator-cleanup
+      restartPolicy: Never
+      containers:
+        - name: cleanup
+          image: "registry.redhat.io/openshift4/ose-cli:latest"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              set -x  # Enable debug output
+              
+              echo "Starting GitOps Operator cleanup..."
+              OPERATOR_NAMESPACE="{{ .Values.operator.namespace }}"
+              ARGOCD_NAMESPACE="{{ .Values.argocd.namespace }}"
+              RELEASE_NAMESPACE="{{ .Release.Namespace }}"
+              
+              # Aggressive finalizer removal upfront
+              echo "Force removing finalizers from all resources in $RELEASE_NAMESPACE..."
+              for resource in gitopsservice appproject argocd; do
+                for obj in $(oc get $resource -n $RELEASE_NAMESPACE -o name 2>/dev/null || true); do
+                  echo "Removing finalizers from $obj..."
+                  oc patch $obj -n $RELEASE_NAMESPACE -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+                done
+              done
+              
+              echo "Force removing finalizers from all resources in $ARGOCD_NAMESPACE..."
+              for resource in gitopsservice appproject argocd; do
+                for obj in $(oc get $resource -n $ARGOCD_NAMESPACE -o name 2>/dev/null || true); do
+                  echo "Removing finalizers from $obj..."
+                  oc patch $obj -n $ARGOCD_NAMESPACE -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+                done
+              done
+              
+              # Delete GitOps Service from release namespace (always check)
+              echo "Checking for GitOps Service in $RELEASE_NAMESPACE..."
+              if oc get gitopsservice -n $RELEASE_NAMESPACE 2>/dev/null | grep -q .; then
+                echo "Found GitOps Service in $RELEASE_NAMESPACE, deleting..."
+                
+                # Remove finalizers first to prevent blocking
+                for svc in $(oc get gitopsservice -n $RELEASE_NAMESPACE -o name 2>/dev/null); do
+                  echo "Removing finalizers from $svc..."
+                  oc patch $svc -n $RELEASE_NAMESPACE -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+                done
+                
+                # Force delete
+                oc delete gitopsservice --all -n $RELEASE_NAMESPACE --force --grace-period=0 --timeout=2m || true
+                
+                # Wait for deletion to complete
+                echo "Waiting for GitOpsService to be removed from $RELEASE_NAMESPACE..."
+                for i in {1..12}; do
+                  if ! oc get gitopsservice -n $RELEASE_NAMESPACE 2>/dev/null | grep -q .; then
+                    echo "✓ GitOpsService successfully removed from $RELEASE_NAMESPACE"
+                    break
+                  fi
+                  if [ $i -eq 12 ]; then
+                    echo "WARNING: GitOpsService may still exist in $RELEASE_NAMESPACE, continuing..."
+                  fi
+                  echo "Waiting... ($i/12)"
+                  sleep 5
+                done
+              else
+                echo "No GitOpsService found in $RELEASE_NAMESPACE"
+              fi
+              
+              # Also check ArgoCD namespace (operator namespace)
+              echo "Checking for GitOps Service in $ARGOCD_NAMESPACE..."
+              if oc get gitopsservice -n $ARGOCD_NAMESPACE 2>/dev/null | grep -q .; then
+                echo "Found GitOps Service in $ARGOCD_NAMESPACE, deleting..."
+                
+                # Remove finalizers first
+                for svc in $(oc get gitopsservice -n $ARGOCD_NAMESPACE -o name 2>/dev/null); do
+                  echo "Removing finalizers from $svc..."
+                  oc patch $svc -n $ARGOCD_NAMESPACE -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+                done
+                
+                # Force delete
+                oc delete gitopsservice --all -n $ARGOCD_NAMESPACE --force --grace-period=0 --timeout=2m || true
+                
+                # Wait for deletion to complete
+                echo "Waiting for GitOpsService to be removed from $ARGOCD_NAMESPACE..."
+                for i in {1..12}; do
+                  if ! oc get gitopsservice -n $ARGOCD_NAMESPACE 2>/dev/null | grep -q .; then
+                    echo "✓ GitOpsService successfully removed from $ARGOCD_NAMESPACE"
+                    break
+                  fi
+                  if [ $i -eq 12 ]; then
+                    echo "WARNING: GitOpsService may still exist in $ARGOCD_NAMESPACE, continuing..."
+                  fi
+                  echo "Waiting... ($i/12)"
+                  sleep 5
+                done
+              else
+                echo "No GitOpsService found in $ARGOCD_NAMESPACE"
+              fi
+
+              {{- if and .Values.argocd.enabled (not .Values.argocd.patchExisting) }}
+              echo ""
+              echo "========================================="
+              echo "PHASE 2: Operator-Created Resources Cleanup"
+              echo "========================================="
+              echo "Cleaning up resources in order: Deployments → HPAs → ArgoCD CR"
+              echo ""
+              
+              # Step 1: Delete Deployments and StatefulSets FIRST
+              echo "Step 1: Cleaning up Deployments and StatefulSets..."
+              DEPLOYMENTS=$(oc get deployment -n $ARGOCD_NAMESPACE -l app.kubernetes.io/part-of=argocd -o name 2>/dev/null || echo "")
+              if [ -n "$DEPLOYMENTS" ]; then
+                echo "Found Deployments to delete:"
+                echo "$DEPLOYMENTS" | sed 's/^/  /'
+                for deploy in $DEPLOYMENTS; do
+                  echo "  Deleting $deploy..."
+                  oc delete $deploy -n $ARGOCD_NAMESPACE --force --grace-period=0 2>/dev/null || true
+                done
+              else
+                echo "  No Deployments found"
+              fi
+              
+              STATEFULSETS=$(oc get statefulset -n $ARGOCD_NAMESPACE -l app.kubernetes.io/part-of=argocd -o name 2>/dev/null || echo "")
+              if [ -n "$STATEFULSETS" ]; then
+                echo "Found StatefulSets to delete:"
+                echo "$STATEFULSETS" | sed 's/^/  /'
+                for sts in $STATEFULSETS; do
+                  echo "  Deleting $sts..."
+                  oc delete $sts -n $ARGOCD_NAMESPACE --force --grace-period=0 2>/dev/null || true
+                done
+              else
+                echo "  No StatefulSets found"
+              fi
+              
+              # Wait for pods to terminate
+              echo "  Waiting for pods to terminate..."
+              for i in {1..24}; do
+                POD_COUNT=$(oc get pods -n $ARGOCD_NAMESPACE -l app.kubernetes.io/part-of=argocd --no-headers 2>/dev/null | wc -l)
+                if [ "$POD_COUNT" -eq 0 ]; then
+                  echo "  ✓ All ArgoCD pods terminated"
+                  break
+                fi
+                if [ $i -eq 24 ]; then
+                  echo "  ⚠ WARNING: Some pods may still be terminating"
+                  oc get pods -n $ARGOCD_NAMESPACE -l app.kubernetes.io/part-of=argocd 2>/dev/null || true
+                fi
+                sleep 5
+              done
+              
+              echo ""
+              # Step 2: Delete HorizontalPodAutoscalers SECOND
+              echo "Step 2: Cleaning up HorizontalPodAutoscalers..."
+              HPA_LIST=$(oc get hpa -n $ARGOCD_NAMESPACE -o name 2>/dev/null || echo "")
+              if [ -n "$HPA_LIST" ]; then
+                echo "Found HPAs to delete:"
+                echo "$HPA_LIST" | sed 's/^/  /'
+                
+                for hpa in $HPA_LIST; do
+                  echo "  Deleting $hpa..."
+                  oc delete $hpa -n $ARGOCD_NAMESPACE --force --grace-period=0 2>/dev/null || true
+                done
+                
+                # Wait for HPAs to be deleted
+                echo "  Waiting for HPAs to be removed..."
+                for i in {1..12}; do
+                  REMAINING=$(oc get hpa -n $ARGOCD_NAMESPACE -o name 2>/dev/null | wc -l)
+                  if [ "$REMAINING" -eq 0 ]; then
+                    echo "  ✓ All HPAs removed"
+                    break
+                  fi
+                  if [ $i -eq 12 ]; then
+                    echo "  ⚠ WARNING: Some HPAs may still exist"
+                    oc get hpa -n $ARGOCD_NAMESPACE 2>/dev/null || true
+                  fi
+                  sleep 5
+                done
+              else
+                echo "  No HPAs found"
+              fi
+              
+              echo ""
+              # Step 3: Delete AppProjects
+              echo "Step 3: Cleaning up AppProjects..."
+              if oc get appproject -n $ARGOCD_NAMESPACE 2>/dev/null | grep -q .; then
+                echo "Found AppProject(s), deleting..."
+                oc delete appproject --all -n $ARGOCD_NAMESPACE --wait=true --timeout=2m || true
+                echo "  ✓ AppProject deletion completed"
+              else
+                echo "  No AppProject found"
+              fi
+              
+              echo ""
+              # Step 4: Delete ArgoCD instance LAST
+              echo "Step 4: Deleting ArgoCD instance..."
+              ARGOCD_NAME="{{ .Values.argocd.name | default "openshift-gitops" }}"
+              if oc get argocd "$ARGOCD_NAME" -n $ARGOCD_NAMESPACE 2>/dev/null; then
+                echo "Found ArgoCD instance: $ARGOCD_NAME, deleting..."
+                
+                # Remove finalizers first to prevent blocking
+                echo "  Removing finalizers..."
+                oc patch argocd "$ARGOCD_NAME" -n $ARGOCD_NAMESPACE \
+                  -p '{"metadata":{"finalizers":[]}}' \
+                  --type=merge 2>/dev/null || true
+                
+                # Delete the instance
+                oc delete argocd "$ARGOCD_NAME" -n $ARGOCD_NAMESPACE \
+                  --grace-period=0 --force 2>/dev/null || true
+                
+                # Wait for ArgoCD CR to be removed
+                echo "  Waiting for ArgoCD CR to be removed..."
+                for i in {1..12}; do
+                  if ! oc get argocd "$ARGOCD_NAME" -n $ARGOCD_NAMESPACE 2>/dev/null; then
+                    echo "  ✓ ArgoCD CR successfully removed"
+                    break
+                  fi
+                  if [ $i -eq 12 ]; then
+                    echo "  ⚠ WARNING: ArgoCD CR may still exist"
+                  fi
+                  sleep 5
+                done
+              else
+                echo "  ArgoCD instance not found (already deleted)"
+              fi
+              
+              echo ""
+              # Step 5: Final cleanup check (retry for any remaining HPAs)
+              echo "Step 5: Final cleanup verification..."
+              for attempt in {1..3}; do
+                HPA_REMAINING=$(oc get hpa -n $ARGOCD_NAMESPACE -o name 2>/dev/null || echo "")
+                if [ -z "$HPA_REMAINING" ]; then
+                  echo "  ✓ No HPAs remaining"
+                  break
+                fi
+                
+                echo "  Found remaining HPAs (attempt $attempt/3), cleaning up..."
+                echo "$HPA_REMAINING" | sed 's/^/    /'
+                for hpa in $HPA_REMAINING; do
+                  oc delete $hpa -n $ARGOCD_NAMESPACE --force --grace-period=0 2>/dev/null || true
+                done
+                
+                if [ $attempt -lt 3 ]; then
+                  sleep 10
+                fi
+              done
+              
+              # Final verification
+              REMAINING_RESOURCES=$(oc get hpa,deployment,statefulset -n $ARGOCD_NAMESPACE -l app.kubernetes.io/part-of=argocd -o name 2>/dev/null | wc -l)
+              if [ "$REMAINING_RESOURCES" -gt 0 ]; then
+                echo "  ⚠ WARNING: $REMAINING_RESOURCES resources still exist:"
+                oc get hpa,deployment,statefulset -n $ARGOCD_NAMESPACE -l app.kubernetes.io/part-of=argocd 2>/dev/null || true
+              else
+                echo "  ✓ All operator-created resources cleaned up"
+              fi
+              {{- else }}
+              echo "Skipping ArgoCD instance deletion (not managed by this chart)"
+              {{- end }}
+              
+              {{- if .Values.argocd.repo.storage.enabled }}
+              echo ""
+              echo "========================================="
+              echo "PHASE 3: Persistent Storage Cleanup"
+              echo "========================================="
+              
+              # Check if we should delete PVCs
+              DELETE_PVCS="{{ .Values.argocd.storage.deleteOnUninstall | default false }}"
+              RETAIN_PVCS="{{ .Values.argocd.storage.retainOnUninstall | default false }}"
+              
+              echo "Storage cleanup policy:"
+              echo "  - Delete PVCs: $DELETE_PVCS"
+              echo "  - Retain PVCs: $RETAIN_PVCS"
+              echo ""
+              
+              # List all PVCs in ArgoCD namespace
+              echo "Current PVCs in $ARGOCD_NAMESPACE:"
+              oc get pvc -n $ARGOCD_NAMESPACE 2>/dev/null || echo "No PVCs found"
+              echo ""
+              
+              if [ "$DELETE_PVCS" = "true" ] && [ "$RETAIN_PVCS" != "true" ]; then
+                echo "Deleting persistent storage (data will be lost)..."
+                
+                {{- if .Values.argocd.repo.storage.enabled }}
+                # Delete repo server PVCs
+                echo "Deleting repo server PVCs..."
+                REPO_PVCS=$(oc get pvc -n $ARGOCD_NAMESPACE -o name 2>/dev/null | grep "argocd-repo-server-cache" || echo "")
+                if [ -n "$REPO_PVCS" ]; then
+                  for pvc in $REPO_PVCS; do
+                    echo "  Removing finalizers from $pvc..."
+                    oc patch $pvc -n $ARGOCD_NAMESPACE -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+                    
+                    echo "  Deleting $pvc..."
+                    oc delete $pvc -n $ARGOCD_NAMESPACE --force --grace-period=0 --timeout=30s 2>/dev/null || true
+                  done
+                  
+                  # Wait for deletion
+                  echo "  Waiting for repo server PVCs to be removed..."
+                  for i in {1..12}; do
+                    if ! oc get pvc -n $ARGOCD_NAMESPACE 2>/dev/null | grep -q "argocd-repo-server-cache"; then
+                      echo "  ✓ Repo server PVCs removed"
+                      break
+                    fi
+                    if [ $i -eq 12 ]; then
+                      echo "  ⚠ WARNING: Some repo server PVCs may still exist"
+                    fi
+                    sleep 5
+                  done
+                else
+                  echo "  No repo server PVCs found"
+                fi
+                {{- end }}
+                
+                echo "✓ Storage cleanup completed"
+                
+              elif [ "$RETAIN_PVCS" = "true" ]; then
+                echo "⚠ RETAINING PVCs for backup/recovery"
+                echo ""
+                echo "The following PVCs will be retained:"
+                oc get pvc -n $ARGOCD_NAMESPACE 2>/dev/null | grep "argocd-repo-server-cache" || echo "None found"
+                echo ""
+                echo "To manually delete these PVCs later:"
+                echo "  oc delete pvc -n $ARGOCD_NAMESPACE -l app.kubernetes.io/part-of=argocd"
+                echo ""
+                
+              else
+                echo "ℹ Storage cleanup skipped (deleteOnUninstall=false)"
+                echo "PVCs will remain in the cluster and can be reused on reinstall"
+                echo ""
+                echo "Current PVCs:"
+                oc get pvc -n $ARGOCD_NAMESPACE 2>/dev/null | grep "argocd-repo-server-cache" || echo "None found"
+                echo ""
+              fi
+              {{- else }}
+              echo "Storage not configured, skipping PVC cleanup"
+              {{- end }}
+              
+              echo ""
+              echo "========================================="
+              echo "PHASE 4: Operator Cleanup"
+              echo "========================================="
+              
+              # Delete operator subscription
+              echo "Deleting GitOps operator subscription..."
+              if oc get subscription {{ .Values.operator.name }} -n $OPERATOR_NAMESPACE 2>/dev/null; then
+                oc delete subscription {{ .Values.operator.name }} -n $OPERATOR_NAMESPACE --ignore-not-found=true
+                echo "Subscription deleted"
+              else
+                echo "Subscription not found, skipping"
+              fi
+              
+              # Delete CSV
+              echo "Deleting ClusterServiceVersion..."
+              CSV=$(oc get csv -n $OPERATOR_NAMESPACE -o name 2>/dev/null | grep gitops-operator || echo "")
+              if [ -n "$CSV" ]; then
+                oc delete $CSV -n $OPERATOR_NAMESPACE --ignore-not-found=true
+                echo "CSV deleted"
+              else
+                echo "CSV not found, skipping"
+              fi
+              
+              # Wait for operator pods to terminate (exclude cleanup job itself)
+              echo "Waiting for operator pods to terminate..."
+              TIMEOUT=60
+              ELAPSED=0
+              while oc get pods -n $OPERATOR_NAMESPACE 2>/dev/null | grep gitops-operator | grep -v -q gitops-operator-cleanup; do
+                if [ $ELAPSED -ge $TIMEOUT ]; then
+                  echo "Timeout waiting for pods to terminate"
+                  break
+                fi
+                echo -n "."
+                sleep 2
+                ELAPSED=$((ELAPSED + 2))
+              done
+              echo ""
+              echo "Operator pods terminated"
+              
+              echo ""
+              echo "========================================="
+              echo "PHASE 5: Cleanup Verification"
+              echo "========================================="
+              
+              CLEANUP_ERRORS=0
+              
+              # Verify GitOpsService removed
+              echo "Verifying GitOpsService removal..."
+              if oc get gitopsservice -n $RELEASE_NAMESPACE 2>/dev/null | grep -q .; then
+                echo "  ❌ GitOpsService still exists in $RELEASE_NAMESPACE"
+                CLEANUP_ERRORS=$((CLEANUP_ERRORS + 1))
+              else
+                echo "  ✓ No GitOpsService in $RELEASE_NAMESPACE"
+              fi
+              
+              if oc get gitopsservice -n $ARGOCD_NAMESPACE 2>/dev/null | grep -q .; then
+                echo "  ❌ GitOpsService still exists in $ARGOCD_NAMESPACE"
+                CLEANUP_ERRORS=$((CLEANUP_ERRORS + 1))
+              else
+                echo "  ✓ No GitOpsService in $ARGOCD_NAMESPACE"
+              fi
+              
+              # Verify ArgoCD CR removed
+              echo "Verifying ArgoCD CR removal..."
+              if oc get argocd -n $ARGOCD_NAMESPACE 2>/dev/null | grep -q .; then
+                echo "  ❌ ArgoCD CR still exists in $ARGOCD_NAMESPACE"
+                CLEANUP_ERRORS=$((CLEANUP_ERRORS + 1))
+              else
+                echo "  ✓ No ArgoCD CR in $ARGOCD_NAMESPACE"
+              fi
+              
+              # Verify PVCs removed (if delete was enabled)
+              {{- if .Values.argocd.repo.storage.enabled }}
+              if [ "$DELETE_PVCS" = "true" ] && [ "$RETAIN_PVCS" != "true" ]; then
+                echo "Verifying PVC removal..."
+                if oc get pvc -n $ARGOCD_NAMESPACE 2>/dev/null | grep -q "argocd-repo-server-cache"; then
+                  echo "  ⚠ Some PVCs still exist (may be in Terminating state)"
+                  oc get pvc -n $ARGOCD_NAMESPACE | grep "argocd-repo-server-cache" || true
+                else
+                  echo "  ✓ All ArgoCD PVCs removed"
+                fi
+              fi
+              {{- end }}
+              
+              # Verify operator removed (exclude cleanup job itself)
+              echo "Verifying operator removal..."
+              if oc get pods -n $OPERATOR_NAMESPACE 2>/dev/null | grep gitops-operator | grep -v -q gitops-operator-cleanup; then
+                echo "  ⚠ Operator pods still running (may be terminating)"
+                CLEANUP_ERRORS=$((CLEANUP_ERRORS + 1))
+              else
+                echo "  ✓ No operator pods running"
+              fi
+              
+              echo ""
+              echo "========================================="
+              if [ $CLEANUP_ERRORS -eq 0 ]; then
+                echo "✅ Cleanup completed successfully"
+              else
+                echo "⚠ Cleanup completed with $CLEANUP_ERRORS warnings"
+                echo "Some resources may still be terminating"
+              fi
+              echo "========================================="
+              echo ""
+              
+              # Display summary
+              echo "Cleanup Summary:"
+              echo "  - GitOpsService: Removed"
+              echo "  - ArgoCD CR: Removed"
+              {{- if .Values.argocd.repo.storage.enabled }}
+              if [ "$DELETE_PVCS" = "true" ] && [ "$RETAIN_PVCS" != "true" ]; then
+                echo "  - Repo Server PVC: Deleted"
+              elif [ "$RETAIN_PVCS" = "true" ]; then
+                echo "  - Repo Server PVC: Retained for backup"
+              else
+                echo "  - Repo Server PVC: Retained (not configured for deletion)"
+              fi
+              {{- end }}
+              echo "  - Operator: Removed"
+              echo ""
+              
+              echo "GitOps Operator cleanup completed"
+
+# Made with Bob

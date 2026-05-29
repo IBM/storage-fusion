@@ -1,0 +1,122 @@
+{{- if .Values.operator.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-secrets-operator-cleanup
+  namespace: {{ include "external-secrets-operator.namespace" . }}
+  labels:
+    {{- include "external-secrets-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: external-secrets-operator-cleanup
+  labels:
+    {{- include "external-secrets-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+rules:
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["subscriptions", "clusterserviceversions"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: external-secrets-operator-cleanup
+  labels:
+    {{- include "external-secrets-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: external-secrets-operator-cleanup
+subjects:
+  - kind: ServiceAccount
+    name: external-secrets-operator-cleanup
+    namespace: {{ include "external-secrets-operator.namespace" . }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: external-secrets-operator-cleanup
+  namespace: {{ include "external-secrets-operator.namespace" . }}
+  labels:
+    {{- include "external-secrets-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  template:
+    metadata:
+      name: external-secrets-operator-cleanup
+      labels:
+        {{- include "external-secrets-operator.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: external-secrets-operator-cleanup
+      restartPolicy: Never
+      containers:
+        - name: cleanup
+          image: "registry.redhat.io/openshift4/ose-cli:latest"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              
+              echo "Starting External Secrets Operator cleanup..."
+              NAMESPACE="{{ include "external-secrets-operator.namespace" . }}"
+              
+              # Delete subscription
+              echo "Deleting subscription..."
+              if oc get subscription openshift-external-secrets-operator -n $NAMESPACE 2>/dev/null; then
+                oc delete subscription openshift-external-secrets-operator -n $NAMESPACE --ignore-not-found=true
+                echo "Subscription deleted"
+              else
+                echo "Subscription not found, skipping"
+              fi
+              
+              # Delete CSV
+              echo "Deleting ClusterServiceVersion..."
+              CSV=$(oc get csv -n $NAMESPACE -o name 2>/dev/null | grep openshift-external-secrets-operator || echo "")
+              if [ -n "$CSV" ]; then
+                oc delete $CSV -n $NAMESPACE --ignore-not-found=true
+                echo "CSV deleted"
+              else
+                echo "CSV not found, skipping"
+              fi
+              
+              # Wait for pods to terminate
+              echo "Waiting for operator pods to terminate..."
+              TIMEOUT=60
+              ELAPSED=0
+              while oc get pods -n $NAMESPACE 2>/dev/null | grep -q external-secrets; do
+                if [ $ELAPSED -ge $TIMEOUT ]; then
+                  echo "Timeout waiting for pods to terminate"
+                  break
+                fi
+                echo -n "."
+                sleep 2
+                ELAPSED=$((ELAPSED + 2))
+              done
+              echo ""
+              
+              echo "External Secrets Operator cleanup completed successfully"
+{{- end }}
+
+# Made with Bob

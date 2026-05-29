@@ -1,0 +1,50 @@
+---
+# Check cluster connectivity and basic information
+- name: Check cluster connectivity
+  kubernetes.core.k8s_cluster_info:
+  register: cluster_info
+  failed_when: false
+
+- name: Fail if cluster is not accessible
+  fail:
+    msg: "Cannot connect to Kubernetes cluster. Please check your kubeconfig."
+  when: cluster_info.failed | default(false)
+
+- name: Display cluster information
+  debug:
+    msg:
+      - "Cluster API: {{ cluster_info.connection.host }}"
+      - "Kubernetes Version: {{ cluster_info.version.server.kubernetes.gitVersion | default('Unknown') }}"
+      - "Platform: {{ cluster_info.version.platform | default('Unknown') }}"
+
+- name: Check if running on OpenShift
+  set_fact:
+    is_openshift: "{{ 'openshift' in (cluster_info.version.platform | default('')) | lower }}"
+
+- name: Display platform type
+  debug:
+    msg: "Platform detected: {{ 'OpenShift' if is_openshift else 'Kubernetes' }}"
+
+- name: Get cluster nodes
+  kubernetes.core.k8s_info:
+    kind: Node
+  register: cluster_nodes
+
+- name: Display node count
+  debug:
+    msg: "Cluster has {{ cluster_nodes.resources | length }} node(s)"
+
+- name: Check node readiness
+  set_fact:
+    ready_nodes: "{{ cluster_nodes.resources | selectattr('status.conditions', 'defined') | selectattr('status.conditions', 'selectattr', 'type', 'equalto', 'Ready') | selectattr('status.conditions', 'selectattr', 'status', 'equalto', 'True') | list }}"
+
+- name: Display ready nodes
+  debug:
+    msg: "Ready nodes: {{ ready_nodes | length }}/{{ cluster_nodes.resources | length }}"
+
+- name: Warn if not all nodes are ready
+  debug:
+    msg: "WARNING: Not all nodes are ready. This may affect deployment."
+  when: (ready_nodes | length) < (cluster_nodes.resources | length)
+
+# Made with Bob

@@ -1,0 +1,21 @@
+{{- if .Values.operator.enabled }}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: external-secrets-operator
+  namespace: {{ include "external-secrets-operator.namespace" . }}
+  labels:
+    {{- include "external-secrets-operator.labels" . | nindent 4 }}
+spec:
+  channel: {{ .Values.operator.subscription.channel }}
+  name: {{ .Values.operator.subscription.name | default "external-secrets-operator" }}
+  source: {{ .Values.operator.subscription.source }}
+  sourceNamespace: {{ .Values.operator.subscription.sourceNamespace }}
+  installPlanApproval: {{ .Values.operator.subscription.installPlanApproval }}
+  {{- if .Values.operator.subscription.startingCSV }}
+  startingCSV: {{ .Values.operator.subscription.startingCSV }}
+  {{- end }}
+{{- end }}
+
+# Made with Bob

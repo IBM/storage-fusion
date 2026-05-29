@@ -1,0 +1,22 @@
+---
+# Ansible Galaxy Collections Requirements
+collections:
+  # Kubernetes core collection
+  - name: kubernetes.core
+    version: ">=2.4.0"
+    source: https://galaxy.ansible.com
+  
+  # Community general collection
+  - name: community.general
+    version: ">=7.0.0"
+    source: https://galaxy.ansible.com
+  
+  # Ansible posix collection
+  - name: ansible.posix
+    version: ">=1.5.0"
+    source: https://galaxy.ansible.com
+
+# Ansible Galaxy Roles Requirements (if needed)
+roles: []
+
+# Made with Bob

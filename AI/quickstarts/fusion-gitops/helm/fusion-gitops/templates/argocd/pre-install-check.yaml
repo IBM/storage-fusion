@@ -1,0 +1,145 @@
+{{- if .Values.argocd.enabled }}
+---
+# Pre-install check to validate ArgoCD configuration
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-preinstall-check-sa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-preinstall-check-role
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["argocds"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-preinstall-check-binding
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-preinstall-check-role
+subjects:
+  - kind: ServiceAccount
+    name: argocd-preinstall-check-sa
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: argocd-preinstall-check-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-4"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-gitops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: preinstall-check
+    spec:
+      serviceAccountName: argocd-preinstall-check-sa
+      restartPolicy: Never
+      containers:
+        - name: check
+          image: registry.redhat.io/openshift4/ose-cli:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              
+              echo "========================================="
+              echo "Pre-install check for ArgoCD configuration"
+              echo "========================================="
+              echo ""
+              echo "Configuration:"
+              echo "  Helm Release: {{ .Release.Name }}"
+              echo "  Helm Namespace: {{ .Release.Namespace }}"
+              echo "  ArgoCD Namespace: {{ .Values.argocd.namespace }}"
+              echo ""
+              echo "This chart ONLY supports patching the operator's default 'openshift-gitops' instance."
+              echo "It does NOT create custom ArgoCD instances."
+              echo ""
+              
+              # Verify namespace is openshift-gitops
+              if [ "{{ .Values.argocd.namespace }}" != "openshift-gitops" ]; then
+                echo "ERROR: Invalid ArgoCD namespace '{{ .Values.argocd.namespace }}'"
+                echo ""
+                echo "This chart only supports the 'openshift-gitops' namespace."
+                echo "Please update your values file:"
+                echo ""
+                echo "  argocd:"
+                echo "    namespace: openshift-gitops"
+                echo ""
+                exit 1
+              fi
+              
+              # Check if openshift-gitops namespace exists
+              if ! oc get namespace openshift-gitops &>/dev/null; then
+                echo "INFO: Namespace 'openshift-gitops' does not exist yet"
+                echo ""
+                echo "This is expected during initial installation."
+                echo "The GitOps operator will create this namespace when installed."
+                echo ""
+                echo "✓ Pre-install check passed (namespace will be created by operator)"
+                exit 0
+              fi
+              
+              # Check if openshift-gitops instance exists
+              if ! oc get argocd openshift-gitops -n openshift-gitops &>/dev/null; then
+                echo "INFO: ArgoCD instance 'openshift-gitops' not found"
+                echo ""
+                echo "This is expected if the GitOps operator hasn't created the default instance yet."
+                echo "The operator will create the instance after installation."
+                echo ""
+                echo "✓ Pre-install check passed (instance will be created by operator)"
+                exit 0
+              fi
+              
+              echo "✓ Pre-install check passed"
+              echo "✓ ArgoCD instance 'openshift-gitops' found in namespace 'openshift-gitops'"
+              echo "✓ Safe to proceed with patching the existing instance"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+{{- end }}
+
+# Made with Bob

@@ -1,0 +1,54 @@
+{{- if .Values.argocd.enabled }}
+{{- if .Values.argocd.createDefaultProject }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ .Values.argocd.defaultProject.name }}
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: {{ .Values.argocd.defaultProject.description | quote }}
+  
+  # Source repositories that applications in this project can pull from
+  sourceRepos:
+    {{- toYaml .Values.argocd.defaultProject.sourceRepos | nindent 4 }}
+  
+  # Destination clusters and namespaces where applications can be deployed
+  destinations:
+    {{- toYaml .Values.argocd.defaultProject.destinations | nindent 4 }}
+  
+  # Cluster resource allow list - what cluster-scoped resources can be managed
+  clusterResourceWhitelist:
+    {{- toYaml .Values.argocd.defaultProject.clusterResourceWhitelist | nindent 4 }}
+  
+  # Namespace resource allow list - what namespace-scoped resources can be managed
+  namespaceResourceWhitelist:
+    {{- toYaml .Values.argocd.defaultProject.namespaceResourceWhitelist | nindent 4 }}
+  
+  # Roles for project-level RBAC
+  {{- if .Values.argocd.defaultProject.roles }}
+  roles:
+    {{- toYaml .Values.argocd.defaultProject.roles | nindent 4 }}
+  {{- end }}
+  
+  # Sync windows - when syncs are allowed
+  {{- if .Values.argocd.defaultProject.syncWindows }}
+  syncWindows:
+    {{- toYaml .Values.argocd.defaultProject.syncWindows | nindent 4 }}
+  {{- end }}
+  
+  # Orphaned resources monitoring
+  orphanedResources:
+    warn: {{ .Values.argocd.defaultProject.orphanedResources.warn }}
+    {{- if .Values.argocd.defaultProject.orphanedResources.ignore }}
+    ignore:
+      {{- toYaml .Values.argocd.defaultProject.orphanedResources.ignore | nindent 6 }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+# Made with Bob

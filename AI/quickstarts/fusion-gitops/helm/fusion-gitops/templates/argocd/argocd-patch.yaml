@@ -1,0 +1,226 @@
+{{- if .Values.argocd.enabled }}
+---
+# ServiceAccount for patching ArgoCD
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-patch-sa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+---
+# ClusterRole for patching ArgoCD
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-patch-role
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["argocds"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get"]
+  # PVC permissions for verification
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
+  # Pod permissions for storage mount verification
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec"]
+    verbs: ["get", "list", "create"]
+  # Deployment/StatefulSet permissions for verification
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list"]
+---
+# ClusterRoleBinding for patching ArgoCD
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-patch-binding
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-patch-role
+subjects:
+  - kind: ServiceAccount
+    name: argocd-patch-sa
+    namespace: {{ .Release.Namespace }}
+---
+# Job to patch existing openshift-gitops ArgoCD instance
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: argocd-patch-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-gitops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: argocd-patch
+    spec:
+      serviceAccountName: argocd-patch-sa
+      restartPolicy: OnFailure
+      containers:
+        - name: patch
+          image: registry.redhat.io/openshift4/ose-cli:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              
+              echo "========================================="
+              echo "Patching openshift-gitops ArgoCD instance"
+              echo "========================================="
+              echo ""
+              
+              # Wait for ArgoCD instance to exist
+              echo "Waiting for openshift-gitops instance to be created by operator..."
+              for i in {1..60}; do
+                if oc get argocd openshift-gitops -n {{ .Values.argocd.namespace }} &>/dev/null; then
+                  echo "✓ ArgoCD instance found"
+                  break
+                fi
+                if [ $i -eq 60 ]; then
+                  echo "ERROR: Timeout waiting for openshift-gitops instance"
+                  echo "The GitOps operator should create this instance automatically."
+                  echo "Please verify the operator is running:"
+                  echo "  oc get pods -n {{ .Values.operator.namespace }}"
+                  exit 1
+                fi
+                echo "Waiting... ($i/60)"
+                sleep 5
+              done
+              
+              echo ""
+              echo "Applying configuration patches..."
+              
+              # Build patch JSON
+              PATCH='{"spec":{'
+              
+              {{- if .Values.argocd.server }}
+              {{- if .Values.argocd.server.replicas }}
+              echo "- Setting server replicas to {{ .Values.argocd.server.replicas }}"
+              PATCH+='"server":{"replicas":{{ .Values.argocd.server.replicas }}'
+              {{- if .Values.argocd.server.autoscale.enabled }}
+              echo "- Enabling server autoscaling ({{ .Values.argocd.server.autoscale.minReplicas }}-{{ .Values.argocd.server.autoscale.maxReplicas }} replicas)"
+              PATCH+=',"autoscale":{"enabled":true,"hpa":{"minReplicas":{{ .Values.argocd.server.autoscale.minReplicas }},"maxReplicas":{{ .Values.argocd.server.autoscale.maxReplicas }},"scaleTargetRef":{"apiVersion":"apps/v1","kind":"Deployment","name":"openshift-gitops-server"},"targetCPUUtilizationPercentage":{{ .Values.argocd.server.autoscale.targetCPUUtilizationPercentage }}}}'
+              {{- else }}
+              echo "- Disabling server autoscaling (single replica mode)"
+              PATCH+=',"autoscale":{"enabled":false}'
+              {{- end }}
+              PATCH+='},'
+              {{- end }}
+              {{- end }}
+              
+              {{- if .Values.argocd.repo }}
+              {{- if .Values.argocd.repo.replicas }}
+              echo "- Setting repo server replicas to {{ .Values.argocd.repo.replicas }}"
+              PATCH+='"repo":{"replicas":{{ .Values.argocd.repo.replicas }}'
+              
+              {{- if .Values.argocd.repo.autoscale.enabled }}
+              echo "- Enabling repo server autoscaling ({{ .Values.argocd.repo.autoscale.minReplicas }}-{{ .Values.argocd.repo.autoscale.maxReplicas }} replicas)"
+              PATCH+=',"autoscale":{"enabled":true,"hpa":{"minReplicas":{{ .Values.argocd.repo.autoscale.minReplicas }},"maxReplicas":{{ .Values.argocd.repo.autoscale.maxReplicas }},"scaleTargetRef":{"apiVersion":"apps/v1","kind":"Deployment","name":"openshift-gitops-repo-server"},"targetCPUUtilizationPercentage":{{ .Values.argocd.repo.autoscale.targetCPUUtilizationPercentage }}}}'
+              {{- else }}
+              echo "- Disabling repo server autoscaling (single replica mode)"
+              PATCH+=',"autoscale":{"enabled":false}'
+              {{- end }}
+              
+              {{- if .Values.argocd.repo.storage.enabled }}
+              echo "- Configuring repo server persistent storage ({{ .Values.argocd.repo.storage.size }})"
+              # Add volume referencing the PVC
+              PATCH+=',"volumes":[{"name":"repo-cache","persistentVolumeClaim":{"claimName":"argocd-repo-server-cache"}}]'
+              # Add volumeMount to mount the volume
+              PATCH+=',"volumeMounts":[{"name":"repo-cache","mountPath":"{{ .Values.argocd.repo.storage.mountPath }}"}]'
+              {{- end }}
+              
+              PATCH+='},'
+              {{- end }}
+              {{- end }}
+              
+              {{- if .Values.argocd.ha.enabled }}
+              echo "- Enabling high availability"
+              PATCH+='"ha":{"enabled":true},'
+              {{- end }}
+              
+              echo "- Setting resource tracking method to {{ .Values.argocd.resourceTrackingMethod }}"
+              PATCH+='"resourceTrackingMethod":"{{ .Values.argocd.resourceTrackingMethod }}",'
+              
+              echo "- Setting kustomize build options"
+              PATCH+='"kustomizeBuildOptions":"{{ .Values.argocd.kustomizeBuildOptions }}"'
+              
+              PATCH+='}}'
+              
+              # Apply patch
+              echo ""
+              echo "Applying patch..."
+              oc patch argocd openshift-gitops -n {{ .Values.argocd.namespace }} \
+                --type=merge \
+                -p "$PATCH"
+              
+              echo ""
+              echo "✓ ArgoCD instance patched successfully"
+              
+              {{- if .Values.argocd.repo.storage.enabled }}
+              echo ""
+              echo "Waiting for repo server PVC to be bound..."
+              sleep 10
+              
+              echo "Checking repo server PVC..."
+              for i in {1..30}; do
+                if oc get pvc argocd-repo-server-cache -n {{ .Values.argocd.namespace }} 2>/dev/null | grep -q "Bound"; then
+                  echo "✓ Repo server PVC bound"
+                  oc get pvc argocd-repo-server-cache -n {{ .Values.argocd.namespace }} || true
+                  break
+                fi
+                if [ $i -eq 30 ]; then
+                  echo "⚠ WARNING: Repo server PVC not bound after 150s"
+                  echo "Check storage class and PVC status"
+                  oc get pvc argocd-repo-server-cache -n {{ .Values.argocd.namespace }} || true
+                fi
+                sleep 5
+              done
+              {{- end }}
+              
+              echo ""
+              echo "Verifying configuration..."
+              oc get argocd openshift-gitops -n {{ .Values.argocd.namespace }} -o yaml | grep -A 20 "spec:"
+              
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+{{- end }}
+
+# Made with Bob

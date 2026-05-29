@@ -1,0 +1,60 @@
+apiVersion: v2
+name: fusion-gitops
+description: |
+  Helm chart for deploying Red Hat GitOps Operator on IBM Fusion HCI with 
+  integrated Fusion Data Services support. This chart provides a complete 
+  GitOps platform with high availability, persistent storage, and enterprise features.
+type: application
+version: 1.0.0
+appVersion: "latest"
+
+keywords:
+  - gitops
+  - argocd
+  - openshift
+  - fusion
+  - hci
+  - continuous-delivery
+  - kubernetes
+
+home: https://github.com/your-org/fusion-gitops
+sources:
+  - https://github.com/your-org/fusion-gitops
+  - https://github.com/argoproj/argo-cd
+  - https://github.com/redhat-developer/gitops-operator
+
+maintainers:
+  - name: IBM Fusion AI Team
+    email: fusion-ai@ibm.com
+    url: https://www.ibm.com/fusion
+
+icon: https://raw.githubusercontent.com/argoproj/argo-cd/master/docs/assets/logo.png
+
+annotations:
+  category: DevOps
+  licenses: Apache-2.0
+  
+  # Operator Lifecycle Manager annotations
+  operators.operatorframework.io/builder: helm
+  operators.operatorframework.io/project_layout: helm.sdk.operatorframework.io/v1
+  
+  # Artifact Hub annotations
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial release with Fusion HCI integration
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/recommendations: |
+    - url: https://argo-cd.readthedocs.io/
+  artifacthub.io/links: |
+    - name: Documentation
+      url: https://github.com/your-org/fusion-gitops/tree/main/docs
+    - name: Support
+      url: https://github.com/your-org/fusion-gitops/issues
+
+dependencies: []
+
+# Kubernetes version requirements
+kubeVersion: ">=1.24.0-0"
+
+# Made with Bob

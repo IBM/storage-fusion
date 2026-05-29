@@ -1,0 +1,99 @@
+---
+# Main deployment playbook for Red Hat GitOps on Fusion HCI
+# This playbook orchestrates the complete deployment using Helm charts
+- name: Deploy Red Hat GitOps Operator on Fusion HCI
+  hosts: localhost
+  gather_facts: true
+  
+  # Set the roles path relative to the playbook
+  vars_files: []
+  
+  vars:
+    # Helm chart configuration
+    helm_chart_path: "{{ playbook_dir }}/../../helm/fusion-gitops"
+    helm_release_name: "{{ gitops_release_name | default('fusion-gitops') }}"
+    helm_namespace: "{{ gitops_namespace | default('default') }}"
+    helm_values_file: "{{ gitops_values_file | default('') }}"
+    
+    # Deployment options
+    skip_preflight: "{{ skip_preflight_checks | default(false) }}"
+    skip_validation: "{{ skip_validation | default(false) }}"
+    dry_run: "{{ dry_run_mode | default(false) }}"
+    
+    # Timeout settings
+    operator_timeout: 600
+    argocd_timeout: 900
+    
+  tasks:
+    # ========================================================================
+    # Phase 1: Pre-flight Checks
+    # ========================================================================
+    - name: Run pre-flight checks
+      include_role:
+        name: preflight
+      when: not skip_preflight
+      tags:
+        - preflight
+        - checks
+    
+    # ========================================================================
+    # Phase 2: Helm Deployment
+    # ========================================================================
+    - name: Deploy using Helm
+      include_role:
+        name: helm-deploy
+      tags:
+        - deploy
+        - helm
+    
+    # ========================================================================
+    # Phase 3: Post-deployment Validation
+    # ========================================================================
+    - name: Validate deployment
+      include_role:
+        name: validation
+      when: not skip_validation
+      tags:
+        - validation
+        - verify
+    
+    # ========================================================================
+    # Phase 4: Post-deployment Configuration
+    # ========================================================================
+    - name: Configure ArgoCD
+      include_role:
+        name: configuration
+      when: configure_argocd | default(true)
+      tags:
+        - configuration
+        - config
+    
+    # ========================================================================
+    # Phase 5: Display Summary
+    # ========================================================================
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "=========================================="
+          - "  Deployment Complete"
+          - "=========================================="
+          - "Release Name: {{ helm_release_name }}"
+          - "Namespace: {{ helm_namespace }}"
+          - "Chart: {{ helm_chart_path }}"
+          - ""
+          - "Next steps:"
+          - "1. Get ArgoCD password:"
+          - "   kubectl get secret openshift-gitops-cluster -n openshift-gitops -o jsonpath='{.data.admin\\.password}' | base64 -d"
+          - ""
+          - "2. Access ArgoCD UI (OpenShift):"
+          - "   oc get route openshift-gitops-server -n openshift-gitops"
+          - ""
+          - "3. Or use port-forward (Kubernetes):"
+          - "   kubectl port-forward svc/openshift-gitops-server -n openshift-gitops 8080:443"
+          - ""
+          - "For more information, see: docs/deployment-guide.md"
+          - "=========================================="
+      tags:
+        - always
+
+# Made with Bob

@@ -1,0 +1,310 @@
+{{- if .Values.vault.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.vault.name }}
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+    {{- include "vault.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.vault.name }}
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+    {{- include "vault.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.vault.name }}
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+    {{- include "vault.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.vault.name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.vault.name }}
+    namespace: {{ include "vault.namespace" . }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.vault.name }}
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+    {{- include "vault.labels" . | nindent 4 }}
+    app.kubernetes.io/name: vault
+spec:
+  serviceName: {{ .Values.vault.name }}-internal
+  replicas: {{ .Values.vault.replicas }}
+  selector:
+    matchLabels:
+      {{- include "vault.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vault.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.vault.name }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: config-init
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              cat > /vault/config/vault.hcl <<EOF
+              ui = {{ .Values.vault.config.ui }}
+              disable_mlock = true
+              
+              listener "tcp" {
+                address         = "0.0.0.0:8200"
+                cluster_address = "0.0.0.0:8201"
+                tls_disable     = 1
+              }
+              
+              storage "raft" {
+                path = "/vault/data"
+                node_id = "${VAULT_K8S_POD_NAME}"
+                
+                retry_join {
+                  leader_api_addr = "http://{{ .Values.vault.name }}-0.{{ .Values.vault.name }}-internal.{{ include "vault.namespace" . }}.svc.cluster.local:8200"
+                }
+              }
+              
+              service_registration "kubernetes" {
+                namespace      = "{{ include "vault.namespace" . }}"
+                pod_name       = "${VAULT_K8S_POD_NAME}"
+              }
+              
+              seal "shamir" {}
+              EOF
+          env:
+            - name: VAULT_K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: VAULT_K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: config
+              mountPath: /vault/config
+      containers:
+        - name: vault
+          image: docker.io/hashicorp/vault:{{ .Values.vault.version }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          command:
+            - "/bin/sh"
+            - "-ec"
+          args:
+            - |
+              exec /usr/local/bin/docker-entrypoint.sh vault server -config=/vault/config/vault.hcl
+          env:
+            - name: VAULT_K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: VAULT_K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: VAULT_ADDR
+              value: "http://127.0.0.1:8200"
+            - name: VAULT_API_ADDR
+              value: "http://$(VAULT_K8S_POD_NAME).{{ .Values.vault.name }}-internal.{{ include "vault.namespace" . }}.svc.cluster.local:8200"
+            - name: SKIP_CHOWN
+              value: "true"
+            - name: SKIP_SETCAP
+              value: "true"
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: VAULT_CLUSTER_ADDR
+              value: "https://$(HOSTNAME).{{ .Values.vault.name }}-internal.{{ include "vault.namespace" . }}.svc.cluster.local:8201"
+          ports:
+            - containerPort: 8200
+              name: http
+              protocol: TCP
+            - containerPort: 8201
+              name: https-internal
+              protocol: TCP
+            - containerPort: 8202
+              name: http-rep
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - vault status -tls-skip-verify
+            failureThreshold: 2
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /v1/sys/health?standbyok=true&sealedcode=204
+              port: 8200
+              scheme: HTTP
+            failureThreshold: 10
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.vault.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /vault/data
+            - name: config
+              mountPath: /vault/config
+      volumes:
+        - name: config
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ .Values.vault.storage.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.vault.storage.size }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.vault.name }}-config
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+    {{- include "vault.labels" . | nindent 4 }}
+data:
+  vault.hcl: |
+    ui = {{ .Values.vault.config.ui }}
+    disable_mlock = true
+    
+    listener "tcp" {
+      address         = "0.0.0.0:8200"
+      cluster_address = "0.0.0.0:8201"
+      tls_disable     = 1
+    }
+    
+    storage "raft" {
+      path = "/vault/data"
+      node_id = "$(VAULT_K8S_POD_NAME)"
+      
+      retry_join {
+        leader_api_addr = "http://{{ .Values.vault.name }}-0.{{ .Values.vault.name }}-internal.{{ include "vault.namespace" . }}.svc.cluster.local:8200"
+      }
+    }
+    
+    service_registration "kubernetes" {
+      namespace      = "{{ include "vault.namespace" . }}"
+      pod_name       = "$(VAULT_K8S_POD_NAME)"
+    }
+    
+    seal "shamir" {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.vault.name }}
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+    {{- include "vault.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8200
+      targetPort: 8200
+      protocol: TCP
+    - name: https-internal
+      port: 8201
+      targetPort: 8201
+      protocol: TCP
+  selector:
+    {{- include "vault.selectorLabels" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.vault.name }}-internal
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+    {{- include "vault.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - name: http
+      port: 8200
+      targetPort: 8200
+      protocol: TCP
+    - name: https-internal
+      port: 8201
+      targetPort: 8201
+      protocol: TCP
+  selector:
+    {{- include "vault.selectorLabels" . | nindent 4 }}
+---
+{{- if .Values.vault.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ .Values.vault.name }}
+  namespace: {{ include "vault.namespace" . }}
+  labels:
+    {{- include "vault.labels" . | nindent 4 }}
+spec:
+  host: {{ .Values.vault.route.host | default "" }}
+  to:
+    kind: Service
+    name: {{ .Values.vault.name }}
+    weight: 100
+  port:
+    targetPort: http
+  {{- if .Values.vault.route.tls.enabled }}
+  tls:
+    termination: {{ .Values.vault.route.tls.termination | default "edge" }}
+    insecureEdgeTerminationPolicy: {{ .Values.vault.route.tls.insecureEdgeTerminationPolicy | default "Redirect" }}
+  {{- end }}
+  wildcardPolicy: None
+{{- end }}
+{{- end }}
+
+# Made with Bob

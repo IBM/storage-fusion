@@ -1,0 +1,4 @@
+# Namespace creation is handled by the deployment script or Helm's --create-namespace flag
+# This file is intentionally empty to avoid namespace ownership conflicts
+
+# Made with Bob

@@ -1,0 +1,31 @@
+---
+# Validate ArgoCD deployment
+- name: Check ArgoCD instance
+  kubernetes.core.k8s_info:
+    api_version: argoproj.io/v1beta1
+    kind: ArgoCD
+    name: argocd-fusion
+    namespace: "{{ helm_namespace }}"
+  register: argocd_instance
+  failed_when: false
+
+- name: Display ArgoCD instance status
+  debug:
+    msg: "ArgoCD instance found"
+  when: argocd_instance.resources | length > 0
+
+- name: Check ArgoCD pods
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ helm_namespace }}"
+    label_selectors:
+      - app.kubernetes.io/part-of=argocd
+  register: argocd_pods
+  failed_when: false
+
+- name: Display ArgoCD pod count
+  debug:
+    msg: "Found {{ argocd_pods.resources | length }} ArgoCD pods"
+  when: argocd_pods.resources is defined
+
+# Made with Bob

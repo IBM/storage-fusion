@@ -1,0 +1,115 @@
+# Example standalone deployment values for HashiCorp Vault
+# This file demonstrates deploying Vault independently of any other project
+#
+# Default storage: OpenShift Data Foundation (ODF)
+# - ocs-storagecluster-ceph-rbd (RWO) for Vault data
+
+# Global settings
+global:
+  openshift: true
+  namespace: vault
+
+# Operator configuration
+operator:
+  enabled: true
+  namespace: vault-operator
+  subscription:
+    channel: stable
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic
+
+# Vault instance configuration
+vault:
+  enabled: true
+  name: vault
+  replicas: 3
+  version: "1.15.0"
+  
+  # Storage configuration
+  # Default: OpenShift Data Foundation (ODF)
+  # Override with your own storage class if needed
+  storage:
+    # Default: OpenShift Data Foundation RWO storage
+    # Alternative options:
+    # - gp2, gp3 (AWS EBS)
+    # - managed-premium (Azure Disk)
+    # - pd-standard, pd-ssd (GCP Persistent Disk)
+    storageClassName: "ocs-storagecluster-ceph-rbd"
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  
+  # Vault configuration
+  config:
+    seal: shamir  # Use Shamir secret sharing for unsealing
+    ui: true
+  
+  # Resource limits
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8200
+  
+  # OpenShift Route
+  route:
+    enabled: true
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+  
+  # Vault injector for automatic secret injection
+  injector:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+# External Secrets Operator integration (optional)
+externalSecrets:
+  enabled: false
+  createSecretStore: false
+
+# ArgoCD integration (optional)
+argocd:
+  enabled: false
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+
+# High availability settings
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Pod anti-affinity for distribution across nodes
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - vault
+          topologyKey: kubernetes.io/hostname
+
+# Made with Bob
