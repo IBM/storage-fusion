@@ -1,0 +1,72 @@
+# Example values for External Secrets Operator with IBM Cloud Secrets Manager
+# Deploy with: helm install external-secrets-operator ./helm/external-secrets-operator -f examples/values-ibmcloud.yaml
+
+global:
+  openshift: true
+  namespace: external-secrets-operator
+
+operator:
+  enabled: true
+  namespace: external-secrets-operator
+  
+  subscription:
+    # Use Red Hat certified operator for OpenShift
+    channel: stable-v1
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    name: openshift-external-secrets-operator
+    installPlanApproval: Automatic
+
+# Enable IBM Cloud secret store
+secretStores:
+  ibmCloud:
+    enabled: true
+    name: ibm-secrets-manager
+    serviceUrl: "https://your-instance-id.us-south.secrets-manager.appdomain.cloud"
+    region: "us-south"
+    
+    auth:
+      method: apiKey
+      apiKey:
+        secretRef:
+          name: ibm-cloud-credentials
+          key: api-key
+          namespace: external-secrets-operator
+
+# Enable example
+examples:
+  enabled: true
+  ibmCloud:
+    enabled: true
+    name: example-ibm-secret
+    namespace: default
+    refreshInterval: 1h
+    targetSecretName: my-app-secrets
+    secretStoreRef:
+      name: ibm-secrets-manager
+      kind: ClusterSecretStore
+    data:
+      - secretKey: database-password
+        remoteRef:
+          key: myapp-database-credentials
+          property: password
+      - secretKey: api-key
+        remoteRef:
+          key: myapp-api-credentials
+          property: apikey
+
+# Note: Create the IBM Cloud credentials secret before deploying:
+# kubectl create secret generic ibm-cloud-credentials \
+#   -n external-secrets-operator \
+#   --from-literal=api-key=YOUR_IBM_CLOUD_API_KEY
+#
+# To get your IBM Cloud API key:
+# 1. Log in to IBM Cloud: https://cloud.ibm.com
+# 2. Go to Manage > Access (IAM) > API keys
+# 3. Create an API key with access to Secrets Manager
+#
+# To get your Secrets Manager instance URL:
+# 1. Go to your Secrets Manager instance in IBM Cloud
+# 2. Copy the "Endpoints" URL from the instance details
+
+# Made with Bob

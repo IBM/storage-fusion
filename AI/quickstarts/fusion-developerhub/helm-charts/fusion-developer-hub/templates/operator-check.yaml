@@ -1,0 +1,152 @@
+{{- if .Values.operators.enabled }}
+{{- if .Values.operators.skipIfExists }}
+---
+# Job to check if operators already exist
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: check-existing-operators
+  namespace: {{ .Values.operators.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: operator-check
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-developer-hub.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: operator-check-sa
+      restartPolicy: Never
+      containers:
+      - name: check
+        image: {{ .Values.global.toolsImage }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "=========================================="
+          echo "Checking for Existing Operators"
+          echo "=========================================="
+          echo ""
+          
+          RHDH_EXISTS=false
+          POSTGRES_EXISTS=false
+          
+          # Check if RHDH operator exists
+          {{- if .Values.operators.developerHub.enabled }}
+          echo "Checking for Red Hat Developer Hub operator..."
+          if oc get csv -n {{ .Values.operators.developerHub.namespace }} -l operators.coreos.com/rhdh.{{ .Values.operators.developerHub.namespace }}="" 2>/dev/null | grep -q rhdh; then
+            echo "  ✓ RHDH operator already exists"
+            RHDH_EXISTS=true
+          else
+            echo "  ℹ RHDH operator not found - will be installed"
+          fi
+          {{- end }}
+          
+          # Check if PostgreSQL operator exists
+          {{- if .Values.operators.postgres.enabled }}
+          echo ""
+          echo "Checking for Crunchy PostgreSQL operator..."
+          if oc get csv -n {{ .Values.operators.postgres.namespace }} -l operators.coreos.com/crunchy-postgres-operator.{{ .Values.operators.postgres.namespace }}="" 2>/dev/null | grep -q crunchy-postgres-operator; then
+            echo "  ✓ Crunchy PostgreSQL operator already exists"
+            POSTGRES_EXISTS=true
+          else
+            echo "  ℹ Crunchy PostgreSQL operator not found - will be installed"
+          fi
+          {{- end }}
+          
+          echo ""
+          echo "=========================================="
+          echo "Operator Check Summary"
+          echo "=========================================="
+          if [ "$RHDH_EXISTS" = "true" ]; then
+            echo "RHDH Operator: Already installed ✓"
+          else
+            echo "RHDH Operator: Will be installed"
+          fi
+          
+          if [ "$POSTGRES_EXISTS" = "true" ]; then
+            echo "PostgreSQL Operator: Already installed ✓"
+          else
+            echo "PostgreSQL Operator: Will be installed"
+          fi
+          echo ""
+          
+          # Create ConfigMap with results for other hooks to use
+          cat <<EOF | oc apply -f -
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: operator-check-results
+            namespace: {{ .Values.operators.developerHub.namespace }}
+            labels:
+              {{- include "fusion-developer-hub.labels" . | nindent 14 }}
+          data:
+            rhdh-exists: "$RHDH_EXISTS"
+            postgres-exists: "$POSTGRES_EXISTS"
+          EOF
+          
+          echo "Operator check complete!"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: operator-check-sa
+  namespace: {{ .Values.operators.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-6"
+    helm.sh/hook-delete-policy: before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: operator-check-role
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-6"
+    helm.sh/hook-delete-policy: before-hook-creation
+rules:
+- apiGroups: ["operators.coreos.com"]
+  resources: ["clusterserviceversions", "subscriptions"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: operator-check-binding
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-6"
+    helm.sh/hook-delete-policy: before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: operator-check-role
+subjects:
+- kind: ServiceAccount
+  name: operator-check-sa
+  namespace: {{ .Values.operators.developerHub.namespace }}
+{{- end }}
+{{- end }}
+
+# Made with Bob

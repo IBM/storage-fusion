@@ -1,0 +1,21 @@
+---
+# Post-deployment configuration
+- name: Display configuration banner
+  debug:
+    msg:
+      - "=========================================="
+      - "  Post-Deployment Configuration"
+      - "=========================================="
+
+- name: Configuration tasks placeholder
+  debug:
+    msg: "Configuration tasks can be added here for repository setup, RBAC, etc."
+
+- name: Display configuration summary
+  debug:
+    msg:
+      - "=========================================="
+      - "  Configuration Complete"
+      - "=========================================="
+
+# Made with Bob

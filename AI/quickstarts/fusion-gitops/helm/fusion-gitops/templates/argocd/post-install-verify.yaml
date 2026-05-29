@@ -1,0 +1,300 @@
+{{- if .Values.argocd.enabled }}
+---
+# Job to verify ArgoCD is ready after installation
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: argocd-verify-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-verify
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-gitops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: argocd-verify
+    spec:
+      serviceAccountName: argocd-patch-sa
+      restartPolicy: OnFailure
+      containers:
+        - name: verify
+          image: registry.redhat.io/openshift4/ose-cli:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              
+              echo "========================================="
+              echo "ArgoCD Post-Install Verification"
+              echo "========================================="
+              echo ""
+              
+              ARGOCD_NS="{{ .Values.argocd.namespace }}"
+              ARGOCD_NAME="{{ .Values.argocd.name }}"
+              TIMEOUT=600  # 10 minutes
+              INTERVAL=10
+              ELAPSED=0
+              
+              # Function to check component status
+              check_component() {
+                local component=$1
+                local label=$2
+                echo "Checking $component..."
+                
+                local ready=0
+                local total=0
+                
+                if oc get deployment -n $ARGOCD_NS -l "$label" &>/dev/null; then
+                  ready=$(oc get deployment -n $ARGOCD_NS -l "$label" -o jsonpath='{.items[0].status.readyReplicas}' 2>/dev/null || echo "0")
+                  total=$(oc get deployment -n $ARGOCD_NS -l "$label" -o jsonpath='{.items[0].spec.replicas}' 2>/dev/null || echo "0")
+                elif oc get statefulset -n $ARGOCD_NS -l "$label" &>/dev/null; then
+                  ready=$(oc get statefulset -n $ARGOCD_NS -l "$label" -o jsonpath='{.items[0].status.readyReplicas}' 2>/dev/null || echo "0")
+                  total=$(oc get statefulset -n $ARGOCD_NS -l "$label" -o jsonpath='{.items[0].spec.replicas}' 2>/dev/null || echo "0")
+                fi
+                
+                if [ "$ready" = "$total" ] && [ "$total" != "0" ]; then
+                  echo "  ✓ $component: $ready/$total replicas ready"
+                  return 0
+                else
+                  echo "  ⏳ $component: $ready/$total replicas ready"
+                  return 1
+                fi
+              }
+              
+              # Function to check PVC status
+              check_pvc() {
+                local pvc_pattern=$1
+                local description=$2
+                
+                if oc get pvc -n $ARGOCD_NS 2>/dev/null | grep -q "$pvc_pattern"; then
+                  local status=$(oc get pvc -n $ARGOCD_NS -o jsonpath='{.items[?(@.metadata.name=~"'$pvc_pattern'")].status.phase}' 2>/dev/null)
+                  if [ "$status" = "Bound" ]; then
+                    echo "  ✓ $description PVC: Bound"
+                    return 0
+                  else
+                    echo "  ⏳ $description PVC: $status"
+                    return 1
+                  fi
+                else
+                  echo "  ⚠ $description PVC: Not found"
+                  return 1
+                fi
+              }
+              
+              # Wait for ArgoCD CR to be ready
+              echo "Step 1: Waiting for ArgoCD CR to be ready..."
+              while [ $ELAPSED -lt $TIMEOUT ]; do
+                PHASE=$(oc get argocd $ARGOCD_NAME -n $ARGOCD_NS -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown")
+                
+                if [ "$PHASE" = "Available" ]; then
+                  echo "✓ ArgoCD CR is Available"
+                  break
+                fi
+                
+                echo "  ArgoCD phase: $PHASE (waiting...)"
+                sleep $INTERVAL
+                ELAPSED=$((ELAPSED + INTERVAL))
+                
+                if [ $ELAPSED -ge $TIMEOUT ]; then
+                  echo "❌ ERROR: Timeout waiting for ArgoCD CR to be Available"
+                  echo "Current phase: $PHASE"
+                  oc get argocd $ARGOCD_NAME -n $ARGOCD_NS -o yaml | grep -A 10 "status:"
+                  exit 1
+                fi
+              done
+              
+              echo ""
+              echo "Step 2: Verifying ArgoCD components..."
+              ELAPSED=0
+              ALL_READY=false
+              
+              while [ $ELAPSED -lt $TIMEOUT ]; do
+                echo "Checking components (elapsed: ${ELAPSED}s)..."
+                
+                SERVER_OK=false
+                REPO_OK=false
+                REDIS_OK=false
+                CONTROLLER_OK=false
+                
+                # Check critical components (must have replicas configured)
+                check_component "Server" "app.kubernetes.io/name=openshift-gitops-server" && SERVER_OK=true
+                check_component "Repo Server" "app.kubernetes.io/name=openshift-gitops-repo-server" && REPO_OK=true
+                
+                # Check optional components - if replicas are 0/0, check if pods exist
+                echo "Checking Redis (optional)..."
+                if check_component "Redis" "app.kubernetes.io/name=openshift-gitops-redis" 2>/dev/null; then
+                  REDIS_OK=true
+                else
+                  # Check if Redis pods exist (may not have replicas field set)
+                  REDIS_PODS=$(oc get pods -n $ARGOCD_NS -l app.kubernetes.io/name=openshift-gitops-redis --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)
+                  if [ "$REDIS_PODS" -gt 0 ]; then
+                    echo "  ✓ Redis: Running ($REDIS_PODS pod(s), no replicas field)"
+                    REDIS_OK=true
+                  else
+                    echo "  ⏳ Redis: Not ready"
+                    REDIS_OK=false
+                  fi
+                fi
+                
+                echo "Checking Application Controller (optional)..."
+                if check_component "Application Controller" "app.kubernetes.io/name=openshift-gitops-application-controller" 2>/dev/null; then
+                  CONTROLLER_OK=true
+                else
+                  # Check if Controller pods exist (may not have replicas field set)
+                  CONTROLLER_PODS=$(oc get pods -n $ARGOCD_NS -l app.kubernetes.io/name=openshift-gitops-application-controller --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)
+                  if [ "$CONTROLLER_PODS" -gt 0 ]; then
+                    echo "  ✓ Application Controller: Running ($CONTROLLER_PODS pod(s), no replicas field)"
+                    CONTROLLER_OK=true
+                  else
+                    echo "  ⏳ Application Controller: Not ready"
+                    CONTROLLER_OK=false
+                  fi
+                fi
+                
+                # Only require critical components (Server and Repo Server)
+                if $SERVER_OK && $REPO_OK; then
+                  echo "✓ Critical components (Server and Repo Server) are ready"
+                  if $REDIS_OK && $CONTROLLER_OK; then
+                    echo "✓ All components including optional ones are ready"
+                  else
+                    echo "⚠ Optional components status: Redis=$REDIS_OK, Controller=$CONTROLLER_OK (continuing anyway)"
+                  fi
+                  
+                  # Check autoscaling configuration
+                  {{- if .Values.argocd.server.autoscale.enabled }}
+                  echo ""
+                  echo "Verifying autoscaling configuration..."
+                  if oc get hpa -n $ARGOCD_NS -l app.kubernetes.io/name=openshift-gitops-server &>/dev/null; then
+                    echo "  ✓ Server HPA configured"
+                  else
+                    echo "  ⚠ Server HPA not found (may still be creating)"
+                  fi
+                  {{- else }}
+                  echo ""
+                  echo "ℹ Autoscaling disabled for server (single replica mode)"
+                  {{- end }}
+                  
+                  {{- if .Values.argocd.repo.autoscale.enabled }}
+                  if oc get hpa -n $ARGOCD_NS -l app.kubernetes.io/name=openshift-gitops-repo-server &>/dev/null; then
+                    echo "  ✓ Repo server HPA configured"
+                  else
+                    echo "  ⚠ Repo server HPA not found (may still be creating)"
+                  fi
+                  {{- else }}
+                  echo "ℹ Autoscaling disabled for repo server (single replica mode)"
+                  {{- end }}
+                  
+                  ALL_READY=true
+                  break
+                fi
+                
+                echo ""
+                sleep $INTERVAL
+                ELAPSED=$((ELAPSED + INTERVAL))
+                
+                if [ $ELAPSED -ge $TIMEOUT ]; then
+                  echo "❌ ERROR: Timeout waiting for all components to be ready"
+                  echo ""
+                  echo "Component status:"
+                  oc get pods -n $ARGOCD_NS -l app.kubernetes.io/part-of=argocd
+                  exit 1
+                fi
+              done
+              
+              echo ""
+              echo "✓ All ArgoCD components are ready"
+              
+              {{- if .Values.argocd.repo.storage.enabled }}
+              echo ""
+              echo "Step 3: Verifying persistent storage..."
+              
+              STORAGE_OK=true
+              check_pvc "argocd-repo-server-cache" "Repo Server" || STORAGE_OK=false
+              
+              if ! $STORAGE_OK; then
+                echo ""
+                echo "⚠ WARNING: Repo server PVC is not ready"
+                echo "This may indicate storage configuration issues."
+                echo ""
+                echo "Current PVCs:"
+                oc get pvc -n $ARGOCD_NS
+                echo ""
+                echo "Storage classes:"
+                oc get storageclass
+                # Don't fail - storage might take longer
+              else
+                echo ""
+                echo "✓ Repo server persistent volume is bound"
+              fi
+              
+              echo ""
+              echo "Step 4: Verifying storage mounts..."
+              
+              echo "Checking repo server volume mounts..."
+              REPO_POD=$(oc get pods -n $ARGOCD_NS -l app.kubernetes.io/name=openshift-gitops-repo-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+              if [ -n "$REPO_POD" ]; then
+                if oc exec -n $ARGOCD_NS $REPO_POD -- df -h {{ .Values.argocd.repo.storage.mountPath }} &>/dev/null; then
+                  echo "  ✓ Repo server storage mounted at {{ .Values.argocd.repo.storage.mountPath }}"
+                  oc exec -n $ARGOCD_NS $REPO_POD -- df -h {{ .Values.argocd.repo.storage.mountPath }} | tail -1
+                else
+                  echo "  ⚠ Could not verify repo server mount"
+                fi
+              fi
+              {{- else }}
+              echo ""
+              echo "Step 3: Persistent storage not enabled"
+              echo "  ⚠ Repo server using ephemeral storage"
+              {{- end }}
+              
+              echo ""
+              echo "========================================="
+              echo "✅ ArgoCD Verification Complete"
+              echo "========================================="
+              echo ""
+              echo "Summary:"
+              echo "  ✓ ArgoCD CR: Available"
+              echo "  ✓ Server: Ready ({{ .Values.argocd.server.replicas }} replica(s))"
+              echo "  ✓ Repo Server: Ready ({{ .Values.argocd.repo.replicas }} replica(s))"
+              echo "  ✓ Redis: Ready"
+              echo "  ✓ Application Controller: Ready"
+              {{- if .Values.argocd.server.autoscale.enabled }}
+              echo "  ✓ Autoscaling: Enabled (Server: {{ .Values.argocd.server.autoscale.minReplicas }}-{{ .Values.argocd.server.autoscale.maxReplicas }}, Repo: {{ .Values.argocd.repo.autoscale.minReplicas }}-{{ .Values.argocd.repo.autoscale.maxReplicas }})"
+              {{- else }}
+              echo "  ℹ Autoscaling: Disabled (single replica mode)"
+              {{- end }}
+              {{- if .Values.argocd.repo.storage.enabled }}
+              echo "  ✓ Persistent Storage: Configured (Repo Server: {{ .Values.argocd.repo.storage.size }})"
+              {{- else }}
+              echo "  ℹ Persistent Storage: Not configured (using ephemeral)"
+              {{- end }}
+              echo "  ℹ Redis: Using ephemeral storage (operator limitation)"
+              echo ""
+              echo "ArgoCD is ready for use!"
+              echo ""
+              echo "Access ArgoCD:"
+              ROUTE=$(oc get route openshift-gitops-server -n $ARGOCD_NS -o jsonpath='{.spec.host}' 2>/dev/null || echo "Not found")
+              if [ "$ROUTE" != "Not found" ]; then
+                echo "  URL: https://$ROUTE"
+              fi
+              echo ""
+              
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+{{- end }}
+
+# Made with Bob

@@ -1,0 +1,207 @@
+# Default values for vault-operator
+# This chart deploys HashiCorp Vault on OpenShift using the Vault Operator
+#
+# Default storage classes are configured for OpenShift Data Foundation (ODF):
+# - ocs-storagecluster-ceph-rbd (RWO) for Vault data
+#
+# Users can override these values to use different storage classes
+
+# Global settings
+global:
+  # OpenShift specific settings
+  openshift: true
+  # Namespace where Vault will be deployed
+  namespace: vault
+
+# Operator configuration
+operator:
+  # Enable/disable operator deployment
+  enabled: true
+  # Operator namespace (defaults to same as vault namespace)
+  namespace: vault
+  # Operator subscription settings
+  subscription:
+    channel: stable
+    source: certified-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic
+    startingCSV: "" # Leave empty for latest
+
+# Vault instance configuration
+vault:
+  # Enable/disable Vault instance deployment
+  enabled: true
+  # Vault instance name
+  name: vault
+  # Number of Vault replicas (HA mode)
+  replicas: 3
+
+  # Vault version
+  version: "1.15.0"
+
+  # Storage configuration
+  # Defaults to OpenShift Data Foundation (ODF) storage classes
+  storage:
+    # Storage class for Vault data (ReadWriteOnce)
+    # Default: ocs-storagecluster-ceph-rbd (OpenShift Data Foundation)
+    # Override with --set vault.storage.storageClassName=your-storage-class
+    storageClassName: "ocs-storagecluster-ceph-rbd"
+    # Storage size for each Vault replica
+    size: 10Gi
+    # Access mode
+    accessMode: ReadWriteOnce
+
+  # Vault configuration
+  config:
+    # Seal type: awskms, azurekeyvault, gcpckms, transit, shamir
+    seal: shamir
+    # UI enabled
+    ui: true
+    # Listener configuration
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        tls_disable: false
+    # Storage backend (integrated raft storage)
+    storage:
+      raft:
+        path: /vault/data
+        node_id: "vault-0"
+    # Service registration
+    service_registration:
+      kubernetes: {}
+
+  # Resource limits and requests
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+  # Vault service configuration
+  service:
+    type: ClusterIP
+    port: 8200
+    targetPort: 8200
+    annotations: {}
+
+  # Ingress/Route configuration for OpenShift
+  route:
+    enabled: true
+    host: "" # Auto-generated if empty
+    tls:
+      enabled: true
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+
+  # Vault injector configuration
+  injector:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+  # Vault CSI provider
+  csi:
+    enabled: false
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "100m"
+
+# External Secrets Operator integration
+externalSecrets:
+  # Enable integration with External Secrets Operator
+  enabled: false
+  # Create SecretStore for Vault
+  createSecretStore: true
+  # SecretStore configuration
+  secretStore:
+    name: vault-backend
+    namespace: vault
+    # Vault connection details
+    vault:
+      server: "http://vault.vault.svc.cluster.local:8200"
+      path: "secret"
+      version: "v2"
+      # Auth method: kubernetes, token, appRole
+      auth:
+        kubernetes:
+          mountPath: "kubernetes"
+          role: "external-secrets"
+
+# ArgoCD integration
+argocd:
+  # Enable ArgoCD Application for Vault
+  enabled: false
+  # ArgoCD project
+  project: default
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+# Monitoring and observability
+monitoring:
+  # Enable Prometheus metrics
+  enabled: true
+  # ServiceMonitor for Prometheus Operator
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 100
+  fsGroup: 1000
+  capabilities:
+    add:
+      - IPC_LOCK
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Affinity rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - vault
+          topologyKey: kubernetes.io/hostname
+
+# Tolerations
+tolerations: []
+
+# Node selector
+nodeSelector: {}
+
+# Additional labels
+labels: {}
+
+# Additional annotations
+annotations: {}
+
+# Made with Bob

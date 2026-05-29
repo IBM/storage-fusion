@@ -1,0 +1,30 @@
+---
+# Check cluster permissions
+- name: Check if user can create namespaces
+  kubernetes.core.k8s_info:
+    kind: Namespace
+    name: default
+  register: namespace_check
+  failed_when: false
+
+- name: Verify namespace access
+  fail:
+    msg: "Cannot access namespaces. Please check your kubeconfig and permissions."
+  when: namespace_check.failed | default(false)
+
+- name: Test create namespace permission
+  command: "{{ ansible_env.KUBECTL_CMD | default('kubectl') }} auth can-i create namespace"
+  register: can_create_ns
+  changed_when: false
+  failed_when: false
+
+- name: Display namespace creation permission
+  debug:
+    msg: "{{ 'Can create namespaces' if can_create_ns.stdout == 'yes' else 'Cannot create namespaces - may need cluster admin' }}"
+
+- name: Warn if insufficient permissions
+  debug:
+    msg: "WARNING: You may not have sufficient permissions. Cluster admin access is recommended."
+  when: can_create_ns.stdout != 'yes'
+
+# Made with Bob

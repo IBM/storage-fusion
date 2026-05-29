@@ -1,0 +1,90 @@
+---
+# Configure existing openshift-gitops ArgoCD instance with storage
+# This uses kubectl patch instead of Helm to avoid ownership conflicts
+
+- name: Check if openshift-gitops ArgoCD instance exists
+  command: kubectl get argocd openshift-gitops -n openshift-gitops
+  register: argocd_exists
+  failed_when: false
+  changed_when: false
+
+- name: Configure existing ArgoCD instance
+  when: argocd_exists.rc == 0
+  block:
+    - name: Display configuration message
+      debug:
+        msg: "Configuring existing openshift-gitops ArgoCD instance with storage..."
+
+    - name: Build repo server patch
+      set_fact:
+        repo_patch_json: |
+          {
+            "spec": {
+              "repo": {
+                "volumeSize": "{{ argocd_repo_storage_size | default('10Gi') }}"
+                {{ ',"storageClassName": "' + argocd_repo_storage_class + '"' if argocd_repo_storage_class else '' }}
+              }
+            }
+          }
+
+    - name: Build redis patch
+      set_fact:
+        redis_patch_json: |
+          {
+            "spec": {
+              "redis": {
+                "volumeSize": "{{ argocd_redis_storage_size | default('5Gi') }}"
+                {{ ',"storageClassName": "' + argocd_redis_storage_class + '"' if argocd_redis_storage_class else '' }}
+              }
+            }
+          }
+
+    - name: Apply repo server storage configuration
+      shell: |
+        kubectl patch argocd openshift-gitops \
+          -n openshift-gitops \
+          --type=merge \
+          --patch '{{ repo_patch_json | trim }}'
+      register: repo_patch
+      changed_when: "'patched' in repo_patch.stdout"
+      failed_when: false
+
+    - name: Apply redis storage configuration
+      shell: |
+        kubectl patch argocd openshift-gitops \
+          -n openshift-gitops \
+          --type=merge \
+          --patch '{{ redis_patch_json | trim }}'
+      register: redis_patch
+      changed_when: "'patched' in redis_patch.stdout"
+      failed_when: false
+
+    - name: Display patch results
+      debug:
+        msg:
+          - "Repo server storage: {{ repo_patch.stdout if repo_patch.rc == 0 else 'Failed' }}"
+          - "Redis storage: {{ redis_patch.stdout if redis_patch.rc == 0 else 'Failed' }}"
+
+    - name: Wait for ArgoCD to reconcile changes
+      pause:
+        seconds: 10
+
+    - name: Verify storage configuration
+      command: kubectl get argocd openshift-gitops -n openshift-gitops -o yaml
+      register: argocd_config
+      changed_when: false
+
+    - name: Check if storage was configured
+      set_fact:
+        storage_configured: "{{ 'volumeSize' in argocd_config.stdout }}"
+
+    - name: Display storage configuration status
+      debug:
+        msg: "Storage configuration {{ 'applied successfully' if storage_configured else 'may need manual verification' }}"
+
+- name: ArgoCD instance not found
+  when: argocd_exists.rc != 0
+  debug:
+    msg: "WARNING: openshift-gitops ArgoCD instance not found. It should be created by the GitOps operator."
+
+# Made with Bob

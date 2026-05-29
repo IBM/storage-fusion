@@ -1,0 +1,29 @@
+---
+# Validate Helm chart before deployment
+- name: Check if Helm chart exists
+  stat:
+    path: "{{ helm_chart_path }}"
+  register: chart_path_check
+
+- name: Fail if chart not found
+  fail:
+    msg: "Helm chart not found at {{ helm_chart_path }}"
+  when: not chart_path_check.stat.exists
+
+- name: Validate Helm chart
+  command: helm lint {{ helm_chart_path }}
+  register: helm_lint
+  changed_when: false
+  failed_when: false
+
+- name: Display lint results
+  debug:
+    var: helm_lint.stdout_lines
+  when: helm_lint.rc == 0
+
+- name: Warn on lint issues
+  debug:
+    msg: "WARNING: Helm chart has lint issues but will proceed"
+  when: helm_lint.rc != 0
+
+# Made with Bob

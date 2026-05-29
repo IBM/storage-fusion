@@ -1,0 +1,236 @@
+# IBM Fusion Developer Hub - Operator-Based with Guest Access
+# This example demonstrates deploying Developer Hub with NO authentication
+# for quick demos, testing, and internal development environments.
+#
+# ⚠️ WARNING: Guest access allows ANYONE to access Developer Hub without authentication
+# This configuration is NOT recommended for production use!
+#
+# Use Case: Organizations that want:
+# - Fastest possible setup for demos
+# - Internal development/testing environments
+# - Proof of concepts and evaluations
+# - Training and workshop environments
+
+global:
+  # REQUIRED: Replace with your OpenShift cluster domain
+  wildcardDomain: fusion-dh.apps.osai-demo.cp.fyre.ibm.com
+  
+  # Tools image for setup jobs (contains oc, kubectl, bash)
+  toolsImage: quay.io/openshift/origin-cli:latest
+  
+  modelsNamespace: maas-models
+
+# Operator Configuration
+operators:
+  enabled: true
+  skipIfExists: true
+  
+  # Red Hat Developer Hub Operator
+  developerHub:
+    enabled: true
+    channel: fast
+    startingCSV: ""  # Latest version
+    namespace: rhdh-operator
+    installPlanApproval: Automatic
+  
+  # Crunchy PostgreSQL Operator
+  postgres:
+    enabled: true
+    channel: v5  # Crunchy Postgres Operator
+    startingCSV: ""  # Latest version
+    namespace: postgres-operator
+    watchAllNamespaces: true
+    installPlanApproval: Automatic
+
+# Developer Hub Instance Configuration
+developerHub:
+  enabled: true
+  createInstance: true  # Create the Developer Hub instance
+  instanceName: fusion-hub
+  # namespace: ""  # Uses .Release.Namespace by default
+  
+  # Single replica for demos
+  replicas: 1
+  
+  # Application Configuration
+  config:
+    title: "IBM Fusion Developer Hub (Demo)"
+    organizationName: "IBM Fusion - Demo Environment"
+    hostname: ""  # Auto-generated
+    
+    # Homepage customization is provided by default in the template
+    # No need to specify here unless you want to override defaults
+    homepage:
+      enabled: false
+        
+  # IBM Fusion AI Configuration
+  # RHOAI connector disabled for guest access (requires rhdh-rhoai-connector-token secret)
+  fusion:
+    enabled: true
+    
+    api:
+      baseUrl: "https://fusion-api.example.com"
+      timeout: 30000
+    
+    # AI Models
+    ai:
+      enabled: true
+      models:
+        - name: watsonx
+          type: llm
+          endpoint: ""
+        - name: granite-code
+          type: code-assistant
+          endpoint: ""
+        - name: granite-chat
+          type: conversational
+          endpoint: ""
+      
+      # Disable RHOAI connector (requires additional secret setup)
+      rhoaiConnector:
+        enabled: false
+    
+    # Modernization Tools
+    modernization:
+      enabled: true
+      tools:
+        - name: transformation-advisor
+          enabled: true
+        - name: mono2micro
+          enabled: true
+        - name: app-navigator
+          enabled: true
+  
+  # PostgreSQL Database - Single Instance
+  database:
+    useOperator: true
+    clusterName: fusion-guest-postgres
+    
+    # Single instance for demos
+    instances: 1
+    
+    # Minimal PostgreSQL configuration
+    maxConnections: "100"
+    sharedBuffers: "256MB"
+    effectiveCacheSize: "1GB"
+    workMem: "16MB"
+    
+    # Storage
+    storageSize: 20Gi
+    storageClassName: ""
+    
+    # Minimal resources
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2Gi
+      requests:
+        cpu: "250m"
+        memory: 512Mi
+    
+    # Backups disabled for demos
+    backup:
+      enabled: false
+  
+  # Catalog Configuration
+  catalog:
+    enabled: true
+    
+    github:
+      enabled: false
+    
+    gitlab:
+      enabled: false
+  
+  # TechDocs disabled for demos
+  techdocs:
+    enabled: false
+  
+  # Authentication - GUEST ACCESS ONLY
+  # ⚠️ WARNING: No authentication required!
+  auth:
+    enabled: true
+    
+    # Guest access enabled
+    guest:
+      enabled: true
+    
+    # All other auth providers disabled
+    github:
+      enabled: false
+    
+    oidc:
+      enabled: false
+  
+  # No secrets needed for guest access
+  extraEnvs:
+    secrets: []
+  
+  # Minimal Resource Limits
+  resources:
+    limits:
+      cpu: "1"
+      memory: 2Gi
+    requests:
+      cpu: "250m"
+      memory: 512Mi
+  
+  # Relaxed Security for Demos
+  security:
+    # Network policies disabled for easier access
+    networkPolicy:
+      enabled: false
+    
+    # Pod security standards enabled
+    podSecurityStandards:
+      enabled: true
+    
+    # Minimal resource quotas
+    resourceQuota:
+      cpu: "4"
+      memory: "8Gi"
+      cpuLimit: "8"
+      memoryLimit: "16Gi"
+      pvc: "5"
+    
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: null
+      fsGroup: null
+      seccompProfile:
+        type: RuntimeDefault
+    
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      runAsUser: null
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false
+  
+  # Route Configuration
+  route:
+    enabled: true
+    tls:
+      enabled: true
+      secretName: ""
+
+# Monitoring disabled for demos
+monitoring:
+  enabled: false
+
+# OpenShift Console QuickStart
+quickstart:
+  enabled: true
+
+# Common Labels
+commonLabels:
+  environment: demo
+  team: fusion-ai
+  access: guest
+
+# Common Annotations
+commonAnnotations:
+  warning: "Guest access enabled - no authentication required"
+
+# Made with Bob

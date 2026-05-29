@@ -1,0 +1,109 @@
+---
+# Deploy Helm chart
+- name: Check if main namespace exists
+  command: kubectl get namespace {{ helm_namespace }}
+  register: namespace_check
+  changed_when: false
+  failed_when: false
+
+- name: Create main namespace if it doesn't exist
+  command: kubectl create namespace {{ helm_namespace }}
+  when: namespace_check.rc != 0
+
+- name: Display main namespace status
+  debug:
+    msg: "Namespace {{ helm_namespace }} {{ 'created' if namespace_check.rc != 0 else 'already exists' }}"
+
+- name: Check if operator namespace exists
+  command: kubectl get namespace openshift-gitops-operator
+  register: operator_namespace_check
+  changed_when: false
+  failed_when: false
+
+- name: Create operator namespace if it doesn't exist
+  command: kubectl create namespace openshift-gitops-operator
+  when: operator_namespace_check.rc != 0
+
+- name: Display operator namespace status
+  debug:
+    msg: "Namespace openshift-gitops-operator {{ 'created' if operator_namespace_check.rc != 0 else 'already exists' }}"
+
+- name: Check if release already exists
+  command: helm list -n {{ helm_namespace }} -o json
+  register: helm_list
+  changed_when: false
+  failed_when: false
+
+- name: Parse existing releases
+  set_fact:
+    existing_release: "{{ (helm_list.stdout | from_json) | selectattr('name', 'equalto', helm_release_name) | list | first | default({}) }}"
+
+- name: Display release status
+  debug:
+    msg: "Release {{ helm_release_name }} {{ 'already exists' if existing_release else 'will be created' }}"
+
+- name: Build Helm command
+  set_fact:
+    helm_command: >-
+      helm upgrade --install
+      {{ helm_release_name }}
+      {{ helm_chart_path }}
+      --namespace {{ helm_namespace }}
+      {{ '--values ' + helm_values_file if helm_values_file else '' }}
+      {{ '--dry-run' if (dry_run | bool) else '' }}
+      --wait
+      --timeout {{ argocd_timeout }}s
+
+- name: Display Helm command
+  debug:
+    msg: "{{ helm_command }}"
+  when: (dry_run | bool) or (ansible_verbosity | default(0)) > 0
+
+- name: Deploy Helm chart (dry-run)
+  command: "{{ helm_command }}"
+  register: helm_deploy_dry
+  when: dry_run | bool
+  changed_when: false
+
+- name: Display dry-run output
+  debug:
+    var: helm_deploy_dry.stdout_lines
+  when: dry_run | bool
+
+- name: Deploy Helm chart
+  command: "{{ helm_command }}"
+  register: helm_deploy
+  when: not (dry_run | bool)
+  changed_when: "'has been upgraded' in helm_deploy.stdout or 'has been installed' in helm_deploy.stdout"
+
+- name: Display deployment output
+  debug:
+    var: helm_deploy.stdout_lines
+  when: not (dry_run | bool) and ((ansible_verbosity | default(0)) > 0)
+
+- name: Get release status
+  command: helm status {{ helm_release_name }} -n {{ helm_namespace }} -o json
+  register: release_status
+  changed_when: false
+  failed_when: false
+  when: not (dry_run | bool)
+
+- name: Parse release status
+  set_fact:
+    release_info: "{{ release_status.stdout | from_json }}"
+  when:
+    - not (dry_run | bool)
+    - release_status.rc == 0
+
+- name: Display release information
+  debug:
+    msg:
+      - "Release: {{ release_info.name }}"
+      - "Status: {{ release_info.info.status }}"
+      - "Version: {{ release_info.version }}"
+      - "Namespace: {{ release_info.namespace }}"
+  when:
+    - not (dry_run | bool)
+    - release_status.rc == 0
+
+# Made with Bob

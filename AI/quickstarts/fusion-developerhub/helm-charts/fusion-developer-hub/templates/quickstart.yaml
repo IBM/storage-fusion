@@ -1,0 +1,214 @@
+{{- if .Values.quickstart.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-getting-started-quickstart
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: quickstart
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+data:
+  quickstart.yaml: |
+    apiVersion: console.openshift.io/v1
+    kind: ConsoleQuickStart
+    metadata:
+      name: fusion-getting-started
+    spec:
+      displayName: Getting Started with IBM Fusion Developer Hub
+      durationMinutes: 15
+      icon: data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMThjLTQuNDEgMC04LTMuNTktOC04czMuNTktOCA4LTggOCAzLjU5IDggOC0zLjU5IDgtOCA4eiIgZmlsbD0iIzAwN2Q3OSIvPjwvc3ZnPg==
+      description: Learn how to use IBM Fusion Developer Hub for application modernization and AI-powered development
+      introduction: |
+        ### Welcome to IBM Fusion Developer Hub!
+        
+        This quickstart will guide you through:
+        - Understanding the Developer Hub interface
+        - Creating your first AI-powered application
+        - Using application modernization tools
+        - Deploying to OpenShift
+        
+        **Prerequisites:**
+        - Access to IBM Fusion Developer Hub at https://{{ .Values.developerHub.config.hostname | default (printf "developerhub-%s.%s" .Values.developerHub.namespace (include "fusion-developer-hub.wildcardDomain" .)) }}
+        - Basic understanding of application development
+        - (Optional) Existing application to modernize
+      
+      tasks:
+        - title: Explore the Developer Hub
+          description: |
+            Get familiar with the IBM Fusion Developer Hub interface and its key features.
+          review:
+            instructions: |
+              #### Access Developer Hub
+              1. Open Developer Hub at: https://{{ .Values.developerHub.config.hostname | default (printf "developerhub-%s.%s" .Values.developerHub.namespace (include "fusion-developer-hub.wildcardDomain" .)) }}
+              2. You should see the Developer Hub home page
+              
+              #### Navigation
+              1. Click on **Catalog** in the left sidebar to view available components
+              2. Click on **Create** to see available templates
+              3. Click on **APIs** to explore API documentation
+              4. Click on **Docs** to access technical documentation
+              
+              #### Key Features
+              - **Software Catalog**: Browse and discover components, APIs, and resources
+              - **Software Templates**: Create new applications from pre-built templates
+              - **TechDocs**: Access comprehensive documentation
+              {{- if .Values.developerHub.fusion.enabled }}
+              - **AI Assistant**: Get AI-powered code suggestions and reviews
+              {{- end }}
+              
+              Have you explored the main sections of Developer Hub?
+          
+          summary:
+            success: You've successfully explored the Developer Hub interface!
+            failed: Try navigating through the different sections again. Make sure you can access the Catalog, Create, APIs, and Docs sections.
+        
+        - title: Browse the Software Catalog
+          description: |
+            Explore the software catalog to discover available components and services.
+          review:
+            instructions: |
+              #### View Catalog
+              1. Click **Catalog** in the left sidebar
+              2. Browse the available components
+              3. Try filtering by:
+                 - **Kind**: Component, API, Resource
+                 - **Tags**: Search for specific technologies
+              4. Click on a component to view its details
+              5. Explore the component's:
+                 - Overview and documentation
+                 - Dependencies and relationships
+                 - API specifications (if available)
+              
+              #### Understanding Components
+              - **Components**: Applications, services, libraries
+              - **APIs**: REST APIs, GraphQL endpoints
+              - **Resources**: Databases, message queues, storage
+              
+              Have you browsed the catalog and viewed component details?
+          
+          summary:
+            success: Great! You understand how to navigate the software catalog.
+            failed: Go back to the Catalog section and try exploring different components.
+        
+        {{- if .Values.developerHub.fusion.enabled }}
+        - title: Create an AI-Powered Application
+          description: |
+            Use the Fusion AI template to create a new application with AI capabilities.
+          review:
+            instructions: |
+              #### Create from Template
+              1. Click **Create** in the left sidebar
+              2. Search for "Fusion" or "AI" templates
+              3. Click **Choose** on a template
+              4. Fill in the application details:
+                 - **Name**: my-fusion-app
+                 - **Description**: My first Fusion AI application
+                 - **Owner**: Select your team
+              5. Configure AI features (if available):
+                 - Enable AI capabilities
+                 - Select AI model preferences
+              6. Configure repository:
+                 - Select your Git provider
+                 - Choose repository location
+              7. Click **Create** or **Next** to proceed
+              
+              #### What Happens Next
+              - Repository is created with scaffolding
+              - Component is registered in the catalog
+              - CI/CD pipeline may be configured
+              - You can track progress in the task activity
+              
+              Have you started creating an application from a template?
+          
+          summary:
+            success: Your application creation is in progress! Check the task activity for status.
+            failed: Review the form and ensure all required fields are filled. You can also try a simpler template first.
+        {{- else }}
+        - title: Create an Application from Template
+          description: |
+            Use a software template to create a new application.
+          review:
+            instructions: |
+              #### Create from Template
+              1. Click **Create** in the left sidebar
+              2. Browse available templates
+              3. Click **Choose** on a template
+              4. Fill in the application details:
+                 - **Name**: my-app
+                 - **Description**: My first application
+                 - **Owner**: Select your team
+              5. Configure repository:
+                 - Select your Git provider
+                 - Choose repository location
+              6. Click **Create** or **Next** to proceed
+              
+              #### What Happens Next
+              - Repository is created with scaffolding
+              - Component is registered in the catalog
+              - CI/CD pipeline may be configured
+              - You can track progress in the task activity
+              
+              Have you started creating an application from a template?
+          
+          summary:
+            success: Your application creation is in progress! Check the task activity for status.
+            failed: Review the form and ensure all required fields are filled. You can also try a different template.
+        {{- end }}
+        
+        - title: Explore Documentation
+          description: |
+            Learn how to access and use the TechDocs feature for documentation.
+          review:
+            instructions: |
+              #### Access TechDocs
+              1. Click **Docs** in the left sidebar
+              2. Browse available documentation
+              3. Click on a document to read it
+              4. Notice the documentation is:
+                 - Rendered from Markdown
+                 - Searchable
+                 - Versioned with your code
+              
+              #### Documentation Features
+              - **Integrated**: Docs live with your code
+              - **Searchable**: Find information quickly
+              - **Versioned**: Docs match code versions
+              - **Collaborative**: Team can contribute
+              
+              Have you explored the documentation section?
+          
+          summary:
+            success: You now know how to access and use TechDocs!
+            failed: Navigate to the Docs section and try reading some documentation.
+      
+      conclusion: |
+        ### Congratulations! 🎉
+        
+        You've completed the Getting Started with IBM Fusion Developer Hub quickstart!
+        
+        #### What You've Learned
+        - ✅ Navigate the Developer Hub interface
+        - ✅ Browse the software catalog
+        - ✅ Create applications from templates
+        - ✅ Access documentation
+        
+        #### Next Steps
+        1. **Explore More Templates**: Try creating different types of applications
+        2. **Register Components**: Add your existing applications to the catalog
+        3. **Customize**: Configure Developer Hub for your team's needs
+        {{- if .Values.developerHub.fusion.enabled }}
+        4. **Use AI Features**: Leverage AI for code generation and reviews
+        5. **Modernize Apps**: Use modernization tools to analyze applications
+        {{- end }}
+        
+        #### Resources
+        - [Developer Hub Documentation](https://{{ .Values.developerHub.config.hostname | default (printf "developerhub-%s.%s" .Values.developerHub.namespace (include "fusion-developer-hub.wildcardDomain" .)) }}/docs)
+        - [Software Templates](https://{{ .Values.developerHub.config.hostname | default (printf "developerhub-%s.%s" .Values.developerHub.namespace (include "fusion-developer-hub.wildcardDomain" .)) }}/create)
+        - [Software Catalog](https://{{ .Values.developerHub.config.hostname | default (printf "developerhub-%s.%s" .Values.developerHub.namespace (include "fusion-developer-hub.wildcardDomain" .)) }}/catalog)
+        
+        **Need Help?** Check the documentation or reach out to your platform team.
+{{- end }}
+
+# Made with Bob

@@ -1,0 +1,35 @@
+---
+# Check Fusion HCI storage availability
+- name: Check for Fusion storage classes
+  kubernetes.core.k8s_info:
+    kind: StorageClass
+  register: storage_classes
+
+- name: Look for Fusion storage classes
+  set_fact:
+    fusion_storage_found: "{{ storage_classes.resources | selectattr('provisioner', 'search', 'fusion') | list | length > 0 }}"
+
+- name: Display Fusion storage status
+  debug:
+    msg: "{{ 'Fusion storage classes found' if fusion_storage_found else 'No Fusion storage classes found (will be created)' }}"
+
+- name: Check for Fusion CSI driver
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: kube-system
+  register: kube_system_pods
+
+- name: Look for Fusion CSI pods
+  set_fact:
+    fusion_csi_found: "{{ kube_system_pods.resources | selectattr('metadata.name', 'search', 'fusion.*csi') | list | length > 0 }}"
+
+- name: Display Fusion CSI status
+  debug:
+    msg: "{{ 'Fusion CSI driver found' if fusion_csi_found else 'Fusion CSI driver not found - ensure it is installed' }}"
+
+- name: Warn if Fusion CSI not found
+  debug:
+    msg: "WARNING: Fusion CSI driver not detected. Storage provisioning may fail."
+  when: not fusion_csi_found
+
+# Made with Bob

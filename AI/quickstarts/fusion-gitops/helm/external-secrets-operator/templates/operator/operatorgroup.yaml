@@ -1,0 +1,13 @@
+{{- if .Values.operator.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: external-secrets-operator-group
+  namespace: {{ include "external-secrets-operator.namespace" . }}
+  labels:
+    {{- include "external-secrets-operator.labels" . | nindent 4 }}
+spec: {}
+{{- end }}
+
+# Made with Bob

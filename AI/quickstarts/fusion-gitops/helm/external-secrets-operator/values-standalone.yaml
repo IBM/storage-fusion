@@ -1,0 +1,132 @@
+# Standalone values for external-secrets-operator
+# This configuration deploys ONLY the operator without any secret backend integration
+# Use this for testing operator deployment and functionality before adding vault integration
+
+# Global settings
+global:
+  # OpenShift specific settings
+  openshift: true
+  # Namespace where External Secrets Operator will be deployed
+  namespace: external-secrets-operator
+
+# Operator configuration
+operator:
+  # Enable operator deployment
+  enabled: true
+  # Operator namespace
+  namespace: external-secrets-operator
+  
+  # Operator subscription settings
+  subscription:
+    # Channel for operator updates
+    channel: stable-v1
+    # Catalog source - Use Red Hat certified operator for OpenShift
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    # Package name for Red Hat OpenShift operator
+    name: openshift-external-secrets-operator
+    # Install plan approval (Automatic or Manual)
+    installPlanApproval: Automatic
+    # Starting CSV (leave empty for latest)
+    startingCSV: ""
+  
+  # Operator replicas
+  replicas: 2
+  
+  # Resource limits and requests
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# SecretStore configurations
+# ALL DISABLED for standalone deployment - no external vault required
+secretStores:
+  # HashiCorp Vault backend - DISABLED
+  vault:
+    enabled: false
+  
+  # AWS Secrets Manager backend - DISABLED
+  aws:
+    enabled: false
+  
+  # IBM Cloud Secrets Manager backend - DISABLED
+  ibmCloud:
+    enabled: false
+  
+  # Azure Key Vault backend - DISABLED
+  azure:
+    enabled: false
+  
+  # Google Cloud Secret Manager backend - DISABLED
+  gcp:
+    enabled: false
+
+# Example ExternalSecret configurations - DISABLED
+examples:
+  enabled: false
+
+# Webhook configuration
+webhook:
+  enabled: true
+  replicas: 2
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+# Cert Controller configuration
+certController:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Service account
+serviceAccount:
+  create: true
+  name: external-secrets-operator
+  annotations: {}
+
+# RBAC
+rbac:
+  create: true
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+
+# Additional labels
+labels: {}
+
+# Additional annotations
+annotations: {}
+
+# Made with Bob

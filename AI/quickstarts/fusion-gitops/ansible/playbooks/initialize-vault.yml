@@ -1,0 +1,317 @@
+---
+- name: Initialize and Unseal HashiCorp Vault
+  hosts: localhost
+  gather_facts: false
+  vars:
+    vault_namespace: "{{ lookup('env', 'VAULT_NAMESPACE') | default('vault', true) }}"
+    vault_pod_name: "vault-0"
+    vault_replicas: 3
+    vault_addr: "http://vault.{{ vault_namespace }}.svc.cluster.local:8200"
+
+  tasks:
+    - name: Get list of Vault pods
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ vault_namespace }}"
+        label_selectors:
+          - app.kubernetes.io/name=vault
+      register: vault_pods
+
+    - name: Fail if no Vault pods found
+      fail:
+        msg: "No Vault pods found in namespace {{ vault_namespace }}"
+      when: vault_pods.resources | length == 0
+
+    - name: Get actual pod names
+      set_fact:
+        vault_pod_names: "{{ vault_pods.resources | map(attribute='metadata.name') | list }}"
+
+    - name: Display found pods
+      debug:
+        msg: "Found Vault pods: {{ vault_pod_names }}"
+
+    - name: Wait for Vault pod to be running
+      kubernetes.core.k8s_info:
+        kind: Pod
+        name: "{{ vault_pod_name }}"
+        namespace: "{{ vault_namespace }}"
+      register: vault_pod
+      until: vault_pod.resources[0].status.phase == "Running"
+      retries: 30
+      delay: 10
+
+    - name: Wait for Vault process to be stable
+      kubernetes.core.k8s_exec:
+        namespace: "{{ vault_namespace }}"
+        pod: "{{ vault_pod_name }}"
+        command: vault status -format=json
+      register: vault_ready_check
+      until: vault_ready_check.rc in [0, 1, 2]
+      retries: 20
+      delay: 5
+      failed_when: false
+      changed_when: false
+      environment:
+        VAULT_ADDR: "{{ vault_addr }}"
+
+    - name: Short delay after Vault process stabilizes
+      pause:
+        seconds: 5
+
+    - name: Check if Vault is already initialized
+      kubernetes.core.k8s_exec:
+        namespace: "{{ vault_namespace }}"
+        pod: "{{ vault_pod_name }}"
+        command: vault status -format=json
+      register: vault_status
+      failed_when: false
+      changed_when: false
+      environment:
+        VAULT_ADDR: "{{ vault_addr }}"
+
+    - name: Parse Vault status
+      set_fact:
+        vault_initialized: "{{ (vault_status.stdout | from_json).initialized | default(false) }}"
+      when: vault_status.rc in [0, 2] # 0 = unsealed, 2 = sealed
+
+    - name: Check for existing unseal keys secret
+      kubernetes.core.k8s_info:
+        kind: Secret
+        name: vault-unseal-keys
+        namespace: "{{ vault_namespace }}"
+      register: existing_secret
+      when: vault_initialized | default(false)
+
+    - name: Unseal existing Vault with stored keys
+      block:
+        - name: Get unseal keys from secret
+          set_fact:
+            unseal_key1: "{{ existing_secret.resources[0].data.key1 | b64decode }}"
+            unseal_key2: "{{ existing_secret.resources[0].data.key2 | b64decode }}"
+            unseal_key3: "{{ existing_secret.resources[0].data.key3 | b64decode }}"
+
+        - name: Unseal all Vault pods
+          kubernetes.core.k8s_exec:
+            namespace: "{{ vault_namespace }}"
+            pod: "{{ item }}"
+            command: vault operator unseal {{ unseal_key1 }}
+          loop: "{{ vault_pod_names }}"
+          environment:
+            VAULT_ADDR: "{{ vault_addr }}"
+          register: unseal_result1
+          failed_when: false
+
+        - name: Unseal all Vault pods (key 2)
+          kubernetes.core.k8s_exec:
+            namespace: "{{ vault_namespace }}"
+            pod: "{{ item }}"
+            command: vault operator unseal {{ unseal_key2 }}
+          loop: "{{ vault_pod_names }}"
+          environment:
+            VAULT_ADDR: "{{ vault_addr }}"
+          register: unseal_result2
+          failed_when: false
+
+        - name: Unseal all Vault pods (key 3)
+          kubernetes.core.k8s_exec:
+            namespace: "{{ vault_namespace }}"
+            pod: "{{ item }}"
+            command: vault operator unseal {{ unseal_key3 }}
+          loop: "{{ vault_pod_names }}"
+          environment:
+            VAULT_ADDR: "{{ vault_addr }}"
+          register: unseal_result3
+          failed_when: false
+
+        - name: Display unseal status
+          debug:
+            msg: "Vault pods unsealed using existing keys"
+
+      when:
+        - vault_initialized | default(false)
+        - existing_secret.resources | length > 0
+
+    - name: Initialize new Vault
+      block:
+        - name: Initialize Vault
+          kubernetes.core.k8s_exec:
+            namespace: "{{ vault_namespace }}"
+            pod: "{{ vault_pod_name }}"
+            command: vault operator init -format=json
+          register: vault_init
+          environment:
+            VAULT_ADDR: "{{ vault_addr }}"
+      rescue:
+        - name: Capture vault status on failure
+          kubernetes.core.k8s_exec:
+            namespace: "{{ vault_namespace }}"
+            pod: "{{ vault_pod_name }}"
+            command: vault status
+          register: vault_status_failure
+          failed_when: false
+          environment:
+            VAULT_ADDR: "{{ vault_addr }}"
+
+        - name: Capture pod description on failure
+          kubernetes.core.k8s_info:
+            kind: Pod
+            name: "{{ vault_pod_name }}"
+            namespace: "{{ vault_namespace }}"
+          register: pod_describe_failure
+
+        - name: Capture pod logs on failure
+          kubernetes.core.k8s_log:
+            name: "{{ vault_pod_name }}"
+            namespace: "{{ vault_namespace }}"
+            tail_lines: 100
+          register: pod_logs_failure
+          failed_when: false
+
+        - name: Capture previous pod logs if restarted
+          kubernetes.core.k8s_log:
+            name: "{{ vault_pod_name }}"
+            namespace: "{{ vault_namespace }}"
+            previous: true
+            tail_lines: 100
+          register: pod_logs_previous_failure
+          failed_when: false
+
+        - name: Capture namespace events on failure
+          kubernetes.core.k8s_info:
+            kind: Event
+            namespace: "{{ vault_namespace }}"
+          register: namespace_events_failure
+
+        - name: Display failure diagnostics
+          debug:
+            msg:
+              - "=========================================="
+              - "VAULT INITIALIZATION FAILED - DIAGNOSTICS"
+              - "=========================================="
+              - ""
+              - "Vault Status Output:"
+              - "{{ vault_status_failure.stdout | default('N/A') }}"
+              - ""
+              - "Pod Phase: {{ pod_describe_failure.resources[0].status.phase | default('Unknown') }}"
+              - "Pod Conditions:"
+              - "{{ pod_describe_failure.resources[0].status.conditions | default([]) | to_nice_yaml }}"
+              - ""
+              - "Container Statuses:"
+              - "{{ pod_describe_failure.resources[0].status.containerStatuses | default([]) | to_nice_yaml }}"
+              - ""
+              - "Recent Pod Logs:"
+              - "{{ pod_logs_failure.log | default('N/A') }}"
+              - ""
+              - "Previous Pod Logs (if restarted):"
+              - "{{ pod_logs_previous_failure.log | default('N/A') }}"
+              - ""
+              - "Recent Namespace Events:"
+              - "{{ namespace_events_failure.resources | selectattr('involvedObject.name', 'equalto', vault_pod_name) | list | to_nice_yaml }}"
+              - "=========================================="
+
+        - name: Fail with diagnostic information
+          fail:
+            msg: "Vault initialization failed. See diagnostics above."
+
+      when: not (vault_initialized | default(false))
+
+    - name: Continue initialization after successful init
+      block:
+        - name: Parse initialization output
+          set_fact:
+            vault_keys: "{{ vault_init.stdout | from_json }}"
+          when: vault_init is defined and vault_init.stdout is defined
+
+        - name: Store unseal keys in Kubernetes secret
+          kubernetes.core.k8s:
+            state: present
+            definition:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: vault-unseal-keys
+                namespace: "{{ vault_namespace }}"
+                labels:
+                  app.kubernetes.io/name: vault
+                  app.kubernetes.io/component: vault
+              type: Opaque
+              stringData:
+                key1: "{{ vault_keys.unseal_keys_b64[0] }}"
+                key2: "{{ vault_keys.unseal_keys_b64[1] }}"
+                key3: "{{ vault_keys.unseal_keys_b64[2] }}"
+                key4: "{{ vault_keys.unseal_keys_b64[3] }}"
+                key5: "{{ vault_keys.unseal_keys_b64[4] }}"
+                root-token: "{{ vault_keys.root_token }}"
+
+        - name: Unseal all Vault pods with new keys (key 1)
+          kubernetes.core.k8s_exec:
+            namespace: "{{ vault_namespace }}"
+            pod: "{{ item }}"
+            command: vault operator unseal {{ vault_keys.unseal_keys_b64[0] }}
+          loop: "{{ vault_pod_names }}"
+          environment:
+            VAULT_ADDR: "{{ vault_addr }}"
+          register: unseal_result1
+
+        - name: Unseal all Vault pods with new keys (key 2)
+          kubernetes.core.k8s_exec:
+            namespace: "{{ vault_namespace }}"
+            pod: "{{ item }}"
+            command: vault operator unseal {{ vault_keys.unseal_keys_b64[1] }}
+          loop: "{{ vault_pod_names }}"
+          environment:
+            VAULT_ADDR: "{{ vault_addr }}"
+          register: unseal_result2
+
+        - name: Unseal all Vault pods with new keys (key 3)
+          kubernetes.core.k8s_exec:
+            namespace: "{{ vault_namespace }}"
+            pod: "{{ item }}"
+            command: vault operator unseal {{ vault_keys.unseal_keys_b64[2] }}
+          loop: "{{ vault_pod_names }}"
+          environment:
+            VAULT_ADDR: "{{ vault_addr }}"
+          register: unseal_result3
+
+        - name: Display initialization results
+          debug:
+            msg:
+              - "=========================================="
+              - "Vault initialization complete!"
+              - "=========================================="
+              - ""
+              - "Unseal keys and root token stored in:"
+              - "  Secret: vault-unseal-keys"
+              - "  Namespace: {{ vault_namespace }}"
+              - ""
+              - "To retrieve the root token:"
+              - "  kubectl get secret vault-unseal-keys -n {{ vault_namespace }} -o jsonpath='{.data.root-token}' | base64 -d"
+              - ""
+              - "To retrieve unseal keys:"
+              - "  kubectl get secret vault-unseal-keys -n {{ vault_namespace }} -o jsonpath='{.data.key1}' | base64 -d"
+              - ""
+              - "IMPORTANT: Back up this secret to a secure location!"
+              - "=========================================="
+
+      when:
+        - not (vault_initialized | default(false))
+        - vault_init is defined
+        - vault_init.stdout is defined
+
+    - name: Verify Vault is unsealed
+      kubernetes.core.k8s_exec:
+        namespace: "{{ vault_namespace }}"
+        pod: "{{ item }}"
+        command: vault status -format=json
+      loop: "{{ vault_pod_names }}"
+      register: final_status
+      environment:
+        VAULT_ADDR: "{{ vault_addr }}"
+      failed_when: false
+
+    - name: Display final status
+      debug:
+        msg: "Vault pod {{ item.item }} - Sealed: {{ (item.stdout | from_json).sealed }}"
+      loop: "{{ final_status.results }}"
+      when: item.rc in [0, 2]
+# Made with Bob

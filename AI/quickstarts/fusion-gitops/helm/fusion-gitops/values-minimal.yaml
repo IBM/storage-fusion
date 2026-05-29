@@ -1,0 +1,134 @@
+# Minimal values for Red Hat GitOps on Fusion HCI
+# This configuration is optimized for getting started quickly
+# with minimal resources and no HA features
+#
+# Use this for:
+#   - Development environments
+#   - Testing and evaluation
+#   - Learning GitOps
+#   - Resource-constrained environments
+#
+# To use: helm install fusion-gitops ./helm/fusion-gitops -f values-minimal.yaml
+
+# Use existing storage classes (minimal configuration)
+# Override if your cluster uses different storage class names
+storage:
+  defaultStorageClass: ocs-storagecluster-cephfs
+  sharedStorageClass: ocs-storagecluster-cephfs
+
+# ArgoCD configuration - minimal setup
+argocd:
+  enabled: true
+  
+  # Server configuration - single replica, no autoscaling
+  server:
+    replicas: 1  # Single instance
+    autoscale:
+      enabled: false  # No autoscaling
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  # Repository server - single replica, no storage
+  repo:
+    replicas: 1  # Single instance
+    autoscale:
+      enabled: false  # No autoscaling
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    storage:
+      enabled: false  # No persistent storage for simplicity
+    env:
+      - name: ARGOCD_EXEC_TIMEOUT
+        value: "180s"
+      - name: ARGOCD_GIT_ATTEMPTS_COUNT
+        value: "3"
+  
+  # Application controller - single replica, no sharding
+  controller:
+    replicas: 1  # Single instance
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    sharding:
+      enabled: false  # No sharding
+    env:
+      - name: ARGOCD_RECONCILIATION_TIMEOUT
+        value: "180s"
+      - name: ARGOCD_REPO_SERVER_TIMEOUT_SECONDS
+        value: "180"
+  
+  # Redis - minimal resources
+  redis:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  # High availability - disabled
+  ha:
+    enabled: false
+  
+  # Dex/SSO - basic configuration
+  dex:
+    enabled: true
+    openShiftOAuth: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  # RBAC - permissive for getting started
+  rbac:
+    defaultPolicy: 'role:admin'  # Permissive for getting started
+    policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+    scopes: '[groups]'
+  
+  # Notifications - disabled for simplicity
+  notifications:
+    enabled: false
+  
+  # ApplicationSet - minimal resources
+  applicationSet:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# Network policies - disabled for simplicity
+networkPolicy:
+  enabled: false
+
+# Resource quotas - disabled for simplicity
+resourceQuota:
+  enabled: false
+
+# Monitoring - disabled for simplicity
+monitoring:
+  enabled: false
+
+# Made with Bob

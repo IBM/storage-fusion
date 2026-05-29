@@ -1,0 +1,64 @@
+# Example values for External Secrets Operator with HashiCorp Vault
+# Deploy with: helm install external-secrets-operator ./helm/external-secrets-operator -f examples/values-vault.yaml
+
+global:
+  openshift: true
+  namespace: external-secrets-operator
+
+operator:
+  enabled: true
+  namespace: external-secrets-operator
+  
+  subscription:
+    # Use Red Hat certified operator for OpenShift
+    channel: stable-v1
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    name: openshift-external-secrets-operator
+    installPlanApproval: Automatic
+
+# Enable Vault secret store
+secretStores:
+  vault:
+    enabled: true
+    name: vault-backend
+    server: "http://vault.vault.svc.cluster.local:8200"
+    path: "secret"
+    version: "v2"
+    
+    auth:
+      method: kubernetes
+      kubernetes:
+        mountPath: "kubernetes"
+        role: "external-secrets"
+        serviceAccountRef:
+          name: external-secrets-operator
+          namespace: external-secrets-operator
+
+# Enable example
+examples:
+  enabled: true
+  vault:
+    enabled: true
+    name: example-vault-secret
+    namespace: default
+    refreshInterval: 1h
+    targetSecretName: my-app-secrets
+    secretStoreRef:
+      name: vault-backend
+      kind: ClusterSecretStore
+    data:
+      - secretKey: database-username
+        remoteRef:
+          key: myapp/database
+          property: username
+      - secretKey: database-password
+        remoteRef:
+          key: myapp/database
+          property: password
+      - secretKey: api-key
+        remoteRef:
+          key: myapp/api
+          property: key
+
+# Made with Bob

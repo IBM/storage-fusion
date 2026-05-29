@@ -1,0 +1,135 @@
+---
+# Two-phase Helm deployment for GitOps operator and ArgoCD
+# Phase 1: Deploy operator and storage
+# Phase 2: Wait for CRDs, then deploy ArgoCD
+
+- name: Phase 1 - Deploy operator and storage (ArgoCD disabled)
+  debug:
+    msg: "Phase 1: Deploying GitOps operator and storage classes..."
+
+- name: Resolve absolute path for values file
+  set_fact:
+    helm_values_file_abs: "{{ (playbook_dir + '/../../' + helm_values_file) | realpath }}"
+  when: helm_values_file != ''
+
+- name: Build Helm command for Phase 1
+  set_fact:
+    helm_command_phase1: >-
+      helm upgrade --install
+      {{ helm_release_name }}
+      {{ helm_chart_path }}
+      --namespace {{ helm_namespace }}
+      --create-namespace
+      {{ '--values ' + helm_values_file_abs if helm_values_file else '' }}
+      --set argocd.enabled=false
+      --set operator.enabled=true
+      {{ '--dry-run' if (dry_run | bool) else '' }}
+      --wait
+      --timeout {{ operator_timeout }}s
+
+- name: Deploy Phase 1 (Operator and Storage)
+  command: "{{ helm_command_phase1 }}"
+  register: helm_deploy_phase1
+  changed_when: "'has been upgraded' in helm_deploy_phase1.stdout or 'has been installed' in helm_deploy_phase1.stdout"
+
+- name: Display Phase 1 output
+  debug:
+    var: helm_deploy_phase1.stdout_lines
+  when: (ansible_verbosity | default(0)) > 0
+
+- name: Wait for GitOps operator to be ready
+  when: not (dry_run | bool)
+  block:
+    - name: Wait for ArgoCD CRD to be available
+      command: kubectl get crd argocds.argoproj.io
+      register: crd_check
+      until: crd_check.rc == 0
+      retries: 60
+      delay: 10
+      changed_when: false
+      failed_when: false
+
+    - name: Verify CRD is available
+      assert:
+        that:
+          - crd_check.rc == 0
+        fail_msg: "ArgoCD CRD not available after waiting"
+        success_msg: "ArgoCD CRD is available"
+
+    - name: Wait for GitOps operator CSV to be ready
+      shell: |
+        kubectl get csv -n openshift-gitops-operator \
+          -o jsonpath='{.items[?(@.spec.displayName=="Red Hat OpenShift GitOps")].status.phase}' \
+          2>/dev/null || echo ""
+      register: csv_status
+      until: csv_status.stdout == "Succeeded"
+      retries: 60
+      delay: 10
+      changed_when: false
+
+    - name: Display operator status
+      debug:
+        msg: "GitOps operator is ready (CSV phase: {{ csv_status.stdout }})"
+
+- name: Phase 2 - Configure ArgoCD storage
+  when: not (dry_run | bool)
+  block:
+    - name: Phase 2 banner
+      debug:
+        msg: "Phase 2: Configuring ArgoCD storage..."
+
+    - name: Load storage configuration from values file
+      include_vars:
+        file: "{{ helm_values_file_abs }}"
+        name: values_config
+      when: helm_values_file != ''
+
+    - name: Set storage variables from values file
+      set_fact:
+        argocd_repo_storage_size: "{{ values_config.argocd.repo.storage.size | default('10Gi') }}"
+        argocd_repo_storage_class: "{{ values_config.argocd.repo.storage.storageClassName | default(values_config.storage.sharedStorageClass | default('')) }}"
+        argocd_redis_storage_size: "{{ values_config.argocd.redis.storage.size | default('5Gi') }}"
+        argocd_redis_storage_class: "{{ values_config.argocd.redis.storage.storageClassName | default(values_config.storage.defaultStorageClass | default('')) }}"
+      when: helm_values_file != ''
+
+    - name: Set default storage variables
+      set_fact:
+        argocd_repo_storage_size: "10Gi"
+        argocd_repo_storage_class: ""
+        argocd_redis_storage_size: "5Gi"
+        argocd_redis_storage_class: ""
+      when: helm_values_file == ''
+
+    - name: Configure existing ArgoCD instance with storage
+      include_tasks: configure-existing-argocd.yml
+
+    - name: Display Phase 2 completion
+      debug:
+        msg: "ArgoCD storage configuration completed"
+
+- name: Get final release status
+  command: helm status {{ helm_release_name }} -n {{ helm_namespace }} -o json
+  register: release_status
+  changed_when: false
+  failed_when: false
+  when: not (dry_run | bool)
+
+- name: Parse release status
+  set_fact:
+    release_info: "{{ release_status.stdout | from_json }}"
+  when: 
+    - not (dry_run | bool)
+    - release_status.rc == 0
+
+- name: Display final release information
+  debug:
+    msg:
+      - "Release: {{ release_info.name }}"
+      - "Status: {{ release_info.info.status }}"
+      - "Version: {{ release_info.version }}"
+      - "Namespace: {{ release_info.namespace }}"
+  when: 
+    - not (dry_run | bool)
+    - release_status.rc == 0
+
+# Made with Bob

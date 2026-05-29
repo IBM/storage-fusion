@@ -1,0 +1,14 @@
+{{- if .Values.operator.enabled }}
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: vault-operator-group
+  namespace: {{ include "operator.namespace" . }}
+  labels:
+    {{- include "vault-operator.labels" . | nindent 4 }}
+spec: {}
+  # Empty spec means AllNamespaces mode (cluster-wide)
+  # vault-secrets-operator requires AllNamespaces install mode
+{{- end }}
+
+# Made with Bob

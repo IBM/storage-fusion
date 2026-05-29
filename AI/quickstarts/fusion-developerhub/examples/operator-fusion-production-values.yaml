@@ -1,0 +1,381 @@
+# IBM Fusion Developer Hub - Operator-Based Production Configuration
+# This example demonstrates a production-ready deployment with:
+# - IBM Fusion AI components
+# - High availability PostgreSQL
+# - Enterprise security features
+# - OIDC authentication
+# - Automated backups
+
+global:
+  # Replace with your OpenShift cluster domain
+  wildcardDomain: apps.your-cluster.example.com
+  
+  # Tools image for setup jobs (contains oc, kubectl, bash)
+  toolsImage: quay.io/openshift/origin-cli:latest
+  
+  # Models namespace for AI deployments
+  modelsNamespace: maas-models
+
+# Operator Configuration
+operators:
+  enabled: true
+  
+  # Red Hat Developer Hub Operator
+  developerHub:
+    enabled: true
+    # Use 'fast' channel for latest features, 'stable' for production stability
+    channel: fast
+    # Pin to specific version for production (optional but recommended)
+    # Leave empty to use latest version in channel
+    # To find available versions: oc get packagemanifest rhdh -n openshift-marketplace -o yaml
+    startingCSV: ""  # Example: "rhdh-operator.v1.2.0"
+    namespace: rhdh-operator
+    # Automatic: Operator upgrades automatically
+    # Manual: Requires manual approval for upgrades (recommended for production)
+    installPlanApproval: Automatic
+  
+  # Crunchy PostgreSQL Operator
+  postgres:
+    enabled: true
+    # Use 'v5' channel for Crunchy Postgres Operator
+    channel: v5
+    # Pin to specific version for production (optional but recommended)
+    # Leave empty to use latest version in channel
+    # To find available versions: oc get packagemanifest crunchy-postgres-operator -n openshift-marketplace -o yaml
+    startingCSV: ""  # Example: "postgresoperator.v5.4.0"
+    namespace: postgres-operator
+    watchAllNamespaces: true
+    # Automatic: Operator upgrades automatically
+    # Manual: Requires manual approval for upgrades (recommended for production)
+    installPlanApproval: Manual  # Manual approval recommended for production
+
+# Developer Hub Instance Configuration
+developerHub:
+  enabled: true
+  createInstance: true  # Create the Developer Hub instance
+  instanceName: fusion-developer-hub
+  # namespace: ""  # Uses .Release.Namespace by default
+  
+  # High availability - 3 replicas
+  replicas: 3
+  
+  # Application Configuration
+  config:
+    title: "IBM Fusion Developer Hub"
+    organizationName: "IBM Fusion"
+    hostname: ""  # Auto-generated: fusion-developer-hub-fusion-developer-hub.apps.your-cluster.example.com
+    
+    # Homepage customization (disabled by default - uses standard RHDH homepage)
+    # Set enabled: true to use Fusion custom homepage
+    homepage:
+      enabled: true
+      welcomeTitle: "Welcome to IBM Fusion Developer Hub"
+      welcomeMessage: |
+        Accelerate your AI-powered development and modernization journey:
+        
+        🤖 AI-Powered Development
+        • Generate code with IBM watsonx and Granite models
+        • Get intelligent code reviews and suggestions
+        • Automate documentation with AI
+        
+        🔄 Application Modernization
+        • Analyze legacy applications with Transformation Advisor
+        • Decompose monoliths with Mono2Micro
+        • Migrate to cloud-native architectures
+        
+        🚀 Quick Start
+        • Create new applications from AI-powered templates
+        • Browse the catalog of components and APIs
+        • Access comprehensive documentation and tutorials
+      
+      quickLinks:
+        - title: "Create New Application"
+          description: "Start with AI-powered templates and scaffolding"
+          url: "/create"
+          icon: "add"
+        - title: "AI Code Assistant"
+          description: "Get intelligent coding help from IBM watsonx"
+          url: "/ai-assistant"
+          icon: "smart_toy"
+        - title: "Modernize Legacy App"
+          description: "Analyze and transform applications with AI"
+          url: "/transformation-advisor"
+          icon: "autorenew"
+        - title: "Browse Catalog"
+          description: "Discover components, APIs, and services"
+          url: "/catalog"
+          icon: "catalog"
+        - title: "API Discovery"
+          description: "Explore and integrate internal APIs"
+          url: "/catalog?filters[kind]=api"
+          icon: "api"
+        - title: "Documentation"
+          description: "Guides, tutorials, and best practices"
+          url: "/docs"
+          icon: "docs"
+        - title: "Quick Start Guide"
+          description: "Get started in 5 minutes"
+          url: "/docs/getting-started"
+          icon: "rocket"
+        - title: "Video Tutorials"
+          description: "Learn with step-by-step videos"
+          url: "/docs/tutorials"
+          icon: "video"
+      
+      featuredContent:
+        - title: "🚀 AI-Powered Development"
+          description: "Leverage IBM watsonx and Granite models for intelligent code generation, review, and optimization"
+          links:
+            - text: "Explore AI Templates"
+              url: "/create?filters[kind]=template&filters[tags]=ai"
+            - text: "AI Capabilities Guide"
+              url: "/docs/ai-capabilities"
+            - text: "Code Generation Demo"
+              url: "/docs/demos/code-generation"
+            - text: "AI Best Practices"
+              url: "/docs/ai/best-practices"
+        
+        - title: "🔄 Application Modernization"
+          description: "Transform legacy applications to cloud-native with automated analysis and migration tools"
+          links:
+            - text: "Transformation Advisor"
+              url: "/transformation-advisor"
+            - text: "Mono2Micro Analysis"
+              url: "/mono2micro"
+            - text: "Migration Patterns"
+              url: "/docs/modernization/patterns"
+            - text: "Success Stories"
+              url: "/docs/case-studies"
+        
+        - title: "📚 Quick Start Resources"
+          description: "New to IBM Fusion Developer Hub? Start here with our comprehensive guides"
+          links:
+            - text: "5-Minute Quick Start"
+              url: "/docs/getting-started"
+            - text: "Video Tutorial Series"
+              url: "/docs/tutorials"
+            - text: "Sample Applications"
+              url: "/catalog?filters[kind]=template"
+            - text: "Developer Onboarding"
+              url: "/docs/onboarding"
+        
+        - title: "🎯 Featured Templates"
+          description: "Pre-built templates for common use cases with AI integration"
+          links:
+            - text: "Microservices with AI"
+              url: "/create/templates/microservices-ai"
+            - text: "API Gateway Template"
+              url: "/create/templates/api-gateway"
+            - text: "Data Pipeline Template"
+              url: "/create/templates/data-pipeline"
+            - text: "Browse All Templates"
+              url: "/create"
+        
+        - title: "🔧 Developer Tools"
+          description: "Essential tools and utilities for IBM Fusion development"
+          links:
+            - text: "CLI Tools Setup"
+              url: "/docs/tools/cli"
+            - text: "IDE Extensions"
+              url: "/docs/tools/ide-extensions"
+            - text: "CI/CD Integration"
+              url: "/docs/tools/cicd"
+            - text: "Testing Framework"
+              url: "/docs/tools/testing"
+        
+        - title: "📊 Analytics & Insights"
+          description: "Track development metrics, AI usage, and team performance"
+          links:
+            - text: "Team Dashboard"
+              url: "/analytics/team"
+            - text: "AI Usage Reports"
+              url: "/analytics/ai-usage"
+            - text: "Cost Optimization"
+              url: "/analytics/costs"
+            - text: "Performance Metrics"
+              url: "/analytics/performance"
+  
+  # IBM Fusion AI Configuration
+  fusion:
+    enabled: true
+    
+    # Fusion AI API
+    api:
+      baseUrl: "https://fusion-api.example.com"
+      timeout: 30000
+    
+    # AI Models
+    ai:
+      enabled: true
+      models:
+        - name: watsonx
+          type: llm
+          endpoint: "https://watsonx-api.example.com/v1"
+        - name: granite-code
+          type: code-assistant
+          endpoint: "https://granite-code-api.example.com/v1"
+        - name: granite-chat
+          type: conversational
+          endpoint: "https://granite-chat-api.example.com/v1"
+      rhoaiConnector:
+        enabled: true
+        tokenSecretName: "rhdh-rhoai-connector-token"
+    
+    # Modernization Tools
+    modernization:
+      enabled: true
+      tools:
+        - name: transformation-advisor
+          enabled: true
+        - name: mono2micro
+          enabled: true
+        - name: app-navigator
+          enabled: true
+  
+  # PostgreSQL Database - High Availability
+  database:
+    useOperator: true
+    clusterName: fusion-postgres
+    
+    # 3 instances for HA (1 primary + 2 replicas)
+    instances: 3
+    
+    # PostgreSQL tuning for production
+    maxConnections: "200"
+    sharedBuffers: "512MB"
+    effectiveCacheSize: "2GB"
+    workMem: "32MB"
+    
+    # Storage
+    storageSize: 100Gi
+    storageClassName: ""  # Use default storage class
+    
+    # Resource limits
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+    
+    # Automated Backups to Object Storage
+    backup:
+      enabled: true
+      useODF: true  # Use OpenShift Data Foundation
+      odfStorageClass: openshift-storage.noobaa.io
+      destinationPath: s3://fusion-postgres-backup
+      retentionPolicy: "30d"  # Keep backups for 30 days
+  
+  # Catalog Configuration
+  catalog:
+    enabled: true
+    
+    # GitHub integration
+    github:
+      enabled: true
+      target: https://github.com/your-org
+    
+    # GitLab integration (optional)
+    gitlab:
+      enabled: false
+      target: https://gitlab.com/your-org
+  
+  # TechDocs Configuration
+  techdocs:
+    enabled: true
+    s3Bucket: fusion-techdocs
+    s3Region: us-south
+    s3Endpoint: ""  # Auto-configured with ODF
+  
+  # Authentication - OIDC (Production)
+  auth:
+    enabled: true
+    
+    # GitHub OAuth (optional)
+    github:
+      enabled: false
+      # Set via secrets: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+    
+    # OIDC Provider (IBM ID, Okta, Auth0, etc.)
+    oidc:
+      enabled: true
+      metadataUrl: "https://your-oidc-provider.com/.well-known/openid-configuration"
+      signInResolver: "emailMatchingUserEntityProfileEmail"
+      # Set via secrets: OIDC_CLIENT_ID, OIDC_CLIENT_SECRET
+  
+  # Environment variables from secrets
+  extraEnvs:
+    secrets:
+      - name: fusion-developer-hub-secrets
+  
+  # Resource Limits for Developer Hub
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "2"
+      memory: 4Gi
+  
+  # Security Configuration
+  security:
+    # Network Policies
+    networkPolicy:
+      enabled: true
+    
+    # Pod Security Standards
+    podSecurityStandards:
+      enabled: true
+    
+    # Resource Quotas
+    resourceQuota:
+      cpu: "32"
+      memory: "64Gi"
+      cpuLimit: "64"
+      memoryLimit: "128Gi"
+      pvc: "20"
+    
+    # Pod Security Context (OpenShift SCC compliant)
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: null  # Let OpenShift assign
+      fsGroup: null    # Let OpenShift assign
+      seccompProfile:
+        type: RuntimeDefault
+    
+    # Container Security Context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      runAsUser: null
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false
+  
+  # Route Configuration
+  route:
+    enabled: true
+    tls:
+      enabled: true
+      secretName: ""  # Use auto-generated certificate
+
+# Monitoring
+monitoring:
+  enabled: true
+
+# OpenShift Console QuickStart
+quickstart:
+  enabled: true
+
+# Common Labels
+commonLabels:
+  environment: production
+  team: fusion-ai
+  managed-by: helm
+
+# Common Annotations
+commonAnnotations:
+  contact: fusion-team@example.com
+
+# Made with Bob

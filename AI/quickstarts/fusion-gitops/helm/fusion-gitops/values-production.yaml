@@ -1,0 +1,180 @@
+# Production values for Red Hat GitOps on Fusion HCI
+# This configuration is optimized for production workloads
+#
+# PREREQUISITES: Ensure these storage classes exist in your cluster:
+#   - rook-cephfs (or your RWX storage class)
+#
+# Verify with: kubectl get storageclass
+
+# Use existing storage classes (production environment)
+storage:
+  defaultStorageClass: rook-cephfs
+  sharedStorageClass: rook-cephfs
+
+# ArgoCD configuration - patches existing openshift-gitops instance
+argocd:
+  enabled: true
+  
+  # Server configuration - production settings
+  server:
+    replicas: 3  # Increased for HA
+    autoscale:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 75
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+  
+  # Repository server - production settings
+  repo:
+    replicas: 3  # Increased for HA
+    autoscale:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 75
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+    storage:
+      enabled: true
+      size: 50Gi  # Larger for production repos
+      storageClassName: rook-cephfs
+      accessModes:
+        - ReadWriteMany
+    env:
+      - name: ARGOCD_EXEC_TIMEOUT
+        value: "300s"  # Longer timeout for large repos
+      - name: ARGOCD_GIT_ATTEMPTS_COUNT
+        value: "5"
+  
+  # Application controller - production settings
+  controller:
+    replicas: 2  # Enable sharding for better performance
+    sharding:
+      enabled: true
+      replicas: 2
+    resources:
+      requests:
+        cpu: 2000m
+        memory: 4Gi
+      limits:
+        cpu: 4000m
+        memory: 8Gi
+    env:
+      - name: ARGOCD_RECONCILIATION_TIMEOUT
+        value: "300s"
+      - name: ARGOCD_REPO_SERVER_TIMEOUT_SECONDS
+        value: "300"
+  
+  # Redis - production settings with HA
+  redis:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    storage:
+      enabled: true
+      size: 10Gi  # Larger for production cache
+      storageClassName: rook-cephfs
+      accessModes:
+        - ReadWriteOnce
+  
+  # High availability - enabled for production
+  ha:
+    enabled: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  # Dex/SSO - production settings
+  dex:
+    enabled: true
+    openShiftOAuth: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  # RBAC - production security
+  rbac:
+    defaultPolicy: 'role:readonly'  # Secure default
+    policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+      # Add your production RBAC policies here
+    scopes: '[groups]'
+  
+  # Notifications - enabled for production
+  notifications:
+    enabled: true
+    replicas: 2  # HA for notifications
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  # ApplicationSet - production settings
+  applicationSet:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+# Network policies - enabled for production security
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+# Resource quotas - production limits
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "20"
+    requests.memory: "40Gi"
+    limits.cpu: "40"
+    limits.memory: "80Gi"
+    persistentvolumeclaims: "20"
+    requests.storage: "200Gi"
+
+# Monitoring - enabled for production
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+
+# Made with Bob

@@ -1,0 +1,276 @@
+# Combined configuration for Code Assistant use case
+# This single file is used by maas-operators, maas-platform, and maas-runtime
+
+global:
+  wildcardDomain: apps.cluster.example.com
+  wildcardCertName: ""
+  modelsNamespace: maas-models
+  toolsImage: quay.io/openshift/origin-cli:latest
+
+operators:
+  openshiftAI:
+    enabled: true
+
+  connectivityLink:
+    enabled: true
+
+  certManager:
+    enabled: true
+
+  leaderWorkerSet:
+    enabled: true
+
+  grafana:
+    enabled: true
+
+platform:
+  namespaces:
+    modelRegistry: rhoai-model-registries
+    workbench: rhods-notebooks
+
+dataScienceCluster:
+  enabled: true
+  name: default-dsc
+  namespace: redhat-ods-operator
+  components:
+    dashboard:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+    kserve:
+      managementState: Managed
+      modelsAsService:
+        managementState: Removed
+      rawDeploymentServiceConfig: Headless
+      nim:
+        managementState: Managed
+    modelregistry:
+      managementState: Managed
+    feastoperator:
+      managementState: Removed
+    trustyai:
+      managementState: Managed
+    aipipelines:
+      managementState: Managed
+    ray:
+      managementState: Managed
+    trainingoperator:
+      managementState: Managed
+    trainer:
+      managementState: Removed
+    mlflowoperator:
+      managementState: Removed
+    llamastackoperator:
+      managementState: Removed
+    kueue:
+      managementState: Removed
+
+platformKuadrant:
+  enabled: true
+  namespace: kuadrant-system
+  instance:
+    enabled: true
+    name: kuadrant
+
+leaderWorkerSet:
+  enabled: true
+  namespace: openshift-lws-operator
+  instance:
+    enabled: true
+    name: cluster
+    managementState: Managed
+
+gateway:
+  enabled: true
+  createGatewayClass: true
+  name: openshift-ai-inference
+  namespace: openshift-ingress
+  gatewayClassName: openshift-ai-inference
+  controllerName: openshift.io/gateway-controller/v1
+  istioRevision: openshift-gateway
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+          - group: ''
+            kind: Secret
+            name: router-certs-default
+        mode: Terminate
+  labels: {}
+  annotations: {}
+
+tiers:
+  free:
+    requestRates:
+      - limit: 5
+        window: 2m
+    tokenRates:
+      - limit: 100
+        window: 1m
+
+  premium:
+    requestRates:
+      - limit: 20
+        window: 2m
+    tokenRates:
+      - limit: 10000
+        window: 1m
+
+  enterprise:
+    requestRates:
+      - limit: 50
+        window: 2m
+    tokenRates:
+      - limit: 20000
+        window: 1m
+
+userMapping:
+  free: []
+  premium:
+    - user1
+    - user2
+    - user3
+    - user4
+    - user5
+  enterprise:
+    - admin
+
+monitoring:
+  enabled: true
+  clusterMonitoring:
+    enabled: true
+    userWorkloadMonitoring: true
+  grafana:
+    enabled: true
+    namespace: grafana
+    selectors:
+      app: grafana
+    consoleLink:
+      enabled: true
+      displayName: "Code Assistant Metrics"
+      section: "Observability"
+    dashboards:
+      maasOverview:
+        enabled: true
+      modelMetrics:
+        enabled: true
+      gpuUtilization:
+        enabled: true
+
+authentication:
+  keycloak:
+    enabled: true
+    namespace: keycloak
+    realm:
+      name: maas
+      displayName: "Code Assistant Platform"
+      admin:
+        username: admin
+      user:
+        count: 5
+    removeKubeAdmin: false
+    oauth:
+      enabled: true
+
+rbac:
+  enabled: true
+  modelServiceAccount:
+    name: maas-model-sa
+    namespace: maas-models
+
+kuadrant:
+  instance:
+    name: kuadrant
+    namespace: kuadrant-system
+  authorino:
+    tls:
+      enabled: true
+      secretName: authorino-server-cert
+
+modelRegistry:
+  enabled: true
+  namespace: rhoai-model-registries
+  createNamespace: false
+  name: model-registry
+  objectStorage:
+    enabled: true
+    autoCreateBucket: true
+    odfStorageClass: openshift-storage.noobaa.io
+    bucketClass: noobaa-default-bucket-class
+    bucket: model-registry-artifacts
+    region: us-south
+    verifySSL: true
+    storageClass: STANDARD
+  database:
+    external: false
+    internalDatabase:
+      storageSize: 10Gi
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  versioning:
+    enabled: true
+    format: semantic
+    autoIncrement: true
+  catalogIntegration:
+    enabled: true
+    autoRegister: true
+    syncSchedule: "0 3 * * *"
+
+workbench:
+  enabled: true
+  namespace: rhods-notebooks
+  createNamespace: false
+  objectStorage:
+    enabled: true
+    useODF: true
+    odfStorageClass: openshift-storage.noobaa.io
+    bucketClass: noobaa-default-bucket-class
+    defaultBucket: workbench-data
+    region: us-south
+    verifySSL: true
+    storageClass: STANDARD
+    autoCreateBuckets: true
+    bucketPrefix: workbench-
+  dataConnections:
+    enabled: true
+    createDefault: true
+    defaultConnectionName: fusion-storage
+  storage:
+    defaultPVCSize: 20Gi
+    sharedStorage:
+      enabled: false
+      size: 100Gi
+  resources:
+    defaultRequests:
+      cpu: "1"
+      memory: 8Gi
+    defaultLimits:
+      cpu: "2"
+      memory: 16Gi
+    gpu:
+      enabled: true
+      defaultLimit: "0"
+  culling:
+    enabled: true
+    idleTimeout: 60
+    checkInterval: 5
+
+commonLabels:
+  use-case: Fusion-Agentic-Assistance-Platform
+  environment: production

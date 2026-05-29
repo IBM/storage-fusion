@@ -1,0 +1,104 @@
+# NVIDIA Nemotron Nano 9B v2 FP8 Dynamic Model Configuration
+# This model is registered in the model-registry
+# Available to premium and enterprise tiers only
+
+model:
+  name: nvidia-nemotron-nano-9b-v2-fp8-dynamic-version-1
+  displayName: "NVIDIA Nemotron Nano 9B v2 FP8 Dynamic - Version 1"
+  namespace: deploy-models-rhoai
+
+project:
+  create: false  # Reuse the existing shared namespace
+
+# Model Registry Configuration
+modelRegistry:
+  enabled: true
+  name: model-registry
+  namespace: rhoai-model-registries
+  # This is the registered model name from the model registry
+  registeredModelName: "NVIDIA-Nemotron-Nano-9B-v2-FP8-dynamic"
+  # Registered model IDs and latest version are resolved automatically at deploy time
+  # Shared namespace-level connection secret used by all models in this namespace
+  connectionSecret: "model-registry-connection"
+  
+  # Reuse the existing connection secret created by the first model deployment
+  createConnectionSecret: false
+
+# Model source URI is resolved automatically from the model registry at deploy time
+source:
+  uri: ""
+
+inference:
+  engine: vllm
+  image: registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3.0
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  
+  # vLLM specific arguments
+  extraArgs:
+    - --enable-force-include-usage
+  
+  env:
+    - name: VLLM_ADDITIONAL_ARGS
+      value: "--max-model-len=131072 --gpu-memory-utilization=0.95 --trust-remote-code"
+
+resources:
+  limits:
+    cpu: "4"
+    memory: 24Gi
+    nvidia.com/gpu: "1"
+  requests:
+    cpu: "2"
+    memory: 16Gi
+    nvidia.com/gpu: "1"
+
+# Pod scheduling configuration
+scheduling:
+  nodeSelector: {}
+  
+  tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+  
+  affinity: {}
+
+# Tier-based access control (Available to premium and enterprise tiers only)
+tiers:
+  - premium
+  - enterprise
+
+# Rate limiting configuration
+rateLimiting:
+  enabled: true
+  customLimits: {}
+
+# Token-based rate limiting
+tokenRateLimiting:
+  enabled: true
+  customLimits: {}
+
+# Gateway configuration
+gateway:
+  # Reuse the existing gateway route created by the first model deployment
+  exposeExternally: false
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+# Labels
+labels:
+  use-case: Fusion-Agentic-Assistance-Platform
+  model-type: advanced-reasoning
+  vendor: nvidia
+  environment: production
+
+# Annotations
+annotations:
+  description: "This model was obtained by quantizing weights of NVIDIA-Nemotron-Nano-9B-v2 to FP8-Dynamic data type."
+

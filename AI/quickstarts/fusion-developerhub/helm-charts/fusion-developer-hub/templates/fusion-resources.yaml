@@ -1,0 +1,320 @@
+{{- if .Values.developerHub.enabled }}
+{{- if .Values.developerHub.fusion.enabled }}
+---
+# IBM Fusion AI Templates ConfigMap
+# This ConfigMap provides catalog locations for Fusion AI templates
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-templates
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fusion-templates
+data:
+  app-config-fusion-templates.yaml: |
+    catalog:
+      locations:
+        - type: file
+          target: /opt/app-root/src/fusion-ai-template.yaml
+          rules:
+            - allow: [Template]
+  fusion-ai-template.yaml: |
+    apiVersion: scaffolder.backstage.io/v1beta3
+    kind: Template
+    metadata:
+      name: fusion-ai-application
+      title: IBM Fusion AI Application
+      description: Create a new application with IBM Fusion AI capabilities
+      tags:
+        - fusion
+        - ai
+        - watsonx
+        - recommended
+    spec:
+      owner: fusion-team
+      type: service
+      
+      parameters:
+        - title: Application Information
+          required:
+            - name
+            - description
+          properties:
+            name:
+              title: Name
+              type: string
+              description: Unique name of the application
+              ui:autofocus: true
+            description:
+              title: Description
+              type: string
+              description: Help others understand what this application is for
+            owner:
+              title: Owner
+              type: string
+              description: Owner of the application
+              ui:field: OwnerPicker
+              ui:options:
+                catalogFilter:
+                  kind: Group
+        
+        - title: AI/ML Configuration
+          properties:
+            aiEnabled:
+              title: Enable AI Features
+              type: boolean
+              default: true
+            aiModel:
+              title: AI Model
+              type: string
+              description: Select the AI model to use
+              default: watsonx
+              enum:
+                - watsonx
+                - granite-code
+                - granite-chat
+              enumNames:
+                - 'WatsonX (General Purpose)'
+                - 'Granite Code (Code Generation)'
+                - 'Granite Chat (Conversational)'
+            aiCapabilities:
+              title: AI Capabilities
+              type: array
+              items:
+                type: string
+                enum:
+                  - code-generation
+                  - code-review
+                  - documentation
+                  - testing
+                  - refactoring
+              uniqueItems: true
+              ui:widget: checkboxes
+        
+        - title: Application Modernization
+          properties:
+            modernizationEnabled:
+              title: Enable Modernization Tools
+              type: boolean
+              default: false
+            sourceType:
+              title: Source Application Type
+              type: string
+              enum:
+                - monolith
+                - legacy-java
+                - legacy-dotnet
+                - mainframe
+              enumNames:
+                - 'Monolithic Application'
+                - 'Legacy Java Application'
+                - 'Legacy .NET Application'
+                - 'Mainframe Application'
+            targetPlatform:
+              title: Target Platform
+              type: string
+              default: openshift
+              enum:
+                - openshift
+                - kubernetes
+                - cloud-native
+              enumNames:
+                - 'Red Hat OpenShift'
+                - 'Kubernetes'
+                - 'Cloud Native (Microservices)'
+        
+        - title: Repository Configuration
+          required:
+            - repoUrl
+          properties:
+            repoUrl:
+              title: Repository Location
+              type: string
+              ui:field: RepoUrlPicker
+              ui:options:
+                allowedHosts:
+                  - github.com
+                  - github.ibm.com
+
+      steps:
+        - id: fetch-base
+          name: Fetch Base Template
+          action: fetch:template
+          input:
+            url: ./skeleton
+            values:
+              name: ${{`{{ parameters.name }}`}}
+              description: ${{`{{ parameters.description }}`}}
+              owner: ${{`{{ parameters.owner }}`}}
+              aiEnabled: ${{`{{ parameters.aiEnabled }}`}}
+              aiModel: ${{`{{ parameters.aiModel }}`}}
+              aiCapabilities: ${{`{{ parameters.aiCapabilities }}`}}
+              modernizationEnabled: ${{`{{ parameters.modernizationEnabled }}`}}
+              sourceType: ${{`{{ parameters.sourceType }}`}}
+              targetPlatform: ${{`{{ parameters.targetPlatform }}`}}
+        
+        - id: fusion-analyze
+          name: Analyze with Fusion AI
+          action: fusion:analyze-application
+          if: ${{`{{ parameters.aiEnabled }}`}}
+          input:
+            name: ${{`{{ parameters.name }}`}}
+            capabilities: ${{`{{ parameters.aiCapabilities }}`}}
+        
+        - id: publish
+          name: Publish to Repository
+          action: publish:github
+          input:
+            allowedHosts:
+              - github.com
+              - github.ibm.com
+            description: ${{`{{ parameters.description }}`}}
+            repoUrl: ${{`{{ parameters.repoUrl }}`}}
+            defaultBranch: main
+        
+        - id: register
+          name: Register Component
+          action: catalog:register
+          input:
+            repoContentsUrl: ${{`{{ steps.publish.output.repoContentsUrl }}`}}
+            catalogInfoPath: '/catalog-info.yaml'
+        
+        - id: create-modernization-project
+          name: Create Modernization Project
+          action: fusion:generate-migration-plan
+          if: ${{`{{ parameters.modernizationEnabled }}`}}
+          input:
+            name: ${{`{{ parameters.name }}`}}
+            sourceType: ${{`{{ parameters.sourceType }}`}}
+            targetPlatform: ${{`{{ parameters.targetPlatform }}`}}
+
+      output:
+        links:
+          - title: Repository
+            url: ${{`{{ steps.publish.output.remoteUrl }}`}}
+          - title: Open in catalog
+            icon: catalog
+            entityRef: ${{`{{ steps.register.output.entityRef }}`}}
+          - title: View Modernization Plan
+            url: ${{`{{ steps['create-modernization-project'].output.planUrl }}`}}
+            if: ${{`{{ parameters.modernizationEnabled }}`}}
+---
+# Network Policy for Developer Hub
+{{- if .Values.developerHub.security.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: developerhub-network-policy
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: security
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: developerhub
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from OpenShift router
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - protocol: TCP
+          port: 7007
+    # Allow ingress from same namespace
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 7007
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ .Values.developerHub.database.clusterName }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow external HTTPS (for integrations)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow Kubernetes API
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: default
+      ports:
+        - protocol: TCP
+          port: 6443
+{{- end }}
+---
+# Pod Security Standards - Restricted
+{{- if .Values.developerHub.security.podSecurityStandards.enabled }}
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: developerhub-limits
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: security
+spec:
+  limits:
+    - max:
+        cpu: "4"
+        memory: 8Gi
+      min:
+        cpu: 100m
+        memory: 128Mi
+      default:
+        cpu: "1"
+        memory: 2Gi
+      defaultRequest:
+        cpu: 500m
+        memory: 1Gi
+      type: Container
+    - max:
+        cpu: "8"
+        memory: 16Gi
+      min:
+        cpu: 100m
+        memory: 128Mi
+      type: Pod
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: developerhub-quota
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: security
+spec:
+  hard:
+    requests.cpu: "{{ .Values.developerHub.security.resourceQuota.cpu }}"
+    requests.memory: "{{ .Values.developerHub.security.resourceQuota.memory }}"
+    limits.cpu: "{{ .Values.developerHub.security.resourceQuota.cpuLimit }}"
+    limits.memory: "{{ .Values.developerHub.security.resourceQuota.memoryLimit }}"
+    persistentvolumeclaims: "{{ .Values.developerHub.security.resourceQuota.pvc }}"
+{{- end }}
+{{- end }}
+{{- end }}
+
+# Made with Bob

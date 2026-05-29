@@ -1,0 +1,67 @@
+{{- if .Values.operators.openshiftAI.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: rhoai3-operatorgroup
+  namespace: {{ .Values.operators.openshiftAI.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec: {}
+{{- end }}
+
+{{- if .Values.operators.certManager.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .Values.operators.certManager.namespace }}-og
+  namespace: {{ .Values.operators.certManager.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.certManager.namespace }}
+{{- end }}
+
+{{- if false }}
+{{- if .Values.operators.grafana.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .Values.operators.grafana.namespace }}-og
+  namespace: {{ .Values.operators.grafana.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.grafana.namespace }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.operators.connectivityLink.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: kuadrant-operator-group
+  namespace: {{ .Values.operators.connectivityLink.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec: {}
+{{- end }}
+
+{{- if .Values.operators.leaderWorkerSet.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: leader-worker-set
+  namespace: {{ .Values.operators.leaderWorkerSet.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.leaderWorkerSet.namespace }}
+{{- end }}

@@ -1,0 +1,52 @@
+---
+# Check for required tools and prerequisites
+- name: Check for Helm
+  command: helm version --short
+  register: helm_check
+  changed_when: false
+  failed_when: false
+
+- name: Display Helm status
+  debug:
+    msg: "{{ 'Helm found: ' + helm_check.stdout if helm_check.rc == 0 else 'Helm not found - required for deployment' }}"
+
+- name: Fail if Helm not found
+  fail:
+    msg: "Helm is required but not found. Please install Helm 3.x"
+  when: helm_check.rc != 0
+
+- name: Check Helm version
+  set_fact:
+    helm_version: "{{ helm_check.stdout | regex_search('v([0-9]+)', '\\1') | first }}"
+  when: helm_check.rc == 0
+
+- name: Verify Helm version is 3.x
+  fail:
+    msg: "Helm 3.x is required. Found version: {{ helm_check.stdout }}"
+  when: 
+    - helm_check.rc == 0
+    - helm_version | int < 3
+
+- name: Check for kubectl or oc
+  command: "{{ item }} version --client"
+  register: cli_check
+  changed_when: false
+  failed_when: false
+  loop:
+    - kubectl
+    - oc
+
+- name: Determine available CLI
+  set_fact:
+    available_cli: "{{ 'oc' if cli_check.results[1].rc == 0 else ('kubectl' if cli_check.results[0].rc == 0 else 'none') }}"
+
+- name: Display CLI status
+  debug:
+    msg: "Using CLI: {{ available_cli }}"
+
+- name: Fail if no CLI found
+  fail:
+    msg: "Neither kubectl nor oc found. Please install one of them."
+  when: available_cli == 'none'
+
+# Made with Bob

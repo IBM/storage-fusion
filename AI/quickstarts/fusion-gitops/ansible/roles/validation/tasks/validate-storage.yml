@@ -1,0 +1,25 @@
+---
+# Validate storage provisioning
+- name: Check PVCs
+  kubernetes.core.k8s_info:
+    kind: PersistentVolumeClaim
+    namespace: "{{ helm_namespace }}"
+  register: pvcs
+  failed_when: false
+
+- name: Display PVC status
+  debug:
+    msg: "Found {{ pvcs.resources | length }} PVCs"
+  when: pvcs.resources is defined
+
+- name: Check for bound PVCs
+  set_fact:
+    bound_pvcs: "{{ pvcs.resources | selectattr('status.phase', 'equalto', 'Bound') | list }}"
+  when: pvcs.resources is defined
+
+- name: Display bound PVC count
+  debug:
+    msg: "{{ bound_pvcs | length }}/{{ pvcs.resources | length }} PVCs are bound"
+  when: pvcs.resources is defined and bound_pvcs is defined
+
+# Made with Bob

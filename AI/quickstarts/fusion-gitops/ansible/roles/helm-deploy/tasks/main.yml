@@ -1,0 +1,34 @@
+---
+# Helm deployment role for Red Hat GitOps
+- name: Display Helm deployment banner
+  debug:
+    msg:
+      - "=========================================="
+      - "  Helm Deployment"
+      - "=========================================="
+      - "Chart: {{ helm_chart_path }}"
+      - "Release: {{ helm_release_name }}"
+      - "Namespace: {{ helm_namespace }}"
+
+- name: Check if Helm is installed
+  include_tasks: install-helm.yml
+
+- name: Validate Helm chart
+  include_tasks: validate-chart.yml
+
+- name: Deploy Helm chart (two-phase)
+  include_tasks: deploy-two-phase.yml
+
+- name: Wait for resources to be ready
+  include_tasks: wait-for-resources.yml
+  when: not (dry_run | bool)
+
+- name: Display Helm deployment summary
+  debug:
+    msg:
+      - "=========================================="
+      - "  Helm Deployment Complete"
+      - "=========================================="
+      - "Release {{ helm_release_name }} deployed successfully"
+
+# Made with Bob

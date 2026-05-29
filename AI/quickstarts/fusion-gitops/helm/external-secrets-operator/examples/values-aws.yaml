@@ -1,0 +1,68 @@
+# Example values for External Secrets Operator with AWS Secrets Manager
+# Deploy with: helm install external-secrets-operator ./helm/external-secrets-operator -f examples/values-aws.yaml
+
+global:
+  openshift: true
+  namespace: external-secrets-operator
+
+operator:
+  enabled: true
+  namespace: external-secrets-operator
+  
+  subscription:
+    # Use Red Hat certified operator for OpenShift
+    channel: stable-v1
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    name: openshift-external-secrets-operator
+    installPlanApproval: Automatic
+
+# Enable AWS secret store
+secretStores:
+  aws:
+    enabled: true
+    name: aws-secrets-manager
+    region: "us-east-1"
+    service: SecretsManager
+    
+    auth:
+      method: credentials
+      credentials:
+        accessKeyIDSecretRef:
+          name: aws-credentials
+          key: access-key-id
+          namespace: external-secrets-operator
+        secretAccessKeySecretRef:
+          name: aws-credentials
+          key: secret-access-key
+          namespace: external-secrets-operator
+
+# Enable example
+examples:
+  enabled: true
+  aws:
+    enabled: true
+    name: example-aws-secret
+    namespace: default
+    refreshInterval: 1h
+    targetSecretName: my-app-secrets
+    secretStoreRef:
+      name: aws-secrets-manager
+      kind: ClusterSecretStore
+    data:
+      - secretKey: database-password
+        remoteRef:
+          key: prod/myapp/database
+          property: password
+      - secretKey: api-key
+        remoteRef:
+          key: prod/myapp/api
+          property: key
+
+# Note: Create the AWS credentials secret before deploying:
+# kubectl create secret generic aws-credentials \
+#   -n external-secrets-operator \
+#   --from-literal=access-key-id=YOUR_ACCESS_KEY \
+#   --from-literal=secret-access-key=YOUR_SECRET_KEY
+
+# Made with Bob

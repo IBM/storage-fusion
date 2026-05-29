@@ -1,0 +1,1010 @@
+{{- if .Values.developerHub.enabled }}
+{{- if .Values.developerHub.createInstance }}
+---
+{{- if .Values.developerHub.database.useOperator }}
+# PostgreSQL Cluster using Crunchy Postgres Operator
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: {{ .Values.developerHub.database.clusterName }}
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+  annotations:
+    {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+spec:
+  # PostgreSQL version
+  postgresVersion: {{ .Values.developerHub.database.postgresVersion | default 15 }}
+  
+  # Number of instances
+  instances:
+    - name: instance1
+      replicas: {{ .Values.developerHub.database.instances }}
+      
+      # Resource limits
+      resources:
+        {{- toYaml .Values.developerHub.database.resources | nindent 8 }}
+      
+      # Storage configuration
+      dataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.developerHub.database.storageSize }}
+        {{- if .Values.developerHub.database.storageClassName }}
+        storageClassName: {{ .Values.developerHub.database.storageClassName }}
+        {{- end }}
+  
+  # Backup configuration
+  {{- if .Values.developerHub.database.backup.enabled }}
+  backups:
+    pgbackrest:
+      {{- if and .Values.developerHub.database.backup.useODF .Values.developerHub.database.backup.s3Endpoint }}
+      # Use IBM Fusion / OpenShift Data Foundation with S3
+      repos:
+        - name: repo1
+          s3:
+            bucket: {{ .Values.developerHub.database.clusterName }}-backup
+            endpoint: {{ .Values.developerHub.database.backup.s3Endpoint }}
+            region: us-east-1
+          schedules:
+            full: "0 1 * * 0"
+            differential: "0 1 * * 1-6"
+      configuration:
+        - secret:
+            name: {{ .Values.developerHub.database.clusterName }}-backup-s3
+      {{- else }}
+      # Use volume-based backups (default when S3 endpoint not configured)
+      repos:
+        - name: repo1
+          volume:
+            volumeClaimSpec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: {{ .Values.developerHub.database.backup.storageSize | default "20Gi" }}
+              {{- if .Values.developerHub.database.storageClassName }}
+              storageClassName: {{ .Values.developerHub.database.storageClassName }}
+              {{- end }}
+          schedules:
+            full: "0 1 * * 0"
+            differential: "0 1 * * 1-6"
+      {{- end }}
+  {{- end }}
+  
+  # Monitoring
+  {{- if .Values.monitoring.enabled }}
+  monitoring:
+    pgmonitor:
+      exporter:
+        image: {{ .Values.developerHub.database.exporterImage | default "registry.developers.crunchydata.com/crunchydata/crunchy-postgres-exporter:ubi8-5.4.0-0" }}
+  {{- end }}
+  
+  # PostgreSQL configuration
+  patroni:
+    dynamicConfiguration:
+      postgresql:
+        parameters:
+          max_connections: {{ .Values.developerHub.database.maxConnections | default "200" }}
+          shared_buffers: {{ .Values.developerHub.database.sharedBuffers | default "256MB" }}
+          effective_cache_size: {{ .Values.developerHub.database.effectiveCacheSize | default "1GB" }}
+          work_mem: {{ .Values.developerHub.database.workMem | default "16MB" }}
+---
+# Job to grant CREATEDB privilege to PostgreSQL user
+# This runs as a regular Job (not a Helm hook) to ensure PostgreSQL cluster is fully ready
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.developerHub.database.clusterName }}-grant-createdb
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database-setup
+spec:
+  # Allow multiple retries with exponential backoff
+  backoffLimit: 20
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-developer-hub.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: developerhub-sa
+      restartPolicy: OnFailure
+      containers:
+      - name: grant-createdb
+        image: {{ .Values.global.toolsImage }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "=== PostgreSQL CREATEDB Privilege Grant Job ==="
+          echo "Waiting for PostgreSQL cluster to be fully ready..."
+          
+          # Wait for PostgreSQL cluster resource to exist (max 5 minutes)
+          echo "Step 1: Checking if PostgresCluster resource exists..."
+          for i in {1..60}; do
+            if oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} >/dev/null 2>&1; then
+              echo "PostgresCluster resource found"
+              break
+            fi
+            echo "Waiting for PostgresCluster resource... (attempt $i/60)"
+            sleep 5
+          done
+          
+          # Wait for PostgreSQL cluster to be ready (max 15 minutes)
+          echo "Step 2: Waiting for PostgreSQL cluster to be ready..."
+          for i in {1..180}; do
+            # Check if cluster has ready replicas
+            READY_REPLICAS=$(oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.instances[0].readyReplicas}' 2>/dev/null || echo "0")
+            TOTAL_REPLICAS=$(oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.instances[0].replicas}' 2>/dev/null || echo "0")
+            
+            if [ "$READY_REPLICAS" -gt "0" ] && [ "$READY_REPLICAS" = "$TOTAL_REPLICAS" ]; then
+              echo "PostgreSQL cluster is ready (readyReplicas: $READY_REPLICAS/$TOTAL_REPLICAS)"
+              break
+            fi
+            echo "Waiting for PostgreSQL cluster... (attempt $i/180, readyReplicas: $READY_REPLICAS/$TOTAL_REPLICAS)"
+            sleep 5
+          done
+          
+          # Additional wait for pods to be fully running
+          echo "Step 3: Waiting for PostgreSQL pods to be running..."
+          sleep 10
+          
+          # Get the primary pod with retries
+          echo "Step 4: Finding PostgreSQL primary pod..."
+          PRIMARY_POD=""
+          for i in {1..30}; do
+            PRIMARY_POD=$(oc get pods -n {{ include "fusion-developer-hub.namespace" . }} \
+              -l postgres-operator.crunchydata.com/cluster={{ .Values.developerHub.database.clusterName }},postgres-operator.crunchydata.com/role=master \
+              -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+            
+            if [ -n "$PRIMARY_POD" ]; then
+              echo "Found primary pod: $PRIMARY_POD"
+              
+              # Wait for pod to be ready
+              for j in {1..30}; do
+                POD_READY=$(oc get pod $PRIMARY_POD -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
+                if [ "$POD_READY" = "True" ]; then
+                  echo "Primary pod is ready"
+                  break
+                fi
+                echo "Waiting for pod to be ready... (attempt $j/30)"
+                sleep 5
+              done
+              break
+            fi
+            echo "Waiting for primary pod... (attempt $i/30)"
+            sleep 10
+          done
+          
+          if [ -z "$PRIMARY_POD" ]; then
+            echo "ERROR: Could not find PostgreSQL primary pod after waiting"
+            echo "Available pods:"
+            oc get pods -n {{ include "fusion-developer-hub.namespace" . }} -l postgres-operator.crunchydata.com/cluster={{ .Values.developerHub.database.clusterName }}
+            exit 1
+          fi
+          
+          # Wait for secret to be created
+          echo "Step 5: Waiting for PostgreSQL user secret..."
+          for i in {1..30}; do
+            if oc get secret {{ .Values.developerHub.database.clusterName }}-pguser-{{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} >/dev/null 2>&1; then
+              echo "Secret found"
+              break
+            fi
+            echo "Waiting for secret... (attempt $i/30)"
+            sleep 5
+          done
+          
+          # Get the database user from the secret
+          echo "Step 6: Getting database user from secret..."
+          DB_USER=$(oc get secret {{ .Values.developerHub.database.clusterName }}-pguser-{{ .Values.developerHub.database.clusterName }} \
+            -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.data.user}' | base64 -d)
+          
+          if [ -z "$DB_USER" ]; then
+            echo "ERROR: Could not get database user from secret"
+            exit 1
+          fi
+          
+          echo "Database user: $DB_USER"
+          
+          # Test database connectivity first
+          echo "Step 7: Testing database connectivity..."
+          for i in {1..10}; do
+            if oc exec -n {{ include "fusion-developer-hub.namespace" . }} $PRIMARY_POD -c database -- psql -U postgres -c "SELECT 1;" >/dev/null 2>&1; then
+              echo "Database is accepting connections"
+              break
+            fi
+            echo "Waiting for database to accept connections... (attempt $i/10)"
+            sleep 5
+          done
+          
+          # Grant CREATEDB privilege
+          echo "Step 8: Granting CREATEDB privilege to user: $DB_USER"
+          if oc exec -n {{ include "fusion-developer-hub.namespace" . }} $PRIMARY_POD -c database -- \
+            psql -U postgres -c "ALTER USER \"$DB_USER\" CREATEDB;"; then
+            echo "CREATEDB privilege granted successfully"
+          else
+            echo "WARNING: Failed to grant CREATEDB privilege. Checking if already granted..."
+          fi
+          
+          # Verify the privilege was granted
+          echo "Step 9: Verifying CREATEDB privilege..."
+          HAS_CREATEDB=$(oc exec -n {{ include "fusion-developer-hub.namespace" . }} $PRIMARY_POD -c database -- \
+            psql -U postgres -t -c "SELECT rolcreatedb FROM pg_roles WHERE rolname='$DB_USER';" | tr -d ' \n')
+          
+          if [ "$HAS_CREATEDB" = "t" ]; then
+            echo "✅ SUCCESS: CREATEDB privilege is granted to $DB_USER"
+            echo "PostgreSQL user configuration complete"
+            exit 0
+          else
+            echo "❌ ERROR: CREATEDB privilege verification failed"
+            echo "Current privileges for $DB_USER:"
+            oc exec -n {{ include "fusion-developer-hub.namespace" . }} $PRIMARY_POD -c database -- \
+              psql -U postgres -c "SELECT * FROM pg_roles WHERE rolname='$DB_USER';"
+            exit 1
+          fi
+---
+{{- if .Values.developerHub.database.backup.enabled }}
+{{- if .Values.developerHub.database.backup.useODF }}
+# ObjectBucketClaim for PostgreSQL backups
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: {{ .Values.developerHub.database.clusterName }}-backup
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database-backup
+spec:
+  generateBucketName: {{ .Values.developerHub.database.clusterName }}-backup
+  storageClassName: {{ .Values.developerHub.database.backup.odfStorageClass | default "openshift-storage.noobaa.io" }}
+---
+# Job to setup backup credentials from OBC
+# This runs as a regular Job (not a Helm hook) to ensure PostgreSQL cluster is ready first
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.developerHub.database.clusterName }}-backup-setup
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database-backup-setup
+spec:
+  backoffLimit: 10
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-developer-hub.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: developerhub-sa
+      restartPolicy: OnFailure
+      containers:
+      - name: setup
+        image: {{ .Values.global.toolsImage }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "=== PostgreSQL Backup Setup Job ==="
+          echo "Setting up PostgreSQL backup with IBM Fusion Object Storage..."
+          
+          # Wait for PostgreSQL cluster to be ready first
+          echo "Step 1: Waiting for PostgreSQL cluster to be ready..."
+          for i in {1..120}; do
+            # Check if cluster has ready replicas
+            READY_REPLICAS=$(oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.instances[0].readyReplicas}' 2>/dev/null || echo "0")
+            TOTAL_REPLICAS=$(oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.instances[0].replicas}' 2>/dev/null || echo "0")
+            
+            if [ "$READY_REPLICAS" -gt "0" ] && [ "$READY_REPLICAS" = "$TOTAL_REPLICAS" ]; then
+              echo "PostgreSQL cluster is ready (readyReplicas: $READY_REPLICAS/$TOTAL_REPLICAS)"
+              break
+            fi
+            echo "Waiting for PostgreSQL cluster... (attempt $i/120, readyReplicas: $READY_REPLICAS/$TOTAL_REPLICAS)"
+            sleep 5
+          done
+          
+          # Wait for OBC to be bound
+          echo "Step 2: Waiting for ObjectBucketClaim to be bound..."
+          for i in {1..60}; do
+            STATUS=$(oc get obc {{ .Values.developerHub.database.clusterName }}-backup -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+            if [ "$STATUS" = "Bound" ]; then
+              echo "ObjectBucketClaim is bound"
+              break
+            fi
+            echo "Waiting for OBC... (attempt $i/60, status: $STATUS)"
+            sleep 5
+          done
+          
+          # Get OBC details
+          OBC_NAME={{ .Values.developerHub.database.clusterName }}-backup
+          
+          # Extract credentials
+          ACCESS_KEY=$(oc get secret $OBC_NAME -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
+          SECRET_KEY=$(oc get secret $OBC_NAME -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
+          ENDPOINT=$(oc get cm $OBC_NAME -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.data.BUCKET_HOST}')
+          
+          # Create secret for PostgreSQL backup
+          oc create secret generic {{ .Values.developerHub.database.clusterName }}-backup-s3 \
+            -n {{ include "fusion-developer-hub.namespace" . }} \
+            --from-literal=ACCESS_KEY_ID="$ACCESS_KEY" \
+            --from-literal=ACCESS_SECRET_KEY="$SECRET_KEY" \
+            --dry-run=client -o yaml | oc apply -f -
+          
+          echo "PostgreSQL backup credentials configured successfully"
+{{- end }}
+{{- end }}
+---
+{{- end }}
+# Developer Hub Configuration ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: developerhub-app-config
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: developerhub
+data:
+  app-config.yaml: |
+    app:
+      title: {{ .Values.developerHub.config.title }}
+      baseUrl: https://{{ .Values.developerHub.config.hostname | default (printf "backstage-%s-%s.%s" .Values.developerHub.instanceName (include "fusion-developer-hub.namespace" .) (include "fusion-developer-hub.wildcardDomain" .)) }}
+      {{- if and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
+      {{- if .Values.developerHub.config.homepage.companyLogo }}
+      branding:
+        fullLogo: {{ .Values.developerHub.config.homepage.companyLogo }}
+        {{- if .Values.developerHub.config.homepage.companyLogoIcon }}
+        iconLogo: {{ .Values.developerHub.config.homepage.companyLogoIcon }}
+        {{- end }}
+      {{- end }}
+      support:
+        url: /docs
+        items:
+          {{- if .Values.developerHub.config.homepage.quickLinks }}
+          {{- range .Values.developerHub.config.homepage.quickLinks }}
+          - title: {{ .title | quote }}
+            icon: {{ .icon | default "docs" | quote }}
+            links:
+              - url: {{ .url | quote }}
+                title: {{ .description | default .title | quote }}
+          {{- end }}
+          {{- else }}
+          - title: "Create New Application"
+            icon: "add"
+            links:
+              - url: "/create"
+                title: "Start with AI-powered templates"
+          - title: "Browse Catalog"
+            icon: "catalog"
+            links:
+              - url: "/catalog"
+                title: "Discover components and services"
+          - title: "Documentation"
+            icon: "docs"
+            links:
+              - url: "/docs"
+                title: "Guides and best practices"
+          {{- end }}
+      {{- end }}
+    
+    organization:
+      name: {{ .Values.developerHub.config.organizationName | default "IBM Fusion" }}
+    
+    backend:
+      baseUrl: https://{{ .Values.developerHub.config.hostname | default (printf "backstage-%s-%s.%s" .Values.developerHub.instanceName (include "fusion-developer-hub.namespace" .) (include "fusion-developer-hub.wildcardDomain" .)) }}
+      listen:
+        port: 7007
+      csp:
+        connect-src: ["'self'", 'http:', 'https:']
+      cors:
+        origin: https://{{ .Values.developerHub.config.hostname | default (printf "backstage-%s-%s.%s" .Values.developerHub.instanceName (include "fusion-developer-hub.namespace" .) (include "fusion-developer-hub.wildcardDomain" .)) }}
+        methods: [GET, POST, PUT, DELETE]
+        credentials: true
+      {{- if .Values.developerHub.database.useOperator }}
+      database:
+        client: pg
+        pluginDivisionMode: 'database'
+        connection:
+          host: ${host}
+          port: ${port}
+          user: ${user}
+          password: ${password}
+          database: ${dbname}
+          ssl:
+            rejectUnauthorized: false
+      {{- end }}
+    
+    # Dynamic Plugins configuration for homepage (only when homepage.enabled is true)
+    {{- if and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
+    dynamicPlugins:
+      frontend:
+        red-hat-developer-hub.backstage-plugin-dynamic-home-page:
+          dynamicRoutes:
+            - path: /
+              importName: DynamicHomePage
+          mountPoints:
+            # Search bar at the top
+            - mountPoint: home.page/cards
+              importName: SearchBar
+              config:
+                layouts:
+                  xl: { w: 10, h: 1, x: 1 }
+                  lg: { w: 10, h: 1, x: 1 }
+                  md: { w: 10, h: 1, x: 1 }
+                  sm: { w: 12, h: 1 }
+                  xs: { w: 12, h: 1 }
+            # Quick Access card (reads from <instance>-home-quick-access ConfigMap)
+            - mountPoint: home.page/cards
+              importName: QuickAccessCard
+              config:
+                layouts:
+                  xl: { w: 7, h: 8 }
+                  lg: { w: 7, h: 8 }
+                  md: { w: 7, h: 8 }
+                  sm: { w: 12, h: 8 }
+                  xs: { w: 12, h: 8 }
+            # Welcome message (Markdown card)
+            - mountPoint: home.page/cards
+              importName: Markdown
+              config:
+                layouts:
+                  xl: { w: 5, h: 8, x: 7 }
+                  lg: { w: 5, h: 8, x: 7 }
+                  md: { w: 5, h: 8, x: 7 }
+                  sm: { w: 12, h: 6 }
+                  xs: { w: 12, h: 6 }
+                props:
+                  title: {{ .Values.developerHub.config.homepage.welcomeTitle | default "Welcome to IBM Fusion Developer Hub" | quote }}
+                  content: |
+                    {{- if .Values.developerHub.config.homepage.welcomeMessage }}
+                    {{ .Values.developerHub.config.homepage.welcomeMessage | nindent 20 }}
+                    {{- else }}
+                    Accelerate your AI-powered development and modernization journey:
+
+                    🤖 **AI-Powered Development** — Generate code with IBM watsonx and Granite models
+
+                    🔄 **Application Modernization** — Analyze and transform legacy applications
+
+                    🚀 **Quick Start** — Create applications from AI-powered templates
+                    {{- end }}
+            # Starred entities from the catalog
+            - mountPoint: home.page/cards
+              importName: CatalogStarredEntitiesCard
+              config:
+                layouts:
+                  xl: { w: 6, h: 4 }
+                  lg: { w: 6, h: 4 }
+                  md: { w: 6, h: 4 }
+                  sm: { w: 12, h: 4 }
+                  xs: { w: 12, h: 4 }
+            {{- if .Values.developerHub.config.homepage.featuredContent }}
+            # Featured content sections as Markdown cards
+            {{- range $index, $section := .Values.developerHub.config.homepage.featuredContent }}
+            - mountPoint: home.page/cards
+              importName: Markdown
+              config:
+                layouts:
+                  xl: { w: 6, h: 4 }
+                  lg: { w: 6, h: 4 }
+                  md: { w: 6, h: 4 }
+                  sm: { w: 12, h: 4 }
+                  xs: { w: 12, h: 4 }
+                props:
+                  title: {{ $section.title | quote }}
+                  content: |
+                    {{ $section.description }}
+                    {{- if $section.links }}
+                    {{- range $section.links }}
+
+                    - [{{ .text }}]({{ .url }})
+                    {{- end }}
+                    {{- end }}
+            {{- end }}
+            {{- end }}
+            # Timezone clocks
+            - mountPoint: home.page/cards
+              importName: WorldClockCard
+              config:
+                layouts:
+                  xl: { w: 4, h: 2 }
+                  lg: { w: 4, h: 2 }
+                  md: { w: 6, h: 2 }
+                  sm: { w: 12, h: 2 }
+                  xs: { w: 12, h: 2 }
+                props:
+                  clockConfigs:
+                    - label: UTC
+                      timeZone: UTC
+                    - label: NYC
+                      timeZone: America/New_York
+                    - label: London
+                      timeZone: Europe/London
+                    - label: Tokyo
+                      timeZone: Asia/Tokyo
+    {{- end }}
+    
+    {{- if .Values.developerHub.catalog.enabled }}
+    catalog:
+      import:
+        entityFilename: catalog-info.yaml
+      rules:
+        - allow: [Component, System, API, Resource, Location, Template]
+      locations:
+        {{- if .Values.developerHub.fusion.enabled }}
+        - type: url
+          target: https://github.com/ProjectAbell/Fusion-AI/blob/main/catalog-info.yaml
+        {{- end }}
+        {{- if and .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
+        # RHOAI Model Catalog Location - reads from location provider sidecar
+        - type: url
+          target: http://localhost:9090/
+          rules:
+            - allow: [Component, API, Resource]
+        # Note: AI Templates are now loaded from app-config-ai-templates ConfigMap
+        {{- end }}
+      providers:
+        {{- if .Values.developerHub.catalog.github.enabled }}
+        github:
+          providedOrg:
+            organization: {{ .Values.developerHub.catalog.github.target | trimPrefix "https://github.com/" }}
+            catalogPath: /catalog-info.yaml
+            schedule:
+              frequency: { minutes: 30 }
+              timeout: { minutes: 3 }
+        {{- end }}
+        {{- if .Values.developerHub.catalog.gitlab.enabled }}
+        gitlab:
+          gitlabProvider:
+            host: {{ .Values.developerHub.catalog.gitlab.target }}
+            schedule:
+              frequency: { minutes: 30 }
+              timeout: { minutes: 3 }
+        {{- end }}
+        {{- if .Values.developerHub.fusion.enabled }}
+        fusion:
+          default:
+            baseUrl: {{ .Values.developerHub.fusion.api.baseUrl }}
+            schedule:
+              frequency: { minutes: 30 }
+              timeout: { minutes: 3 }
+        {{- end }}
+        {{- if and .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
+        # RHOAI Model Catalog Provider
+        # Discovers InferenceServices from Red Hat OpenShift AI
+        rhoai:
+          default:
+            # Kubernetes API server URL (uses in-cluster config)
+            kubernetesApiUrl: https://kubernetes.default.svc
+            # Namespaces to watch for InferenceServices (empty = all namespaces)
+            {{- if .Values.developerHub.fusion.ai.rhoaiConnector.rbac.watchNamespaces }}
+            watchNamespaces:
+              {{- range .Values.developerHub.fusion.ai.rhoaiConnector.rbac.watchNamespaces }}
+              - {{ . }}
+              {{- end }}
+            {{- else }}
+            watchNamespaces: []
+            {{- end }}
+            # Refresh schedule
+            schedule:
+              frequency: { minutes: 5 }
+              timeout: { minutes: 2 }
+        # Model Catalog Provider
+        # Reads model data from storage-rest sidecar
+        modelCatalog:
+          default:
+            # Base URL for the location service (sidecar at localhost:9090)
+            baseUrl: http://localhost:9090
+            # Refresh schedule
+            schedule:
+              frequency: { minutes: 5 }
+              timeout: { minutes: 3 }
+        {{- end }}
+    {{- end }}
+    
+    {{- if .Values.developerHub.techdocs.enabled }}
+    techdocs:
+      builder: 'local'
+      generator:
+        runIn: 'local'
+      publisher:
+        {{- if .Values.developerHub.techdocs.s3Endpoint }}
+        type: 'awsS3'
+        awsS3:
+          bucketName: {{ .Values.developerHub.techdocs.s3Bucket }}
+          region: {{ .Values.developerHub.techdocs.s3Region }}
+          endpoint: {{ .Values.developerHub.techdocs.s3Endpoint }}
+        {{- else }}
+        type: 'local'
+        {{- end }}
+    {{- end }}
+    
+    {{- if .Values.developerHub.auth.enabled }}
+    auth:
+      {{- if .Values.developerHub.auth.guest.enabled }}
+      # Guest access enabled - no authentication required
+      environment: development
+      {{- else }}
+      environment: production
+      {{- end }}
+      providers:
+        {{- if .Values.developerHub.auth.github.enabled }}
+        github:
+          production:
+            clientId: ${GITHUB_CLIENT_ID}
+            clientSecret: ${GITHUB_CLIENT_SECRET}
+        {{- end }}
+        {{- if and .Values.developerHub.auth.oidc.enabled .Values.developerHub.auth.oidc.metadataUrl }}
+        oidc:
+          production:
+            metadataUrl: {{ .Values.developerHub.auth.oidc.metadataUrl }}
+            clientId: ${OIDC_CLIENT_ID}
+            clientSecret: ${OIDC_CLIENT_SECRET}
+            prompt: auto
+            signIn:
+              resolver: {{ .Values.developerHub.auth.oidc.signInResolver | default "emailMatchingUserEntityProfileEmail" }}
+        {{- end }}
+        {{- if .Values.developerHub.auth.guest.enabled }}
+        guest:
+          dangerouslyAllowOutsideDevelopment: true
+        {{- end }}
+    {{- else }}
+    # Authentication disabled - guest access only
+    auth:
+      environment: development
+      providers:
+        guest:
+          dangerouslyAllowOutsideDevelopment: true
+    {{- end }}
+    
+    {{- if .Values.developerHub.fusion.enabled }}
+    # IBM Fusion AI Configuration
+    fusion:
+      api:
+        baseUrl: {{ .Values.developerHub.fusion.api.baseUrl }}
+        timeout: {{ .Values.developerHub.fusion.api.timeout | default 30000 }}
+      
+      {{- if .Values.developerHub.fusion.ai.enabled }}
+      ai:
+        enabled: true
+        models:
+          {{- range .Values.developerHub.fusion.ai.models }}
+          - name: {{ .name }}
+            type: {{ .type }}
+            {{- if .endpoint }}
+            endpoint: {{ .endpoint }}
+            {{- end }}
+          {{- end }}
+      {{- end }}
+      
+      {{- if .Values.developerHub.fusion.modernization.enabled }}
+      modernization:
+        enabled: true
+        tools:
+          {{- range .Values.developerHub.fusion.modernization.tools }}
+          - name: {{ .name }}
+            enabled: {{ .enabled }}
+          {{- end }}
+      {{- end }}
+    
+    # Custom scaffolder actions for Fusion
+    scaffolder:
+      actions:
+        - id: 'fusion:analyze-application'
+          description: 'Analyze application for modernization opportunities'
+        - id: 'fusion:generate-migration-plan'
+          description: 'Generate application migration plan'
+        - id: 'fusion:deploy-to-openshift'
+          description: 'Deploy application to OpenShift'
+        - id: 'fusion:ai-code-review'
+          description: 'AI-powered code review'
+    {{- end }}
+---
+# Developer Hub Instance
+# Note: This resource requires the RHDH operator to be installed first
+# The operator must create the Backstage CRD before this can be applied
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: Backstage
+metadata:
+  name: {{ .Values.developerHub.instanceName }}
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: developerhub
+  annotations:
+    {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
+    argocd.argoproj.io/sync-wave: "2"
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "10"
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: developerhub-app-config
+        {{- if .Values.developerHub.fusion.enabled }}
+        - name: fusion-templates
+        {{- end }}
+        {{- if and .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
+        - name: app-config-ai-templates
+        {{- end }}
+    
+    # Dynamic plugins ConfigMap
+    {{- $homepageEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
+    {{- $rhoaiEnabled := and .Values.developerHub.fusion .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
+    {{- if or $homepageEnabled $rhoaiEnabled }}
+    dynamicPluginsConfigMapName: fusion-dynamic-plugins
+    {{- end }}
+    
+    {{- if or .Values.developerHub.database.useOperator (and .Values.developerHub.extraEnvs .Values.developerHub.extraEnvs.secrets (gt (len .Values.developerHub.extraEnvs.secrets) 0)) }}
+    extraEnvs:
+      secrets:
+        {{- if .Values.developerHub.database.useOperator }}
+        - name: {{ .Values.developerHub.database.clusterName }}-pguser-{{ .Values.developerHub.database.clusterName }}
+          key: host
+        - name: {{ .Values.developerHub.database.clusterName }}-pguser-{{ .Values.developerHub.database.clusterName }}
+          key: port
+        - name: {{ .Values.developerHub.database.clusterName }}-pguser-{{ .Values.developerHub.database.clusterName }}
+          key: user
+        - name: {{ .Values.developerHub.database.clusterName }}-pguser-{{ .Values.developerHub.database.clusterName }}
+          key: password
+        - name: {{ .Values.developerHub.database.clusterName }}-pguser-{{ .Values.developerHub.database.clusterName }}
+          key: dbname
+        {{- end }}
+        {{- if and .Values.developerHub.extraEnvs .Values.developerHub.extraEnvs.secrets }}
+        {{- range .Values.developerHub.extraEnvs.secrets }}
+        {{- if .name }}
+        - name: {{ .name }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+    {{- end }}
+    
+    {{- if .Values.developerHub.route.enabled }}
+    route:
+      enabled: true
+      host: {{ .Values.developerHub.config.hostname | default (printf "backstage-%s-%s.%s" .Values.developerHub.instanceName (include "fusion-developer-hub.namespace" .) (include "fusion-developer-hub.wildcardDomain" .)) }}
+      {{- if .Values.developerHub.route.tls.secretName }}
+      tls:
+        externalCertificateSecretName: {{ .Values.developerHub.route.tls.secretName }}
+      {{- end }}
+    {{- end }}
+  
+  # Replicas and Sidecars via deployment patch (v1alpha5 schema)
+  deployment:
+    patch:
+      spec:
+        replicas: {{ .Values.developerHub.replicas }}
+        {{- if $rhoaiEnabled }}
+        template:
+          spec:
+            automountServiceAccountToken: true
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root
+            containers:
+              - name: location
+                image: quay.io/redhat-ai-dev/model-catalog-location-service@sha256:c4471e07be6e0dbe821613053e6264a552cacda7f8604dbf306e6ac9e81e8ab9
+                imagePullPolicy: Always
+                env:
+                  - name: NORMALIZER_FORMAT
+                    value: JsonArrayFormat
+                  - name: POD_IP
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: status.podIP
+                  - name: POD_NAMESPACE
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: metadata.namespace
+                envFrom:
+                  - secretRef:
+                      name: {{ .Values.developerHub.fusion.ai.rhoaiConnector.tokenSecretName }}
+                ports:
+                  - containerPort: 9090
+                    name: location
+                    protocol: TCP
+                volumeMounts:
+                  - mountPath: /opt/app-root/src/dynamic-plugins-root
+                    name: dynamic-plugins-root
+                workingDir: /opt/app-root/src
+              - name: storage-rest
+                image: quay.io/redhat-ai-dev/model-catalog-storage-rest@sha256:398095e7469e86d84b1196371286363f4b7668aa3e26370b4d78cb8d4ace1dc9
+                imagePullPolicy: Always
+                env:
+                  - name: NORMALIZER_FORMAT
+                    value: JsonArrayFormat
+                  - name: STORAGE_TYPE
+                    value: ConfigMap
+                  - name: BRIDGE_URL
+                    value: http://localhost:9090
+                  - name: POD_IP
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: status.podIP
+                  - name: POD_NAMESPACE
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: metadata.namespace
+                envFrom:
+                  - secretRef:
+                      name: {{ .Values.developerHub.fusion.ai.rhoaiConnector.tokenSecretName }}
+                volumeMounts:
+                  - mountPath: /opt/app-root/src/dynamic-plugins-root
+                    name: dynamic-plugins-root
+                workingDir: /opt/app-root/src
+              - name: rhoai-normalizer
+                image: quay.io/redhat-ai-dev/model-catalog-rhoai-normalizer@sha256:9f19742450a3a9c6d9c01d8341a20db7eb5a52a39348f488ae06b6aa49754a26
+                imagePullPolicy: Always
+                env:
+                  - name: NORMALIZER_FORMAT
+                    value: JsonArrayFormat
+                  - name: POD_IP
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: status.podIP
+                  - name: POD_NAMESPACE
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: metadata.namespace
+                envFrom:
+                  - secretRef:
+                      name: {{ .Values.developerHub.fusion.ai.rhoaiConnector.tokenSecretName }}
+                volumeMounts:
+                  - mountPath: /opt/app-root/src/dynamic-plugins-root
+                    name: dynamic-plugins-root
+                workingDir: /opt/app-root/src
+                args:
+                  - "--metrics-address=:8081"
+        {{- end }}
+  
+  {{- if .Values.developerHub.database.useOperator }}
+  database:
+    enableLocalDb: false
+  {{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: developerhub-sa
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: developerhub-manager
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets", "services", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["postgres-operator.crunchydata.com"]
+  resources: ["postgresclusters"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["postgresql.cnpg.io"]
+  resources: ["clusters"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["rhdh.redhat.com"]
+  resources: ["backstages"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["objectbucket.io"]
+  resources: ["objectbucketclaims"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developerhub-manager-binding
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: developerhub-manager
+subjects:
+- kind: ServiceAccount
+  name: developerhub-sa
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+---
+# ClusterRole for cluster-scoped resources (CRDs)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "fusion-developer-hub.namespace" . }}-developerhub-cluster-reader
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+rules:
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "fusion-developer-hub.namespace" . }}-developerhub-cluster-reader-binding
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "fusion-developer-hub.namespace" . }}-developerhub-cluster-reader
+subjects:
+- kind: ServiceAccount
+  name: developerhub-sa
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+
+{{- if $rhoaiEnabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dynamic-plugins-root
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.developerHub.storage.storageClassName }}
+  storageClassName: {{ .Values.developerHub.storage.storageClassName }}
+  {{- end }}
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.developerHub.storage.size }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rhdh-storage-rest-role
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rhdh-storage-rest-rolebinding
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+roleRef:
+  kind: Role
+  name: rhdh-storage-rest-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+
+{{- end }}
+{{- end }}
+
+# Made with Bob

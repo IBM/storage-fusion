@@ -1,0 +1,123 @@
+{{- if .Values.operator.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "fusion-gitops.fullname" . }}-crd-waiter
+  namespace: {{ .Values.operator.namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-2"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "fusion-gitops.fullname" . }}-crd-waiter
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-2"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["clusterserviceversions"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "fusion-gitops.fullname" . }}-crd-waiter
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-2"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "fusion-gitops.fullname" . }}-crd-waiter
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "fusion-gitops.fullname" . }}-crd-waiter
+    namespace: {{ .Values.operator.namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "fusion-gitops.fullname" . }}-wait-for-crds
+  namespace: {{ .Values.operator.namespace }}
+  labels:
+    {{- include "fusion-gitops.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 20
+  template:
+    metadata:
+      name: {{ include "fusion-gitops.fullname" . }}-wait-for-crds
+      labels:
+        {{- include "fusion-gitops.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "fusion-gitops.fullname" . }}-crd-waiter
+      restartPolicy: OnFailure
+      containers:
+        - name: wait-for-crds
+          image: registry.redhat.io/openshift4/ose-cli:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "Waiting for GitOps operator CRDs to be installed..."
+              
+              # Wait for ArgoCD CRD
+              timeout=600
+              elapsed=0
+              interval=10
+              
+              while [ $elapsed -lt $timeout ]; do
+                if kubectl get crd argocds.argoproj.io &>/dev/null; then
+                  echo "✓ ArgoCD CRD found"
+                  break
+                fi
+                echo "Waiting for ArgoCD CRD... ($elapsed/$timeout seconds)"
+                sleep $interval
+                elapsed=$((elapsed + interval))
+              done
+              
+              if [ $elapsed -ge $timeout ]; then
+                echo "ERROR: Timeout waiting for ArgoCD CRD"
+                exit 1
+              fi
+              
+              # Wait for operator to be ready
+              echo "Waiting for GitOps operator to be ready..."
+              elapsed=0
+              
+              while [ $elapsed -lt $timeout ]; do
+                csv=$(kubectl get csv -n {{ .Values.operator.namespace }} -o jsonpath='{.items[?(@.spec.displayName=="Red Hat OpenShift GitOps")].status.phase}' 2>/dev/null || echo "")
+                if [ "$csv" = "Succeeded" ]; then
+                  echo "✓ GitOps operator is ready"
+                  exit 0
+                fi
+                echo "Waiting for operator to be ready... ($elapsed/$timeout seconds)"
+                sleep $interval
+                elapsed=$((elapsed + interval))
+              done
+              
+              echo "ERROR: Timeout waiting for operator to be ready"
+              exit 1
+{{- end }}
+
+# Made with Bob

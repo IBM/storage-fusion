@@ -1,0 +1,21 @@
+---
+# Validate GitOps operator deployment
+- name: Check operator deployment
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: gitops-operator-controller-manager
+    namespace: openshift-gitops-operator
+  register: operator_deployment
+  failed_when: false
+
+- name: Display operator status
+  debug:
+    msg: "Operator deployment found with {{ operator_deployment.resources[0].status.readyReplicas | default(0) }} ready replicas"
+  when: operator_deployment.resources | length > 0
+
+- name: Warn if operator not found
+  debug:
+    msg: "WARNING: Operator deployment not found yet"
+  when: operator_deployment.resources | length == 0
+
+# Made with Bob

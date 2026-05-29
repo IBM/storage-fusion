@@ -1,0 +1,26 @@
+apiVersion: v2
+name: external-secrets-operator
+description: Red Hat OpenShift External Secrets Operator deployment for IBM Fusion HCI with support for multiple secret backends
+type: application
+version: 1.2.0
+appVersion: "1.1.0"
+keywords:
+  - external-secrets
+  - secrets
+  - vault
+  - aws
+  - ibm-cloud
+  - fusion
+  - openshift
+  - redhat
+home: https://external-secrets.io
+sources:
+  - https://github.com/external-secrets/external-secrets
+  - https://catalog.redhat.com/software/containers/external-secrets-operator/openshift-external-secrets-operator
+maintainers:
+  - name: IBM Fusion AI Team
+    email: fusion-ai@ibm.com
+annotations:
+  catalog.redhat.com/certified: "true"
+
+# Made with Bob

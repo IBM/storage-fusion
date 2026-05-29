@@ -1,0 +1,25 @@
+{{- if and .Values.developerHub.enabled .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
+---
+# AI Templates ConfigMap
+# This ConfigMap provides the catalog locations for Red Hat AI Lab templates
+# Following the pattern from https://github.com/redhat-ai-dev/ai-rhdh-installer
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-ai-templates
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-templates
+data:
+  app-config-ai-templates.yaml: |
+    catalog:
+      locations:
+        # Red Hat AI Lab Templates - all templates in one file
+        - type: url
+          target: https://github.com/redhat-ai-dev/ai-lab-template/blob/main/all.yaml
+          rules:
+            - allow: [Template]
+{{- end }}
+
+# Made with Bob

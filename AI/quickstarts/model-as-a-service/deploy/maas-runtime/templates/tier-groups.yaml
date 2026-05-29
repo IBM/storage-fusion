@@ -1,0 +1,23 @@
+{{- range $tierName, $tierConfig := .Values.tiers }}
+{{- if or (index $.Values.userMapping $tierName) (gt (len (index $.Values.userMapping $tierName)) 0) }}
+---
+apiVersion: user.openshift.io/v1
+kind: Group
+metadata:
+  name: {{ include "maas-runtime.tierGroupName" $tierName }}
+  labels:
+    {{- include "maas-runtime.labels" $ | nindent 4 }}
+    maas.redhat.com/tier: {{ $tierName }}
+  annotations:
+    {{- include "maas-runtime.annotations" $ | nindent 4 }}
+    maas.redhat.com/request-limit: {{ (index $tierConfig.requestRates 0).limit | quote }}
+    maas.redhat.com/request-window: {{ (index $tierConfig.requestRates 0).window | quote }}
+    maas.redhat.com/token-limit: {{ (index $tierConfig.tokenRates 0).limit | quote }}
+    maas.redhat.com/token-window: {{ (index $tierConfig.tokenRates 0).window | quote }}
+users:
+{{- range index $.Values.userMapping $tierName }}
+  - {{ . }}
+{{- end }}
+{{- end }}
+{{- end }}
+

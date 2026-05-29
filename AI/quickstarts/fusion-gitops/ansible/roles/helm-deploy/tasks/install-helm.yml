@@ -1,0 +1,19 @@
+---
+# Check if Helm is installed
+- name: Check for Helm installation
+  command: helm version --short
+  register: helm_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Display Helm version
+  debug:
+    msg: "Helm is installed: {{ helm_version_check.stdout }}"
+  when: helm_version_check.rc == 0
+
+- name: Fail if Helm not found
+  fail:
+    msg: "Helm is not installed. Please install Helm 3.x before proceeding."
+  when: helm_version_check.rc != 0
+
+# Made with Bob

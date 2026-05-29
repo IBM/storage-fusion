@@ -1,0 +1,154 @@
+{{- if .Values.operators.enabled }}
+{{- if .Values.developerHub.createInstance }}
+---
+# Job to wait for CRDs to be created by operators
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wait-for-crds
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: crd-waiter
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "2"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-developer-hub.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: crd-waiter-sa
+      restartPolicy: Never
+      containers:
+      - name: wait
+        image: {{ .Values.global.toolsImage }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "=========================================="
+          echo "Waiting for Required CRDs"
+          echo "=========================================="
+          echo ""
+          
+          # Function to check if CRD exists
+          check_crd() {
+            local crd_name=$1
+            local api_group=$2
+            echo "Checking for CRD: $crd_name ($api_group)"
+            if oc api-resources | grep -q "$crd_name.*$api_group"; then
+              echo "  ✓ CRD found: $crd_name"
+              return 0
+            else
+              echo "  ✗ CRD not found: $crd_name"
+              return 1
+            fi
+          }
+          
+          # Wait for Backstage CRD (from RHDH operator)
+          {{- if .Values.operators.developerHub.enabled }}
+          echo "Waiting for Backstage CRD..."
+          for i in {1..120}; do
+            if check_crd "backstages" "rhdh.redhat.com"; then
+              break
+            fi
+            if [ $i -eq 120 ]; then
+              echo "ERROR: Backstage CRD not found after 10 minutes"
+              echo "Checking operator status:"
+              oc get csv -n {{ .Values.operators.developerHub.namespace }} || true
+              exit 1
+            fi
+            echo "Waiting for Backstage CRD... (attempt $i/120)"
+            sleep 5
+          done
+          {{- end }}
+          
+          echo ""
+          
+          # Wait for PostgresCluster CRD (from Crunchy operator)
+          {{- if and .Values.operators.postgres.enabled .Values.developerHub.database.useOperator }}
+          echo "Waiting for PostgresCluster CRD..."
+          for i in {1..120}; do
+            if check_crd "postgresclusters" "postgres-operator.crunchydata.com"; then
+              break
+            fi
+            if [ $i -eq 120 ]; then
+              echo "ERROR: PostgresCluster CRD not found after 10 minutes"
+              echo "Checking operator status:"
+              oc get csv -n {{ .Values.operators.postgres.namespace }} || true
+              exit 1
+            fi
+            echo "Waiting for PostgresCluster CRD... (attempt $i/120)"
+            sleep 5
+          done
+          {{- end }}
+          
+          echo ""
+          echo "=========================================="
+          echo "All Required CRDs are Available"
+          echo "=========================================="
+          echo ""
+          echo "✓ Backstage CRD: Available"
+          {{- if .Values.developerHub.database.useOperator }}
+          echo "✓ PostgresCluster CRD: Available"
+          {{- end }}
+          echo ""
+          echo "Ready to create instances!"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: crd-waiter-sa
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crd-waiter-role
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+rules:
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list"]
+- apiGroups: ["operators.coreos.com"]
+  resources: ["clusterserviceversions"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crd-waiter-binding
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: crd-waiter-role
+subjects:
+- kind: ServiceAccount
+  name: crd-waiter-sa
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+{{- end }}
+{{- end }}
+
+# Made with Bob

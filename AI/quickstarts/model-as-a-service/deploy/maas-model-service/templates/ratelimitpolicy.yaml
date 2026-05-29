@@ -1,0 +1,36 @@
+{{- if .Values.rateLimiting.enabled }}
+{{- range .Values.tiers }}
+---
+apiVersion: kuadrant.io/v1
+kind: RateLimitPolicy
+metadata:
+  name: {{ include "maas-model-service.modelName" $ }}-{{ . }}
+  namespace: {{ include "maas-model-service.namespace" $ }}
+  labels:
+    {{- include "maas-model-service.labels" $ | nindent 4 }}
+    maas.redhat.com/tier: {{ . }}
+  annotations:
+    {{- include "maas-model-service.annotations" $ | nindent 4 }}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: {{ include "maas-model-service.modelName" $ }}-kserve-route
+  
+  limits:
+    "{{ . }}-requests":
+      {{- if and $.Values.rateLimiting.customLimits (index $.Values.rateLimiting.customLimits .) }}
+      rates:
+        {{- toYaml (index $.Values.rateLimiting.customLimits . "requestRates") | nindent 8 }}
+      {{- else }}
+      # Uses tier defaults from maas-runtime
+      # This will be populated by the runtime tier configuration
+      rates:
+        - limit: 10
+          window: 1m
+      {{- end }}
+      
+      when:
+        - predicate: "auth.identity.groups.exists(g, g == '{{ include "maas-model-service.tierGroupName" . }}')"
+{{- end }}
+{{- end }}

@@ -1,0 +1,531 @@
+# Default values for fusion-gitops
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  # Image pull secrets for private registries
+  imagePullSecrets: []
+  # Default image pull policy
+  imagePullPolicy: IfNotPresent
+
+# Name overrides
+nameOverride: ""
+fullnameOverride: ""
+
+# Common labels to add to all resources
+commonLabels:
+  app.kubernetes.io/part-of: fusion-gitops
+  app.kubernetes.io/managed-by: helm
+
+# Common annotations to add to all resources
+commonAnnotations: {}
+
+# ============================================================================
+# Operator Configuration
+# ============================================================================
+operator:
+  # Enable operator installation
+  enabled: true
+  
+  # Operator name
+  name: openshift-gitops-operator
+  
+  # Operator namespace
+  namespace: openshift-gitops-operator
+  
+  # Operator channel
+  channel: latest
+  
+  # Install plan approval (Automatic or Manual)
+  installPlanApproval: Automatic
+  
+  # Operator source
+  source: redhat-operators
+  
+  # Source namespace
+  sourceNamespace: openshift-marketplace
+  
+  # Operator configuration
+  config:
+    env:
+      - name: ARGOCD_CLUSTER_CONFIG_NAMESPACES
+        value: "openshift-gitops,gitops-*"
+
+# ============================================================================
+# Storage Configuration
+# ============================================================================
+# NOTE: This chart uses EXISTING storage classes from your environment.
+# It does NOT create storage classes. Ensure the storage classes below exist.
+#
+# Default: OpenShift Data Foundation (ODF) storage classes
+# - ocs-storagecluster-cephfs (RWX) for shared volumes
+# - ocs-storagecluster-ceph-rbd (RWO) for block storage
+#
+# Users can override these values to use different storage classes
+storage:
+  # Default storage class to use for ArgoCD PVCs
+  # Default: ocs-storagecluster-cephfs (OpenShift Data Foundation)
+  # This should be an existing storage class in your cluster
+  # Override with --set storage.defaultStorageClass=your-storage-class
+  defaultStorageClass: ocs-storagecluster-cephfs
+  
+  # Storage class for shared volumes (ReadWriteMany)
+  # Used for repo cache when multiple replicas are needed
+  # MUST support ReadWriteMany (RWX) access mode
+  # Default: ocs-storagecluster-cephfs (OpenShift Data Foundation)
+  # Override with --set storage.sharedStorageClass=your-rwx-storage-class
+  sharedStorageClass: ocs-storagecluster-cephfs
+
+# ============================================================================
+# ArgoCD Configuration
+# ============================================================================
+argocd:
+  # Enable ArgoCD configuration
+  # When true, patches the existing openshift-gitops instance with custom configuration
+  enabled: true
+  
+  # ArgoCD instance name
+  # Default: openshift-gitops (the operator's default instance)
+  name: openshift-gitops
+  
+  # ArgoCD namespace (must be openshift-gitops)
+  # This chart only supports patching the operator's default instance
+  namespace: openshift-gitops
+  
+  # Server configuration
+  server:
+    replicas: 2
+    autoscale:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 75
+      targetMemoryUtilizationPercentage: 80
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    # Route configuration (OpenShift)
+    route:
+      enabled: true
+      tls:
+        termination: reencrypt
+        insecureEdgeTerminationPolicy: Redirect
+    # Ingress configuration (Kubernetes)
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts: []
+      tls: []
+    service:
+      type: ClusterIP
+  
+  # Repository server configuration
+  repo:
+    replicas: 2
+    autoscale:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 75
+      targetMemoryUtilizationPercentage: 80
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    # Persistent storage for repository cache
+    storage:
+      enabled: true
+      size: 10Gi
+      storageClassName: ""  # Uses storage.sharedStorageClass if empty
+      mountPath: /home/argocd/caches
+      # Access modes: ReadWriteMany required for multiple replicas
+      # Requires storage class that supports RWX (e.g., ocs-storagecluster-cephfs, NFS)
+      accessModes:
+        - ReadWriteMany
+    # Environment variables
+    env:
+      - name: ARGOCD_EXEC_TIMEOUT
+        value: "180s"
+      - name: ARGOCD_GIT_ATTEMPTS_COUNT
+        value: "3"
+  
+  # Application controller configuration
+  controller:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+    sharding:
+      enabled: false
+      replicas: 1
+    env:
+      - name: ARGOCD_RECONCILIATION_TIMEOUT
+        value: "180s"
+      - name: ARGOCD_REPO_SERVER_TIMEOUT_SECONDS
+        value: "180"
+  
+  # Redis configuration
+  # NOTE: Redis persistent storage is NOT supported by the ArgoCD operator
+  # Redis will automatically use ephemeral storage (emptyDir)
+  # This is a known limitation of the Red Hat GitOps operator
+  # Data is lost on pod restart, which is acceptable for Redis cache use case
+  redis:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  # Storage cleanup policy for helm uninstall
+  storage:
+    # Delete PVCs on helm uninstall (WARNING: Data will be lost!)
+    # Set to true only if you don't need to preserve data
+    # Default: false (PVCs are retained and can be reused on reinstall)
+    deleteOnUninstall: false
+    
+    # Retain PVCs for backup/recovery even if deleteOnUninstall is true
+    # If true, PVCs will be kept regardless of deleteOnUninstall setting
+    # Useful for creating backups before deletion
+    # Default: false
+    retainOnUninstall: false
+    
+    # Note: If both are false (default), PVCs remain in the cluster
+    # and can be reused when the chart is reinstalled
+  
+  # High availability configuration
+  ha:
+    enabled: true
+    redisProxyImage: haproxy
+    redisProxyVersion: "2.6.2-alpine"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  # Dex/SSO configuration
+  dex:
+    enabled: true
+    openShiftOAuth: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  # RBAC configuration
+  rbac:
+    defaultPolicy: 'role:readonly'
+    policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+    scopes: '[groups]'
+  
+  # Notifications controller
+  notifications:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  # ApplicationSet controller
+  applicationSet:
+    enabled: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  # Resource tracking method
+  resourceTrackingMethod: annotation
+  
+  # Kustomize build options
+  kustomizeBuildOptions: "--enable-helm --load-restrictor LoadRestrictionsNone"
+  
+  # Create default AppProject for applications
+  createDefaultProject: false
+  
+  # Default AppProject configuration
+  defaultProject:
+    name: fusion-apps
+    description: "Default project for Fusion HCI applications deployed via GitOps"
+    
+    # Source repositories allowed
+    sourceRepos:
+      - '*'  # Allow all repositories (restrict in production)
+    
+    # Destination clusters and namespaces
+    destinations:
+      - namespace: '*'
+        server: https://kubernetes.default.svc
+    
+    # Cluster-scoped resources that can be managed
+    clusterResourceWhitelist:
+      - group: '*'
+        kind: '*'
+    
+    # Namespace-scoped resources that can be managed
+    namespaceResourceWhitelist:
+      - group: '*'
+        kind: '*'
+    
+    # Project roles for RBAC
+    roles: []
+    # Example:
+    # - name: developer
+    #   description: Developer role
+    #   policies:
+    #     - p, proj:fusion-apps:developer, applications, get, fusion-apps/*, allow
+    #     - p, proj:fusion-apps:developer, applications, sync, fusion-apps/*, allow
+    #   groups:
+    #     - developers
+    
+    # Sync windows
+    syncWindows: []
+    # Example:
+    # - kind: allow
+    #   schedule: "0 9 * * 1-5"  # Mon-Fri 9 AM
+    #   duration: 8h
+    #   applications:
+    #     - '*'
+    
+    # Orphaned resources monitoring
+    orphanedResources:
+      warn: true
+      ignore: []
+  
+  # Extra configuration
+  extraConfig:
+    accounts.admin: "apiKey, login"
+    accounts.admin.enabled: "true"
+    application.instanceLabelKey: "argocd.argoproj.io/instance"
+    exec.enabled: "false"
+    server.rbac.log.enforce.enable: "true"
+    timeout.reconciliation: "180s"
+    timeout.hard.reconciliation: "0s"
+  
+  # Resource customizations
+  resourceCustomizations: |
+    argoproj.io/Application:
+      health.lua: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = ""
+        if obj.status ~= nil then
+          if obj.status.health ~= nil then
+            hs.status = obj.status.health.status
+            if obj.status.health.message ~= nil then
+              hs.message = obj.status.health.message
+            end
+          end
+        end
+        return hs
+  
+  # Resource exclusions
+  resourceExclusions: |
+    - apiGroups:
+      - tekton.dev
+      clusters:
+      - '*'
+      kinds:
+      - TaskRun
+      - PipelineRun
+  
+  # Initial repositories
+  initialRepositories: []
+  # Example:
+  # - name: fusion-gitops-config
+  #   type: git
+  #   url: https://github.com/your-org/fusion-gitops-config.git
+  
+  # Repository credentials
+  repositoryCredentials: []
+  # Example:
+  # - url: https://github.com/
+  #   type: git
+  #   passwordSecret:
+  #     name: github-credentials
+  #     key: password
+  #   usernameSecret:
+  #     name: github-credentials
+  #     key: username
+
+# ============================================================================
+# Network Policy Configuration
+# ============================================================================
+networkPolicy:
+  # Enable network policies
+  enabled: true
+  
+  # Policy types
+  policyTypes:
+    - Ingress
+    - Egress
+  
+  # Additional ingress rules
+  additionalIngressRules: []
+  
+  # Additional egress rules
+  additionalEgressRules: []
+
+# ============================================================================
+# Resource Quota Configuration
+# ============================================================================
+resourceQuota:
+  # Enable resource quotas
+  enabled: true
+  
+  # Hard limits
+  hard:
+    requests.cpu: "10"
+    requests.memory: "20Gi"
+    limits.cpu: "20"
+    limits.memory: "40Gi"
+    persistentvolumeclaims: "10"
+    requests.storage: "100Gi"
+
+# ============================================================================
+# Monitoring Configuration
+# ============================================================================
+monitoring:
+  # Enable monitoring
+  enabled: true
+  
+  # Prometheus configuration
+  prometheus:
+    enabled: true
+    # Service monitor configuration
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+  
+  # Grafana configuration
+  grafana:
+    enabled: false
+    # Dashboard configuration
+    dashboards:
+      enabled: false
+
+# ============================================================================
+# Service Account Configuration
+# ============================================================================
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# ============================================================================
+# Pod Security Configuration
+# ============================================================================
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# ============================================================================
+# Additional Configuration
+# ============================================================================
+
+# Node selector for all pods
+nodeSelector: {}
+
+# Tolerations for all pods
+tolerations: []
+
+# Affinity rules for all pods
+affinity: {}
+
+# Priority class name
+priorityClassName: ""
+
+# Additional volumes
+extraVolumes: []
+
+# Additional volume mounts
+extraVolumeMounts: []
+
+# Additional environment variables
+extraEnv: []
+
+# Additional init containers
+extraInitContainers: []
+
+# Additional containers
+extraContainers: []
+# ============================================================================
+# HashiCorp Vault Integration (Optional)
+# ============================================================================
+vault:
+  # Enable Vault deployment
+  enabled: false
+  
+  # Vault chart configuration
+  # When enabled, deploys HashiCorp Vault using the vault-operator chart
+  chart:
+    # Path to vault-operator chart (relative to this chart)
+    path: "../vault-operator"
+    # Release name for Vault
+    releaseName: vault-operator
+  
+  # Vault storage configuration
+  storage:
+    # Storage class for Vault data
+    # Uses existing storage class from your environment
+    storageClassName: "ocs-storagecluster-ceph-rbd"
+    # Storage size per Vault replica
+    size: 10Gi
+  
+  # Vault instance configuration
+  instance:
+    # Number of Vault replicas (HA mode)
+    replicas: 3
+    # Vault namespace
+    namespace: vault
+  
+  # External Secrets Operator integration
+  externalSecrets:
+    # Enable External Secrets integration with Vault
+    enabled: false
+    # Create SecretStore for Vault
+    createSecretStore: true
+
+
+# Made with Bob

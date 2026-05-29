@@ -1,0 +1,98 @@
+{{- if and .Values.developerHub.enabled .Values.developerHub.fusion.ai.rhoaiConnector.enabled .Values.developerHub.fusion.ai.rhoaiConnector.rbac.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "fusion-developer-hub.fullname" . }}-rhoai-crd-reader
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    component: rhoai-connector
+rules:
+# Permission to read CRDs (required for discovering InferenceService CRD)
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get"]
+# Permission to read OpenShift routes
+- apiGroups: ["route.openshift.io"]
+  resources: ["routes"]
+  verbs: ["get", "list", "watch"]
+# Permission to read services and serviceaccounts
+- apiGroups: [""]
+  resources: ["serviceaccounts", "services"]
+  verbs: ["get", "list", "watch"]
+# Permission to read InferenceServices across all namespaces
+- apiGroups: ["serving.kserve.io"]
+  resources: ["inferenceservices"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "fusion-developer-hub.fullname" . }}-rhoai-connector
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    component: rhoai-connector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "fusion-developer-hub.fullname" . }}-rhoai-crd-reader
+subjects:
+- kind: ServiceAccount
+  name: {{ include "fusion-developer-hub.serviceAccountName" . }}
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+---
+# Role for ConfigMap updates within the RHDH namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "fusion-developer-hub.fullname" . }}-rhoai-configmap
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    component: rhoai-connector
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+# RoleBinding for ConfigMap updates
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "fusion-developer-hub.fullname" . }}-rhoai-configmap
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    component: rhoai-connector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "fusion-developer-hub.fullname" . }}-rhoai-configmap
+subjects:
+- kind: ServiceAccount
+  name: {{ include "fusion-developer-hub.serviceAccountName" . }}
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+{{- if .Values.developerHub.fusion.ai.rhoaiConnector.rbac.modelRegistryNamespace }}
+---
+# RoleBinding in the RHOAI model registry namespace
+# Grants the RHDH ServiceAccount read permissions to model registry data
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "fusion-developer-hub.fullname" . }}-rhoai-dashboard-permissions
+  namespace: {{ .Values.developerHub.fusion.ai.rhoaiConnector.rbac.modelRegistryNamespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    component: rhoai-connector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.developerHub.fusion.ai.rhoaiConnector.rbac.modelRegistryRoleName | default "registry-user-modelregistry-public" }}
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:serviceaccounts:{{ include "fusion-developer-hub.namespace" . }}
+{{- end }}
+{{- end }}
+
+# Made with Bob

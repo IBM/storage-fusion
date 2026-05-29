@@ -1,0 +1,37 @@
+{{- if .Values.gateway.enabled | default true }}
+{{- if .Values.gateway.createGatewayClass | default true }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: {{ .Values.gateway.gatewayClassName }}
+  labels:
+    {{- include "maas-runtime.labels" . | nindent 4 }}
+  annotations:
+    {{- include "maas-runtime.annotations" . | nindent 4 }}
+spec:
+  controllerName: {{ .Values.gateway.controllerName | default "openshift.io/gateway-controller/v1" }}
+{{- end }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ include "maas-runtime.gatewayName" . }}
+  namespace: {{ include "maas-runtime.gatewayNamespace" . }}
+  labels:
+    {{- include "maas-runtime.labels" . | nindent 4 }}
+    {{- if .Values.gateway.istioRevision }}
+    istio.io/rev: {{ .Values.gateway.istioRevision }}
+    {{- end }}
+    {{- with .Values.gateway.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- with .Values.gateway.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  listeners:
+    {{- toYaml .Values.gateway.listeners | nindent 4 }}
+{{- end }}
