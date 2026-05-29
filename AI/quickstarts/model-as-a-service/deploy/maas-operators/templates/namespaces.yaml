@@ -1,0 +1,56 @@
+{{- if .Values.operators.openshiftAI.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.openshiftAI.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+
+{{- if .Values.operators.certManager.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.certManager.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+
+{{- if false }}
+{{- if .Values.operators.grafana.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.grafana.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+{{- end }}
+
+{{- if .Values.operators.connectivityLink.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.connectivityLink.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+
+{{- if .Values.operators.leaderWorkerSet.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.leaderWorkerSet.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}

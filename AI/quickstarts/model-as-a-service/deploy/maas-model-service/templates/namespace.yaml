@@ -1,0 +1,19 @@
+{{- if .Values.project.create }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "maas-model-service.namespace" . }}
+  labels:
+    {{- include "maas-model-service.labels" . | nindent 4 }}
+    # Label required for OpenShift AI dashboard visibility
+    opendatahub.io/dashboard: "true"
+    {{- with .Values.project.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- include "maas-model-service.annotations" . | nindent 4 }}
+    {{- with .Values.project.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

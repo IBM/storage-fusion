@@ -1,0 +1,13 @@
+{{- if .Values.rbac.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "maas-runtime.modelsNamespace" . }}
+  labels:
+    {{- include "maas-runtime.labels" . | nindent 4 }}
+    opendatahub.io/dashboard: "true"
+  annotations:
+    {{- include "maas-runtime.annotations" . | nindent 4 }}
+{{- end }}
+

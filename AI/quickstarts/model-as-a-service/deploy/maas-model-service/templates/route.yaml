@@ -1,0 +1,25 @@
+{{- if .Values.gateway.exposeExternally }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- include "maas-model-service.labels" . | nindent 4 }}
+    gateway.networking.k8s.io/gateway-name: {{ .Values.gateway.name }}
+  annotations:
+    {{- include "maas-model-service.annotations" . | nindent 4 }}
+spec:
+  host: {{ .Values.gateway.name }}-{{ .Values.gateway.namespace }}.{{ .Values.gateway.wildcardDomain | default "apps.cluster.example.com" }}
+  port:
+    targetPort: https
+  tls:
+    termination: passthrough
+    insecureEdgeTerminationPolicy: Redirect
+  to:
+    kind: Service
+    name: {{ .Values.gateway.name }}-{{ .Values.gateway.name }}
+    weight: 100
+  wildcardPolicy: None
+{{- end }}

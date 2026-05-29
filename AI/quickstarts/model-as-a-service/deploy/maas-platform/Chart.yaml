@@ -1,0 +1,16 @@
+apiVersion: v2
+name: maas-platform
+description: Platform bootstrap chart for MaaS operator-backed custom resources
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - ai
+  - openshift-ai
+  - kuadrant
+  - platform
+maintainers:
+  - name: Red Hat AI Quickstart Team
+home: https://github.com/rh-ai-quickstart/maas-platform
+sources:
+  - https://github.com/rh-ai-quickstart/maas-platform

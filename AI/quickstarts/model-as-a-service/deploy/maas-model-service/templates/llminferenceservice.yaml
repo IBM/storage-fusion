@@ -1,0 +1,100 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: {{ include "maas-model-service.modelName" . }}
+  namespace: {{ include "maas-model-service.namespace" . }}
+  labels:
+    {{- include "maas-model-service.labels" . | nindent 4 }}
+    {{- if .Values.modelRegistry.enabled }}
+    {{- if .Values.modelRegistry.registeredModelId }}
+    modelregistry.opendatahub.io/registered-model-id: "{{ .Values.modelRegistry.registeredModelId }}"
+    {{- end }}
+    {{- if .Values.modelRegistry.modelVersionId }}
+    modelregistry.opendatahub.io/model-version-id: "{{ .Values.modelRegistry.modelVersionId }}"
+    {{- end }}
+    {{- if .Values.modelRegistry.name }}
+    modelregistry.opendatahub.io/name: {{ .Values.modelRegistry.name }}
+    {{- end }}
+    opendatahub.io/dashboard: "true"
+    {{- end }}
+  annotations:
+    {{- include "maas-model-service.annotations" . | nindent 4 }}
+    {{- if .Values.modelRegistry.enabled }}
+    {{- if .Values.modelRegistry.connectionSecret }}
+    opendatahub.io/connections: {{ .Values.modelRegistry.connectionSecret }}
+    {{- end }}
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: {{ .Values.model.displayName }}
+    security.opendatahub.io/enable-auth: "false"
+    {{- end }}
+spec:
+  {{- if and .Values.advanced (index .Values.advanced "enabled") }}
+  {{- toYaml .Values.advanced.spec | nindent 2 }}
+  {{- else }}
+  model:
+    name: {{ include "maas-model-service.modelName" . }}
+    uri: {{ .Values.source.uri }}
+  replicas: {{ .Values.inference.replicas }}
+  {{- if .Values.modelRegistry.enabled }}
+  router:
+    gateway: {}
+    route: {}
+    scheduler: {}
+  {{- end }}
+  template:
+    containers:
+    - name: main
+      {{- if .Values.inference.image }}
+      image: {{ .Values.inference.image }}
+      {{- end }}
+      {{- if .Values.inference.imagePullPolicy }}
+      imagePullPolicy: {{ .Values.inference.imagePullPolicy }}
+      {{- end }}
+      resources:
+        {{- toYaml .Values.resources | nindent 8 }}
+      {{- if or .Values.inference.extraArgs .Values.inference.env }}
+      env:
+        {{- if .Values.inference.extraArgs }}
+        - name: VLLM_ARGS
+          value: {{ join " " .Values.inference.extraArgs | quote }}
+        {{- end }}
+        {{- if .Values.inference.env }}
+        {{- toYaml .Values.inference.env | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.inference.volumeMounts }}
+      volumeMounts:
+        {{- toYaml .Values.inference.volumeMounts | nindent 8 }}
+      {{- end }}
+      {{- if and .Values.securityContext (index .Values.securityContext "container") }}
+      securityContext:
+        {{- toYaml .Values.securityContext.container | nindent 8 }}
+      {{- end }}
+    {{- if .Values.modelRegistry.enabled }}
+    {{- if .Values.modelRegistry.connectionSecret }}
+    imagePullSecrets:
+    - name: {{ .Values.modelRegistry.connectionSecret }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.scheduling.nodeSelector }}
+    nodeSelector:
+      {{- toYaml .Values.scheduling.nodeSelector | nindent 6 }}
+    {{- end }}
+    {{- if .Values.scheduling.tolerations }}
+    tolerations:
+      {{- toYaml .Values.scheduling.tolerations | nindent 6 }}
+    {{- end }}
+    {{- if .Values.scheduling.affinity }}
+    affinity:
+      {{- toYaml .Values.scheduling.affinity | nindent 6 }}
+    {{- end }}
+    {{- if .Values.inference.volumes }}
+    volumes:
+      {{- toYaml .Values.inference.volumes | nindent 6 }}
+    {{- end }}
+    {{- if and .Values.securityContext (index .Values.securityContext "pod") }}
+    securityContext:
+      {{- toYaml .Values.securityContext.pod | nindent 6 }}
+    {{- end }}
+  
+  {{- end }}

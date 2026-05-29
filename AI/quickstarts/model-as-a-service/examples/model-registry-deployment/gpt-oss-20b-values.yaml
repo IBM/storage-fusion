@@ -1,0 +1,121 @@
+# Helm values for deploying gpt-oss-20b from model registry
+# This model is registered in the model-registry
+
+model:
+  name: gpt-oss-20b-version-1
+  displayName: "GPT-OSS 20B - Version 1"
+  namespace: deploy-models-rhoai
+
+project:
+  create: true  # Reuse the existing shared namespace
+
+# Model Registry Configuration
+modelRegistry:
+  enabled: true
+  name: model-registry
+  namespace: rhoai-model-registries
+  # This is the registered model name from the model registry
+  registeredModelName: "gpt-oss-20b"
+  # Registered model IDs and latest version are resolved automatically at deploy time
+  # Shared namespace-level connection secret used by all models in this namespace
+  connectionSecret: "model-registry-connection"
+  
+  # Create the namespace connection secret through the Helm chart
+  createConnectionSecret: true
+  connectionSecretData:
+    # echo -n "registry.redhat.io" | base64
+    ociHost: "cmVnaXN0cnkucmVkaGF0Lmlv"
+
+# Model source URI is resolved automatically from the model registry at deploy time
+source:
+  uri: ""
+
+# Inference engine configuration
+inference:
+  engine: vllm
+  image: registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3.0
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  
+  # vLLM specific arguments
+  extraArgs:
+    - --enable-force-include-usage
+  
+  env:
+    - name: VLLM_ADDITIONAL_ARGS
+      value: "--max-model-len=32768 --gpu-memory-utilization=0.95"
+
+# Resource allocation
+resources:
+  limits:
+    cpu: "4"
+    memory: 24Gi
+    nvidia.com/gpu: "1"
+  requests:
+    cpu: "2"
+    memory: 16Gi
+    nvidia.com/gpu: "1"
+
+# Pod scheduling configuration
+scheduling:
+  nodeSelector: {}
+  
+  tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+  
+  affinity: {}
+
+# Tier-based access control
+tiers:
+  - free
+  - premium
+  - enterprise
+
+# Rate limiting configuration
+rateLimiting:
+  enabled: true
+  # Custom rate limits per tier (optional - leave empty to use tier defaults from maas-runtime)
+  customLimits:
+    free:
+      requestRates:
+        - limit: 10
+          window: 1m
+    premium:
+      requestRates:
+        - limit: 100
+          window: 1m
+    enterprise:
+      requestRates:
+        - limit: 1000
+          window: 1m
+
+# Token-based rate limiting
+tokenRateLimiting:
+  enabled: false
+  customLimits: {}
+
+# Gateway configuration
+gateway:
+  # Set to true to automatically expose the gateway for external access
+  exposeExternally: true
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+# Labels
+labels:
+  use-case: Fusion-Agentic-Assistance-Platform
+  model-type: general-purpose
+  environment: production
+
+# Annotations
+annotations:
+  # description: "General purpose 20B parameter model for code assistance deployed from model registry"
+  # model-card-url: "https://huggingface.co/rh-aiservices-bu/gpt-oss-20b"
