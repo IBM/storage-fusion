@@ -1,0 +1,159 @@
+{{- if .Values.operators.enabled }}
+{{- if .Values.operators.postgres.enabled }}
+{{- $existingSubscription := lookup "operators.coreos.com/v1alpha1" "Subscription" .Values.operators.postgres.namespace "crunchy-postgres-operator" }}
+{{- $skipInstall := and .Values.operators.skipIfExists $existingSubscription }}
+{{- if not $skipInstall }}
+---
+# Namespace for PostgreSQL Operator
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.postgres.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres-operator
+  annotations:
+    {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+---
+# OperatorGroup for PostgreSQL Operator
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: postgres-operator-group
+  namespace: {{ .Values.operators.postgres.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-9"
+spec:
+  {{- if .Values.operators.postgres.watchAllNamespaces }}
+  # Watch all namespaces
+  {{- else }}
+  targetNamespaces:
+    - {{ .Values.operators.postgres.namespace }}
+  {{- end }}
+---
+# Subscription for PostgreSQL Operator (Crunchy Postgres for Kubernetes)
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: crunchy-postgres-operator
+  namespace: {{ .Values.operators.postgres.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres-operator
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-8"
+spec:
+  channel: {{ .Values.operators.postgres.channel }}
+  name: crunchy-postgres-operator
+  source: {{ .Values.operators.postgres.source | default "certified-operators" }}
+  sourceNamespace: openshift-marketplace
+  {{- if .Values.operators.postgres.startingCSV }}
+  startingCSV: {{ .Values.operators.postgres.startingCSV }}
+  {{- end }}
+  installPlanApproval: {{ .Values.operators.postgres.installPlanApproval | default "Automatic" }}
+---
+# Wait for operator to be ready
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wait-for-postgres-operator
+  namespace: {{ .Values.operators.postgres.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres-operator-setup
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-developer-hub.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: postgres-setup-sa
+      restartPolicy: OnFailure
+      containers:
+      - name: wait
+        image: {{ .Values.global.toolsImage }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "Waiting for Crunchy PostgreSQL operator to be ready..."
+          
+          # Wait for CSV to be succeeded (max 10 minutes)
+          for i in {1..120}; do
+            CSV_PHASE=$(oc get csv -n {{ .Values.operators.postgres.namespace }} -l operators.coreos.com/crunchy-postgres-operator.{{ .Values.operators.postgres.namespace }}="" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+            if [ "$CSV_PHASE" = "Succeeded" ]; then
+              echo "Crunchy PostgreSQL operator is ready"
+              exit 0
+            fi
+            echo "Waiting for operator... (attempt $i/120, phase: $CSV_PHASE)"
+            sleep 5
+          done
+          
+          echo "ERROR: Crunchy PostgreSQL operator did not become ready within timeout"
+          exit 1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-setup-sa
+  namespace: {{ .Values.operators.postgres.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: postgres-setup-role
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+rules:
+- apiGroups: ["operators.coreos.com"]
+  resources: ["clusterserviceversions", "subscriptions"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: postgres-setup-binding
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: postgres-setup-role
+subjects:
+- kind: ServiceAccount
+  name: postgres-setup-sa
+  namespace: {{ .Values.operators.postgres.namespace }}
+{{- else }}
+---
+# ConfigMap to indicate PostgreSQL operator already exists
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-operator-exists
+  namespace: {{ .Values.operators.postgres.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+data:
+  message: "Crunchy PostgreSQL operator already exists in the cluster - skipping installation"
+  subscription: "{{ .Values.operators.postgres.namespace }}/crunchy-postgres-operator"
+{{- end }}
+{{- end }}
+{{- end }}
+
+# Made with Bob

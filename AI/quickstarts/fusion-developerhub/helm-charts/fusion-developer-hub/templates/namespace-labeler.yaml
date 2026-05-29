@@ -1,0 +1,105 @@
+{{- if .Values.developerHub.enabled }}
+{{- $namespace := include "fusion-developer-hub.namespace" . }}
+---
+# Job to add Helm labels and annotations to the namespace
+# This runs as a pre-install/pre-upgrade hook to ensure namespace has proper Helm metadata
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-labeler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: namespace-labeler
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "fusion-developer-hub.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-labeler-sa
+      restartPolicy: OnFailure
+      containers:
+      - name: labeler
+        image: {{ .Values.global.toolsImage }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "Adding Helm labels and annotations to namespace {{ $namespace }}..."
+          
+          # Add Helm labels
+          kubectl label namespace {{ $namespace }} \
+            app.kubernetes.io/managed-by=Helm \
+            app.kubernetes.io/instance={{ .Release.Name }} \
+            app.kubernetes.io/name={{ include "fusion-developer-hub.name" . }} \
+            app.kubernetes.io/version={{ .Chart.AppVersion | quote }} \
+            helm.sh/chart={{ include "fusion-developer-hub.chart" . }} \
+            opendatahub.io/dashboard="true" \
+            --overwrite
+          
+          # Add Helm annotations
+          kubectl annotate namespace {{ $namespace }} \
+            meta.helm.sh/release-name={{ .Release.Name }} \
+            meta.helm.sh/release-namespace={{ .Release.Namespace }} \
+            --overwrite
+          
+          echo "Successfully labeled namespace {{ $namespace }}"
+---
+# ServiceAccount for namespace labeler job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-labeler-sa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+---
+# ClusterRole for namespace labeler
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-namespace-labeler
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "patch", "update"]
+  resourceNames: ["{{ $namespace }}"]
+---
+# ClusterRoleBinding for namespace labeler
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-namespace-labeler
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-namespace-labeler
+subjects:
+- kind: ServiceAccount
+  name: {{ .Release.Name }}-labeler-sa
+  namespace: {{ .Release.Namespace }}
+{{- end }}
+
+# Made with Bob

@@ -1,0 +1,396 @@
+# Global configuration shared across all components
+global:
+  # OpenShift cluster wildcard domain (e.g., apps.cluster.example.com)
+  wildcardDomain: apps.cluster.example.com
+  
+  # Name of the certificate secret for ingress (leave empty for self-signed)
+  wildcardCertName: ""
+  
+  # Default namespace for model deployments
+  modelsNamespace: maas-models
+  
+  # Tools image for jobs (should contain oc, kubectl, bash)
+  toolsImage: quay.io/openshift/origin-cli:latest
+
+# Operator installation and configuration
+operators:
+  # Enable operator installation (disable if operators already exist)
+  enabled: true
+  
+  # Skip operator installation if they already exist in the cluster
+  # Set to true to use existing operators instead of installing new ones
+  skipIfExists: true
+  
+  # Red Hat Developer Hub Operator
+  developerHub:
+    enabled: true
+    # Operator channel (fast, stable)
+    channel: fast
+    # Specific operator version (CSV name)
+    # Leave empty for latest version in channel
+    # Example: "rhdh-operator.v1.2.0"
+    startingCSV: ""
+    # Operator namespace
+    namespace: rhdh-operator
+    # Note: RHDH operator requires AllNamespaces install mode
+    # It will automatically watch all namespaces
+    # Install plan approval (Automatic or Manual)
+    installPlanApproval: Automatic
+  
+  # PostgreSQL Operator (Crunchy Postgres for Kubernetes)
+  postgres:
+    enabled: true
+    # Operator channel (v5, stable)
+    channel: v5
+    # Specific operator version (CSV name)
+    # Leave empty for latest version in channel
+    # Example: "postgresoperator.v5.4.0"
+    startingCSV: ""
+    # Operator namespace
+    namespace: postgres-operator
+    # Operator catalog source
+    source: certified-operators
+    # Watch all namespaces
+    watchAllNamespaces: true
+    # Install plan approval (Automatic or Manual)
+    installPlanApproval: Automatic
+
+# Monitoring and observability (optional for Developer Hub)
+monitoring:
+  # Enable monitoring stack
+  enabled: false
+
+# Additional labels to apply to all resources
+commonLabels: {}
+  # environment: production
+  # team: ai-platform
+
+# Additional annotations to apply to all resources
+commonAnnotations: {}
+  # managed-by: helm
+
+# Made with Bob
+
+# Red Hat Developer Hub Configuration
+developerHub:
+  # Enable Developer Hub deployment
+  enabled: true
+  
+  # Create Backstage instance (requires operator CRDs to exist)
+  # Set to true to create the instance immediately
+  # Default is true for easier initial setup
+  createInstance: true
+  
+  # Developer Hub instance name
+  instanceName: developer-hub
+  
+  # Namespace for Developer Hub instance
+  # IMPORTANT: This should match the --namespace flag used with helm install/upgrade
+  # Leave empty to use .Release.Namespace automatically
+  namespace: ""
+  # Service Account configuration
+  # Used for RBAC permissions, especially for RHOAI connector
+  serviceAccount:
+    # Create a dedicated service account (default: false, uses "default" SA)
+    # Set to true if you need custom RBAC permissions
+    create: false
+    
+    # Name of the service account to use
+    # If not set and create is true, a name is generated using the fullname template
+    # If not set and create is false, uses "default" service account
+    name: ""
+    
+    # Annotations to add to the service account
+    annotations: {}
+  
+  # Storage configuration for dynamic plugins
+  storage:
+    # Storage class for dynamic plugins PVC (ReadWriteMany access mode required)
+    # Leave empty to use cluster default storage class
+    #
+    # IMPORTANT: Must support ReadWriteMany (RWX) access mode
+    # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
+    # - If using NFS: use "nfs-client" or your NFS storage class
+    # - Other filesystem storage classes that support RWX
+    storageClassName: ""
+    
+    # Storage size for dynamic plugins
+    size: 5Gi
+  
+  # Number of replicas
+  replicas: 2
+  
+  # Application configuration
+  config:
+    # Application title
+    title: "IBM Fusion Developer Hub"
+    
+    # Organization name
+    organizationName: "IBM Fusion"
+    
+    # Hostname for the Developer Hub (leave empty for auto-generation)
+    hostname: ""
+    
+    # Homepage customization (OPTIONAL)
+    # By default, uses the standard Red Hat Developer Hub homepage.
+    # Set enabled: true to use IBM Fusion custom homepage with:
+    # - IBM Fusion branding and welcome message
+    # - Quick access links to AI-powered development tools
+    # - Featured content highlighting modernization capabilities
+    #
+    # See docs/homepage-customization.md for full customization options.
+    homepage:
+      # Enable Fusion custom homepage (default: true - uses Fusion custom homepage)
+      enabled: true
+      
+      # Company logo URL (displayed in top-left corner)
+      # Recommended size: 200x50px or similar aspect ratio
+      # Leave empty to use default IBM Fusion branding
+      # Example: "https://your-cdn.com/logo.png" or "data:image/svg+xml;base64,..."
+      companyLogo: ""
+      
+      # Company logo icon (small icon for mobile/compact view)
+      # Recommended size: 32x32px
+      companyLogoIcon: ""
+      
+      # Welcome message on homepage (optional - defaults to Fusion welcome message)
+      # Uncomment to customize:
+      # welcomeTitle: "Welcome to Your Company Developer Hub"
+      # welcomeMessage: |
+      #   Your custom welcome message here
+      
+      # Quick access links (optional - defaults to Fusion quick links)
+      # Uncomment to customize:
+      # quickLinks:
+      #   - title: "Create Application"
+      #     description: "Start with templates"
+      #     url: "/create"
+      #     icon: "add"
+      
+      # Featured content sections (optional - defaults to Fusion featured content)
+      # Uncomment to customize:
+      # featuredContent:
+      #   - title: "🚀 Your Initiative"
+      #     description: "Description here"
+      #     links:
+      #       - text: "Link 1"
+      #         url: "/path1"
+  
+  # PostgreSQL Database configuration
+  database:
+    # Use PostgreSQL operator for database
+    useOperator: true
+    
+    # PostgreSQL cluster name
+    clusterName: developerhub-postgres
+    
+    # Note: The database configuration automatically includes pluginDivisionMode: 'database'
+    # This setting tells Backstage to create separate databases for each plugin,
+    # which requires the PostgreSQL user to have CREATEDB privilege.
+    # The CREATEDB privilege is automatically granted during deployment.
+    
+    # Number of PostgreSQL instances (for HA)
+    instances: 3
+    
+    # PostgreSQL configuration
+    maxConnections: "200"
+    sharedBuffers: "256MB"
+    effectiveCacheSize: "1GB"
+    workMem: "16MB"
+    
+    # Storage configuration
+    storageSize: 20Gi
+    storageClassName: ""  # Use default
+    
+    # Resource limits
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+    
+    # Backup configuration
+    backup:
+      enabled: true
+      useODF: true  # Use IBM Fusion / OpenShift Data Foundation
+      odfStorageClass: openshift-storage.noobaa.io
+      destinationPath: s3://developerhub-postgres-backup
+      s3Endpoint: ""  # Auto-populated from OBC
+      retentionPolicy: "30d"
+  
+  # Catalog configuration
+  catalog:
+    enabled: true
+    
+    # GitHub integration
+    github:
+      enabled: false
+      target: https://github.com/your-org
+    
+    # GitLab integration
+    gitlab:
+      enabled: false
+      target: https://gitlab.com/your-org
+  
+  # TechDocs configuration
+  techdocs:
+    enabled: true
+    s3Bucket: developerhub-techdocs
+    s3Region: us-south
+    s3Endpoint: ""  # Set to IBM Fusion endpoint (leave empty to use local storage)
+  
+  # Authentication configuration
+  auth:
+    enabled: true
+    
+    # Guest access (no authentication required)
+    # WARNING: Allows anyone to access Developer Hub without authentication
+    # Only enable for demos, testing, or internal development environments
+    # Default: true for easier initial setup
+    guest:
+      enabled: true
+    
+    # GitHub OAuth
+    github:
+      enabled: false
+      clientId: ""  # GitHub OAuth App Client ID
+      clientSecret: ""  # GitHub OAuth App Client Secret
+    
+    # OIDC (OpenShift, Keycloak, etc.)
+    # Set metadataUrl to enable OIDC authentication
+    # Default: disabled to allow guest access
+    oidc:
+      enabled: false
+      metadataUrl: ""  # Set to your OIDC provider (e.g., https://keycloak.example.com/auth/realms/master/.well-known/openid-configuration)
+      clientId: ""  # OIDC Client ID
+      clientSecret: ""  # OIDC Client Secret
+      signInResolver: "emailMatchingUserEntityProfileEmail"
+  
+  # Extra environment variables from secrets
+  # The developerhub-secrets is automatically added when auth providers are enabled
+  # Add additional secrets here if needed
+  # Example:
+  # extraEnvs:
+  #   secrets:
+  #     - name: custom-secrets
+  extraEnvs:
+    secrets: []
+  
+  # Resource limits for Developer Hub pods
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+  
+  # Route configuration
+  route:
+    enabled: true
+    tls:
+      enabled: true
+      secretName: ""  # Leave empty for auto-generated cert
+
+  
+  # IBM Fusion AI Configuration
+  fusion:
+    enabled: true
+    
+    # Fusion AI API endpoints
+    api:
+      baseUrl: "https://fusion-api.example.com"
+      timeout: 30000
+    
+    # AI/ML capabilities
+    ai:
+      enabled: true
+      models:
+        - name: watsonx
+          type: llm
+          endpoint: ""
+        - name: granite-code
+          type: code-assistant
+          endpoint: ""
+        - name: granite-chat
+          type: conversational
+          endpoint: ""
+      
+      # Integration with Red Hat OpenShift AI (RHOAI)
+      # Enables automatic discovery of deployed AI models
+      # Requires creating the rhdh-rhoai-connector-token secret
+      # Default: false (requires additional setup)
+      rhoaiConnector:
+        enabled: false
+        # Name of the secret containing the access token for RHOAI
+        tokenSecretName: "rhdh-rhoai-connector-token"
+        
+        # RBAC configuration for RHOAI connector
+        # The connector needs cluster-level permissions to read CRDs and InferenceServices
+        rbac:
+          # Automatically create ClusterRole and ClusterRoleBinding when connector is enabled
+          # Set to false if you want to manage RBAC manually
+          create: true
+          
+          # Namespaces to watch for InferenceServices (empty = all namespaces)
+          # Example: ["rhoai-models", "ai-workloads"]
+          watchNamespaces: []
+          
+          # Model Registry namespace configuration
+          # Set this to grant access to RHOAI model registry
+          # Leave empty to skip model registry RoleBinding creation
+          modelRegistryNamespace: ""  # Example: "rhoai-model-registries" or "odh-model-registries"
+          modelRegistryRoleName: "registry-user-modelregistry-public"
+    
+    # Application modernization tools
+    modernization:
+      enabled: true
+      tools:
+        - name: transformation-advisor
+          enabled: true
+        - name: mono2micro
+          enabled: true
+        - name: app-navigator
+          enabled: true
+  
+  # Security Configuration
+  security:
+    # Network policies
+    networkPolicy:
+      enabled: true
+    
+    # Pod Security Standards
+    podSecurityStandards:
+      enabled: true
+    
+    # Resource quotas
+    resourceQuota:
+      cpu: "16"
+      memory: "32Gi"
+      cpuLimit: "32"
+      memoryLimit: "64Gi"
+      pvc: "10"
+    
+    # Pod security context (OpenShift SCC compliant)
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: null  # Let OpenShift assign from namespace range
+      fsGroup: null    # Let OpenShift assign from namespace range
+      seccompProfile:
+        type: RuntimeDefault
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      runAsUser: null  # Let OpenShift assign from namespace range
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false  # Developer Hub needs to write temp files
+
+# OpenShift Console QuickStart Configuration
+quickstart:
+  # Enable deployment of the Getting Started QuickStart
+  enabled: true

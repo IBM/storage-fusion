@@ -1,0 +1,95 @@
+{{- if .Values.developerHub.enabled }}
+{{- if .Values.developerHub.createInstance }}
+---
+# Dynamic Plugins ConfigMap for Red Hat Developer Hub
+# This ConfigMap enables the DynamicHomePage plugin and configures
+# the Fusion homepage layout with quick links, welcome message,
+# featured content, and timezone clocks.
+# Only created when homepage.enabled or RHOAI connector is true.
+{{- $homepageEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
+{{- $rhoaiEnabled := and .Values.developerHub.fusion .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
+{{- if or $homepageEnabled $rhoaiEnabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-dynamic-plugins
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: developerhub-plugins
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      {{- if $homepageEnabled }}
+      # Enable the Dynamic Home Page plugin — required for custom homepage rendering
+      - package: './dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page'
+        disabled: false
+      {{- end }}
+      {{- if $rhoaiEnabled }}
+      # RHOAI Model Catalog Plugin - Enables model discovery from OpenShift AI Model Registry
+      - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog:bs_1.42.5__0.7.0!red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog'
+        disabled: false
+      # TechDoc URL Reader Backend Plugin - Required for RHOAI connector
+      - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend:bs_1.42.5__0.3.0!red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend'
+        disabled: false
+      {{- end }}
+---
+# QuickAccess ConfigMap for the homepage QuickAccessCard
+# This ConfigMap provides the data for the Quick Access card on the homepage.
+# The ConfigMap name follows the RHDH convention: <backstage-instance-name>-home-quick-access
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.developerHub.instanceName }}-home-quick-access
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: developerhub-homepage
+data:
+  quick-access.yaml: |
+    title: Quick Access
+    isExpanded: true
+    links:
+      {{- if .Values.developerHub.config.homepage.quickLinks }}
+      {{- range .Values.developerHub.config.homepage.quickLinks }}
+      - title: {{ .title | quote }}
+        description: {{ .description | default "" | quote }}
+        url: {{ .url | quote }}
+        {{- if .icon }}
+        icon: {{ .icon | quote }}
+        {{- end }}
+      {{- end }}
+      {{- else }}
+      # Default IBM Fusion quick links
+      - title: "Create New Application"
+        description: "Start with AI-powered templates"
+        url: "/create"
+        icon: "add"
+      - title: "AI Code Assistant"
+        description: "Get intelligent coding help"
+        url: "/ai-assistant"
+        icon: "smart_toy"
+      - title: "Modernize Legacy App"
+        description: "Analyze and transform applications"
+        url: "/transformation-advisor"
+        icon: "autorenew"
+      - title: "Browse Catalog"
+        description: "Discover components and services"
+        url: "/catalog"
+        icon: "catalog"
+      - title: "API Discovery"
+        description: "Explore internal APIs"
+        url: "/catalog?filters[kind]=api"
+        icon: "api"
+      - title: "Documentation"
+        description: "Guides and best practices"
+        url: "/docs"
+        icon: "docs"
+      {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+# Made with Bob

@@ -1,0 +1,221 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-getting-started-quickstart
+  labels:
+    app.kubernetes.io/name: fusion-quickstart
+    app.kubernetes.io/component: quickstart
+data:
+  quickstart.yaml: |
+    apiVersion: console.openshift.io/v1
+    kind: ConsoleQuickStart
+    metadata:
+      name: fusion-getting-started
+    spec:
+      displayName: Getting Started with IBM Fusion Developer Hub
+      durationMinutes: 15
+      icon: data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMThjLTQuNDEgMC04LTMuNTktOC04czMuNTktOCA4LTggOCAzLjU5IDggOC0zLjU5IDgtOCA4eiIgZmlsbD0iIzAwN2Q3OSIvPjwvc3ZnPg==
+      description: Learn how to use IBM Fusion Developer Hub for application modernization and AI-powered development
+      introduction: |
+        ### Welcome to IBM Fusion Developer Hub!
+        
+        This quickstart will guide you through:
+        - Understanding the Developer Hub interface
+        - Creating your first AI-powered application
+        - Using application modernization tools
+        - Deploying to OpenShift
+        
+        **Prerequisites:**
+        - Access to IBM Fusion Developer Hub
+        - Basic understanding of application development
+        - (Optional) Existing application to modernize
+      
+      tasks:
+        - title: Explore the Developer Hub
+          description: |
+            Get familiar with the IBM Fusion Developer Hub interface and its key features.
+          review:
+            instructions: |
+              #### Navigation
+              1. Click on **Catalog** in the left sidebar to view available components
+              2. Click on **Create** to see available templates
+              3. Click on **APIs** to explore API documentation
+              4. Click on **Docs** to access technical documentation
+              
+              #### Key Features
+              - **Software Catalog**: Browse and discover components, APIs, and resources
+              - **Software Templates**: Create new applications from pre-built templates
+              - **TechDocs**: Access comprehensive documentation
+              - **AI Assistant**: Get AI-powered code suggestions and reviews
+          
+          summary:
+            success: You've successfully explored the Developer Hub interface!
+            failed: Try navigating through the different sections again.
+        
+        - title: Create an AI-Powered Application
+          description: |
+            Use the Fusion AI template to create a new application with AI capabilities.
+          review:
+            instructions: |
+              #### Create from Template
+              1. Click **Create** in the left sidebar
+              2. Search for "IBM Fusion AI Application" template
+              3. Click **Choose** on the template
+              4. Fill in the application details:
+                 - **Name**: my-fusion-app
+                 - **Description**: My first Fusion AI application
+                 - **Owner**: Select your team
+              5. Configure AI features:
+                 - Enable **AI Features**
+                 - Select **WatsonX** as the AI model
+                 - Choose capabilities: code-generation, code-review
+              6. Configure repository:
+                 - Select your Git provider
+                 - Choose repository location
+              7. Click **Create**
+              
+              #### What Happens Next
+              - Repository is created with AI-enabled scaffolding
+              - Component is registered in the catalog
+              - CI/CD pipeline is configured
+              - AI assistant is integrated
+          
+          summary:
+            success: Your AI-powered application has been created successfully!
+            failed: Review the form and ensure all required fields are filled.
+        
+        - title: Use Application Modernization Tools
+          description: |
+            Learn how to analyze and modernize existing applications using Fusion tools.
+          review:
+            instructions: |
+              #### Analyze Your Application
+              1. Navigate to **Catalog** > **Components**
+              2. Find your application or create a new one
+              3. Click on the **Modernization** tab
+              4. Click **Analyze Application**
+              5. Review the analysis results:
+                 - Technology stack assessment
+                 - Modernization recommendations
+                 - Complexity score
+                 - Migration effort estimate
+              
+              #### Available Tools
+              - **Transformation Advisor**: Analyze Java applications for cloud readiness
+              - **Mono2Micro**: Break monoliths into microservices
+              - **App Navigator**: Visualize application dependencies
+              
+              #### Generate Migration Plan
+              1. Click **Generate Migration Plan**
+              2. Select target platform (OpenShift/Kubernetes)
+              3. Review the generated plan
+              4. Download the migration artifacts
+          
+          summary:
+            success: You've learned how to use modernization tools!
+            failed: Try analyzing an application again.
+        
+        - title: Deploy to OpenShift
+          description: |
+            Deploy your application to Red Hat OpenShift using the integrated deployment tools.
+          review:
+            instructions: |
+              #### Prepare for Deployment
+              1. Navigate to your application in the catalog
+              2. Click on the **Kubernetes** tab
+              3. Verify your cluster connection
+              
+              #### Deploy Application
+              1. Click **Deploy** button
+              2. Select deployment configuration:
+                 - **Environment**: development/staging/production
+                 - **Namespace**: Select or create namespace
+                 - **Resources**: Configure CPU/Memory limits
+              3. Review the deployment manifest
+              4. Click **Deploy to OpenShift**
+              
+              #### Monitor Deployment
+              1. View deployment status in real-time
+              2. Check pod logs
+              3. Access application URL once deployed
+              4. Monitor metrics and health checks
+              
+              #### Verify Deployment
+              - Application is running
+              - Health checks are passing
+              - Metrics are being collected
+          
+          summary:
+            success: Your application is now running on OpenShift!
+            failed: Check the deployment logs for errors.
+        
+        - title: Use AI Code Assistant
+          description: |
+            Leverage AI-powered code assistance for development tasks.
+          review:
+            instructions: |
+              #### Access AI Assistant
+              1. Open your application repository
+              2. Navigate to a code file
+              3. Click the **AI Assistant** icon
+              
+              #### Available AI Features
+              
+              **Code Generation**
+              - Type a comment describing what you want
+              - Press `Ctrl+Space` to trigger AI suggestions
+              - Review and accept generated code
+              
+              **Code Review**
+              - Select code block
+              - Click **AI Review**
+              - Review suggestions for:
+                * Security vulnerabilities
+                * Performance improvements
+                * Best practices
+                * Code quality
+              
+              **Documentation**
+              - Select function/class
+              - Click **Generate Docs**
+              - AI generates comprehensive documentation
+              
+              **Refactoring**
+              - Select code to refactor
+              - Click **AI Refactor**
+              - Choose refactoring type
+              - Review and apply changes
+          
+          summary:
+            success: You're now using AI to accelerate your development!
+            failed: Try accessing the AI assistant again.
+      
+      conclusion: |
+        ### Congratulations!
+        
+        You've completed the IBM Fusion Developer Hub quickstart! You now know how to:
+        - ✅ Navigate the Developer Hub interface
+        - ✅ Create AI-powered applications
+        - ✅ Use modernization tools
+        - ✅ Deploy to OpenShift
+        - ✅ Leverage AI code assistance
+        
+        ### Next Steps
+        - Explore more templates in the catalog
+        - Integrate your existing applications
+        - Set up CI/CD pipelines
+        - Configure monitoring and observability
+        - Join the Fusion community
+        
+        ### Resources
+        - [Documentation](https://fusion-docs.example.com)
+        - [API Reference](https://fusion-api.example.com)
+        - [Community Forum](https://community.fusion.ibm.com)
+        - [Support](https://support.ibm.com/fusion)
+      
+      nextQuickStart:
+        - fusion-advanced-features
+        - fusion-cicd-setup
+        - fusion-monitoring
+
+# Made with Bob

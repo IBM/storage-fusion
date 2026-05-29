@@ -1,0 +1,296 @@
+# IBM Fusion Developer Hub - Operator-Based Development Configuration
+# This example demonstrates a development deployment with:
+# - IBM Fusion AI components
+# - Single PostgreSQL instance
+# - Relaxed security for development
+# - OIDC authentication with guest fallback
+
+global:
+  # Replace with your OpenShift cluster domain
+  wildcardDomain: apps.dev-cluster.example.com
+  
+  # Tools image for setup jobs (contains oc, kubectl, bash)
+  toolsImage: quay.io/openshift/origin-cli:latest
+  
+  modelsNamespace: maas-models
+
+# Operator Configuration
+operators:
+  enabled: true
+  
+  developerHub:
+    enabled: true
+    channel: fast
+    namespace: rhdh-operator
+  
+  postgres:
+    enabled: true
+    channel: v5  # Crunchy Postgres Operator
+    namespace: postgres-operator
+    watchAllNamespaces: true
+
+# Developer Hub Instance Configuration
+developerHub:
+  enabled: true
+  createInstance: true  # Create the Developer Hub instance
+  instanceName: fusion-dev-hub
+  # namespace: ""  # Uses .Release.Namespace by default
+  
+  # Single replica for development
+  replicas: 1
+  
+  config:
+    title: "IBM Fusion Developer Hub (Dev)"
+    organizationName: "IBM Fusion - Development"
+    hostname: ""  # Auto-generated
+    
+    # Homepage customization (disabled by default - uses standard RHDH homepage)
+    # Set enabled: true to use Fusion custom homepage
+    homepage:
+      enabled: true
+      welcomeTitle: "Welcome to IBM Fusion Developer Hub (Development)"
+      welcomeMessage: |
+        Accelerate your AI-powered development and modernization journey:
+        
+        🤖 AI-Powered Development
+        • Generate code with IBM watsonx and Granite models
+        • Get intelligent code reviews and suggestions
+        • Automate documentation with AI
+        
+        🔄 Application Modernization
+        • Analyze legacy applications with Transformation Advisor
+        • Decompose monoliths with Mono2Micro
+        • Migrate to cloud-native architectures
+        
+        🚀 Quick Start
+        • Create new applications from AI-powered templates
+        • Browse the catalog of components and APIs
+        • Access comprehensive documentation and tutorials
+      
+      quickLinks:
+        - title: "Create New Application"
+          description: "Start with AI-powered templates"
+          url: "/create"
+          icon: "add"
+        - title: "AI Code Assistant"
+          description: "Get intelligent coding help"
+          url: "/ai-assistant"
+          icon: "smart_toy"
+        - title: "Modernize Legacy App"
+          description: "Analyze and transform applications"
+          url: "/transformation-advisor"
+          icon: "autorenew"
+        - title: "Browse Catalog"
+          description: "Discover components and services"
+          url: "/catalog"
+          icon: "catalog"
+        - title: "API Discovery"
+          description: "Explore internal APIs"
+          url: "/catalog?filters[kind]=api"
+          icon: "api"
+        - title: "Documentation"
+          description: "Guides and best practices"
+          url: "/docs"
+          icon: "docs"
+      
+      featuredContent:
+        - title: "🚀 AI-Powered Development"
+          description: "Leverage IBM watsonx and Granite models for intelligent development"
+          links:
+            - text: "Explore AI Templates"
+              url: "/create?filters[tags]=ai"
+            - text: "AI Capabilities Guide"
+              url: "/docs/ai-capabilities"
+            - text: "Code Generation Demo"
+              url: "/docs/demos/code-generation"
+        
+        - title: "🔄 Application Modernization"
+          description: "Transform legacy applications with automated tools"
+          links:
+            - text: "Transformation Advisor"
+              url: "/transformation-advisor"
+            - text: "Mono2Micro Analysis"
+              url: "/mono2micro"
+            - text: "Migration Patterns"
+              url: "/docs/modernization/patterns"
+        
+        - title: "📚 Quick Start Resources"
+          description: "New to Fusion Developer Hub? Start here"
+          links:
+            - text: "5-Minute Quick Start"
+              url: "/docs/getting-started"
+            - text: "Video Tutorial Series"
+              url: "/docs/tutorials"
+            - text: "Sample Applications"
+              url: "/catalog?filters[kind]=template"
+        
+        - title: "🔧 Developer Tools"
+          description: "Essential tools for development"
+          links:
+            - text: "CLI Tools Setup"
+              url: "/docs/tools/cli"
+            - text: "IDE Extensions"
+              url: "/docs/tools/ide-extensions"
+            - text: "CI/CD Integration"
+              url: "/docs/tools/cicd"
+  
+  # IBM Fusion AI Configuration
+  fusion:
+    enabled: true
+    
+    api:
+      baseUrl: "https://fusion-api-dev.example.com"
+      timeout: 30000
+    
+    # AI Models (development endpoints)
+    ai:
+      enabled: true
+      models:
+        - name: watsonx
+          type: llm
+          endpoint: "https://watsonx-dev.example.com/v1"
+        - name: granite-code
+          type: code-assistant
+          endpoint: "https://granite-code-dev.example.com/v1"
+        - name: granite-chat
+          type: conversational
+          endpoint: "https://granite-chat-dev.example.com/v1"
+      rhoaiConnector:
+        enabled: true
+        tokenSecretName: "rhdh-rhoai-connector-token"
+    
+    # Modernization Tools
+    modernization:
+      enabled: true
+      tools:
+        - name: transformation-advisor
+          enabled: true
+        - name: mono2micro
+          enabled: true
+        - name: app-navigator
+          enabled: true
+  
+  # PostgreSQL Database - Single Instance
+  database:
+    useOperator: true
+    clusterName: fusion-dev-postgres
+    
+    # Single instance for development
+    instances: 1
+    
+    # Minimal PostgreSQL tuning
+    maxConnections: "100"
+    sharedBuffers: "256MB"
+    effectiveCacheSize: "1GB"
+    workMem: "16MB"
+    
+    # Storage
+    storageSize: 20Gi
+    storageClassName: ""
+    
+    # Minimal resources
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "500m"
+        memory: 1Gi
+    
+    # Backups disabled for development
+    backup:
+      enabled: false
+  
+  # Catalog Configuration
+  catalog:
+    enabled: true
+    
+    github:
+      enabled: true
+      target: https://github.com/your-org
+    
+    gitlab:
+      enabled: false
+  
+  # TechDocs
+  techdocs:
+    enabled: true
+    s3Bucket: fusion-dev-techdocs
+    s3Region: us-south
+    s3Endpoint: ""
+  
+  # Authentication - OIDC with guest fallback
+  auth:
+    enabled: true
+    
+    github:
+      enabled: false
+    
+    # OIDC for development
+    oidc:
+      enabled: true
+      metadataUrl: "https://dev-oidc-provider.com/.well-known/openid-configuration"
+      signInResolver: "emailMatchingUserEntityProfileEmail"
+  
+  extraEnvs:
+    secrets:
+      - name: fusion-dev-hub-secrets
+  
+  # Minimal resources for development
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+  
+  # Relaxed security for development
+  security:
+    networkPolicy:
+      enabled: false  # Disabled for easier development
+    
+    podSecurityStandards:
+      enabled: true
+    
+    resourceQuota:
+      cpu: "8"
+      memory: "16Gi"
+      cpuLimit: "16"
+      memoryLimit: "32Gi"
+      pvc: "10"
+    
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: null
+      fsGroup: null
+      seccompProfile:
+        type: RuntimeDefault
+    
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      runAsUser: null
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false
+  
+  route:
+    enabled: true
+    tls:
+      enabled: true
+      secretName: ""
+
+# Monitoring disabled for development
+monitoring:
+  enabled: false
+
+# OpenShift Console QuickStart
+quickstart:
+  enabled: true
+
+commonLabels:
+  environment: development
+  team: fusion-ai
+
+# Made with Bob

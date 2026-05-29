@@ -1,0 +1,313 @@
+# Production Configuration for IBM Fusion Developer Hub
+# This file provides production-ready settings with HA, security, and monitoring
+
+global:
+  # IMPORTANT: Change this to match your OpenShift cluster domain
+  wildcardDomain: apps.<cluster-domain>.com
+
+# Developer Hub Configuration
+developerHub:
+  # High Availability - 3 replicas
+  replicas: 3
+  
+  # Storage configuration for dynamic plugins
+  storage:
+    # Storage class for dynamic plugins PVC (ReadWriteMany access mode required)
+    # Leave empty to use cluster default storage class
+    #
+    # IMPORTANT: Must support ReadWriteMany (RWX) access mode
+    # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
+    # - If using NFS: use "nfs-client" or your NFS storage class
+    # - Other filesystem storage classes that support RWX
+    storageClassName: ""  # Uses cluster default
+    size: 5Gi
+  
+  # Security configuration
+  security:
+    # Resource quotas for the namespace
+    resourceQuota:
+      cpu: "32"
+      memory: "64Gi"
+      cpuLimit: "64"
+      memoryLimit: "128Gi"
+      pvc: "20"
+  fusion:
+    enabled: true  # Enable IBM Fusion features including templates
+    ai:
+      rhoaiConnector:
+        enabled: true
+        tokenSecretName: "rhdh-rhoai-connector-token"
+        rbac:
+          create: true  # Automatically creates required RBAC
+          watchNamespaces: []  # Watch all namespaces
+          # Model Registry namespace configuration
+          # Uncomment and set to grant access to RHOAI model registry
+          modelRegistryNamespace: "rhoai-model-registries"  # or "odh-model-registries"
+          modelRegistryRoleName: "registry-user-modelregistry-public"
+  # Production resources
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  
+  # Application configuration
+  config:
+    # IBM Fusion AI Homepage (enabled by default)
+    homepage:
+      enabled: true
+      companyLogo: "https://raw.githubusercontent.com/IBM/storage-fusion/main/AI/quickstarts/fusion-developerhub/assets/fusion-logo.svg"
+      welcomeTitle: "Welcome to IBM Fusion AI Platform"
+      welcomeMessage: |
+        Accelerate AI development with:
+        • Automatic model discovery from OpenShift AI
+        • Self-service templates for AI applications
+        • Integrated development tools
+        • Enterprise-grade security and governance
+      
+      # OpenShift AI Model Connector (KEY FEATURE)
+      plugins:
+        - name: openshift-ai-connector
+          enabled: true
+          config:
+            # Discover models every 30 seconds
+            discoveryInterval: 30s
+            # Namespaces to scan for models
+            namespaces:
+              - model-serving
+              - maas-runtime
+              - redhat-ods-applications
+            # Display options
+            displayOptions:
+              showMetrics: true
+              showEndpoints: true
+              showStatus: true
+              refreshInterval: 30s
+    
+    # Catalog configuration
+    catalog:
+      enabled: true
+      # Catalog providers for automatic discovery
+      providers:
+        # OpenShift AI provider
+        openshiftAI:
+          enabled: true
+          schedule:
+            frequency: { minutes: 1 }
+            timeout: { minutes: 3 }
+    
+    # TechDocs configuration
+    techdocs:
+      enabled: true
+      builder: local
+      generator:
+        runIn: local
+      publisher:
+        type: local
+    
+    # Authentication (configure for production)
+    auth:
+      environment: production
+      # Add your OIDC provider here
+      # providers:
+      #   oidc:
+      #     enabled: true
+      #     clientId: "your-client-id"
+      #     clientSecret: "your-client-secret"
+      #     issuer: "https://your-sso.com"
+
+# PostgreSQL HA Configuration
+postgresql:
+  enabled: true
+  
+  # High Availability - 3 instances
+  instances: 3
+  
+  # Database configuration
+  database:
+    # CRITICAL: Use schema-based plugin isolation instead of separate databases
+    # This prevents "permission denied to create database" errors
+    pluginDivisionMode: schema
+  
+  # Production resources
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  # Storage configuration
+  storage:
+    size: 20Gi
+    # Storage class for PostgreSQL (ReadWriteOnce access mode is sufficient)
+    # Leave empty to use cluster default storage class
+    #
+    # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-ceph-rbd"
+    # - Other block storage classes that support RWO
+    storageClassName: ""  # Uses cluster default
+  
+  # Automated backups
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    retention: "30d"
+    # Backup to ODF
+    repos:
+      - name: repo1
+        schedules:
+          full: "0 2 * * 0"  # Weekly full backup on Sunday
+          differential: "0 2 * * 1-6"  # Daily differential
+        volume:
+          volumeClaimSpec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 50Gi
+            # Storage class for backup volumes (ReadWriteOnce is sufficient)
+            # Leave empty to use cluster default
+            #
+            # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-ceph-rbd"
+            # - Other block storage classes that support RWO
+            storageClassName: ""  # Uses cluster default
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  
+  # Prometheus integration
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+  
+  # Grafana dashboards
+  grafana:
+    enabled: true
+
+# Security Configuration
+security:
+  # Network policies
+  networkPolicy:
+    enabled: true
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                network.openshift.io/policy-group: ingress
+    egress:
+      - to:
+          - namespaceSelector: {}
+        ports:
+          - protocol: TCP
+            port: 443
+          - protocol: TCP
+            port: 5432
+  
+  # Pod security standards
+  podSecurity:
+    enabled: true
+    enforce: restricted
+  
+  # Security context
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    runAsNonRoot: true
+
+# RBAC Configuration
+rbac:
+  enabled: true
+  # Create service account
+  create: true
+
+# IBM Fusion AI Features
+fusion:
+  enabled: true
+  
+  # AI capabilities
+  ai:
+    enabled: true
+    models:
+      # Models will be discovered automatically from OpenShift AI
+      autoDiscovery: true
+    
+    # RHOAI Connector - enables model discovery from OpenShift AI
+    rhoaiConnector:
+      enabled: true
+      tokenSecretName: "rhdh-rhoai-connector-token"
+      rbac:
+        create: true
+        watchNamespaces: []  # Empty = watch all namespaces
+  
+  # Modernization tools
+  modernization:
+    enabled: true
+    tools:
+      - transformation-advisor
+      - mono2micro
+      - app-navigator
+
+# Templates Configuration
+templates:
+  enabled: true
+  # IBM Fusion AI templates
+  locations:
+    - type: url
+      target: https://github.com/IBM/storage-fusion/blob/main/AI/quickstarts/fusion-developerhub/templates/fusion-ai-template.yaml
+
+# Operators Configuration
+operators:
+  # Red Hat Developer Hub Operator
+  rhdh:
+    namespace: rhdh-operator
+    channel: fast
+    installPlanApproval: Automatic
+  
+  # Crunchy PostgreSQL Operator
+  postgresql:
+    namespace: postgres-operator
+    channel: v5
+    installPlanApproval: Automatic
+
+# Ingress/Route Configuration
+route:
+  enabled: true
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# Resource Quotas (optional)
+resourceQuota:
+  enabled: false
+  # Uncomment to enable
+  # hard:
+  #   requests.cpu: "10"
+  #   requests.memory: "20Gi"
+  #   limits.cpu: "20"
+  #   limits.memory: "40Gi"
+
+# Horizontal Pod Autoscaling (optional)
+autoscaling:
+  enabled: false
+  # Uncomment to enable
+  # minReplicas: 3
+  # maxReplicas: 10
+  # targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Made with Bob
+

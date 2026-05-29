@@ -1,0 +1,184 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: fusion-ai-application
+  title: IBM Fusion AI Application
+  description: Create a new application with IBM Fusion AI capabilities
+  tags:
+    - fusion
+    - ai
+    - watsonx
+    - recommended
+spec:
+  owner: fusion-team
+  type: service
+  
+  parameters:
+    - title: Application Information
+      required:
+        - name
+        - description
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name of the application
+          ui:autofocus: true
+          ui:options:
+            rows: 5
+        description:
+          title: Description
+          type: string
+          description: Help others understand what this application is for
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the application
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+    
+    - title: AI/ML Configuration
+      properties:
+        aiEnabled:
+          title: Enable AI Features
+          type: boolean
+          default: true
+        aiModel:
+          title: AI Model
+          type: string
+          description: Select the AI model to use
+          default: watsonx
+          enum:
+            - watsonx
+            - granite-code
+            - granite-chat
+          enumNames:
+            - 'WatsonX (General Purpose)'
+            - 'Granite Code (Code Generation)'
+            - 'Granite Chat (Conversational)'
+        aiCapabilities:
+          title: AI Capabilities
+          type: array
+          items:
+            type: string
+            enum:
+              - code-generation
+              - code-review
+              - documentation
+              - testing
+              - refactoring
+          uniqueItems: true
+          ui:widget: checkboxes
+    
+    - title: Application Modernization
+      properties:
+        modernizationEnabled:
+          title: Enable Modernization Tools
+          type: boolean
+          default: false
+        sourceType:
+          title: Source Application Type
+          type: string
+          enum:
+            - monolith
+            - legacy-java
+            - legacy-dotnet
+            - mainframe
+          enumNames:
+            - 'Monolithic Application'
+            - 'Legacy Java Application'
+            - 'Legacy .NET Application'
+            - 'Mainframe Application'
+        targetPlatform:
+          title: Target Platform
+          type: string
+          default: openshift
+          enum:
+            - openshift
+            - kubernetes
+            - cloud-native
+          enumNames:
+            - 'Red Hat OpenShift'
+            - 'Kubernetes'
+            - 'Cloud Native (Microservices)'
+    
+    - title: Repository Configuration
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+              - github.ibm.com
+
+  steps:
+    - id: fetch-base
+      name: Fetch Base Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          aiEnabled: ${{ parameters.aiEnabled }}
+          aiModel: ${{ parameters.aiModel }}
+          aiCapabilities: ${{ parameters.aiCapabilities }}
+          modernizationEnabled: ${{ parameters.modernizationEnabled }}
+          sourceType: ${{ parameters.sourceType }}
+          targetPlatform: ${{ parameters.targetPlatform }}
+    
+    - id: fusion-analyze
+      name: Analyze with Fusion AI
+      action: fusion:analyze-application
+      if: ${{ parameters.aiEnabled }}
+      input:
+        name: ${{ parameters.name }}
+        capabilities: ${{ parameters.aiCapabilities }}
+    
+    - id: publish
+      name: Publish to Repository
+      action: publish:github
+      input:
+        allowedHosts:
+          - github.com
+          - github.ibm.com
+        description: ${{ parameters.description }}
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+        repoVisibility: public
+    
+    - id: register
+      name: Register Component
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+    
+    - id: create-modernization-project
+      name: Create Modernization Project
+      action: fusion:generate-migration-plan
+      if: ${{ parameters.modernizationEnabled }}
+      input:
+        name: ${{ parameters.name }}
+        sourceType: ${{ parameters.sourceType }}
+        targetPlatform: ${{ parameters.targetPlatform }}
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+      - title: View Modernization Plan
+        url: ${{ steps['create-modernization-project'].output.planUrl }}
+        if: ${{ parameters.modernizationEnabled }}
+
+# Made with Bob

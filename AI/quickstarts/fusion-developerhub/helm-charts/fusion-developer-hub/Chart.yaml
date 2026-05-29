@@ -1,0 +1,18 @@
+apiVersion: v2
+name: developer-hub
+description: Red Hat Developer Hub deployment with PostgreSQL operator on OpenShift
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - developer-hub
+  - backstage
+  - postgresql
+  - openshift
+maintainers:
+  - name: Red Hat Developer Hub Team
+home: https://developers.redhat.com/rhdh
+sources:
+  - https://github.com/rh-ai-quickstart/fusion-ai
+
+# Made with Bob
