@@ -400,6 +400,7 @@ def validate_json_file(file_path):
 # MAIN PROGRAM
 # =========================
 
+
 def main():
     """
     Main function - Entry point of the program
