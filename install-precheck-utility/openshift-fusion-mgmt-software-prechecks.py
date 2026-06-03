@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-installerNetworkValidation_new.py
+openshift-fusion-mgmt-software-prechecks.py
 
-Simple and Interactive HCI Installer Network Validation Tool
-Written with beginner-friendly code and extensive comments for easy debugging.
+IBM Fusion HCI Network Validation Tool
+Interactive pre-installation validation for network configuration, registry access,
+certificates, and connectivity requirements.
 
 Author: Based on requirements from Saurabh.md
-Version: 1.0
+Version: 2.0 - Enhanced Usability
 """
 
 # Import required libraries
@@ -19,6 +20,39 @@ import subprocess   # For running system commands
 import socket       # For network connectivity checks
 import base64       # For encoding credentials
 from datetime import datetime  # For timestamps
+
+# =========================
+# VALIDATION RESULT TRACKING
+# =========================
+# Global structure to track all validation results for summary report
+validation_results = {
+    'critical': [],  # Must pass for installation
+    'warning': [],   # Should review but not blocking
+    'info': [],      # Informational only
+    'skipped': []    # Not applicable to configuration
+}
+
+def add_validation_result(category, test, status, message, details=None, severity='info'):
+    """
+    Track a validation result for the summary report
+    
+    Args:
+        category: Category of validation (e.g., 'Registry Connectivity')
+        test: Name of the test function
+        status: 'passed', 'failed', 'warning', or 'skipped'
+        message: Human-readable message
+        details: Optional dictionary with additional details
+        severity: 'critical', 'warning', 'info', or 'skipped'
+    """
+    result = {
+        'category': category,
+        'test': test,
+        'status': status,
+        'message': message,
+        'details': details or {},
+        'timestamp': datetime.now().isoformat()
+    }
+    validation_results[severity].append(result)
 
 # =========================
 # LOGGING SETUP
@@ -51,89 +85,139 @@ def log_and_print(message, level="INFO"):
 # HELPER FUNCTIONS
 # =========================
 
-def check_exit_command(user_input):
+def print_section_header(step_num, total_steps, title, description=""):
     """
-    Check if user wants to exit the program
-    If user types 'I want to exit', program will stop
+    Print a formatted section header with step information
     """
-    if user_input.strip().lower() == "i want to exit":
-        log_and_print("User requested to exit by saying: I want to exit", "INFO")
-        print("\nExiting program. Goodbye!")
-        sys.exit(0)
+    print("\n" + "="*80)
+    print(f"STEP {step_num} of {total_steps}: {title}")
+    print("="*80)
+    if description:
+        print(f"{description}\n")
 
-def get_user_input(prompt_message, allow_empty=False):
+def print_prompt(field_name, purpose, format_info, notes=""):
     """
-    Get input from user with validation
-    - prompt_message: The message to show user
-    - allow_empty: If False, user must enter something
+    Print a formatted input prompt with context
+    
+    Args:
+        field_name: Name of the field being requested
+        purpose: Why this information is needed
+        format_info: Expected format with examples
+        notes: Additional notes or requirements
+    """
+    print(f"\nEnter {field_name}")
+    print(f"  Purpose: {purpose}")
+    print(f"  Format: {format_info}")
+    if notes:
+        print(f"  Note: {notes}")
+
+def get_user_input(prompt_message, allow_empty=False, field_name="", purpose="", format_info="", notes=""):
+    """
+    Get input from user with validation and enhanced prompts
+    
+    Args:
+        prompt_message: The message to show user (simple mode)
+        allow_empty: If False, user must enter something
+        field_name: Name of field (for enhanced mode)
+        purpose: Why this is needed (for enhanced mode)
+        format_info: Expected format (for enhanced mode)
+        notes: Additional notes (for enhanced mode)
+    
     Returns: user's input as string
     """
+    # If enhanced prompt info provided, use it
+    if field_name and purpose and format_info:
+        print_prompt(field_name, purpose, format_info, notes)
+        prompt = f"{field_name}: "
+    else:
+        prompt = prompt_message
+    
     while True:
         # Show prompt and get input
-        user_input = input(prompt_message).strip()
-        
-        # Check if user wants to exit
-        check_exit_command(user_input)
+        user_input = input(prompt).strip()
         
         # If empty input is not allowed and user entered nothing
         if not allow_empty and not user_input:
-            error_msg = "ERROR: Input cannot be empty. Please enter a value."
-            log_and_print(error_msg, "ERROR")
+            print("  ✗ Error: Input cannot be empty. Please enter a value.")
+            logging.error(f"Empty input for: {field_name or prompt_message}")
             continue  # Ask again
         
         # Valid input received
         return user_input
 
-def get_password_input(prompt_message):
+def get_password_input(prompt_message, field_name="", purpose="", notes=""):
     """
     Get password from user (password will be hidden on screen)
+    
+    Args:
+        prompt_message: The message to show user (simple mode)
+        field_name: Name of field (for enhanced mode)
+        purpose: Why this is needed (for enhanced mode)
+        notes: Additional notes (for enhanced mode)
+    
     Returns: password as string
     """
+    # If enhanced prompt info provided, use it
+    if field_name and purpose:
+        print(f"\nEnter {field_name}")
+        print(f"  Purpose: {purpose}")
+        if notes:
+            print(f"  Note: {notes}")
+        prompt = f"{field_name}: "
+    else:
+        prompt = prompt_message
+    
     while True:
         # Get password (hidden input)
-        password = getpass.getpass(prompt_message)
-        
-        # Check if user wants to exit
-        check_exit_command(password)
+        password = getpass.getpass(prompt)
         
         # Check if password is empty
         if not password:
-            error_msg = "ERROR: Password cannot be empty. Please enter a password."
-            log_and_print(error_msg, "ERROR")
+            print("  ✗ Error: Password cannot be empty. Please enter a password.")
+            logging.error(f"Empty password for: {field_name or prompt_message}")
             continue  # Ask again
         
         # Log that password was entered (but don't log the actual password)
-        logging.info(f"Password entered: XXXXXXXXX")
+        logging.info(f"Password entered for: {field_name or 'password field'}")
         return password
 
-def get_choice_input(prompt_message, valid_choices):
+def get_choice_input(prompt_message, valid_choices, field_name="", options_description=None):
     """
     Get user choice from a list of valid options
-    - prompt_message: The message to show user
-    - valid_choices: List of valid choices (e.g., ['1', '2'])
+    
+    Args:
+        prompt_message: The message to show user
+        valid_choices: List of valid choices (e.g., ['1', '2'])
+        field_name: Name of field (for enhanced mode)
+        options_description: Dict mapping choice to description
+    
     Returns: user's choice as string
     """
+    # If options description provided, display it
+    if options_description:
+        print()
+        for choice, description in options_description.items():
+            print(f"  {choice}. {description}")
+        print()
+    
     while True:
         # Get user input
         choice = input(prompt_message).strip()
         
-        # Check if user wants to exit
-        check_exit_command(choice)
-        
         # Check if choice is empty
         if not choice:
-            error_msg = "ERROR: Input cannot be empty. Please select an option."
-            log_and_print(error_msg, "ERROR")
+            print("  ✗ Error: Input cannot be empty. Please select an option.")
+            logging.error(f"Empty choice for: {field_name or prompt_message}")
             continue
         
         # Check if choice is valid
         if choice not in valid_choices:
-            error_msg = f"ERROR: Invalid choice '{choice}'. Please select from: {', '.join(valid_choices)}"
-            log_and_print(error_msg, "ERROR")
+            print(f"  ✗ Error: Invalid choice '{choice}'. Please select from: {', '.join(valid_choices)}")
+            logging.error(f"Invalid choice '{choice}' for: {field_name or prompt_message}")
             continue
         
         # Valid choice received
-        log_and_print(f"User selected option: {choice}", "INFO")
+        logging.info(f"User selected option {choice} for: {field_name or prompt_message}")
         return choice
 
 # =========================
@@ -145,7 +229,7 @@ def check_registry_reachability(registry_url):
     Check if registry URL is reachable from this machine
     Returns: True if reachable, False otherwise
     """
-    log_and_print(f"Checking reachability to registry: {registry_url}", "INFO")
+    log_and_print(f"  [1/3] Testing connectivity to registry...", "INFO")
     
     try:
         # Remove http:// or https:// if present
@@ -166,14 +250,68 @@ def check_registry_reachability(registry_url):
         sock.close()
         
         if result == 0:
-            log_and_print(f"✓ SUCCESS: Registry {registry_url} is reachable", "INFO")
+            print(f"  ✓ SUCCESS: Registry connectivity verified")
+            print(f"    Registry: {registry_url}")
+            print(f"    Host: {host}")
+            print(f"    Port: {port}")
+            print(f"    Status: Reachable and responding\n")
+            logging.info(f"Registry {registry_url} is reachable")
+            
+            add_validation_result(
+                category='Registry Connectivity',
+                test='check_registry_reachability',
+                status='passed',
+                message=f'Registry {registry_url} is reachable',
+                details={'host': host, 'port': port},
+                severity='critical'
+            )
             return True
         else:
-            log_and_print(f"✗ FAILURE: Registry {registry_url} is NOT reachable", "ERROR")
+            print(f"  ✗ FAILURE: Cannot reach registry {registry_url}\n")
+            print(f"  Possible causes:")
+            print(f"    1. Network connectivity issue - verify network connection")
+            print(f"    2. Firewall blocking port {port} - check firewall rules")
+            print(f"    3. Incorrect hostname or port - verify registry URL")
+            print(f"    4. DNS resolution failure - test with: ping {host}")
+            print(f"\n  Troubleshooting steps:")
+            print(f"    • Test connectivity: telnet {host} {port}")
+            print(f"    • Check DNS: nslookup {host}")
+            print(f"    • Verify firewall allows outbound connections to port {port}")
+            print(f"    • Confirm registry is running and accessible")
+            print(f"\n  This validation is CRITICAL - installation cannot proceed without registry access.\n")
+            logging.error(f"Registry {registry_url} is NOT reachable")
+            
+            add_validation_result(
+                category='Registry Connectivity',
+                test='check_registry_reachability',
+                status='failed',
+                message=f'Registry {registry_url} is not reachable',
+                details={'host': host, 'port': port, 'error': 'Connection failed'},
+                severity='critical'
+            )
             return False
             
     except Exception as e:
-        log_and_print(f"✗ FAILURE: Error checking registry {registry_url}: {str(e)}", "ERROR")
+        print(f"  ✗ FAILURE: Error checking registry {registry_url}\n")
+        print(f"  Error details: {str(e)}")
+        print(f"\n  Possible causes:")
+        print(f"    1. Invalid registry URL format")
+        print(f"    2. Network configuration issue")
+        print(f"    3. DNS resolution failure")
+        print(f"\n  Troubleshooting steps:")
+        print(f"    • Verify registry URL format (hostname:port)")
+        print(f"    • Check network connectivity")
+        print(f"    • Test DNS resolution: nslookup {registry_url.split(':')[0]}\n")
+        logging.error(f"Error checking registry {registry_url}: {str(e)}")
+        
+        add_validation_result(
+            category='Registry Connectivity',
+            test='check_registry_reachability',
+            status='failed',
+            message=f'Error checking registry {registry_url}',
+            details={'error': str(e)},
+            severity='critical'
+        )
         return False
 
 def podman_login_test(registry_url, username, password):
@@ -181,7 +319,7 @@ def podman_login_test(registry_url, username, password):
     Test podman login to registry
     Returns: True if login successful, False otherwise
     """
-    log_and_print(f"Testing podman login to: {registry_url}", "INFO")
+    log_and_print(f"  [2/3] Testing authentication...", "INFO")
     logging.info(f"Username: {username}, Password: XXXXXXXXX")
     
     try:
@@ -193,17 +331,72 @@ def podman_login_test(registry_url, username, password):
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
         if result.returncode == 0:
-            log_and_print(f"✓ SUCCESS: Podman login to {registry_url} successful", "INFO")
+            print(f"  ✓ SUCCESS: Registry authentication verified")
+            print(f"    Registry: {registry_url}")
+            print(f"    Username: {username}")
+            print(f"    Status: Credentials accepted")
+            print(f"\n    Your credentials are valid. Next, we'll test image pull capability.\n")
+            logging.info(f"Podman login to {registry_url} successful")
+            
             # Logout after successful login
             subprocess.run(f"podman logout {clean_url}", shell=True, capture_output=True)
+            
+            add_validation_result(
+                category='Registry Authentication',
+                test='podman_login_test',
+                status='passed',
+                message=f'Authentication successful for {registry_url}',
+                details={'username': username},
+                severity='critical'
+            )
             return True
         else:
-            log_and_print(f"✗ FAILURE: Podman login to {registry_url} failed", "ERROR")
-            log_and_print(f"Error details: {result.stderr}", "ERROR")
+            print(f"  ✗ FAILURE: Authentication failed for registry {registry_url}\n")
+            print(f"  Error details: {result.stderr}")
+            print(f"\n  Possible causes:")
+            print(f"    1. Incorrect username or password")
+            print(f"    2. Account locked or expired")
+            print(f"    3. Registry authentication not configured")
+            print(f"    4. Certificate trust issues (for HTTPS registries)")
+            print(f"\n  Troubleshooting steps:")
+            print(f"    • Verify credentials with registry administrator")
+            print(f"    • Test login manually: podman login {clean_url}")
+            print(f"    • Check if registry requires certificate (see certificate validation)")
+            print(f"    • Review registry logs for authentication errors")
+            print(f"\n  This validation is CRITICAL - valid credentials required for image mirroring.\n")
+            logging.error(f"Podman login to {registry_url} failed: {result.stderr}")
+            
+            add_validation_result(
+                category='Registry Authentication',
+                test='podman_login_test',
+                status='failed',
+                message=f'Authentication failed for {registry_url}',
+                details={'username': username, 'error': result.stderr},
+                severity='critical'
+            )
             return False
             
     except Exception as e:
-        log_and_print(f"✗ FAILURE: Error during podman login: {str(e)}", "ERROR")
+        print(f"  ✗ FAILURE: Error during authentication test\n")
+        print(f"  Error details: {str(e)}")
+        print(f"\n  Possible causes:")
+        print(f"    1. Podman not installed or not in PATH")
+        print(f"    2. Network connectivity issue")
+        print(f"    3. Registry configuration problem")
+        print(f"\n  Troubleshooting steps:")
+        print(f"    • Verify podman is installed: podman --version")
+        print(f"    • Check network connectivity to registry")
+        print(f"    • Review podman configuration\n")
+        logging.error(f"Error during podman login: {str(e)}")
+        
+        add_validation_result(
+            category='Registry Authentication',
+            test='podman_login_test',
+            status='failed',
+            message=f'Error during authentication test',
+            details={'error': str(e)},
+            severity='critical'
+        )
         return False
 
 def podman_pull_test(registry_url, username, password, image_name):
@@ -211,7 +404,7 @@ def podman_pull_test(registry_url, username, password, image_name):
     Test pulling an image from registry
     Returns: True if pull successful, False otherwise
     """
-    log_and_print(f"Testing image pull from: {registry_url}", "INFO")
+    log_and_print(f"  [3/3] Testing image pull capability...", "INFO")
     
     try:
         # Remove protocol if present
@@ -230,17 +423,72 @@ def podman_pull_test(registry_url, username, password, image_name):
         subprocess.run(f"podman logout {clean_url}", shell=True, capture_output=True)
         
         if result.returncode == 0:
-            log_and_print(f"✓ SUCCESS: Image pull from {registry_url} successful", "INFO")
+            print(f"  ✓ SUCCESS: Image pull capability verified")
+            print(f"    Registry: {registry_url}")
+            print(f"    Image: {image_name}")
+            print(f"    Status: Successfully pulled and verified")
+            print(f"\n    Registry validation complete - all checks passed!\n")
+            logging.info(f"Image pull from {registry_url} successful")
+            
             # Remove the pulled image
             subprocess.run(f"podman rmi {full_image_path}", shell=True, capture_output=True)
+            
+            add_validation_result(
+                category='Registry Image Pull',
+                test='podman_pull_test',
+                status='passed',
+                message=f'Image pull successful from {registry_url}',
+                details={'image': image_name},
+                severity='critical'
+            )
             return True
         else:
-            log_and_print(f"✗ FAILURE: Image pull from {registry_url} failed", "ERROR")
-            log_and_print(f"Error details: {result.stderr}", "ERROR")
+            print(f"  ✗ FAILURE: Image pull failed from {registry_url}\n")
+            print(f"  Error details: {result.stderr}")
+            print(f"\n  Possible causes:")
+            print(f"    1. Image does not exist in registry")
+            print(f"    2. Insufficient permissions to pull image")
+            print(f"    3. Network issue during image transfer")
+            print(f"    4. Registry storage or configuration problem")
+            print(f"\n  Troubleshooting steps:")
+            print(f"    • Verify image exists: podman search {clean_url}/{image_name.split('/')[0]}")
+            print(f"    • Check user permissions in registry")
+            print(f"    • Test manual pull: podman pull {full_image_path}")
+            print(f"    • Review registry logs for errors")
+            print(f"\n  This validation is CRITICAL - image pull capability required for installation.\n")
+            logging.error(f"Image pull from {registry_url} failed: {result.stderr}")
+            
+            add_validation_result(
+                category='Registry Image Pull',
+                test='podman_pull_test',
+                status='failed',
+                message=f'Image pull failed from {registry_url}',
+                details={'image': image_name, 'error': result.stderr},
+                severity='critical'
+            )
             return False
             
     except Exception as e:
-        log_and_print(f"✗ FAILURE: Error during image pull: {str(e)}", "ERROR")
+        print(f"  ✗ FAILURE: Error during image pull test\n")
+        print(f"  Error details: {str(e)}")
+        print(f"\n  Possible causes:")
+        print(f"    1. Podman not properly configured")
+        print(f"    2. Network connectivity issue")
+        print(f"    3. Registry authentication expired")
+        print(f"\n  Troubleshooting steps:")
+        print(f"    • Verify podman is working: podman images")
+        print(f"    • Check network connectivity")
+        print(f"    • Re-authenticate to registry\n")
+        logging.error(f"Error during image pull: {str(e)}")
+        
+        add_validation_result(
+            category='Registry Image Pull',
+            test='podman_pull_test',
+            status='failed',
+            message=f'Error during image pull test',
+            details={'error': str(e)},
+            severity='critical'
+        )
         return False
 
 def validate_file_path(file_path):
@@ -248,13 +496,45 @@ def validate_file_path(file_path):
     Check if file exists and is readable
     Returns: True if file exists, False otherwise
     """
-    log_and_print(f"Validating file path: {file_path}", "INFO")
+    log_and_print(f"  Validating file: {file_path}", "INFO")
     
     if os.path.isfile(file_path) and os.access(file_path, os.R_OK):
-        log_and_print(f"✓ SUCCESS: File exists and is readable: {file_path}", "INFO")
+        print(f"  ✓ SUCCESS: File validated")
+        print(f"    Path: {file_path}")
+        print(f"    Status: File exists and is readable\n")
+        logging.info(f"File exists and is readable: {file_path}")
+        
+        add_validation_result(
+            category='File Validation',
+            test='validate_file_path',
+            status='passed',
+            message=f'File validated: {file_path}',
+            details={'path': file_path},
+            severity='critical'
+        )
         return True
     else:
-        log_and_print(f"✗ FAILURE: File not found or not readable: {file_path}", "ERROR")
+        print(f"  ✗ FAILURE: Cannot access file: {file_path}\n")
+        print(f"  Possible causes:")
+        print(f"    1. File does not exist at specified path")
+        print(f"    2. Insufficient read permissions")
+        print(f"    3. Path contains typo or incorrect directory")
+        print(f"\n  Troubleshooting steps:")
+        print(f"    • Verify file exists: ls -la {file_path}")
+        print(f"    • Check permissions: should be readable by current user")
+        print(f"    • Confirm full path is correct (use absolute paths)")
+        print(f"    • Check for typos in filename or extension")
+        print(f"\n  This validation is CRITICAL - the file is required for installation.\n")
+        logging.error(f"File not found or not readable: {file_path}")
+        
+        add_validation_result(
+            category='File Validation',
+            test='validate_file_path',
+            status='failed',
+            message=f'File not accessible: {file_path}',
+            details={'path': file_path},
+            severity='critical'
+        )
         return False
 
 def validate_certificate(cert_path):
@@ -262,7 +542,7 @@ def validate_certificate(cert_path):
     Validate certificate file
     Returns: True if valid, False otherwise
     """
-    log_and_print(f"Validating certificate: {cert_path}", "INFO")
+    log_and_print(f"  Validating certificate...", "INFO")
     
     try:
         # Check if file exists
@@ -274,13 +554,10 @@ def validate_certificate(cert_path):
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
         if result.returncode == 0:
-            log_and_print(f"✓ SUCCESS: Certificate is valid", "INFO")
-            
             # Check expiration date
             exp_cmd = f"openssl x509 -in {cert_path} -noout -enddate"
             exp_result = subprocess.run(exp_cmd, shell=True, capture_output=True, text=True)
-            if exp_result.returncode == 0:
-                log_and_print(f"Certificate expiration: {exp_result.stdout.strip()}", "INFO")
+            expiration = exp_result.stdout.strip() if exp_result.returncode == 0 else "Unknown"
             
             # Check if self-signed
             issuer_cmd = f"openssl x509 -in {cert_path} -noout -issuer"
@@ -288,18 +565,78 @@ def validate_certificate(cert_path):
             issuer = subprocess.run(issuer_cmd, shell=True, capture_output=True, text=True).stdout
             subject = subprocess.run(subject_cmd, shell=True, capture_output=True, text=True).stdout
             
-            if issuer == subject:
-                log_and_print(f"⚠ WARNING: Certificate is self-signed", "WARNING")
-            else:
-                log_and_print(f"✓ Certificate is CA-signed", "INFO")
+            is_self_signed = (issuer == subject)
+            cert_type = "Self-signed" if is_self_signed else "CA-signed"
             
+            print(f"  ✓ SUCCESS: Certificate validation passed")
+            print(f"    Certificate: {cert_path}")
+            print(f"    {expiration}")
+            print(f"    Type: {cert_type}")
+            print(f"    Status: Valid and trusted")
+            
+            if is_self_signed:
+                print(f"\n    ⚠ WARNING: Certificate is self-signed")
+                print(f"    Consider using CA-signed certificate for production environments")
+            
+            print()
+            logging.info(f"Certificate is valid: {cert_path}, Type: {cert_type}, {expiration}")
+            
+            severity = 'warning' if is_self_signed else 'critical'
+            add_validation_result(
+                category='Certificate Validation',
+                test='validate_certificate',
+                status='passed' if not is_self_signed else 'warning',
+                message=f'Certificate validated: {cert_path}',
+                details={'path': cert_path, 'type': cert_type, 'expiration': expiration},
+                severity=severity
+            )
             return True
         else:
-            log_and_print(f"✗ FAILURE: Certificate validation failed", "ERROR")
+            print(f"  ✗ FAILURE: Certificate validation failed\n")
+            print(f"  Error details: {result.stderr}")
+            print(f"\n  Possible causes:")
+            print(f"    1. File is not a valid X.509 certificate")
+            print(f"    2. Certificate is corrupted or malformed")
+            print(f"    3. Wrong file format (must be PEM or DER)")
+            print(f"\n  Troubleshooting steps:")
+            print(f"    • Verify certificate format: openssl x509 -in {cert_path} -text -noout")
+            print(f"    • Check file is not encrypted")
+            print(f"    • Ensure certificate is in PEM format (begins with -----BEGIN CERTIFICATE-----)")
+            print(f"    • Try converting if needed: openssl x509 -inform DER -in cert.der -out cert.pem")
+            print(f"\n  This validation is CRITICAL - valid certificate required for secure registry access.\n")
+            logging.error(f"Certificate validation failed: {cert_path}")
+            
+            add_validation_result(
+                category='Certificate Validation',
+                test='validate_certificate',
+                status='failed',
+                message=f'Certificate validation failed: {cert_path}',
+                details={'path': cert_path, 'error': result.stderr},
+                severity='critical'
+            )
             return False
             
     except Exception as e:
-        log_and_print(f"✗ FAILURE: Error validating certificate: {str(e)}", "ERROR")
+        print(f"  ✗ FAILURE: Error validating certificate\n")
+        print(f"  Error details: {str(e)}")
+        print(f"\n  Possible causes:")
+        print(f"    1. OpenSSL not installed or not in PATH")
+        print(f"    2. File access permission issue")
+        print(f"    3. System configuration problem")
+        print(f"\n  Troubleshooting steps:")
+        print(f"    • Verify OpenSSL is installed: openssl version")
+        print(f"    • Check file permissions")
+        print(f"    • Review system logs for errors\n")
+        logging.error(f"Error validating certificate: {str(e)}")
+        
+        add_validation_result(
+            category='Certificate Validation',
+            test='validate_certificate',
+            status='failed',
+            message=f'Error validating certificate',
+            details={'error': str(e)},
+            severity='critical'
+        )
         return False
 
 def check_site_reachability(site_url, proxy_server=None, proxy_port=None, proxy_username=None, proxy_password=None):
@@ -307,7 +644,7 @@ def check_site_reachability(site_url, proxy_server=None, proxy_port=None, proxy_
     Check if a website/URL is reachable
     Returns: True if reachable, False otherwise
     """
-    log_and_print(f"Checking reachability to: {site_url}", "INFO")
+    logging.info(f"Checking reachability to: {site_url}")
     
     try:
         # Build curl command
@@ -330,14 +667,44 @@ def check_site_reachability(site_url, proxy_server=None, proxy_port=None, proxy_
         
         # Check if successful (HTTP 200, 301, 302, 401, 403 are considered reachable)
         if result.returncode == 0 or any(code in result.stdout for code in ['200', '301', '302', '401', '403']):
-            log_and_print(f"✓ SUCCESS: Site reachable: {site_url}", "INFO")
+            print(f"  ✓ {site_url}")
+            logging.info(f"Site reachable: {site_url}")
+            
+            add_validation_result(
+                category='Site Connectivity',
+                test='check_site_reachability',
+                status='passed',
+                message=f'Site reachable: {site_url}',
+                details={'url': site_url},
+                severity='critical'
+            )
             return True
         else:
-            log_and_print(f"✗ FAILURE: Site NOT reachable: {site_url}", "ERROR")
+            print(f"  ✗ {site_url} - NOT REACHABLE")
+            logging.error(f"Site NOT reachable: {site_url}")
+            
+            add_validation_result(
+                category='Site Connectivity',
+                test='check_site_reachability',
+                status='failed',
+                message=f'Site not reachable: {site_url}',
+                details={'url': site_url},
+                severity='critical'
+            )
             return False
             
     except Exception as e:
-        log_and_print(f"✗ FAILURE: Error checking site {site_url}: {str(e)}", "ERROR")
+        print(f"  ✗ {site_url} - ERROR: {str(e)}")
+        logging.error(f"Error checking site {site_url}: {str(e)}")
+        
+        add_validation_result(
+            category='Site Connectivity',
+            test='check_site_reachability',
+            status='failed',
+            message=f'Error checking site: {site_url}',
+            details={'url': site_url, 'error': str(e)},
+            severity='critical'
+        )
         return False
 
 def create_auth_file(pull_secret_path, ibm_entitlement_key, output_path="authfile.json"):
@@ -382,19 +749,141 @@ def validate_json_file(file_path):
     Check if file is valid JSON
     Returns: True if valid JSON, False otherwise
     """
-    log_and_print(f"Validating JSON file: {file_path}", "INFO")
+    log_and_print(f"  Validating JSON format...", "INFO")
     
     try:
         with open(file_path, 'r') as f:
             json.load(f)
-        log_and_print(f"✓ SUCCESS: File is valid JSON", "INFO")
+        print(f"  ✓ SUCCESS: File is valid JSON")
+        print(f"    Path: {file_path}")
+        print(f"    Status: Valid JSON format\n")
+        logging.info(f"File is valid JSON: {file_path}")
+        
+        add_validation_result(
+            category='File Validation',
+            test='validate_json_file',
+            status='passed',
+            message=f'Valid JSON file: {file_path}',
+            details={'path': file_path},
+            severity='critical'
+        )
         return True
     except json.JSONDecodeError as e:
-        log_and_print(f"✗ FAILURE: File is not valid JSON: {str(e)}", "ERROR")
+        print(f"  ✗ FAILURE: File is not valid JSON\n")
+        print(f"  Error details: {str(e)}")
+        print(f"\n  Possible causes:")
+        print(f"    1. Syntax error in JSON (missing comma, bracket, etc.)")
+        print(f"    2. Invalid JSON structure")
+        print(f"    3. File encoding issue")
+        print(f"\n  Troubleshooting steps:")
+        print(f"    • Validate JSON syntax: python3 -m json.tool {file_path}")
+        print(f"    • Check for common errors (trailing commas, unquoted keys)")
+        print(f"    • Use a JSON validator or linter")
+        print(f"    • Verify file encoding is UTF-8\n")
+        logging.error(f"File is not valid JSON: {str(e)}")
+        
+        add_validation_result(
+            category='File Validation',
+            test='validate_json_file',
+            status='failed',
+            message=f'Invalid JSON file: {file_path}',
+            details={'path': file_path, 'error': str(e)},
+            severity='critical'
+        )
         return False
     except Exception as e:
-        log_and_print(f"✗ FAILURE: Error reading JSON file: {str(e)}", "ERROR")
+        print(f"  ✗ FAILURE: Error reading JSON file\n")
+        print(f"  Error details: {str(e)}")
+        print(f"\n  Troubleshooting steps:")
+        print(f"    • Verify file exists and is readable")
+        print(f"    • Check file permissions\n")
+        logging.error(f"Error reading JSON file: {str(e)}")
+        
+        add_validation_result(
+            category='File Validation',
+            test='validate_json_file',
+            status='failed',
+            message=f'Error reading JSON file: {file_path}',
+            details={'path': file_path, 'error': str(e)},
+            severity='critical'
+        )
         return False
+
+def print_validation_summary(cluster_name="", base_domain="", install_type="", config_details=None):
+    """
+    Print a comprehensive validation summary report
+    """
+    print("\n" + "="*80)
+    print("VALIDATION SUMMARY")
+    print("="*80 + "\n")
+    
+    # Count results by status
+    critical_passed = sum(1 for r in validation_results['critical'] if r['status'] == 'passed')
+    critical_failed = sum(1 for r in validation_results['critical'] if r['status'] == 'failed')
+    warnings = len(validation_results['warning'])
+    info_count = len(validation_results['info'])
+    skipped_count = len(validation_results['skipped'])
+    
+    # Determine overall status
+    if critical_failed == 0:
+        overall_status = "✓ READY FOR INSTALLATION"
+        status_color = "SUCCESS"
+    else:
+        overall_status = "✗ NOT READY - CRITICAL FAILURES DETECTED"
+        status_color = "FAILURE"
+    
+    print(f"Overall Status: {overall_status}\n")
+    
+    # Critical validations
+    print(f"Critical Validations (Must Pass):")
+    if validation_results['critical']:
+        for result in validation_results['critical']:
+            status_symbol = "✓" if result['status'] == 'passed' else "✗"
+            print(f"  {status_symbol} {result['category']:<30} {result['status'].upper()}")
+            if result['status'] == 'failed':
+                print(f"     Issue: {result['message']}")
+    else:
+        print(f"  No critical validations performed")
+    
+    print()
+    
+    # Warnings
+    if warnings > 0:
+        print(f"Warnings (Review Recommended):")
+        for result in validation_results['warning']:
+            print(f"  ⚠ {result['category']:<30} WARNING")
+            print(f"     {result['message']}")
+        print()
+    
+    # Configuration summary
+    if cluster_name or base_domain or install_type:
+        print(f"Configuration Summary:")
+        if cluster_name:
+            print(f"  Cluster Name:        {cluster_name}")
+        if base_domain:
+            print(f"  Base Domain:         {base_domain}")
+        if install_type:
+            print(f"  Installation Type:   {install_type}")
+        if config_details:
+            for key, value in config_details.items():
+                print(f"  {key:<20} {value}")
+        print()
+    
+    # Next steps
+    print(f"Next Steps:")
+    if critical_failed == 0:
+        print(f"  1. Review the detailed log file: {LOG_FILE}")
+        if warnings > 0:
+            print(f"  2. Address {warnings} warning(s) before proceeding")
+        print(f"  3. Proceed with cluster installation using validated configuration")
+        print(f"  4. Keep this validation log for troubleshooting reference")
+    else:
+        print(f"  1. Review {critical_failed} critical failure(s) above")
+        print(f"  2. Follow troubleshooting steps for each failed validation")
+        print(f"  3. Re-run this validation tool after resolving issues")
+        print(f"  4. Check detailed log file: {LOG_FILE}")
+    
+    print("\n" + "="*80 + "\n")
 
 # =========================
 # MAIN PROGRAM
@@ -406,50 +895,88 @@ def main():
     Main function - Entry point of the program
     """
     # Display welcome message
-    print("\n" + "="*70)
-    print("Welcome to HCI Installer Network Validation Script")
-    print("="*70)
-    print("\nThis script will help you validate your network configuration")
-    print("for HCI cluster installation.")
-    print("\nInstructions:")
-    print("- Answer each question carefully")
-    print("- Type 'I want to exit' at any prompt to exit the program")
-    print("- All actions are logged to:", LOG_FILE)
-    print("="*70 + "\n")
+    print("\n" + "="*80)
+    print("IBM Fusion HCI Network Validation Tool")
+    print("="*80)
+    print("\nThis tool validates your network configuration for IBM Fusion HCI installation.")
+    print("\nWhat this tool checks:")
+    print("  • Container registry connectivity and authentication")
+    print("  • Certificate validity and trust")
+    print("  • Network connectivity to required endpoints")
+    print("  • Pull secret and authentication file validity")
+    print("\nHow to use:")
+    print("  • Answer each question carefully")
+    print("  • Press Ctrl+C at any time to exit")
+    print("  • All results are logged to:", LOG_FILE)
+    print("\nEstimated time: 5-15 minutes depending on configuration")
+    print("="*80 + "\n")
     
-    log_and_print("="*70, "INFO")
-    log_and_print("HCI Installer Network Validation Script Started", "INFO")
-    log_and_print("="*70, "INFO")
+    logging.info("="*80)
+    logging.info("IBM Fusion HCI Network Validation Tool Started")
+    logging.info("="*80)
     
     # =========================
     # STEP 1: Get Cluster Name
     # =========================
-    print("\n--- Step 1: Cluster Information ---")
-    cluster_name = get_user_input("Enter Cluster Name for your cluster: ")
-    log_and_print(f"Cluster Name: {cluster_name}", "INFO")
+    print_section_header(1, 6, "Cluster Configuration",
+                        "We need basic information about your cluster to generate validation URLs.")
+    
+    cluster_name = get_user_input(
+        prompt_message="Enter Cluster Name: ",
+        field_name="Cluster Name",
+        purpose="Identifies your OpenShift cluster in DNS and URLs",
+        format_info="Lowercase alphanumeric with hyphens (e.g., 'prod-cluster-01')",
+        notes="Must be valid DNS label (max 63 characters)"
+    )
+    logging.info(f"Cluster Name: {cluster_name}")
     
     # =========================
     # STEP 2: Get Base Domain
     # =========================
-    base_domain = get_user_input("Enter Base Domain for your cluster: ")
-    log_and_print(f"Base Domain: {base_domain}", "INFO")
+    base_domain = get_user_input(
+        prompt_message="Enter Base Domain: ",
+        field_name="Base Domain",
+        purpose="DNS domain for your cluster (e.g., 'example.com')",
+        format_info="Valid DNS domain name",
+        notes="Will be combined with cluster name for full cluster domain"
+    )
+    logging.info(f"Base Domain: {base_domain}")
     
     # =========================
     # STEP 3: Get Installation Type
     # =========================
-    print("\n--- Step 2: Installation Type ---")
-    print("1. Airgap Install (Offline Install - No internet connectivity)")
-    print("2. Connected Install (Online Install - Internet connectivity)")
+    print_section_header(2, 6, "Installation Type",
+                        "Select your installation type based on network connectivity.")
     
-    install_type_choice = get_choice_input("Enter the Type of Install (1 or 2): ", ['1', '2'])
+    install_options = {
+        '1': "Airgap Installation (Disconnected/Offline)\n" +
+             "     • No direct internet connectivity\n" +
+             "     • Uses local container registry\n" +
+             "     • All images pre-mirrored to local registry\n" +
+             "     • Best for: Secure/isolated environments, compliance requirements",
+        '2': "Connected Installation (Online)\n" +
+             "     • Direct internet connectivity available\n" +
+             "     • Pulls images from IBM and Red Hat registries\n" +
+             "     • May use proxy for internet access\n" +
+             "     • Best for: Standard deployments with internet access"
+    }
+    
+    install_type_choice = get_choice_input(
+        "Enter your choice (1 or 2): ",
+        ['1', '2'],
+        field_name="Installation Type",
+        options_description=install_options
+    )
     
     # Set installation type based on choice
     if install_type_choice == '1':
         type_of_install = "airgap_install"
-        log_and_print(f"Installation Type: Airgap Install (Offline)", "INFO")
+        install_type_display = "Airgap Installation (Disconnected)"
+        logging.info(f"Installation Type: {install_type_display}")
     else:
         type_of_install = "connected_install"
-        log_and_print(f"Installation Type: Connected Install (Online)", "INFO")
+        install_type_display = "Connected Installation (Online)"
+        logging.info(f"Installation Type: {install_type_display}")
     
     # =========================
     # AIRGAP INSTALLATION PATH
@@ -811,18 +1338,36 @@ def main():
                 log_and_print("Ingress certificate will not be used", "INFO")
     
     # =========================
-    # COMPLETION
+    # COMPLETION - GENERATE SUMMARY REPORT
     # =========================
-    print("\n" + "="*70)
-    print("Validation Complete!")
-    print("="*70)
-    print(f"\nAll validation results have been logged to: {LOG_FILE}")
-    print("\nThank you for using HCI Installer Network Validation Script!")
-    print("="*70 + "\n")
     
-    log_and_print("="*70, "INFO")
-    log_and_print("HCI Installer Network Validation Script Completed Successfully", "INFO")
-    log_and_print("="*70, "INFO")
+    # Prepare configuration details for summary
+    config_details = {
+        "Installation Type:": install_type_display
+    }
+    
+    # Add type-specific details
+    if type_of_install == "airgap_install":
+        if 'offline_registry_url' in locals():
+            config_details["Registry:"] = offline_registry_url
+        elif 'openshift_registry_url' in locals():
+            config_details["OpenShift Registry:"] = openshift_registry_url
+            config_details["Fusion Registry:"] = fusion_registry_url
+    
+    # Generate and display summary report
+    print_validation_summary(
+        cluster_name=cluster_name,
+        base_domain=base_domain,
+        install_type=install_type_display,
+        config_details=config_details
+    )
+    
+    print(f"Thank you for using IBM Fusion HCI Network Validation Tool!")
+    print(f"Detailed log file: {LOG_FILE}\n")
+    
+    logging.info("="*80)
+    logging.info("IBM Fusion HCI Network Validation Tool Completed")
+    logging.info("="*80)
 
 # =========================
 # PROGRAM ENTRY POINT
