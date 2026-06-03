@@ -6,7 +6,7 @@ IFS=$(echo -en "\n\b")
 
 SCRIPT64=$(cat ./scripts/locks.sh | base64 -w 0)
 
-[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
+[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils.sh")
 if oc auth can-i debug node >/dev/null 2>&1; then
   msg "Checking for locks by pod, per node (${BLUE}using oc debug, it can take a while${NOCOLOR})"
   fw_errors=0

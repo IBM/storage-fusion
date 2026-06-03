@@ -105,6 +105,7 @@
 CHECK_PASS='  ✅'
 CHECK_FAIL='  ❌'
 CHECK_UNKNOW='  ⏳'
+CHECK_WARN='  ⚠️'
 PADDING_1='   '
 PADDING_2='      '
 REPORT=$(pwd)/preupgrade_healthcheck_report.log
@@ -275,23 +276,46 @@ function verify_clusteroperators_status () {
 	print info "Verify Red Hat OpenShift cluster operators health."
 	notavailablecocount=$(oc get co)
         unhealthy=0
+        unhealthy_operators=""
         rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-        while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get co|grep -v NAME)"
+        
+        # Get cluster operators and process each line
+        oc get co --no-headers > ${TEMP_MMHEALTH_FILE}
+        
         while IFS= read -r line
         do
-                comp=$(echo $line|awk '{print $1}')
-                available=$(echo $line|awk '{print $3}')	# Possible values True|False
-                progressing=$(echo $line|awk '{print $4}')	# Possible values True|False
-                degraded=$(echo $line|awk '{print $5}')		# Possible values True|False
-                if [[ "${available}" == False || "${progressing}" == True || "${degraded}" == True ]]
-		then
-                        print error "${CHECK_FAIL} ${failed} Cluster operator $comp is not healthy or/and ready."
-			print error "${CHECK_FAIL} $line"
-                        unhealthy=1
+                if [[ -z "$line" ]]; then
+                        continue
                 fi
-        done <<< $(cat "${TEMP_MMHEALTH_FILE}")
+                
+                comp=$(echo "$line" | awk '{print $1}')
+                version=$(echo "$line" | awk '{print $2}')
+                available=$(echo "$line" | awk '{print $3}')	# Possible values True|False
+                progressing=$(echo "$line" | awk '{print $4}')	# Possible values True|False
+                degraded=$(echo "$line" | awk '{print $5}')	# Possible values True|False
+                since=$(echo "$line" | awk '{print $6}')
+                message=$(echo "$line" | cut -d' ' -f7-)
+                
+                if [[ "${available}" == "False" || "${progressing}" == "True" || "${degraded}" == "True" ]]
+		then
+                        print error "${CHECK_FAIL} Cluster operator '$comp' is not healthy"
+                        print error "  Version: $version"
+                        print error "  Available: $available | Progressing: $progressing | Degraded: $degraded"
+                        print error "  Since: $since"
+                        if [[ -n "$message" ]]; then
+                                print error "  Message: $message"
+                        fi
+                        print error ""
+                        unhealthy=1
+                        unhealthy_operators="${unhealthy_operators}\n  - $comp (Available=$available, Progressing=$progressing, Degraded=$degraded)"
+                fi
+        done < "${TEMP_MMHEALTH_FILE}"
+        
         if [ $unhealthy  -eq 0 ]; then
                 print info "${CHECK_PASS} All Red Hat OpenShift cluster operators are healthy."
+        else
+                print error "${CHECK_FAIL} Summary of unhealthy cluster operators:"
+                echo -e "$unhealthy_operators"
         fi
         rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
@@ -343,11 +367,13 @@ function verify_mcp() {
 		winprogress=1
 	fi
 	if [[ $readycompute -ne $computecount ]]; then
-		print error "${CHECK_FAIL}  $readycompute compute nodes are not ready."
+		notreadycount=$((computecount - readycompute))
+		print error "${CHECK_FAIL}  $notreadycount compute nodes are not ready."
 		wnotready=1
 	fi
 	if [[ $updatedcompute -ne $computecount ]]; then
-		print error "${CHECK_FAIL}  $updatedcompute compute nodes are not updated."
+		notupdatedcount=$((computecount - updatedcompute))
+		print error "${CHECK_FAIL}  $notupdatedcount compute nodes are not updated."
 		wnotupdated=1
 	fi
 	if [[ $wnotupdated -eq 1 || $wnotready -eq 1 || $winprogress -eq 1 || $wdegraded -eq 1 ]]; then
@@ -365,11 +391,13 @@ function verify_mcp() {
 		inprogress=1
 	fi
 	if [[ $readycontrol -ne $controlcount ]]; then
-		print error "${CHECK_FAIL}  $readycontrol control nodes are not ready."
+		notreadycount=$((controlcount - readycontrol))
+		print error "${CHECK_FAIL}  $notreadycount control nodes are not ready."
 		notready=1
 	fi
 	if [[ $updatedcontrol -ne $controlcount ]]; then
-		print error "${CHECK_FAIL}  $updatedcontrol control nodes are not updated."
+		notupdatedcount=$((controlcount - updatedcontrol))
+		print error "${CHECK_FAIL}  $notupdatedcount control nodes are not updated."
 		notupdated=1
 	fi
 	if [[ $notupdated -eq 1 || $notready -eq 1 || $inprogress -eq 1 || $degraded -eq 1 ]]; then
@@ -487,12 +515,13 @@ function verify_mmhealth_details() {
 function verify_scale_fs() {
 	print info "Verify IBM Storage Scale file system health"
 	nodename=$(oc get nodes |grep 'control'|grep 'Ready'|head -1|awk '{print $1}'|cut -d"." -f 1)
-        oc project $SCALENS
-        local count=$(oc rsh $nodename mmlsmount all | tr -dc '0-9')
+	       oc project $SCALENS
+	       # Count lines with mounted filesystems (excluding header)
+	       local count=$(oc rsh $nodename mmlsmount all | grep -c "mounted" || echo "0")
 	local nodescount=$(oc get nodes --no-headers | wc -l)
 	if [[ $count -ne $nodescount ]]; then
 		print error "${CHECK_FAIL} number of nodes on which file system is mounted $count is not equal to total number of nodes in cluster $nodescount"
-		print info "If this is metro DR setup then number of nodes on which file system is mounted should be total number of nodes in both DR sites. If that is the case here, then you can ignoe this error." 
+		print info "If this is metro DR setup then number of nodes on which file system is mounted should be total number of nodes in both DR sites. If that is the case here, then you can ignoe this error."
 	else
 		print info "${CHECK_PASS} File system is mounted on all nodes."
 	fi
@@ -718,44 +747,28 @@ function getReadyControlNode() {
 	CONTROLNODE=$(oc get nodes | grep -vE 'NAME|NotReady|Scheduling' | grep 'master' | head -1|awk '{print $1}')
 }
 
-# Verify quay access
-function isQuayAccessible () {
-	getReadyControlNode
-	oc debug nodes/$CONTROLNODE -- chroot /host curl https://$QUAY|grep "Quay " > /dev/null
-	if [[ $? -ne 0 ]]; then
-		print error "${CHECK_FAIL} $QUAY is not accessible."
-	else
-		print info "${CHECK_PASS} $QUAY is accessible."
-	fi
-}
+##############################################################################
+# Source utility functions from external files
+##############################################################################
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/registry-utils.sh"
+source "${SCRIPT_DIR}/network-utils.sh"
+source "${SCRIPT_DIR}/hardware-utils.sh"
 
-# Verify ibm registry access
-function isIBMRegistryAccessible () {
-	getReadyControlNode
-	oc debug nodes/$CONTROLNODE -- chroot /host curl https://$IBMENTITLEDREG |grep "Connection timed out" > /dev/null
-	if [[ $? -ne 0 ]]; then
-                print info "${CHECK_PASS} $IBMENTITLEDREG is accessible."
-	else
-                print error "${CHECK_FAIL} $IBMENTITLEDREG is not accessible."
-	fi
-	print_subsection
-	oc debug nodes/$CONTROLNODE -- chroot /host curl https://$IBMOPENREG|grep "Connection timed out" > /dev/null
-	if [[ $? -ne 0 ]]; then
-		print info "${CHECK_PASS} $IBMOPENREG is accessible."
-        else
-		print error "${CHECK_FAIL} $IBMOPENREG is not accessible."
-	fi
-}
-
-# Verify registry accesses
+# Verify registry accesses - Enhanced with dynamic discovery
 function areRegistriesAccessible () {
-	isQuayAccessible
-	print_subsection
-	isIBMRegistryAccessible
+	# Use dynamic registry check based on CatalogSources
+	check_dynamic_registries
 }
 
 # Verify registry can pull isf images
 function canPullIsfImage() {
+	# Skip for offline installations - public registries not accessible
+	if is_offline_installation; then
+		print info "${CHECK_PASS} Skipping ISF image pull test (offline installation - using mirror registries)"
+		return 0
+	fi
+	
 	getReadyControlNode
 	oc debug nodes/$CONTROLNODE -- chroot /host podman pull --authfile /var/lib/kubelet/config.json "$ISFENTITLEMENT_PATH/$ISFENTITLEMENT_IMAGE" |grep "Writing manifest"
 	if [[ $? -ne 0 ]]; then
@@ -765,8 +778,14 @@ function canPullIsfImage() {
         fi
 }
 
-# Verify registry can pull isf images
+# Verify registry can pull OCP images
 function canPullOCPImage () {
+	# Skip for offline installations - public registries not accessible
+	if is_offline_installation; then
+		print info "${CHECK_PASS} Skipping OCP image pull test (offline installation - using mirror registries)"
+		return 0
+	fi
+	
 	getReadyControlNode
 	oc debug nodes/$CONTROLNODE -- chroot /host podman pull --authfile /var/lib/kubelet/config.json "$QUAYPATH/$OCPRELEASE_IMAGE" |grep "Writing manifest"
 	if [[ $? -ne 0 ]]; then
@@ -819,7 +838,7 @@ function get_virtual_machines () {
         if [[ $nonMigratableVM -eq 1 ]]; then
           print info "VMs that do not use ReadWriteMany access mode for PVC can not be evicted."
         fi
-        print error "${CHECK_FAIL} Non-migratable VM: $vm in namespace $ns."
+        print info "${CHECK_WARN} Non-migratable VM: $vm in namespace $ns."
       fi
     done < ${TEMP_MMHEALTH_FILE}
 	if [[ $nonMigratableVM -eq 0 ]]; then
@@ -883,58 +902,7 @@ function verify_imagepullbackoff_pods(){
 }
 
 #oc get computemonitoring -n ibm-spectrum-fusion-ns monitoring-compute-1-ru5 -o json | jq .status.nodes[].nodeMonStatus.state
-function verify_nodes_hw(){
-  print info "Verify node hardware status"
-  nodeStatus=0
-  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get computemonitoring -n ${FUSIONNS} --no-headers )"
-  while IFS= read -r line
-    do
-      monitoringCRD=$(echo $line |awk '{print $1}')
-      #check only configured nodes, not discovered one
-      configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].ocpNodeName )
-      if [[ "${configuredNode}" == null ]]; then
-        print info "${CHECK_UNKNOW} $monitoringCRD is not part of OCP yet."
-      else
-        nodeHwStatus=$(oc get computemonitoring -n ${FUSIONNS} $monitoringCRD -o json | jq .status.nodes[].nodeMonStatus.state)
-        if ! [ "$nodeHwStatus" = "\"Succeeded\"" ]; then
-          nodeStatus=1
-          print error "${CHECK_FAIL} ${configuredNode} hardware is not healthy"
-        fi
-      fi
-    done < ${TEMP_MMHEALTH_FILE}
-  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  if [ $nodeStatus -eq 0 ]; then
-    print info "${CHECK_PASS} All configured nodes hardware is healthy."
-  fi
-}
-
-function verify_nodes_fw(){
-  print info "Verify node firmware status"
-  nodeStatus=0
-  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  while read -r proc; do echo $proc >> ${TEMP_MMHEALTH_FILE}; done <<< "$(oc get cfw -n ${FUSIONNS} --no-headers )"
-  while IFS= read -r line
-    do
-      firmwareCR=$(echo $line |awk '{print $1}')
-      monitorCR="monitoring-c"`echo $firmwareCR | cut -f2 -d'c'`
-      configuredNode=$(oc get computemonitoring -n ${FUSIONNS} $monitorCR -o json | jq .status.nodes[].ocpNodeName)
-      #check only configured nodes, not discovered one
-      if [[ "${configuredNode}" == null ]]; then
-        print error "$monitorCR is not part of OCP yet."
-      else
-        nodeFwStatus=$(oc get computefirmware -n ${FUSIONNS} $firmwareCR -o json | jq .status.updateRequired)
-        if [[ "$nodeFwStatus" == "true" ]]; then
-           nodeStatus=1
-           print error "${CHECK_FAIL} ${configuredNode} firmware is not at latest level."
-        fi
-      fi
-    done < ${TEMP_MMHEALTH_FILE}
-  rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
-  if [ $nodeStatus -eq 0 ]; then
-    print info "${CHECK_PASS} All configured nodes are at latest firmware level."
-  fi
-}
+# Hardware verification functions are now in hardware-utils.sh
 
 function verify_nodes_dns () {
   print info "Verify DNS on nodes"
@@ -963,15 +931,21 @@ function verify_link(){
   while IFS= read -r line
     do
       linkName=$(echo $line |awk '{print $1}')
-      linkuuid=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .spec.torLinkSpec[].uuid)
-      linkCreatedStatus=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .status.torUplinkStatus.$linkuuid.linkCreated)
-      linkState=$(oc get link -n ${FUSIONNS} $linkName -o json | jq .status.torUplinkStatus.$linkuuid.linkState)
-      if [[ "$linkCreatedStatus" != "true" ]] && [[ "$linkState" != "true" ]] ; then
-        linkStatus=1
-	print error "${CHECK_FAIL} Link $linkName status is $linkState."
-      else
-    	print info "${CHECK_PASS} Link $linkName is healthy."
-      fi
+      # Get the full Link CR JSON once
+      linkCrJson=$(oc get link -n ${FUSIONNS} $linkName -o json)
+      # Get all link UUIDs from spec
+      linkuuids=$(echo "$linkCrJson" | jq -r '.spec.torLinkSpec[].uuid')
+      # Check each link UUID's status
+      for linkuuid in $linkuuids; do
+        linkCreatedStatus=$(echo "$linkCrJson" | jq -r ".status.torUplinkStatus.\"$linkuuid\".linkCreated // false")
+        linkState=$(echo "$linkCrJson" | jq -r ".status.torUplinkStatus.\"$linkuuid\".linkState // false")
+        if [[ "$linkCreatedStatus" != "true" ]] || [[ "$linkState" != "true" ]] ; then
+          linkStatus=1
+          print error "${CHECK_FAIL} Link $linkuuid status is linkCreated=$linkCreatedStatus, linkState=$linkState."
+        else
+          print info "${CHECK_PASS} Link $linkuuid is healthy."
+        fi
+      done
     done < ${TEMP_MMHEALTH_FILE}
   rm -f ${TEMP_MMHEALTH_FILE} >> /dev/null
 }
@@ -1028,7 +1002,8 @@ function verify_bonds() {
 }
 
 function verify_network_checks(){
-verify_nodes_dns
+# Enhanced DNS/DHCP/NTP reachability check
+verify_nodes_dns_dhcp
 print_subsection
 verify_link
 print_subsection
@@ -1282,6 +1257,8 @@ function preupgrade_checks() {
         verify_mcp
         print_section "Catalog sources"
         verify_catsrc
+        print_section "Operators with missing catalog sources"
+        verify_operators_catalog_sources
         print_section "Fusion software"
         verify_fusion_health
         print_section "Backup & Restore"
@@ -1294,8 +1271,6 @@ function preupgrade_checks() {
         verify_scale_health
         print_section "VMs migration"
         verify_livemigratable_vms
-        print_section "Pods with imagepullbackoff across cluster"	
-        verify_imagepullbackoff_pods
         print_section "Nodes hardware status"
         verify_nodes_hw
         print_section "Fusion nodes maintenance"
@@ -1306,6 +1281,94 @@ function preupgrade_checks() {
         verify_pid_limit
         print_section "Verify Presence of CSI Configmap"
         verify_CSI_configmap_present
+        print_section "Additional namespace health check (informational)"
+        verify_additional_namespace_pods
+        print_section "Pods with imagepullbackoff across cluster"
+        verify_imagepullbackoff_pods
+}
+
+# Verify pods in all other namespaces not already checked
+function verify_additional_namespace_pods() {
+ print info "Checking for failed pods in namespaces not covered by main checks..."
+ print info "This is an informational check - failures here may not be critical."
+ 
+ # List of namespaces already checked in main sections
+ local checked_namespaces=(
+  "ibm-spectrum-scale"
+  "ibm-spectrum-scale-operator"
+  "ibm-spectrum-scale-dns"
+  "ibm-spectrum-scale-csi"
+  "ibm-backup-restore"
+  "ibm-spectrum-protect-plus-ns"
+  "ibm-data-cataloging"
+  "baas"
+  "openshift-etcd"
+ )
+ 
+ # Get all namespaces with failed pods
+ local all_failed_pods=$(oc get pods -A --no-headers 2>/dev/null | egrep -v 'Running|Completed')
+ 
+ if [[ -z "$all_failed_pods" ]]; then
+  print info "${CHECK_PASS} No failed pods found in any namespace."
+  return 0
+ fi
+ 
+ # Check openshift-operator-lifecycle-manager namespace specifically
+ print_subsection
+ print info "Checking openshift-operator-lifecycle-manager namespace (OLM)..."
+ local olm_failed=$(oc get pods -n openshift-operator-lifecycle-manager --no-headers 2>/dev/null | egrep -v 'Running|Completed')
+ if [[ -n "$olm_failed" ]]; then
+  print warn "${CHECK_WARN} Found failed pods in openshift-operator-lifecycle-manager namespace:"
+  echo "$olm_failed"
+ else
+  print info "${CHECK_PASS} All OLM pods are healthy."
+ fi
+ 
+ # Process all namespaces and filter out already-checked ones
+ print_subsection
+ print info "Checking other namespaces for failed pods..."
+ 
+ local found_additional=0
+ local temp_file=$(mktemp)
+ 
+ # Group failed pods by namespace
+ echo "$all_failed_pods" | awk '{print $1}' | sort -u > "$temp_file"
+ 
+ while IFS= read -r namespace; do
+  # Skip if namespace is in checked list
+  local skip=0
+  for checked_ns in "${checked_namespaces[@]}"; do
+   if [[ "$namespace" == "$checked_ns" ]]; then
+    skip=1
+    break
+   fi
+  done
+  
+  # Skip openshift-operator-lifecycle-manager as we already checked it
+  if [[ "$namespace" == "openshift-operator-lifecycle-manager" ]]; then
+   skip=1
+  fi
+  
+  if [[ $skip -eq 0 ]]; then
+   local ns_failed_pods=$(echo "$all_failed_pods" | grep "^$namespace ")
+   if [[ -n "$ns_failed_pods" ]]; then
+    found_additional=1
+    local pod_count=$(echo "$ns_failed_pods" | wc -l)
+    print warn "${CHECK_WARN} Namespace: $namespace has $pod_count failed pod(s):"
+    echo "$ns_failed_pods" | awk '{printf "  - %s (Status: %s, Restarts: %s, Age: %s)\n", $2, $4, $5, $6}'
+    print_subsection
+   fi
+  fi
+ done < "$temp_file"
+ 
+ rm -f "$temp_file"
+ 
+ if [[ $found_additional -eq 0 ]]; then
+  print info "${CHECK_PASS} No additional failed pods found in unchecked namespaces."
+ else
+  print warn "${CHECK_WARN} Found failed pods in additional namespaces (see above)."
+  print info "Note: These may not be critical for upgrade, but should be investigated."
+ fi
 }
 
 rm -f ${REPORT} > /dev/null
@@ -1350,3 +1413,6 @@ elif [[ $# -eq 1 && "$1" == "help" ]]; then
 else
  usage	
 fi
+
+
+

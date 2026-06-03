@@ -6,7 +6,7 @@ NAMESPACE="openshift-ovn-kubernetes"
 
 error=false
 
-[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
+[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils.sh")
 
 if [[ $(oc get network/cluster -o jsonpath={.spec.networkType}) != "OVNKubernetes" ]]; then
   msg "This check only works for OVNKubernetes SDN"

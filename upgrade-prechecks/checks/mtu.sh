@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # description: Show the nodes' MTU for some interfaces
 
-[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
+[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils.sh")
 
 if oc auth can-i get network/cluster >/dev/null 2>&1; then
   network_type=$(oc get network/cluster -ojson | jq -r .status.networkType)

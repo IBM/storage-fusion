@@ -15,7 +15,7 @@ IFS=$'\n\t'
 cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1
 
 # shellcheck disable=SC1091
-source $(pwd)/utils
+source $(pwd)/utils.sh
 
 #trap cleanup SIGINT SIGTERM ERR EXIT
 export ERRORFILE=$(mktemp)

@@ -11,7 +11,7 @@
 # We concatenate all commands with || meaning it will stop if
 # some command fails (returns 0, so if the rule exist)
 
-[ -z "${UTILSFILE}" ] && source "$(dirname "${0}")/../utils"
+[ -z "${UTILSFILE}" ] && source "$(dirname "${0}")/../utils.sh"
 
 tmperrorfile=$(mktemp)
 trap "rm -f ${tmperrorfile}" EXIT
