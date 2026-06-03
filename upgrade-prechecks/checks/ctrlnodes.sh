@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # description: Checks if any controller nodes have had the NoSchedule taint removed
 
-[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
+[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils.sh")
 
 error=false
 errors=0  

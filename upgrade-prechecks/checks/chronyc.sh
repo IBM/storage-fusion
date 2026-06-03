@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# description: Checks if the workers have enough entropy
+# description: Checks if the worker clocks are synced using chronyc
 
-[ -z "${UTILSFILE}" ] && source "$(dirname "${0}")/../utils"
+[ -z "${UTILSFILE}" ] && source "$(dirname "${0}")/../utils.sh"
 
 tmperrorfile=$(mktemp)
 trap "rm -f ${tmperrorfile}" EXIT
 echo 0 >"${tmperrorfile}"
 
 if oc auth can-i debug node >/dev/null 2>&1; then
-  msg "Collecting entropy data... (${BLUE}using oc debug, it can take a while${NOCOLOR})"
+  msg "Collecting NTP data... (${BLUE}using oc debug, it can take a while${NOCOLOR})"
   
   # Initialize parallel job counter
   i=0
@@ -20,13 +20,14 @@ if oc auth can-i debug node >/dev/null 2>&1; then
     ((i++ == 0)) && wait
 
     (
+      # shellcheck disable=2016
       ocdebugorwait # Pause for no OC debug running
       
-      if ! ENTROPY=$(oc debug "${node}" -- chroot /host sh -c 'cat /proc/sys/kernel/random/entropy_avail' 2>/dev/null); then
+      if ! SOURCES=$(oc debug "${node}" -- chroot /host sh -c 'chronyc activity' 2>/dev/null | awk '/sources online/ { print $1 }'); then
         msg "${ORANGE}Error running oc debug in ${node}${NOCOLOR}"
       else
-        if [ -n "${ENTROPY}" ] && [ "${ENTROPY}" -lt 200 ]; then
-          msg "${RED}Low entropy in ${node}${NOCOLOR}"
+        if [ -n "${SOURCES}" ] && [ "${SOURCES}" -lt 1 ]; then
+          msg "${RED}Clock doesn't seem to be synced in ${node}${NOCOLOR}"
           echo 1 >"${tmperrorfile}"
         fi
       fi

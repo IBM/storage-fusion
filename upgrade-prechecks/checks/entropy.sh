@@ -1,35 +1,43 @@
 #!/usr/bin/env bash
-# description: Checks if more than 5 zombie processes exist on the hosts
+# description: Checks if the workers have enough entropy
 
-[ -z ${UTILSFILE} ] && source "$(dirname "${0}")/../utils"
+[ -z "${UTILSFILE}" ] && source "$(dirname "${0}")/../utils.sh"
 
 tmperrorfile=$(mktemp)
-trap "rm -f ${tmperrorfile}" EXIT  # Fixed variable reference for rm
-echo 0 >${tmperrorfile}
+trap "rm -f ${tmperrorfile}" EXIT
+echo 0 >"${tmperrorfile}"
 
 if oc auth can-i debug node >/dev/null 2>&1; then
-  msg "Collecting zombie processes... (${BLUE}using oc debug, it can take a while${NOCOLOR})"
+  msg "Collecting entropy data... (${BLUE}using oc debug, it can take a while${NOCOLOR})"
+  
+  # Initialize parallel job counter
+  i=0
+  
   # shellcheck disable=SC2016
   for node in $(oc get nodes -o go-template='{{range .items}}{{$node := .}}{{range .status.conditions}}{{if eq .type "Ready"}}{{if eq .status "True"}}node/{{$node.metadata.name}}{{"\n"}}{{end}}{{end}}{{end}}{{end}}'); do
     # See https://medium.com/@robert.i.sandor/getting-started-with-parallelization-in-bash-e114f4353691
     ((i = i % PARALLELJOBS))
     ((i++ == 0)) && wait
+
     (
       ocdebugorwait # Pause for no OC debug running
-      ZOMBIES=$(oc debug "${node}" -- chroot /host sh -c 'ps -ef | grep -c "[d]efunct"' 2>/dev/null)
-      if [ -n "${ZOMBIES}" ] && [ "${ZOMBIES}" -gt 0 ]; then
-        msg "${ORANGE}${ZOMBIES}${NOCOLOR} zombie processes found in ${node}"
-        if [ "${ZOMBIES}" -ge 5 ]; then
-          echo 1 >${tmperrorfile}
+      
+      if ! ENTROPY=$(oc debug "${node}" -- chroot /host sh -c 'cat /proc/sys/kernel/random/entropy_avail' 2>/dev/null); then
+        msg "${ORANGE}Error running oc debug in ${node}${NOCOLOR}"
+      else
+        if [ -n "${ENTROPY}" ] && [ "${ENTROPY}" -lt 200 ]; then
+          msg "${RED}Low entropy in ${node}${NOCOLOR}"
+          echo 1 >"${tmperrorfile}"
         fi
       fi
     ) &
   done
   wait
-  if [ "$(cat ${tmperrorfile})" -eq 1 ]; then
+  
+  if [ "$(cat "${tmperrorfile}")" -eq 1 ]; then
     errors=$((errors + 1))
     if [ -n "${ERRORFILE}" ]; then
-      echo "${errors}" >${ERRORFILE}
+      echo "${errors}" >"${ERRORFILE}"
     fi
     exit ${OCERROR}
   else

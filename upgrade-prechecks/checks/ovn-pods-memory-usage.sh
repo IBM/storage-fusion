@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # description: Checks if the memory usage of the OVN pods is under the LIMIT threshold
 
-[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils")
+[ -z ${UTILSFILE} ] && source $(echo "$(dirname ${0})/../utils.sh")
 
 error=false
 errors=0  
