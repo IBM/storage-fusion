@@ -1,4 +1,4 @@
-# Quickstart: Model as a Service on IBM Fusion with Red Hat OpenShift AI
+# Quickstart: Model as a Service on IBM Fusion
 
 Organizations adopting generative AI often need a secure, scalable, and governed way to host foundation models within their own infrastructure. Running models internally helps teams maintain control over data, access, performance, compliance, and operational costs while creating a consistent platform for enterprise AI workloads.
 
@@ -176,12 +176,17 @@ helm version
 
 The following procedure walks through repository access, storage credential setup, platform installation, model deployment, and endpoint validation.
 
-### Step 1: Clone the Repository
+### Step 1: Fork and Clone the Storage Fusion Repository
+The quickstart examples reference configurations from the storage-fusion repository. Fork this repository to your GitHub account and clone it locally.
 
-```bash
-git clone https://github.ibm.com/ProjectAbell/Fusion-AI.git
-cd Fusion-AI/quickstarts/model-as-a-service
+Fork the repository: Fork the storage-fusion repository
+
+Clone the forked copy of this repository:
 ```
+git clone git@github.com:<your-username>/storage-fusion.git
+cd storage-fusion/quickstarts/model-as-a-service
+```
+Note: The quickstarts/model-as-a-service directory is located under the AI/ parent directory within the storage-fusion repository (path: storage-fusion/AI/quickstarts/model-as-a-service).
 
 ### Step 2: Configure Storage Credentials
 
@@ -575,8 +580,6 @@ After completing the quickstart, the environment includes the following platform
 | **Gateway** | Intelligent routing | `openshift-ingress` |
 | **GPT-OSS-20B** | Code assistance model | `deploy-models-rhoai` |
 | **Monitoring** | Prometheus & Grafana | `openshift-monitoring` |
-
----
 
 ---
 
