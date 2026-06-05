@@ -1,20 +1,32 @@
-# installerNetworkValidation
+# openshift-fusion-mgmt-software-prechecks
 
 ## Overview
 
-[`installerNetworkValidation.py`](installerNetworkValidation.py) is an interactive Python-based network validation utility for HCI cluster installation preparation. It guides the user through installation-specific questions and validates registry access, certificate files, pull secrets, proxy-based connectivity, and required external endpoints.
+[`openshift-fusion-mgmt-software-prechecks.py`](openshift-fusion-mgmt-software-prechecks.py) is an interactive Python-based network validation utility for IBM Fusion HCI cluster installation preparation. It guides users through installation-specific questions with enhanced prompts and validates registry access, certificate files, pull secrets, proxy-based connectivity, and required external endpoints.
+
+**Version 2.0** includes significant usability improvements with enhanced error messages, progress indicators, contextual help, and a comprehensive validation summary report.
 
 The script supports two major installation modes:
 
-- Air-gapped installation
-- Connected installation
+- Air-gapped installation (disconnected/offline)
+- Connected installation (online with internet access)
 
-It also creates a log file named [`installer_validation.log`](installer_validation.log) during execution to record all actions, outcomes, warnings, and errors.
+It creates a log file named [`installer_validation.log`](installer_validation.log) during execution to record all actions, outcomes, warnings, and errors.
 
 ## Key Features
 
+### User Experience Enhancements (Version 2.0)
+- **Enhanced input prompts** with context, purpose, format examples, and requirements
+- **Actionable error messages** with possible causes and troubleshooting steps
+- **Informative success messages** with validation details and next steps
+- **Progress indicators** showing current step and validation progress
+- **Contextual help** explaining technical terms and choice implications
+- **Comprehensive summary report** at completion with installation readiness status
+- **Standard exit mechanism** using Ctrl+C (no longer requires typing "I want to exit")
+- **Validation result tracking** throughout execution for detailed reporting
+
+### Core Validation Capabilities
 - Interactive CLI prompts for installation setup
-- Graceful exit support by typing `I want to exit`
 - Logging of validation flow and outcomes
 - Registry reachability checks using sockets
 - Registry authentication testing with `podman login`
@@ -35,12 +47,12 @@ It also creates a log file named [`installer_validation.log`](installer_validati
 
 ## Prerequisites
 
-Before running [`installerNetworkValidation.py`](installerNetworkValidation.py), ensure the following are available on the system:
+Before running [`openshift-fusion-mgmt-software-prechecks.py`](openshift-fusion-mgmt-software-prechecks.py), ensure the following are available on the system:
 
 - Python 3
-- [`podman`](installerNetworkValidation.py:179)
-- [`openssl`](installerNetworkValidation.py:273)
-- [`curl`](installerNetworkValidation.py:324)
+- [`podman`](openshift-fusion-mgmt-software-prechecks.py:179)
+- [`openssl`](openshift-fusion-mgmt-software-prechecks.py:273)
+- [`curl`](openshift-fusion-mgmt-software-prechecks.py:324)
 
 The script also expects valid access to:
 - Container registries
@@ -54,31 +66,43 @@ The script is organized into the following major sections:
 
 ### Logging Setup
 
-- [`LOG_FILE`](installerNetworkValidation.py:27) defines the output log file
-- [`log_and_print()`](installerNetworkValidation.py:37) prints messages to the terminal and writes them to the log
+- [`LOG_FILE`](openshift-fusion-mgmt-software-prechecks.py:27) defines the output log file
+- [`log_and_print()`](openshift-fusion-mgmt-software-prechecks.py:37) prints messages to the terminal and writes them to the log
 
 ### Input Helper Functions
 
-- [`check_exit_command()`](installerNetworkValidation.py:54) exits the script when the user types the supported exit phrase
-- [`get_user_input()`](installerNetworkValidation.py:64) collects non-empty user input
-- [`get_password_input()`](installerNetworkValidation.py:87) securely captures passwords
-- [`get_choice_input()`](installerNetworkValidation.py:109) restricts user input to allowed options
+- [`print_section_header()`](openshift-fusion-mgmt-software-prechecks.py) displays formatted section headers with step numbers and descriptions
+- [`print_prompt()`](openshift-fusion-mgmt-software-prechecks.py) displays formatted input prompts with context, purpose, and format information
+- [`get_user_input()`](openshift-fusion-mgmt-software-prechecks.py) collects user input with enhanced prompts showing context, purpose, format, and notes
+- [`get_password_input()`](openshift-fusion-mgmt-software-prechecks.py) securely captures passwords with contextual information
+- [`get_choice_input()`](openshift-fusion-mgmt-software-prechecks.py) restricts user input to allowed options with detailed option descriptions
 
 ### Validation Functions
 
-- [`check_registry_reachability()`](installerNetworkValidation.py:143) checks socket-level connectivity to a registry
-- [`podman_login_test()`](installerNetworkValidation.py:179) validates registry login using Podman
-- [`podman_pull_test()`](installerNetworkValidation.py:209) validates image pull capability from a registry
-- [`validate_file_path()`](installerNetworkValidation.py:246) checks file existence and readability
-- [`validate_certificate()`](installerNetworkValidation.py:260) validates X.509 certificate content using OpenSSL
-- [`check_site_reachability()`](installerNetworkValidation.py:305) validates website access with optional proxy support
-- [`create_auth_file()`](installerNetworkValidation.py:343) creates an auth JSON file by merging pull-secret content with IBM entitlement credentials
-- [`validate_json_file()`](installerNetworkValidation.py:380) checks whether a file contains valid JSON
+All validation functions now include:
+- Progress indicators (e.g., "[1/3] Testing connectivity...")
+- Detailed success messages with configuration details
+- Actionable error messages with troubleshooting steps
+- Result tracking for summary report
+
+- [`check_registry_reachability()`](openshift-fusion-mgmt-software-prechecks.py) checks socket-level connectivity to a registry with detailed error diagnostics
+- [`podman_login_test()`](openshift-fusion-mgmt-software-prechecks.py) validates registry login using Podman with authentication troubleshooting
+- [`podman_pull_test()`](openshift-fusion-mgmt-software-prechecks.py) validates image pull capability from a registry with specific error scenarios
+- [`validate_file_path()`](openshift-fusion-mgmt-software-prechecks.py) checks file existence and readability with access troubleshooting
+- [`validate_certificate()`](openshift-fusion-mgmt-software-prechecks.py) validates X.509 certificate content using OpenSSL with format guidance
+- [`check_site_reachability()`](openshift-fusion-mgmt-software-prechecks.py) validates website access with optional proxy support (concise output format)
+- [`create_auth_file()`](openshift-fusion-mgmt-software-prechecks.py) creates an auth JSON file by merging pull-secret content with IBM entitlement credentials
+- [`validate_json_file()`](openshift-fusion-mgmt-software-prechecks.py) checks whether a file contains valid JSON with syntax troubleshooting
+
+### Result Tracking and Reporting
+
+- [`add_validation_result()`](openshift-fusion-mgmt-software-prechecks.py) tracks validation results by category and severity for summary report
+- [`print_validation_summary()`](openshift-fusion-mgmt-software-prechecks.py) generates comprehensive end-of-run summary with installation readiness status
 
 ### Main Execution Flow
 
-- [`main()`](installerNetworkValidation.py:403) orchestrates the full validation workflow
-- The script entry point starts execution in [`if __name__ == "__main__":`](installerNetworkValidation.py:829)
+- [`main()`](openshift-fusion-mgmt-software-prechecks.py:403) orchestrates the full validation workflow
+- The script entry point starts execution in [`if __name__ == "__main__":`](openshift-fusion-mgmt-software-prechecks.py:829)
 
 ## Functional Flow
 
@@ -200,7 +224,7 @@ Then it performs:
 
 - Pull-secret file existence validation
 - Pull-secret JSON syntax validation
-- Auth file creation through [`create_auth_file()`](installerNetworkValidation.py:343)
+- Auth file creation through [`create_auth_file()`](openshift-fusion-mgmt-software-prechecks.py:343)
 - Registry reachability checks for common registries
 
 It also prompts for optional ingress certificate and key file paths and validates them if provided.
@@ -210,7 +234,7 @@ It also prompts for optional ingress certificate and key file paths and validate
 ### Created during execution
 
 - [`installer_validation.log`](installer_validation.log)
-- [`authfile.json`](authfile.json) by default from [`create_auth_file()`](installerNetworkValidation.py:343)
+- [`authfile.json`](authfile.json) by default from [`create_auth_file()`](openshift-fusion-mgmt-software-prechecks.py:343)
 
 ### Referenced as input
 
@@ -223,7 +247,7 @@ It also prompts for optional ingress certificate and key file paths and validate
 From the project directory, run:
 
 ```bash
-python3 installerNetworkValidation.py
+python3 openshift-fusion-mgmt-software-prechecks.py
 ```
 
 ## Example Usage
@@ -236,17 +260,20 @@ python3 installerNetworkValidation.py
 
 ## Logging Behavior
 
-All major actions are both printed to the terminal and written to [`installer_validation.log`](installer_validation.log) through [`log_and_print()`](installerNetworkValidation.py:37).
+All major actions are both printed to the terminal and written to [`installer_validation.log`](installer_validation.log) through [`log_and_print()`](openshift-fusion-mgmt-software-prechecks.py:37).
 
 Sensitive fields such as passwords are masked in logs where applicable.
 
 ## Exit Behavior
 
-At any prompt, the user can type:
+Users can exit the script at any time by pressing **Ctrl+C**.
 
-`I want to exit`
+The script includes graceful interrupt handling that:
+- Logs the exit event
+- Displays a clean exit message
+- Terminates the program safely
 
-This is handled by [`check_exit_command()`](installerNetworkValidation.py:54), which logs the event and terminates the program cleanly.
+This standard exit mechanism (Ctrl+C) is more intuitive than the previous "I want to exit" text requirement.
 
 ## Error Handling
 
@@ -268,21 +295,61 @@ If an unexpected error occurs, it is logged and displayed to the user.
 
 ## Main Functions Reference
 
-- [`log_and_print()`](installerNetworkValidation.py:37)
-- [`check_exit_command()`](installerNetworkValidation.py:54)
-- [`get_user_input()`](installerNetworkValidation.py:64)
-- [`get_password_input()`](installerNetworkValidation.py:87)
-- [`get_choice_input()`](installerNetworkValidation.py:109)
-- [`check_registry_reachability()`](installerNetworkValidation.py:143)
-- [`podman_login_test()`](installerNetworkValidation.py:179)
-- [`podman_pull_test()`](installerNetworkValidation.py:209)
-- [`validate_file_path()`](installerNetworkValidation.py:246)
-- [`validate_certificate()`](installerNetworkValidation.py:260)
-- [`check_site_reachability()`](installerNetworkValidation.py:305)
-- [`create_auth_file()`](installerNetworkValidation.py:343)
-- [`validate_json_file()`](installerNetworkValidation.py:380)
-- [`main()`](installerNetworkValidation.py:403)
+### Logging and Display
+- [`log_and_print()`](openshift-fusion-mgmt-software-prechecks.py) - Logs messages to file and prints to screen
+- [`print_section_header()`](openshift-fusion-mgmt-software-prechecks.py) - Displays formatted section headers with step numbers
+- [`print_prompt()`](openshift-fusion-mgmt-software-prechecks.py) - Displays formatted input prompts with context
+
+### Input Functions
+- [`get_user_input()`](openshift-fusion-mgmt-software-prechecks.py) - Collects user input with enhanced prompts
+- [`get_password_input()`](openshift-fusion-mgmt-software-prechecks.py) - Securely captures passwords with context
+- [`get_choice_input()`](openshift-fusion-mgmt-software-prechecks.py) - Restricts input to valid options with descriptions
+
+### Validation Functions
+- [`check_registry_reachability()`](openshift-fusion-mgmt-software-prechecks.py) - Tests registry connectivity
+- [`podman_login_test()`](openshift-fusion-mgmt-software-prechecks.py) - Validates registry authentication
+- [`podman_pull_test()`](openshift-fusion-mgmt-software-prechecks.py) - Tests image pull capability
+- [`validate_file_path()`](openshift-fusion-mgmt-software-prechecks.py) - Checks file existence and readability
+- [`validate_certificate()`](openshift-fusion-mgmt-software-prechecks.py) - Validates X.509 certificates
+- [`check_site_reachability()`](openshift-fusion-mgmt-software-prechecks.py) - Tests website connectivity
+- [`create_auth_file()`](openshift-fusion-mgmt-software-prechecks.py) - Creates authentication file
+- [`validate_json_file()`](openshift-fusion-mgmt-software-prechecks.py) - Validates JSON file format
+
+### Result Tracking and Reporting
+- [`add_validation_result()`](openshift-fusion-mgmt-software-prechecks.py) - Tracks validation results
+- [`print_validation_summary()`](openshift-fusion-mgmt-software-prechecks.py) - Generates comprehensive summary report
+
+### Main Execution
+- [`main()`](openshift-fusion-mgmt-software-prechecks.py) - Main program entry point
 
 ## Summary
 
-[`installerNetworkValidation.py`](installerNetworkValidation.py) is a guided pre-installation validation tool for HCI environments. It helps verify that the required registries, certificates, credentials, pull secrets, proxies, and external endpoints are accessible before proceeding with cluster installation.
+[`openshift-fusion-mgmt-software-prechecks.py`](openshift-fusion-mgmt-software-prechecks.py) (Version 2.0) is an enhanced, user-friendly pre-installation validation tool for IBM Fusion HCI environments.
+
+### Key Improvements in Version 2.0
+
+**Enhanced User Experience:**
+- Clear, contextual input prompts with examples and requirements
+- Actionable error messages with troubleshooting steps
+- Detailed success messages explaining validation results
+- Progress indicators showing current step and completion status
+- Comprehensive summary report with installation readiness determination
+
+**Improved Communication:**
+- Standard exit mechanism (Ctrl+C) instead of typing "I want to exit"
+- Contextual help explaining technical terms and choices
+- Structured error messages with possible causes and solutions
+- Validation result tracking throughout execution
+
+**Better Guidance:**
+- Step-by-step progress through validation workflow
+- Clear indication of critical vs. warning vs. informational results
+- Specific troubleshooting commands for common issues
+- Next steps based on validation outcomes
+
+The tool helps verify that required registries, certificates, credentials, pull secrets, proxies, and external endpoints are accessible before proceeding with cluster installation, while providing clear guidance to resolve any issues discovered.
+
+## Version History
+
+- **Version 1.0**: Original implementation with basic prompts and error messages
+- **Version 2.0**: Enhanced usability with improved prompts, actionable error messages, progress indicators, contextual help, and comprehensive summary reporting
