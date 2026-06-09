@@ -12,7 +12,7 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 ### Issues Fixed
 1. 2.11 Spoke cannot connect to 2.13 Hub due to incorrect Kafka header 
-2. Fix broken 2.12.0.4 hotfix idp-agent-operator patch which causing invalidImage references for agent pods
+2. Fix broken hotfix idp-agent-operator patch which causing invalidImage references for agent pods
 
 ## Hotfix hotfix-2.11.0.10
 
