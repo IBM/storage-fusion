@@ -6,7 +6,15 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
-## Hotfix hotfix-2.11.0.10 (Latest)
+## Hotfix hotfix-2.11.0.11 (Latest)
+
+**Release Date:** June 9, 2026
+
+### Issues Fixed
+1. 2.11 Spoke cannot connect to 2.13 Hub due to incorrect Kafka header 
+2. Fix broken hotfix idp-agent-operator patch which causing invalidImage references for agent pods
+
+## Hotfix hotfix-2.11.0.10
 
 **Release Date:** May 7, 2026
 
