@@ -8,7 +8,7 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 ## Hotfix hotfix-2.11.0.11 (Latest)
 
-**Release Date:** June 10, 2026
+**Release Date:** June 9, 2026
 
 ### Issues Fixed
 1. 2.11 Spoke cannot connect to 2.13 Hub due to incorrect Kafka header 
