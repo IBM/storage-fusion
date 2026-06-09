@@ -359,7 +359,7 @@ transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:081c
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
-velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:726af6360d5a7cb4431cd3e4b903699a8684999e3a73b078b590493a5ca482db
+velero_img=cp.icr.io/cp/bnr/fbr-velero@sha256:e508118398e8037ecccf78ec767699c0c88fef14387724626b3e71e5516a5669
 set_velero_image ${velero_img}
 
 if [ -n "$HUB" ]; then
