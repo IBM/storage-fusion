@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=10
+HOTFIX_NUMBER=11
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -349,7 +349,7 @@ update_isf_operator_csv isf-operator.v2.11.0 "${isfdataprotection_img}"
 
 
 # update idp-agent-operator
-guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:7f1b66ca1876c23c3705da181499ba3ec015d90e3b8ea9b455af78763814cfa6
+guardianidpagentoperator_img=icr.io/cpopen/idp-agent-operator@sha256:f008e145162cdb28b552950f5fdf923ad9e89b75cd0b249f16773ad3de2f2549
 update_operator_csv ibm-dataprotectionagent.v2.11.0 ibm-dataprotectionagent-controller-manager "${guardianidpagentoperator_img}"
 
 update_guardian_configmap(){
@@ -392,7 +392,7 @@ update_transaction_manager_clusterrole(){
 update_guardian_configmap
 update_transaction_manager_clusterrole
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:04d60b053580cb0c8a6180c0fa51873f8ebc737d060d911889f97c3e1d7b2b7c
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:77a61e09b4197447f5cf25ab3beea1e42278a51fb42b7db7917ef6cd126008d1
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
