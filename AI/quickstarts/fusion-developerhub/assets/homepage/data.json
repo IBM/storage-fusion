@@ -1,0 +1,67 @@
+[
+  {
+    "title": "AI Tools",
+    "isExpanded": true,
+    "links": [
+      {
+        "label": "Fusion Tech Community",
+        "url": "https://ibm.github.io/storage-fusion/fusion-ai/overview/",
+        "iconUrl": "https://raw.githubusercontent.com/IBM/storage-fusion/main/AI/quickstarts/fusion-developerhub/assets/icons/fusion-logo.svg"
+      }
+    ]
+  },
+  {
+    "title": "CI/CD Tools",
+    "isExpanded": true,
+    "links": [
+      {
+        "label": "ArgoCD",
+        "url": "https://argoproj.github.io/cd/",
+        "iconUrl": "https://raw.githubusercontent.com/redhat-developer/rhdh/main/packages/app/public/homepage/icons/argo-icon-color.svg"
+      },
+      {
+        "label": "SonarQube",
+        "url": "https://www.sonarsource.com/open-source-editions/",
+        "iconUrl": "https://raw.githubusercontent.com/redhat-developer/rhdh/main/packages/app/public/homepage/icons/sonarqube.svg"
+      },
+      {
+        "label": "Quay.io",
+        "url": "https://quay.io/",
+        "iconUrl": "https://raw.githubusercontent.com/redhat-developer/rhdh/main/packages/app/public/homepage/icons/quay.svg"
+      }
+    ]
+  },
+  {
+    "title": "OpenShift Clusters",
+    "isExpanded": true,
+    "links": [
+      {
+        "label": "OpenShift",
+        "url": "https://docs.openshift.com/",
+        "iconUrl": "https://raw.githubusercontent.com/redhat-developer/rhdh/main/packages/app/public/homepage/icons/icons8/openshift.png"
+      }
+    ]
+  },
+  {
+    "title": "Monitoring Tools",
+    "isExpanded": false,
+    "links": [
+      {
+        "label": "Grafana",
+        "url": "https://grafana.com/",
+        "iconUrl": "https://raw.githubusercontent.com/redhat-developer/rhdh/main/packages/app/public/homepage/icons/icons8/system-task.png"
+      }
+    ]
+  },
+  {
+    "title": "Security Tools",
+    "isExpanded": false,
+    "links": [
+      {
+        "label": "GitHub Security",
+        "url": "https://docs.github.com/en/code-security",
+        "iconUrl": "https://raw.githubusercontent.com/redhat-developer/rhdh/main/packages/app/public/homepage/icons/icons8/security-checked.png"
+      }
+    ]
+  }
+]
