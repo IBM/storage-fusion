@@ -4,14 +4,79 @@
 
 [`openshift-fusion-mgmt-software-prechecks.py`](openshift-fusion-mgmt-software-prechecks.py) is an interactive Python-based network validation utility for IBM Fusion HCI cluster installation preparation. It guides users through installation-specific questions with enhanced prompts and validates registry access, certificate files, pull secrets, proxy-based connectivity, and required external endpoints.
 
-**Version 2.0** includes significant usability improvements with enhanced error messages, progress indicators, contextual help, and a comprehensive validation summary report.
-
 The script supports two major installation modes:
 
 - Air-gapped installation (disconnected/offline)
 - Connected installation (online with internet access)
 
 It creates a log file named [`installer_validation.log`](installer_validation.log) during execution to record all actions, outcomes, warnings, and errors.
+
+## USAGE
+
+### Quick Start Guide
+
+Follow these steps to run the pre-installation validation tool:
+
+#### 1. Clone the Repository
+
+```bash
+git clone https://github.com/IBM/storage-fusion.git
+cd storage-fusion/install-precheck-utility
+```
+
+#### 2. Install Prerequisites
+
+Ensure the following packages are installed on your system:
+
+```bash
+# For RHEL/CentOS/Fedora
+sudo dnf install -y python3 podman openssl curl
+
+# For Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y python3 podman openssl curl
+```
+
+**Required packages:**
+- **Python 3** - Script runtime
+- **podman** - Container registry authentication and image pull testing
+- **openssl** - Certificate validation
+- **curl** - Website/endpoint reachability checks
+
+#### 3. Run the Validation Script
+
+```bash
+python3 openshift-fusion-mgmt-software-prechecks.py
+```
+
+#### 4. Follow Interactive Prompts
+
+The script will guide you through:
+- Entering cluster name and base domain
+- Selecting installation type (Airgap or Connected)
+- Providing registry credentials and certificates (if applicable)
+- Validating firewall and proxy configurations (for connected installs)
+- Checking access to required endpoints
+
+#### 5. Review Results
+
+- **Console Output**: Real-time validation results with ✓ (success) or ✗ (failure) indicators
+- **Log File**: Detailed execution log saved to `installer_validation.log`
+- **Summary Report**: Comprehensive validation summary displayed at completion
+
+#### 6. Exit Anytime
+
+Press **Ctrl+C** to exit the script at any point.
+
+### What Gets Validated
+
+- ✓ Registry connectivity and authentication
+- ✓ Certificate validity
+- ✓ Pull secret format and content
+- ✓ Firewall status and registry access (for connected installs with firewall)
+- ✓ Proxy configuration and endpoint reachability (for connected installs with proxy)
+- ✓ Required external endpoints based on your configuration
+- ✓ GPU, China region, Metro DR, Call Home, and Remote Support requirements (if applicable)
 
 ## Key Features
 
@@ -38,6 +103,7 @@ It creates a log file named [`installer_validation.log`](installer_validation.lo
 - Conditional validation flows for:
   - Airgap install with single registry
   - Airgap install with multiple registries
+  - Connected install with firewall
   - Connected install with proxy
   - Connected install without proxy
   - GPU-enabled cluster requirements
@@ -85,6 +151,7 @@ All validation functions now include:
 - Actionable error messages with troubleshooting steps
 - Result tracking for summary report
 
+- [`check_firewall_status()`](openshift-fusion-mgmt-software-prechecks.py) checks if firewall is active/running on the system (firewalld, iptables, or ufw)
 - [`check_registry_reachability()`](openshift-fusion-mgmt-software-prechecks.py) checks socket-level connectivity to a registry with detailed error diagnostics
 - [`podman_login_test()`](openshift-fusion-mgmt-software-prechecks.py) validates registry login using Podman with authentication troubleshooting
 - [`podman_pull_test()`](openshift-fusion-mgmt-software-prechecks.py) validates image pull capability from a registry with specific error scenarios
@@ -164,7 +231,44 @@ If certificates are used, each certificate path is validated separately.
 
 ## 4. Connected Installation Flow
 
-When `connected_install` is selected, the script asks whether installation uses:
+When `connected_install` is selected, the script first asks whether installation uses:
+
+- Firewall
+- No firewall
+
+### Connected Install With Firewall
+
+If firewall is selected, the script performs:
+
+- **Firewall Status Check**: Validates that the firewall is active and running using one of the following methods:
+  - `firewall-cmd --state` (for firewalld)
+  - `iptables -L -n` (for iptables)
+  - `ufw status` (for ufw)
+
+- **Registry Access Validation**: Checks connectivity to all required registries through the firewall:
+  - `icr.io` - IBM Container Registry
+  - `cp.icr.io` - IBM Cloud Pak Container Registry
+  - `gcr.io` - Google Container Registry
+  - `registry.redhat.io` - Red Hat Container Registry
+  - `quay.io` - Quay.io Container Registry
+  - `cert-api.access.redhat.com` - Red Hat Certificate API
+  - `access.redhat.com` - Red Hat Access Portal
+  - `api.access.redhat.com` - Red Hat API Access
+  - `infogw.api.openshift.com` - OpenShift Info Gateway
+  - `console.redhat.com` - Red Hat Console (including `/api/ingress`)
+  - `cloud.redhat.com` - Red Hat Cloud (including `/api/ingress`)
+  - `mirror.openshift.com` - OpenShift Mirror
+  - `storage.googleapis.com` - Google Storage (for `/openshift-release`)
+  - `.apps.<cluster_name>.<base_domain>` - Cluster-specific apps domain
+  - `quayio-production-s3.s3.amazonaws.com` - Quay.io S3 Storage
+  - `api.openshift.com` - OpenShift API
+  - `art-rhcos-ci.s3.amazonaws.com` - RHCOS CI S3 Storage
+  - `registry.access.redhat.com` - Red Hat Registry Access
+  - `sso.redhat.com` - Red Hat SSO
+  - `esupport.ibm.com` - IBM Support Portal
+  - `ecurep.ibm.com` - IBM eCuRep
+
+After firewall checks, the script then asks whether installation uses:
 
 - Proxy
 - No proxy
@@ -306,6 +410,7 @@ If an unexpected error occurs, it is logged and displayed to the user.
 - [`get_choice_input()`](openshift-fusion-mgmt-software-prechecks.py) - Restricts input to valid options with descriptions
 
 ### Validation Functions
+- [`check_firewall_status()`](openshift-fusion-mgmt-software-prechecks.py) - Checks if firewall is active/running
 - [`check_registry_reachability()`](openshift-fusion-mgmt-software-prechecks.py) - Tests registry connectivity
 - [`podman_login_test()`](openshift-fusion-mgmt-software-prechecks.py) - Validates registry authentication
 - [`podman_pull_test()`](openshift-fusion-mgmt-software-prechecks.py) - Tests image pull capability
