@@ -5,12 +5,12 @@ site_description: Enterprise developer portal for IBM Fusion HCI - built on Red 
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Point to existing docs directory
-docs_dir: ../docs
+# Point to docs directory
+docs_dir: docs
 
 # Navigation - single quickstart file
 nav:
-  - Home: QUICKSTART.md
+  - Home: index.md
 
 theme:
   name: material

@@ -10,7 +10,7 @@ docs_dir: docs
 
 # Point to your actual markdown file
 nav:
-  - Home: Fusion_NVIDIA_VSS_Guide.md
+  - Home: index.md
 
 theme:
   name: material
