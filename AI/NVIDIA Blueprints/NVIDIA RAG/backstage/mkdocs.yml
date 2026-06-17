@@ -5,10 +5,10 @@ site_description: Deploy Retrieval-Augmented Generation applications on IBM Fusi
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Use current directory (where mkdocs.yml is located)
-docs_dir: .
+# Point to parent directory for docs
+docs_dir: ..
 
-# Point to your actual markdown file
+# Point to your actual markdown file in parent directory
 nav:
   - Home: Fusion_NVIDIA_RAG_Guide.md
 
@@ -28,3 +28,5 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+
+# Made with Bob

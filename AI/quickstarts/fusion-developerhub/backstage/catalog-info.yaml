@@ -2,7 +2,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: fusion-developer-hub-quickstart
-  title: Quickstart - Deploy Fusion Developer Hub on OpenShift
+  title: Quickstart - Fusion Developer Hub 
   description: |
     Deploy IBM Fusion Developer Hub, a production-ready enterprise developer portal built on Red Hat Developer Hub (Backstage) with deep integration into IBM Fusion's AI ecosystem.
     

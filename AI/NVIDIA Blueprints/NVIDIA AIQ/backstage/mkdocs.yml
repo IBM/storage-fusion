@@ -1,16 +1,16 @@
-site_name: Quickstart - Fusion Developer Hub
-site_description: Deploy Red Hat Developer Hub on IBM Fusion with AI integration
+site_name: NVIDIA AI-Q Blueprint on IBM Fusion
+site_description: Deploy NVIDIA AI-Q research assistant on IBM Fusion HCI for document-driven AI workflows
 
 # Point to the IBM storage-fusion repo for documentation
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Use current directory (where mkdocs.yml is located)
-docs_dir: .
+# Point to parent directory for docs
+docs_dir: ..
 
-# Point to your actual markdown file
+# Point to your actual markdown file in parent directory
 nav:
-  - Home: QUICKSTART.md
+  - Home: Fusion_NVIDIA_AIQ_Guide.md
 
 theme:
   name: material
@@ -28,3 +28,5 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+
+# Made with Bob
