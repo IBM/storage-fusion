@@ -1,16 +1,16 @@
-site_name: NVIDIA VSS Blueprint on IBM Fusion
-site_description: Deploy AI-powered video search and summarization on IBM Fusion HCI
+site_name: NVIDIA RAG Blueprint on IBM Fusion
+site_description: Deploy Retrieval-Augmented Generation applications on IBM Fusion HCI
 
 # Point to the IBM storage-fusion repo for documentation
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Point to parent directory for docs
-docs_dir: ..
+# Use current directory (where mkdocs.yml is located)
+docs_dir: .
 
-# Point to your actual markdown file in parent directory
+# Point to your actual markdown file
 nav:
-  - Home: Fusion_NVIDIA_VSS_Guide.md
+  - Home: Fusion_NVIDIA_RAG_Guide.md
 
 theme:
   name: material

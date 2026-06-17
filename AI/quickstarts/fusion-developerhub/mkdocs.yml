@@ -5,10 +5,10 @@ site_description: Deploy Red Hat Developer Hub on IBM Fusion with AI integration
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Point to parent directory for docs
-docs_dir: ..
+# Use current directory (where mkdocs.yml is located)
+docs_dir: .
 
-# Point to your actual markdown file in parent directory
+# Point to your actual markdown file
 nav:
   - Home: QUICKSTART.md
 
