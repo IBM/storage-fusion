@@ -1,0 +1,50 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fusion-gitops-quickstart
+  title: Quickstart - GitOps (ArgoCD) on IBM Fusion
+  description: |
+    Deploy a complete GitOps platform on IBM Fusion HCI with Red Hat OpenShift GitOps (ArgoCD), HashiCorp Vault for secret management, and External Secrets Operator for seamless secret synchronization.
+    
+    This quickstart provides a production-ready GitOps deployment with operator-based management for automated deployment and day-2 operations, integrated secret management with Vault and External Secrets Operator, high availability configuration for enterprise workloads, and comprehensive validation and diagnostic tooling. The platform enables declarative infrastructure management, automated application deployment, secure secret handling across multiple backends, and GitOps-driven continuous delivery workflows.
+  tags:
+    - fusion
+    - gitops
+    - argocd
+    - quickstart
+    - vault
+    - secrets
+    - platform
+    - openshift
+    - automation
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+    
+  links:
+    - url: https://community.ibm.com/community/user/blogs/christo-abraham/2026/05/27/fusion-gitops-quickstart
+      title: Read on IBM Tech Exchange
+      icon: article
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/quickstarts/
+      title: View on Fusion Tech Community
+      icon: web
+    - url: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/README.md
+      title: Complete deployment guide on GitHub
+      icon: docs
+    - url: https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/fusion-gitops
+      title: View source code
+      icon: github
+spec:
+  type: quickstart
+  lifecycle: production
+  owner: fusion-team
+  system: fusion-ai-platform
+  
+  providesApis: []
+  consumesApis: []
+  
+  dependsOn:
+    - resource:default/openshift
+    - resource:default/fusion-storage
+
+# Made with Bob
