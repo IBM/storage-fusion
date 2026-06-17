@@ -5,10 +5,10 @@ site_description: Deploy Retrieval-Augmented Generation applications on IBM Fusi
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Point to parent directory for docs
-docs_dir: ..
+# Point to docs directory
+docs_dir: docs
 
-# Point to your actual markdown file in parent directory
+# Point to your actual markdown file
 nav:
   - Home: Fusion_NVIDIA_RAG_Guide.md
 

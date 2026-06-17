@@ -1,14 +1,14 @@
 site_name: NVIDIA VSS Blueprint on IBM Fusion
-site_description: Deploy AI-powered video search and summarization on IBM Fusion HCI
+site_description: Deploy NVIDIA Video Search and Summarization on IBM Fusion HCI for AI-powered video analytics
 
 # Point to the IBM storage-fusion repo for documentation
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Point to parent directory for docs
-docs_dir: ..
+# Point to docs directory
+docs_dir: docs
 
-# Point to your actual markdown file in parent directory
+# Point to your actual markdown file
 nav:
   - Home: Fusion_NVIDIA_VSS_Guide.md
 

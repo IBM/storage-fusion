@@ -1,14 +1,14 @@
-site_name: Quickstart - Fusion Developer Hub
-site_description: Deploy Red Hat Developer Hub on IBM Fusion with AI integration
+site_name: IBM Fusion Developer Hub
+site_description: Enterprise developer portal for IBM Fusion HCI - built on Red Hat Developer Hub (Backstage)
 
 # Point to the IBM storage-fusion repo for documentation
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Point to parent directory for docs
-docs_dir: ..
+# Point to existing docs directory
+docs_dir: ../docs
 
-# Point to your actual markdown file in parent directory
+# Navigation - single quickstart file
 nav:
   - Home: QUICKSTART.md
 
@@ -20,7 +20,6 @@ theme:
 
 plugins:
   - techdocs-core
-
 
 # Safe markdown extensions
 markdown_extensions:

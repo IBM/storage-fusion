@@ -5,10 +5,10 @@ site_description: Deploy NVIDIA AI-Q research assistant on IBM Fusion HCI for do
 repo_url: https://github.com/IBM/storage-fusion
 repo_name: IBM/storage-fusion
 
-# Point to parent directory for docs
-docs_dir: ..
+# Point to docs directory
+docs_dir: docs
 
-# Point to your actual markdown file in parent directory
+# Point to your actual markdown file
 nav:
   - Home: Fusion_NVIDIA_AIQ_Guide.md
 
