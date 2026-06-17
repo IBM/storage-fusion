@@ -1,0 +1,52 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: nvidia-aiq-blueprint
+  title: How to deploy NVIDIA AIQ on IBM Fusion HCI
+  description: |
+    Deploy NVIDIA AI-Q, a research assistant blueprint that helps users extract insights from documents using generative AI. 
+    AI-Q combines RAG pipelines for document-based Q&A, GPU-accelerated LLM inference, multi-stage reasoning and validation, and a simple UI for running research workflows.
+    
+    Unlike a simple chatbot, AI-Q represents a full AI workflow, making it ideal for validating enterprise AI platforms like IBM Fusion HCI. The platform provides predictable GPU scheduling and utilization using Red Hat OpenShift with the NVIDIA GPU Operator, secure controlled deployment within enterprise infrastructure, and a unified platform for multiple AI blueprints on the same Red Hat OpenShift-based environment.
+  tags:
+    - nvidia
+    - aiq
+    - ai
+    - blueprint
+    - fusion
+    - gpu
+    - llm
+    - rag
+    - research-assistant
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+    
+  links:
+    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/02/15/unlocking-ai-powered-video-analytics-on-ibm-fusion
+      title: Read on IBM Tech Exchange
+      icon: article
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
+      title: View on Fusion Tech Community
+      icon: web
+    - url: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20AIQ/Fusion_NVIDIA_AIQ_Guide.md
+      title: Complete deployment guide on GitHub
+      icon: docs
+    - url: https://build.nvidia.com/nvidia/aiq
+      title: NVIDIA AI-Q Blueprint
+      icon: launch
+spec:
+  type: blueprint
+  lifecycle: production
+  owner: fusion-team
+  system: fusion-ai-platform
+  
+  providesApis: []
+  consumesApis: []
+  
+  dependsOn:
+    - resource:default/nvidia-gpu
+    - resource:default/fusion-storage
+    - component:default/nvidia-rag-blueprint
+
+# Made with Bob

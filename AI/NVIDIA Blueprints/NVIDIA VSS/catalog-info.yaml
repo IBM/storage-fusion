@@ -1,0 +1,53 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: nvidia-vss-blueprint
+  title: Guide to deploy NVIDIA VSS Blueprint on IBM Fusion HCI
+  description: |
+    Deploy NVIDIA Video Search and Summarization (VSS), an AI-powered visual intelligence blueprint that transforms video from passive recordings into intelligent, queryable knowledge bases.
+    
+    VSS delivers automated video summarization with timestamped key events, natural language Q&A over video content, semantic search that understands meaning and context, and flexible processing for both live streams and archived footage. The architecture combines Cosmos-Reason2 8B VLM for visual understanding, Llama 3.1 70B LLM for natural language reasoning, and NeMo embedding and reranking models for intelligent retrieval. Together, these components convert raw video into structured, searchable intelligence, making video data searchable, understandable, and actionable for enterprise use cases.
+  tags:
+    - nvidia
+    - vss
+    - ai
+    - blueprint
+    - fusion
+    - gpu
+    - video-analytics
+    - computer-vision
+    - llm
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+    
+  links:
+    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/02/15/unlocking-ai-powered-video-analytics-on-ibm-fusion
+      title: Read on IBM Tech Exchange
+      icon: article
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
+      title: View on Fusion Tech Community
+      icon: web
+    - url: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20VSS/Fusion_NVIDIA_VSS_Guide.md
+      title: Complete deployment guide on GitHub
+      icon: docs
+    - url: https://build.nvidia.com/nvidia/video-search-and-summarization
+      title: NVIDIA VSS Blueprint
+      icon: launch
+    - url: https://docs.nvidia.com/vss/latest/content/vss_dep_helm.html
+      title: NVIDIA VSS Documentation
+      icon: launch
+spec:
+  type: blueprint
+  lifecycle: production
+  owner: fusion-team
+  system: fusion-ai-platform
+  
+  providesApis: []
+  consumesApis: []
+  
+  dependsOn:
+    - resource:default/nvidia-gpu
+    - resource:default/fusion-storage
+
+# Made with Bob

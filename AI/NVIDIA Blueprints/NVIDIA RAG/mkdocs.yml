@@ -1,0 +1,30 @@
+site_name: NVIDIA RAG Blueprint on IBM Fusion
+site_description: Deploy Retrieval-Augmented Generation applications on IBM Fusion HCI
+
+# Point to the IBM storage-fusion repo for documentation
+repo_url: https://github.com/IBM/storage-fusion
+repo_name: IBM/storage-fusion
+
+# Use current directory (where mkdocs.yml is located)
+docs_dir: .
+
+# Point to your actual markdown file
+nav:
+  - Home: Fusion_NVIDIA_RAG_Guide.md
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+
+plugins:
+  - techdocs-core
+
+
+# Safe markdown extensions
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
