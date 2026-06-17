@@ -4,18 +4,18 @@ metadata:
   name: fusion-developer-hub
   title: Quickstart: Fusion Developer Hub
   description: |
-    IBM Fusion Developer Hub delivers exactly that—a production-ready enterprise developer portal built on Red Hat Developer Hub (Backstage) with deep integration into IBM Fusion's AI ecosystem.
-    This quickstart guide will walk you through deploying a fully functional, high-availability Developer Hub instance on OpenShift in under 15 minutes, complete with automatic AI model discovery, self-service templates, and enterprise-grade security.  
+    IBM Fusion Developer Hub delivers a production-ready enterprise developer portal built on Red Hat Developer Hub (Backstage) with deep integration into IBM Fusion's AI ecosystem.
+    
+    This quickstart guide walks you through deploying a fully functional, high-availability Developer Hub instance on OpenShift in under 15 minutes, complete with automatic AI model discovery, self-service templates, and enterprise-grade security. The platform provides operator-based management for automated deployment and day-2 operations, IBM Fusion AI integration with WatsonX and Granite models, high availability with multi-instance PostgreSQL, and enterprise security with RBAC and network policies.
   tags:
-    - nvidia
-    - vss
-    - ai
-    - blueprint
     - fusion
-    - gpu
-    - video-analytics
-    - computer-vision
-    - llm
+    - developer-hub
+    - backstage
+    - quickstart
+    - ai
+    - platform
+    - openshift
+    - rhdh
   annotations:
     backstage.io/techdocs-ref: dir:.
     github.com/project-slug: IBM/storage-fusion
@@ -30,6 +30,9 @@ metadata:
     - url: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/QUICKSTART.md
       title: Complete deployment guide on GitHub
       icon: docs
+    - url: https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/fusion-developerhub
+      title: View source code
+      icon: github
 spec:
   type: quickstart
   lifecycle: production
@@ -40,6 +43,5 @@ spec:
   consumesApis: []
   
   dependsOn:
-    - resource:default/gitops
+    - resource:default/openshift
     - resource:default/fusion-storage
-

@@ -1,5 +1,5 @@
-site_name: Quickstart: Fusion Developer Hub
-site_description: Deploy Fusion Developer Hub
+site_name: Quickstart - Fusion Developer Hub
+site_description: Deploy Red Hat Developer Hub on IBM Fusion with AI integration
 
 # Point to the IBM storage-fusion repo for documentation
 repo_url: https://github.com/IBM/storage-fusion
