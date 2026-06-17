@@ -224,6 +224,111 @@ def get_choice_input(prompt_message, valid_choices, field_name="", options_descr
 # VALIDATION FUNCTIONS
 # =========================
 
+def check_firewall_status():
+    """
+    Check if firewall is active/running on the system
+    Returns: True if firewall is active, False otherwise
+    """
+    log_and_print("Checking firewall status...", "INFO")
+    
+    try:
+        # Try to check firewall status using firewall-cmd (for firewalld)
+        result = subprocess.run(
+            "firewall-cmd --state",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        
+        if result.returncode == 0 and "running" in result.stdout.lower():
+            print(f"  ✓ Firewall is ACTIVE (firewalld)")
+            logging.info("Firewall is active (firewalld)")
+            
+            add_validation_result(
+                category='Firewall Status',
+                test='check_firewall_status',
+                status='passed',
+                message='Firewall is active and running',
+                details={'service': 'firewalld'},
+                severity='info'
+            )
+            return True
+        
+        # Try iptables if firewalld is not running
+        result = subprocess.run(
+            "sudo iptables -L -n | head -5",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        
+        if result.returncode == 0 and result.stdout:
+            print(f"  ✓ Firewall is ACTIVE (iptables)")
+            logging.info("Firewall is active (iptables)")
+            
+            add_validation_result(
+                category='Firewall Status',
+                test='check_firewall_status',
+                status='passed',
+                message='Firewall is active and running',
+                details={'service': 'iptables'},
+                severity='info'
+            )
+            return True
+        
+        # Check ufw (Ubuntu firewall)
+        result = subprocess.run(
+            "sudo ufw status",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        
+        if result.returncode == 0 and "active" in result.stdout.lower():
+            print(f"  ✓ Firewall is ACTIVE (ufw)")
+            logging.info("Firewall is active (ufw)")
+            
+            add_validation_result(
+                category='Firewall Status',
+                test='check_firewall_status',
+                status='passed',
+                message='Firewall is active and running',
+                details={'service': 'ufw'},
+                severity='info'
+            )
+            return True
+        
+        print(f"  ⚠ WARNING: Could not determine firewall status")
+        print(f"    Please verify firewall is configured correctly")
+        logging.warning("Could not determine firewall status")
+        
+        add_validation_result(
+            category='Firewall Status',
+            test='check_firewall_status',
+            status='warning',
+            message='Could not determine firewall status',
+            details={},
+            severity='warning'
+        )
+        return False
+        
+    except Exception as e:
+        print(f"  ✗ ERROR checking firewall status: {str(e)}")
+        logging.error(f"Error checking firewall status: {str(e)}")
+        
+        add_validation_result(
+            category='Firewall Status',
+            test='check_firewall_status',
+            status='failed',
+            message=f'Error checking firewall: {str(e)}',
+            details={},
+            severity='warning'
+        )
+        return False
+
 def check_registry_reachability(registry_url):
     """
     Check if registry URL is reachable from this machine
@@ -1116,6 +1221,56 @@ def main():
     # =========================
     elif type_of_install == "connected_install":
         print("\n--- Connected Installation Configuration ---")
+        
+        # Ask about firewall
+        print("\n1. Cluster Installation will be with firewall")
+        print("2. Cluster Installation will be without firewall")
+        
+        firewall_choice = get_choice_input("Is this installation with Firewall (1 or 2): ", ['1', '2'])
+        
+        if firewall_choice == '1':
+            is_firewall_used = True
+            log_and_print("Installation will use firewall", "INFO")
+            
+            # Check if firewall is up
+            print("\n--- Checking Firewall Status ---")
+            check_firewall_status()
+            
+            # Check access to required registries through firewall
+            print("\n--- Validating Registry Access Through Firewall ---")
+            firewall_registries = [
+                "icr.io",
+                "cp.icr.io",
+                "gcr.io",
+                "registry.redhat.io",
+                "quay.io",
+                "cdn01.quay.io",
+                "cdn02.quay.io",
+                "cdn03.quay.io",
+                "openshiftapps.com",
+                "cert-api.access.redhat.com",
+                "access.redhat.com",
+                "api.access.redhat.com",
+                "infogw.api.openshift.com",
+                "console.redhat.com",
+                "cloud.redhat.com",
+                "mirror.openshift.com",
+                "storage.googleapis.com",
+                f".apps.{cluster_name}.{base_domain}",
+                "quayio-production-s3.s3.amazonaws.com",
+                "api.openshift.com",
+                "art-rhcos-ci.s3.amazonaws.com",
+                "registry.access.redhat.com",
+                "sso.redhat.com",
+                "esupport.ibm.com",
+                "ecurep.ibm.com"
+            ]
+            
+            for registry in firewall_registries:
+                check_site_reachability(registry)
+        else:
+            is_firewall_used = False
+            log_and_print("Installation will NOT use firewall", "INFO")
         
         # Ask about proxy
         print("\n1. Cluster Installation will be with proxy")
