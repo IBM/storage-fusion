@@ -1,0 +1,45 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fusion-developer-hub
+  title: Quickstart: Fusion Developer Hub
+  description: |
+    IBM Fusion Developer Hub delivers exactly that—a production-ready enterprise developer portal built on Red Hat Developer Hub (Backstage) with deep integration into IBM Fusion's AI ecosystem.
+    This quickstart guide will walk you through deploying a fully functional, high-availability Developer Hub instance on OpenShift in under 15 minutes, complete with automatic AI model discovery, self-service templates, and enterprise-grade security.  
+  tags:
+    - nvidia
+    - vss
+    - ai
+    - blueprint
+    - fusion
+    - gpu
+    - video-analytics
+    - computer-vision
+    - llm
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+    
+  links:
+    - url: https://community.ibm.com/community/user/blogs/anushka-jaiswal/2026/05/29/quickstart-developer-hub-on-ibm-fusion-with-redhat
+      title: Read on IBM Tech Exchange
+      icon: article
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/quickstarts/
+      title: View on Fusion Tech Community
+      icon: web
+    - url: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/QUICKSTART.md
+      title: Complete deployment guide on GitHub
+      icon: docs
+spec:
+  type: quickstart
+  lifecycle: production
+  owner: fusion-team
+  system: fusion-ai-platform
+  
+  providesApis: []
+  consumesApis: []
+  
+  dependsOn:
+    - resource:default/gitops
+    - resource:default/fusion-storage
+

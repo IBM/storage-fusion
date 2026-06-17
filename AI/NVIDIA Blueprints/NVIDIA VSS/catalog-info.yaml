@@ -50,4 +50,3 @@ spec:
     - resource:default/nvidia-gpu
     - resource:default/fusion-storage
 
-# Made with Bob
