@@ -1,40 +1,42 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: fusion-developer-hub-quickstart
-  title: Quickstart: Fusion Developer Hub
+  name: nvidia-aiq-blueprint
+  title: How to deploy NVIDIA AIQ on IBM Fusion HCI
   description: |
-    IBM Fusion Developer Hub delivers a production-ready enterprise developer portal built on Red Hat Developer Hub (Backstage) with deep integration into IBM Fusion's AI ecosystem.
+    Deploy NVIDIA AI-Q, a research assistant blueprint that helps users extract insights from documents using generative AI. 
+    AI-Q combines RAG pipelines for document-based Q&A, GPU-accelerated LLM inference, multi-stage reasoning and validation, and a simple UI for running research workflows.
     
-    This quickstart guide walks you through deploying a fully functional, high-availability Developer Hub instance on OpenShift in under 15 minutes, complete with automatic AI model discovery, self-service templates, and enterprise-grade security. The platform provides operator-based management for automated deployment and day-2 operations, IBM Fusion AI integration with WatsonX and Granite models, high availability with multi-instance PostgreSQL, and enterprise security with RBAC and network policies.
+    Unlike a simple chatbot, AI-Q represents a full AI workflow, making it ideal for validating enterprise AI platforms like IBM Fusion HCI. The platform provides predictable GPU scheduling and utilization using Red Hat OpenShift with the NVIDIA GPU Operator, secure controlled deployment within enterprise infrastructure, and a unified platform for multiple AI blueprints on the same Red Hat OpenShift-based environment.
   tags:
-    - fusion
-    - developer-hub
-    - backstage
-    - quickstart
+    - nvidia
+    - aiq
     - ai
-    - platform
-    - openshift
-    - rhdh
+    - blueprint
+    - fusion
+    - gpu
+    - llm
+    - rag
+    - research-assistant
   annotations:
     backstage.io/techdocs-ref: dir:.
     github.com/project-slug: IBM/storage-fusion
     
   links:
-    - url: https://community.ibm.com/community/user/blogs/anushka-jaiswal/2026/05/29/quickstart-developer-hub-on-ibm-fusion-with-redhat
+    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/02/15/unlocking-ai-powered-video-analytics-on-ibm-fusion
       title: Read on IBM Tech Exchange
       icon: article
-    - url: https://ibm.github.io/storage-fusion/fusion-ai/quickstarts/
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
       title: View on Fusion Tech Community
       icon: web
-    - url: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/QUICKSTART.md
+    - url: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20AIQ/Fusion_NVIDIA_AIQ_Guide.md
       title: Complete deployment guide on GitHub
       icon: docs
-    - url: https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/fusion-developerhub
-      title: View source code
-      icon: github
+    - url: https://build.nvidia.com/nvidia/aiq
+      title: NVIDIA AI-Q Blueprint
+      icon: launch
 spec:
-  type: quickstart
+  type: blueprint
   lifecycle: production
   owner: fusion-team
   system: fusion-ai-platform
@@ -43,5 +45,6 @@ spec:
   consumesApis: []
   
   dependsOn:
-    - resource:default/openshift
+    - resource:default/nvidia-gpu
     - resource:default/fusion-storage
+    - component:default/nvidia-rag-blueprint
