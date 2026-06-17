@@ -34,7 +34,7 @@ metadata:
       title: View source code
       icon: github
 spec:
-  type: blueprint
+  type: quickstart
   lifecycle: production
   owner: fusion-team
   system: fusion-ai-platform
