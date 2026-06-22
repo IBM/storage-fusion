@@ -108,20 +108,7 @@ main() {
 
 	patch_ceph_csi_drivers
 
-	# Deploy IBM Storage Scale if not already installed
-	if is_scale_deployed; then
-		logger success "IBM Storage Scale is already deployed."
-	else
-		logger info "IBM Storage Scale not detected. Deploying..."
-		deploy_scale_service
-	fi
-
-	logger info "Configuring CNSA with $FILESYSTEM_NAME filesystem and $FILESYSTEM_CAPACITY size..."
-	ensure_project "$LOCAL_STORAGE_PROJECT"
-
 	create_scale_rbd_sc
-	create_pvc_local_disks
-	create_expose_rbd_daemonset
 
 	# Create scale cluster if not exist
 	if ! is_scale_cluster_created; then
@@ -131,27 +118,10 @@ main() {
 
 	verify_scale_cluster
 
-	get_device_ids_for_local_disks
+	create_scale_rbd_sc
 
-	patch_device_regex_in_scale_cluster
-
-	ensure_local_disks
-
-	if ! is_fs_created; then
-		create_fs
-	fi
-	verify_fs
-	patch_scale_csi_driver
-
-	validate_local_disks_usage
-
-	# Set up AFM
-	configure_afm
-	verify_afm_config
-
-	scale_set_config "syncReadWFConfig" "yes"
-	scale_set_config "afmPtrashOpt" "3"
-	logger success "Scale AFM config set"
+	# HACK: Workaround for missing cas-operator RBAC for labeling nodes
+	ensure_node_labeling_rbac
 
 	# Install CAS if not already installed
 	if [[ -z "$(is_fsi_deployed "$CAS_SERVICE_NAME")" ]]; then
@@ -166,13 +136,11 @@ main() {
 	logger info "Patching CasInstall"
 	patch_cas_install "${CAS_NAMESPACE}" "${CAS_SERVICE_NAME}"
 
+	patch_scale_csi_driver
+
 	wait_for_fsi "${CAS_SERVICE_NAME}" "templates/fusion/content_aware_storage.yaml" "${CAS_SERVICE_TIMEOUT}"
 
 	delete_scale_rbd_sc
-
-	# Create Scale Watch configuration for CAS
-	configure_scale_watch "${CAS_NAMESPACE}" "${FILESYSTEM_NAME}"
-	logger success "Scale watch configured"
 
 	logger success "Local Data Caching has been successfully configured for CAS! 🎉"
 }

@@ -198,7 +198,14 @@ EOF
 create_scale_cluster() {
 	logger info "Creating Spectrum Scale cluster..."
 
-	if envsubst <templates/spectrum_scale_cluster.yaml | oc apply -f - >/dev/null 2>&1; then
+	local yaml_content
+	yaml_content=$(envsubst <templates/spectrum_scale_cluster.yaml)
+
+	if [[ "${SCALE_CLUSTER_USE_KMM}" == "true" ]]; then
+		yaml_content=$(echo "$yaml_content" | yq eval '.spec.gpfsModuleManagement = {"kmm": {}}' -)
+	fi
+
+	if echo "$yaml_content" | oc apply -f - >/dev/null 2>&1; then
 		logger success "Spectrum Scale cluster creation initiated"
 	else
 		logger error "Failed to apply Spectrum Scale cluster manifest."

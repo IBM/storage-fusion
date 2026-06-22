@@ -44,7 +44,9 @@ wait_for_delete() {
 		any_exist=false
 		local existing_resources=""
 		for resource in "${resources[@]}"; do
-			if oc get "${resource}" -n "${namespace}" &> /dev/null; then
+			local count
+			count=$(oc get "${resource}" -n "${namespace}" --no-headers=true 2>/dev/null | wc -l)
+			if [[ "${count}" -gt 0 ]]; then
 				any_exist=true
 				existing_resources="${existing_resources} ${resource}"
 			fi
@@ -86,14 +88,24 @@ cleanup_cnsa() {
 
 	oc scale deployment --replicas=0 isf-cns-operator-controller-manager -n "$FUSION_NAMESPACE"
 
-	oc label -n "${SCALE_NAMESPACE}" filesystem "${FILESYSTEM_NAME}" scale.spectrum.ibm.com/allowDelete=
-	envsubst <templates/filesystem.yaml | oc delete -f - --ignore-not-found=true
-	wait_for_delete "${SCALE_NAMESPACE}" "filesystem/${FILESYSTEM_NAME}"
+	# Check if filesystem exists and get deviceVolumes
+	FS_HAS_DEVICE_VOLUMES=$(oc get filesystem "${FILESYSTEM_NAME}" -n "${SCALE_NAMESPACE}" -o jsonpath='{.spec.local.pools[*].deviceVolumes}' 2>/dev/null)
+	FS_EXISTS=$?
 
-	oc_nodes_cmd "$(oc get no -l scale=true -o name)" 'rm -rf /var/mmfs; rm -rf /usr/lpp/mmfs; rm -rf /var/adm/ras; rmmod tracedev mmfs26 mmfslinux;'
+	# Proceed with filesystem cleanup if it exists
+	if [[ $FS_EXISTS -eq 0 ]]; then
+		oc label -n "${SCALE_NAMESPACE}" filesystem "${FILESYSTEM_NAME}" scale.spectrum.ibm.com/allowDelete=
+		envsubst <templates/filesystem.yaml | oc delete -f - --ignore-not-found=true
+		wait_for_delete "${SCALE_NAMESPACE}" "filesystem/${FILESYSTEM_NAME}"
 
-	oc delete localdisk disk0 disk1 disk2 -n "$SCALE_NAMESPACE" --ignore-not-found=true
-	wait_for_delete "${SCALE_NAMESPACE}" "localdisk/disk0"
+		# Only delete localdisks if no deviceVolumes were defined in the Filesystem CR
+		if [[ -z "$FS_HAS_DEVICE_VOLUMES" ]]; then
+			oc delete localdisk disk0 disk1 disk2 -n "$SCALE_NAMESPACE" --ignore-not-found=true
+			wait_for_delete "${SCALE_NAMESPACE}" "localdisk/disk0" "localdisk/disk1" "localdisk/disk2"
+		fi
+	fi
+
+	oc_nodes_cmd "$(oc get no -o name)" 'rm -rf /var/mmfs; rm -rf /usr/lpp/mmfs; rm -rf /var/adm/ras; rm -rf /var/lib/firmware; rm -rf /mnt/'"${FILESYSTEM_NAME}"'; rmmod tracedev mmfs26 mmfslinux;'
 
 	if [[ $ENV == "HCI" ]]; then
 		oc delete "$FUSION_SERVICE_INSTANCE_CR" "$SCALE_SERVICE_NAME" -n "$FUSION_NAMESPACE" --ignore-not-found=true
@@ -105,6 +117,8 @@ cleanup_cnsa() {
 
 	oc delete clusters.scale.spectrum.ibm.com "${SCALE_NAMESPACE}" -n "$SCALE_NAMESPACE" --ignore-not-found=true
 	wait_for_delete "${SCALE_NAMESPACE}" "clusters.scale.spectrum.ibm.com/${SCALE_NAMESPACE}"
+
+	oc delete modules.kmm.sigs.x-k8s.io -n "${SCALE_NAMESPACE}" gpfs-kmod --ignore-not-found=true
 
 	oc label node --all scale.spectrum.ibm.com/nsdFailureGroup- scale.spectrum.ibm.com/nsdFailureGroupMappingType-
 
@@ -118,13 +132,20 @@ cleanup_cnsa() {
 
 	oc label node --all "scale-" "${SCALE_DAEMON_LABEL}-" "${SCALE_IMAGE_DIGEST_LABEL}-" "${SCALE_ROLE_LABEL}-" "${SCALE_DESIGNATION_LABEL}-"
 
-	envsubst <templates/daemonset_expose_rbd.yaml | oc delete -f - --ignore-not-found=true
-	envsubst <templates/pvc_local_disks.yaml | oc delete -f - --ignore-not-found=true
-	oc delete project "$LOCAL_STORAGE_PROJECT" --ignore-not-found=true
-	oc delete project "$SCALE_NAMESPACE" --ignore-not-found=true
-	oc delete project "$SCALE_NAMESPACE-dns" --ignore-not-found=true
-	oc delete project "$SCALE_CSI_NAMESPACE" --ignore-not-found=true
-	oc delete project "$SCALE_OPERATOR_NAMESPACE" --ignore-not-found=true
+	# Skip local storage cleanup if filesystem exists and has device volumes
+	if [[ $FS_EXISTS -eq 0 && -n "$FS_HAS_DEVICE_VOLUMES" ]]; then
+		echo "Skipping local storage cleanup - filesystem with device volumes was found"
+	else
+		envsubst <templates/daemonset_expose_rbd.yaml | oc delete -f - --ignore-not-found=true
+		envsubst <templates/pvc_local_disks.yaml | oc delete -f - --ignore-not-found=true
+		oc delete project "$LOCAL_STORAGE_PROJECT" --ignore-not-found=true
+	fi
+	oc delete project "$SCALE_NAMESPACE" --ignore-not-found=true --wait=false
+	oc delete project "$SCALE_NAMESPACE-dns" --ignore-not-found=true --wait=false
+	oc delete project "$SCALE_CSI_NAMESPACE" --ignore-not-found=true --wait=false
+	oc delete project "$SCALE_OPERATOR_NAMESPACE" --ignore-not-found=true --wait=false
+
+	wait_for_delete "${SCALE_NAMESPACE}" "pods"
 
 	oc scale deployment --replicas=1 isf-cns-operator-controller-manager -n "$FUSION_NAMESPACE"
 	oc_delete_scale_sc_pvs
