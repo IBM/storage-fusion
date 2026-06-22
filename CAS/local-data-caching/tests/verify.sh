@@ -7,7 +7,9 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 # Load Global Constants
 #========================================
 set -a
+# shellcheck source=lib/constants.sh
 source "$ROOT_DIR/lib/constants.sh"
+# shellcheck source=config/config.env
 source "$ROOT_DIR/config/config.env"
 set +a
 

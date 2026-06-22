@@ -12,13 +12,8 @@
 
 set -u
 
-# shellcheck source=/dev/null
+# shellcheck source=bin/common.sh
 source "bin/common.sh"
-
-echo
-echo "================================================================="
-echo "Cleanup odf"
-echo "================================================================="
 
 result=$(oc get ns openshift-storage --no-headers 2>/dev/null | wc -l | tr -d ' ')
 if [[ $result -eq 0 ]]; then
@@ -132,16 +127,16 @@ else
 	# 	fi
 	# fi
 
-	printf "\n------delete storagesystem------\n"
-	## delete storagesystem
-	result=$(oc get storagesystem -n openshift-storage --no-headers 2>/dev/null | wc -l | tr -d ' ')
+	printf "\n------delete storagecluster------\n"
+	## delete storagecluster
+	result=$(oc get storagecluster -n openshift-storage --no-headers 2>/dev/null | wc -l | tr -d ' ')
 	if [[ $result -eq 0 ]]; then
-		info "There is no storage system"
+		info "There is no storage cluster"
 	else
 		# wait for 5 mins for storage cluster deletion
 		# oc wait --for=delete storagesystem ocs-storagecluster-storagesystem -n openshift-storage --timeout=300s
 
-		oc delete -n openshift-storage storagesystem --all --wait=true
+		oc delete -n openshift-storage storagecluster --all --wait=true
 		if [[ $? -ge 1 ]]; then
 			error "Storage system couldn't be deleted"
 			exit 1
@@ -220,16 +215,6 @@ if [[ $result == *$encryptedflag* ]]; then
 	# info $(echo $result | grep -E 'Starting|dmcrypt')
 else
 	info "Encryption is not enabled or already cleaned up"
-fi
-
-printf "\n------delete localvolumeset------\n"
-result=$(oc get localvolumeset -n openshift-local-storage --no-headers 2>/dev/null | wc -l | tr -d ' ')
-if [[ $result -eq 0 ]]; then
-	info "There is no localvolumeset detected"
-else
-	info "localvolumeset detected, start to remove local storage"
-	CURRENT_DIR=$(cd "$(dirname "$0")" && pwd)
-	"$CURRENT_DIR"/delete-local-storage.sh
 fi
 
 printf "\n------check pv in released state------\n"
