@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# shellcheck disable=SC2034
 #========================================
 # WARNING!
 #========================================
@@ -8,6 +9,12 @@
 #  should not be changed by the user
 #  unless they know what they're doing.
 #========================================
+
+# GUARD CLAUSE: Prevent sourcing this file multiple times
+if [[ -n "${LOADED_CONSTANTS_SH:-}" ]]; then
+    return 0
+fi
+export LOADED_CONSTANTS_SH=1
 
 #========================================
 # OpenShift Configuration
@@ -20,6 +27,10 @@ EXPECTED_NODE_COUNT=3
 WORKER_ROLE="node-role.kubernetes.io/worker"
 MASTER_ROLE="node-role.kubernetes.io/master"
 CONTROL_ROLE="node-role.kubernetes.io/control-plane"
+
+WORKER_MATCH="Exists:${WORKER_ROLE}"
+MASTER_MATCH="Exists:${MASTER_ROLE}"
+CONTROL_MATCH="Exists:${CONTROL_ROLE}"
 
 #========================================
 # Red Hat Catalog Configuration
@@ -123,7 +134,7 @@ DEFAULT_FS_SIZE="250Gi"
 # LOCAL_DISK_PVC Configuration
 #========================================
 LOCAL_DISK_PVC_ACCESS_MODE="ReadWriteMany"
-LOCAL_DISK_PVC_STORAGE_CLASS="ocs-storagecluster-ceph-rbd"
+LOCAL_DISK_PVC_STORAGE_CLASS_SOURCE="ocs-storagecluster-ceph-rbd"
 LOCAL_DISK_PVC_VOLUME_MODE="Block"
 NO_OF_RBD_PVCS=3
 

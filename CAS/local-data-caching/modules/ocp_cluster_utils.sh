@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -eu
 
+# GUARD CLAUSE: Prevent sourcing this file multiple times
+if [[ -n "${LOADED_OCP_UTILS_SH:-}" ]]; then
+    return 0
+fi
+export LOADED_OCP_UTILS_SH=1
+
 #----------------------------------------
 # Function: Check cluster connectivity
 #----------------------------------------
@@ -28,8 +34,7 @@ get_ocp_version() {
 # Function: Check if OCP version is supported (>= target)
 #----------------------------------------
 is_supported_ocp_version() {
-	local current_version
-	current_version=$(get_ocp_version)
+	local current_version="$1"
 
 	if [[ "$(printf '%s\n%s\n' "$current_version" "$OCP_TOLERATED_VERSION" | sort -V | head -n1)" == "$current_version" ]] &&
 		[[ "$current_version" != "$OCP_TOLERATED_VERSION" ]]; then
@@ -67,8 +72,7 @@ get_nodes() {
 # Function: Count nodes
 #----------------------------------------
 count_nodes() {
-	local nodes=$(get_nodes)
-	echo "$nodes" | wc -l | tr -d ' '
+	get_nodes | wc -l | tr -d ' '
 }
 
 #----------------------------------------
@@ -172,5 +176,5 @@ get_node_for_pod() {
 #----------------------------------------
 get_pv_from_pvc() {
 	local pvc="$1"
-	oc get pvc "$pvc" -n $LOCAL_STORAGE_PROJECT -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo ""
+	oc get pvc "$pvc" -n "${LOCAL_STORAGE_PROJECT}" -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo ""
 }

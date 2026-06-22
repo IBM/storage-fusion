@@ -4,9 +4,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 set -a
+# shellcheck source=lib/constants.sh
 source "$ROOT_DIR/lib/constants.sh"
+# shellcheck source=config/config.env
 source "$ROOT_DIR/config/config.env"
 set +a
+
+# shellcheck source=modules/df_utils.sh
+source "$ROOT_DIR/modules/df_utils.sh"
 
 LOG_DIR="./logs"
 LOG_FILE="$LOG_DIR/cleanup-data-cache-$(date +'%Y%m%d_%H%M%S').log"
@@ -31,24 +36,48 @@ echo "Fusion environment: ${ENV}"
 
 wait_for_delete() {
 	local namespace="$1"
-	local resource="$2"
+	shift
+	local resources=("$@")
 
-	while oc get "${resource}" -n "${namespace}" &> /dev/null; do
-		echo "Waiting for resource to delete... (10s)"
-		sleep 10
+	local any_exist=true
+	while $any_exist; do
+		any_exist=false
+		local existing_resources=""
+		for resource in "${resources[@]}"; do
+			if oc get "${resource}" -n "${namespace}" &> /dev/null; then
+				any_exist=true
+				existing_resources="${existing_resources} ${resource}"
+			fi
+		done
+		if $any_exist; then
+			echo "Waiting for resource(s) to delete:${existing_resources} (10s)"
+			sleep 10
+		fi
+	done
+}
+
+oc_delete_scale_sc_pvs(){
+	#
+	# Make sure the internal PVs created by the Scale installer are not just released but really gone
+	# to prevent a reinstall failure
+	#
+	echo "Deleting Scale Storage Class (SC=ibm-spectrum-scale-internal) PVs"
+	for pv in $(oc get pv -l app.kubernetes.io/name="pmcollector" -o name --no-headers)
+	do
+		oc delete "${pv}"
 	done
 }
 
 oc_nodes_cmd(){
 	local nodes="${1}"
 	shift
-	local cmd="${@}"
+	local cmd="$*"
 
 	echo "Running command: ${cmd}"
 
 	for node in ${nodes}; do
-		echo ${node#*/}
-		oc debug $node -- chroot /host /bin/bash -c "${CMD}" -s 2> /dev/null
+		echo "-> ${node#*/}"
+		oc debug "$node" -- chroot /host /bin/bash -c "${cmd}" -s #2> /dev/null
 	done
 }
 
@@ -57,7 +86,7 @@ cleanup_cnsa() {
 
 	oc scale deployment --replicas=0 isf-cns-operator-controller-manager -n "$FUSION_NAMESPACE"
 
-	oc label -n ${SCALE_NAMESPACE} filesystem ${FILESYSTEM_NAME} scale.spectrum.ibm.com/allowDelete=
+	oc label -n "${SCALE_NAMESPACE}" filesystem "${FILESYSTEM_NAME}" scale.spectrum.ibm.com/allowDelete=
 	envsubst <templates/filesystem.yaml | oc delete -f - --ignore-not-found=true
 	wait_for_delete "${SCALE_NAMESPACE}" "filesystem/${FILESYSTEM_NAME}"
 
@@ -98,20 +127,114 @@ cleanup_cnsa() {
 	oc delete project "$SCALE_OPERATOR_NAMESPACE" --ignore-not-found=true
 
 	oc scale deployment --replicas=1 isf-cns-operator-controller-manager -n "$FUSION_NAMESPACE"
+	oc_delete_scale_sc_pvs
+
+	delete_scale_rbd_sc
 }
 
 cleanup_df() {
-	$ROOT_DIR/bin/delete-fusion-odf.sh "$FUSION_NAMESPACE"
+	echo "================================================================="
+	echo "Cleanup Fusion Data Foundation"
+	echo "================================================================="
 
-	DEVICES=($(oc get pvc -n $OCS_NAMESPACE -l $DEVICESET_LABEL -o jsonpath='{range .items[*]}{.spec.volumeName}{"\n"}{end}' |
-		while read pv; do
-			oc get pv "$pv" -o jsonpath='{.metadata.annotations.storage\.openshift\.com/device-name}{"\n"}'
-		done))
+	printf "\n------scale isf-cns deployment to 0 replica------\n"
+	oc scale deployment --replicas=0 "$ISF_CNS_MANAGER" -n "$FUSION_NAMESPACE"
 
-	for DEV in "${DEVICES[@]}"; do
-		echo ">>> Cleaning device: $DEV"
-		$ROOT_DIR/bin/disk-cleanup.sh "/dev/$DEV"
-	done
+	printf "\n------delete odf fusionserviceinstance------\n"
+	oc delete "$FUSION_SERVICE_INSTANCE_CR" "$DF_SERVICE_NAME" -n "$FUSION_NAMESPACE" --ignore-not-found=true
+
+	printf "\n------delete odfmanager------\n"
+	oc delete odfmanager "$DF_SERVICE_NAME" --ignore-not-found=true
+
+	printf "\n------delete odfcluster------\n"
+	oc delete odfcluster odfcluster -n "$FUSION_NAMESPACE" --ignore-not-found=true
+
+	if [[ "$ENV" == "HCI" ]]; then
+		printf "\n------scale isf-bkprstr deployment to 0 replica------\n"
+		oc scale deployment --replicas=0 isf-bkprstr-operator-controller-manager -n "$FUSION_NAMESPACE"
+
+		printf "\n------scale logcollector deployment to 0 replica------\n"
+		oc scale deployment --replicas=0 logcollector -n "$FUSION_NAMESPACE"
+
+		printf "\n------delete Fusion internal used PVC isf-bkprstr-claim logcollector------\n"
+		oc delete pvc isf-bkprstr-claim logcollector -n "$FUSION_NAMESPACE" --ignore-not-found=true
+	fi
+
+	# Call the ODF cleanup script
+	"$ROOT_DIR/bin/delete-odf.sh"
+
+	result=$?
+	if [[ $result -ne 0 ]]; then
+		echo ""
+		echo "================================================================="
+		echo "Delete ODF failed"
+		echo "Please check failure and retry"
+		echo "================================================================="
+		exit 1
+	fi
+
+	printf "\n------delete storageclass ibm-spectrum-fusion-mgmt-sc------\n"
+	oc delete sc "$FUSION_SC" --ignore-not-found=true
+
+	printf "\n------delete fdf catalogsource------\n"
+	oc delete catalogsource "$DF_CATALOG" -n "$MARKETPLACE_NAMESPACE" --ignore-not-found=true
+
+	printf "\n------scale isf-cns deployment back to 1 replica------\n"
+	oc scale deployment --replicas=1 "$ISF_CNS_MANAGER" -n "$FUSION_NAMESPACE"
+
+	if [[ "$ENV" == "HCI" ]]; then
+		printf "\n------recreate the PVC isf-bkprstr-claim and logcollector------\n"
+		oc apply -f - <<EOF
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+    name: isf-bkprstr-claim
+    namespace: $FUSION_NAMESPACE
+spec:
+    accessModes:
+        - ReadWriteMany
+    resources:
+        requests:
+            storage: 25Gi
+    storageClassName: $FUSION_SC
+    volumeMode: Filesystem
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+    name: logcollector
+    namespace: $FUSION_NAMESPACE
+spec:
+    accessModes:
+        - ReadWriteMany
+    resources:
+        requests:
+            storage: 25Gi
+    storageClassName: $FUSION_SC
+    volumeMode: Filesystem
+EOF
+
+		printf "\n------scale isf-bkprstr deployment to 1 replica------\n"
+		oc scale deployment --replicas=1 isf-bkprstr-operator-controller-manager -n "$FUSION_NAMESPACE"
+
+		printf "\n------scale logcollector deployment to 2 replica------\n"
+		oc scale deployment --replicas=2 logcollector -n "$FUSION_NAMESPACE"
+	fi
+
+	# Clean up devices
+	printf "\n------delete localvolumeset------\n"
+	result=$(oc get localvolumeset -n openshift-local-storage "$OCS_BACKING_STORAGECLASS" --no-headers 2>/dev/null | wc -l | tr -d ' ')
+	if [[ $result -eq 0 ]]; then
+		info "There is no localvolumeset detected"
+	else
+		info "localvolumeset detected, start to remove local storage"
+		CURRENT_DIR=$(cd "$(dirname "$0")" && pwd)
+		"$CURRENT_DIR"/delete-local-storage.sh --yes-i-really-mean-it "$OCS_BACKING_STORAGECLASS"
+	fi
+
+	echo "================================================================="
+	echo "Cleanup Fusion with ODF completed in $(date +"%F %Z")"
+	echo "================================================================="
 }
 
 cleanup_fusion() {
@@ -136,8 +259,8 @@ cleanup_fusion() {
 
 		# Remove all the resources for CRD's
 		for CRD in $ISF_CRDS; do
-			oc delete crd $CRD --wait=false
-			RES_LIST=$(oc get $CRD --all-namespaces -o=jsonpath='{range .items[]}{.metadata.namespace}:{.metadata.name}{"\n"}{end}')
+			oc delete crd "$CRD" --wait=false
+			RES_LIST=$(oc get "$CRD" --all-namespaces -o=jsonpath='{range .items[]}{.metadata.namespace}:{.metadata.name}{"\n"}{end}')
 			sleep 1
 			if [ -n "$RES_LIST" ]; then
 				# Loop through the resources and delete them
@@ -145,7 +268,7 @@ cleanup_fusion() {
 					namespace=$(echo "$res" | cut -d ':' -f 1)
 					res_name=$(echo "$res" | cut -d ':' -f 2)
 					echo "patching resource $res_name in namespace $namespace"
-					oc patch $CRD $res_name -n $namespace --type merge -p '{"metadata":{"finalizers": []}}'
+					oc patch "$CRD" "$res_name" -n "$namespace" --type merge -p '{"metadata":{"finalizers": []}}'
 				done <<<"$RES_LIST"
 			fi
 		done
@@ -218,7 +341,7 @@ cleanup_fusion() {
 		oc delete clusterrolebinding isf-sds-backuprestore-rolebinding
 		oc delete clusterrolebinding isf-bkprstr-operator-manager-rolebinding
 
-		oc delete OperatorGroup isf-fusionbase -n $FUSION_NAMESPACE
+		oc delete OperatorGroup isf-fusionbase -n "$FUSION_NAMESPACE"
 		oc delete ns baas
 		oc delete ns ibm-spectrum-protect-plus-ns
 		oc delete ns ibm-spectrum-scale-csi
@@ -251,19 +374,74 @@ cleanup_fusion() {
 		oc delete catalogsource ibm-usage-metering-catalog-source -n openshift-marketplace
 		oc get CatalogSource -n openshift-marketplace -l app=ibm-fusion-hcp -o name | xargs -n1 oc delete -n openshift-marketplace CatalogSource
 
-		oc delete ns $FUSION_NAMESPACE
+		oc delete ns "$FUSION_NAMESPACE"
 	fi
+}
+
+cleanup_cas() {
+	echo "================================================================="
+	echo "Cleanup CAS (Content Aware Storage)"
+	echo "================================================================="
+
+	# Check if CAS namespace exists before running cleanup script
+	if oc get namespace "$CAS_NAMESPACE" &>/dev/null; then
+		local cas_cleanup_script="$ROOT_DIR/bin/customer_cas_cleanup.sh"
+
+		# Check if cleanup script exists, download if not
+		if [[ ! -f "$cas_cleanup_script" ]]; then
+			printf "\n------Downloading CAS cleanup script------\n"
+			if ! curl -fsSL "$CAS_CLEANUP_SCRIPT_URL" -o "$cas_cleanup_script"; then
+				echo "ERROR: Failed to download CAS cleanup script from $CAS_CLEANUP_SCRIPT_URL"
+				return 1
+			fi
+			chmod +x "$cas_cleanup_script"
+			echo "CAS cleanup script downloaded successfully"
+		else
+			echo "Using existing CAS cleanup script: $cas_cleanup_script"
+		fi
+
+		printf "\n------Running CAS cleanup script------\n"
+		if ! yes y | "$cas_cleanup_script"; then
+			echo "ERROR: CAS cleanup script failed"
+			return 1
+		fi
+	else
+		echo "CAS namespace '$CAS_NAMESPACE' not found - skipping CAS cleanup script"
+	fi
+
+	# Check if filesystem exists and get deviceVolumes
+	FS_HAS_DEVICE_VOLUMES=$(oc get filesystem "${FILESYSTEM_NAME}" -n "${SCALE_NAMESPACE}" -o jsonpath='{.spec.local.pools[*].deviceVolumes}' 2>/dev/null)
+	FS_EXISTS=$?
+
+	# Proceed with filesystem cleanup if it exists
+	if [[ $FS_EXISTS -eq 0 ]]; then
+		oc label -n "${SCALE_NAMESPACE}" filesystem "${FILESYSTEM_NAME}" scale.spectrum.ibm.com/allowDelete=
+		envsubst <templates/filesystem.yaml | oc delete -f - --ignore-not-found=true
+		wait_for_delete "${SCALE_NAMESPACE}" "filesystem/${FILESYSTEM_NAME}"
+
+		# Only delete localdisks if no deviceVolumes were defined in the Filesystem CR
+		if [[ -z "$FS_HAS_DEVICE_VOLUMES" ]]; then
+			oc delete localdisk disk0 disk1 disk2 -n "$SCALE_NAMESPACE" --ignore-not-found=true
+			wait_for_delete "${SCALE_NAMESPACE}" "localdisk/disk0" "localdisk/disk1" "localdisk/disk2"
+		fi
+	fi
+
+	oc delete sc ibm-cas-cache-fs-internal --ignore-not-found=true
+
+	echo "================================================================="
+	echo "CAS cleanup completed in $(date +"%F %Z")"
+	echo "================================================================="
 }
 
 show_help() {
 	cat <<EOF
-Usage: $0 [OPTION] [--filesystem-name NAME]
+Usage: $0 <ACTION> [--filesystem-name NAME]
 
-Options:
-  --all               Clean CNSA, Local PVC, DF, and Fusion (in case of SDS environment)
-  --cnsa              Clean only CNSA
-  --df                Clean CNSA, Local PVC and DF
-  --fusion            Clean CNSA, Local PVC, DF and Fusion (in case of SDS environment)
+ACTION:
+  --all, --fusion     Clean CAS, CNSA, Local PVC, DF, and Fusion (in case of SDS environment)
+  --cas               Clean only CAS
+  --cnsa              Clean CAS, CNSA, and Local PVC
+  --df                Clean CAS, CNSA, Local PVC, and DF
 
 Optional:
   --filesystem-name   Override filesystem name (default: cache-fs)
@@ -274,6 +452,11 @@ ACTION=""
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	--filesystem-name)
+		if [[ $# -lt 2 || -z "$2" ]]; then
+			echo "Missing value for --filesystem-name"
+			echo "Use --help for usage."
+			exit 1
+		fi
 		FILESYSTEM_NAME="$2"
 		export FILESYSTEM_NAME
 		shift 2
@@ -282,7 +465,7 @@ while [[ $# -gt 0 ]]; do
 		show_help
 		exit 0
 		;;
-	--all | --fusion | --df | --cnsa)
+	--all | --fusion | --df | --cnsa | --cas)
 		ACTION="$1"
 		shift
 		;;
@@ -303,14 +486,20 @@ export FILESYSTEM_NAME
 
 case "$ACTION" in
 --all | --fusion)
+	cleanup_cas || exit 1
 	cleanup_cnsa || exit 1
 	cleanup_df || exit 1
 	cleanup_fusion || exit 1
 	;;
+--cas)
+	cleanup_cas || exit 1
+	;;
 --cnsa)
+	cleanup_cas || exit 1
 	cleanup_cnsa || exit 1
 	;;
 --df)
+	cleanup_cas || exit 1
 	cleanup_cnsa || exit 1
 	cleanup_df || exit 1
 	;;

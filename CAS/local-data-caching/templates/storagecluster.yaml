@@ -48,3 +48,19 @@ spec:
       name: ocs-deviceset-localblock
       portable: false
       replica: 1
+      preparePlacement:
+        topologySpreadConstraints:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - rook-ceph-osd
+              - rook-ceph-osd-prepare
+            - key: device-class
+              operator: In
+              values:
+              - ssd
+          maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -eu
 
+# GUARD CLAUSE: Prevent sourcing this file multiple times
+if [[ -n "${LOADED_OLM_UTILS_SH:-}" ]]; then
+    return 0
+fi
+export LOADED_OLM_UTILS_SH=1
+
 #----------------------------------------
 # Function: Check if Fusion operator is installed (HCI or SDS)
 #----------------------------------------
