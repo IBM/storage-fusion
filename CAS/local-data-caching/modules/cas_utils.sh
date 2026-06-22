@@ -23,6 +23,36 @@ patch_cas_fsd() {
 }
 
 #----------------------------------------
+# Function: Apply RBAC allowing cas-operator to label nodes
+#----------------------------------------
+ensure_node_labeling_rbac(){
+  oc apply -f - <<EOF
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ibm-isf-cas-operator-label-nodes
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "update", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ibm-isf-cas-operator-label-nodes
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ibm-isf-cas-operator-label-nodes
+subjects:
+- kind: ServiceAccount
+  name: ibm-isf-cas-operator-controller-manager
+  namespace: ${CAS_NAMESPACE}
+EOF
+}
+
+#----------------------------------------
 # Function: Patch CasInstall with CPU docling/vllm flags
 #----------------------------------------
 patch_cas_install_cpu_flags() {
@@ -68,6 +98,23 @@ patch_cas_install_cpu_flags() {
 patch_cas_install() {
   local namespace="${1}"
   local name="${2}"
+
+  if ! oc patch casinstall "${name}" -n "${namespace}" --type=merge -p '{
+    "metadata": {
+	  "annotations": {
+	    "ignore-filesystem-health-timeout": "true"
+      }
+	},
+    "spec": {
+      "cache": {
+	   "storageClass": "ocs-storagecluster-ceph-rbd-aof",
+	   "size": "256Gi"
+      }
+	}
+  }' >/dev/null 2>&1; then
+    logger error "Failed to patch CasInstall '${name}' in namespace '${namespace}'."
+    return 1
+  fi
 
   # Patch CAS install to use CPU, if configured
   if [[ "${CAS_RHAI_USE_CPU}" == "true" ]]; then
