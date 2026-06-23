@@ -43,13 +43,34 @@ sudo apt-get install -y python3 podman openssl curl
 - **openssl** - Certificate validation
 - **curl** - Website/endpoint reachability checks
 
-#### 3. Run the Validation Script
+#### 3. Prepare Required Files
+
+Before running the validation script, ensure you have the necessary files ready on your jumphost:
+
+**For Connected (Online) Installations:**
+- **pull-secret.json** - Download your OpenShift pull secret from [Red Hat Console](https://console.redhat.com/openshift/install/pull-secret)
+  - Place the file in an accessible location on your jumphost
+  - Note down the full file path (e.g., `/home/user/pull-secret.json`)
+  - You will need to provide this path during script execution
+
+**For Airgap (Offline) Installations with Self-Signed Certificates:**
+- **Registry certificate file (.crt)** - If using a self-signed certificate for your registry (e.g., Quay)
+  - Place the certificate file in an accessible location on your jumphost
+  - Note down the full file path (e.g., `/home/user/registry-ca.crt`)
+  - You will need to provide this path during script execution
+  - The certificate should be in PEM format (X.509)
+
+**Optional Files (if applicable):**
+- **Ingress certificate and key files** - For custom ingress certificates (connected installs)
+- **Additional registry certificates** - If using multiple registries with different certificates
+
+#### 4. Run the Validation Script
 
 ```bash
 python3 openshift-fusion-mgmt-software-prechecks.py
 ```
 
-#### 4. Follow Interactive Prompts
+#### 5. Follow Interactive Prompts
 
 The script will guide you through:
 - Entering cluster name and base domain
@@ -58,13 +79,15 @@ The script will guide you through:
 - Validating firewall and proxy configurations (for connected installs)
 - Checking access to required endpoints
 
-#### 5. Review Results
+**Tip:** Have your file paths ready from Step 3 to quickly provide them when prompted.
+
+#### 6. Review Results
 
 - **Console Output**: Real-time validation results with ✓ (success) or ✗ (failure) indicators
 - **Log File**: Detailed execution log saved to `installer_validation.log`
 - **Summary Report**: Comprehensive validation summary displayed at completion
 
-#### 6. Exit Anytime
+#### 7. Exit Anytime
 
 Press **Ctrl+C** to exit the script at any point.
 
@@ -251,22 +274,24 @@ If firewall is selected, the script performs:
   - `gcr.io` - Google Container Registry
   - `registry.redhat.io` - Red Hat Container Registry
   - `quay.io` - Quay.io Container Registry
-  - `cert-api.access.redhat.com` - Red Hat Certificate API
+  - `cdn01.quay.io`, `cdn02.quay.io`, `cdn03.quay.io`, `cdn04.quay.io`, `cdn05.quay.io`, `cdn06.quay.io` - Quay.io CDN endpoints
   - `access.redhat.com` - Red Hat Access Portal
   - `api.access.redhat.com` - Red Hat API Access
+  - `cert-api.access.redhat.com` - Red Hat Certificate API
   - `infogw.api.openshift.com` - OpenShift Info Gateway
   - `console.redhat.com` - Red Hat Console (including `/api/ingress`)
   - `cloud.redhat.com` - Red Hat Cloud (including `/api/ingress`)
   - `mirror.openshift.com` - OpenShift Mirror
   - `storage.googleapis.com` - Google Storage (for `/openshift-release`)
-  - `.apps.<cluster_name>.<base_domain>` - Cluster-specific apps domain
+  - `oauth-openshift.apps.<cluster_name>.<base_domain>` - Cluster OAuth endpoint
+  - `console-openshift-console.apps.<cluster_name>.<base_domain>` - Cluster console endpoint
   - `quayio-production-s3.s3.amazonaws.com` - Quay.io S3 Storage
   - `api.openshift.com` - OpenShift API
   - `art-rhcos-ci.s3.amazonaws.com` - RHCOS CI S3 Storage
   - `registry.access.redhat.com` - Red Hat Registry Access
   - `sso.redhat.com` - Red Hat SSO
   - `esupport.ibm.com` - IBM Support Portal
-  - `ecurep.ibm.com` - IBM eCuRep
+  - `www.ecurep.ibm.com` - IBM eCuRep
 
 After firewall checks, the script then asks whether installation uses:
 

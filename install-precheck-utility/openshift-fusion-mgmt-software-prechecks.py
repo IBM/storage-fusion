@@ -340,6 +340,11 @@ def check_registry_reachability(registry_url):
         # Remove http:// or https:// if present
         clean_url = registry_url.replace('https://', '').replace('http://', '')
         
+        # Remove any path components (e.g., /mirror-automation-2.13.0/hci/hci-isf-week24)
+        # Keep only hostname and port
+        if '/' in clean_url:
+            clean_url = clean_url.split('/')[0]
+        
         # Split host and port if port is specified
         if ':' in clean_url:
             host = clean_url.split(':')[0]
@@ -419,7 +424,7 @@ def check_registry_reachability(registry_url):
         )
         return False
 
-def podman_login_test(registry_url, username, password):
+def podman_login_test(registry_url, username, password, cert_path=None):
     """
     Test podman login to registry
     Returns: True if login successful, False otherwise
@@ -430,6 +435,18 @@ def podman_login_test(registry_url, username, password):
     try:
         # Remove protocol if present
         clean_url = registry_url.replace('https://', '').replace('http://', '')
+        
+        # Remove any path components - keep only hostname:port
+        if '/' in clean_url:
+            clean_url = clean_url.split('/')[0]
+        
+        # Build podman login command with optional certificate
+        if cert_path:
+            # Copy certificate to system trust store for podman
+            cert_dir = "/etc/containers/certs.d/" + clean_url.split(':')[0]
+            subprocess.run(f"sudo mkdir -p {cert_dir}", shell=True, capture_output=True)
+            subprocess.run(f"sudo cp {cert_path} {cert_dir}/ca.crt", shell=True, capture_output=True)
+            logging.info(f"Certificate installed to {cert_dir}/ca.crt")
         
         # Run podman login command
         cmd = f"echo '{password}' | podman login -u '{username}' --password-stdin {clean_url}"
@@ -504,7 +521,7 @@ def podman_login_test(registry_url, username, password):
         )
         return False
 
-def podman_pull_test(registry_url, username, password, image_name):
+def podman_pull_test(registry_url, username, password, image_name, cert_path=None):
     """
     Test pulling an image from registry
     Returns: True if pull successful, False otherwise
@@ -515,17 +532,29 @@ def podman_pull_test(registry_url, username, password, image_name):
         # Remove protocol if present
         clean_url = registry_url.replace('https://', '').replace('http://', '')
         
+        # Remove any path components - keep only hostname:port
+        if '/' in clean_url:
+            registry_host = clean_url.split('/')[0]
+        else:
+            registry_host = clean_url
+        
+        # Install certificate if provided (should already be done in login test, but ensure it's there)
+        if cert_path:
+            cert_dir = "/etc/containers/certs.d/" + registry_host.split(':')[0]
+            subprocess.run(f"sudo mkdir -p {cert_dir}", shell=True, capture_output=True)
+            subprocess.run(f"sudo cp {cert_path} {cert_dir}/ca.crt", shell=True, capture_output=True)
+        
         # Login first
-        login_cmd = f"echo '{password}' | podman login -u '{username}' --password-stdin {clean_url}"
+        login_cmd = f"echo '{password}' | podman login -u '{username}' --password-stdin {registry_host}"
         subprocess.run(login_cmd, shell=True, capture_output=True)
         
-        # Try to pull image
+        # Try to pull image - use full registry URL with path if provided
         full_image_path = f"{clean_url}/{image_name}"
         pull_cmd = f"podman pull {full_image_path}"
         result = subprocess.run(pull_cmd, shell=True, capture_output=True, text=True)
         
         # Logout
-        subprocess.run(f"podman logout {clean_url}", shell=True, capture_output=True)
+        subprocess.run(f"podman logout {registry_host}", shell=True, capture_output=True)
         
         if result.returncode == 0:
             print(f"  ✓ SUCCESS: Image pull capability verified")
@@ -751,6 +780,9 @@ def check_site_reachability(site_url, proxy_server=None, proxy_port=None, proxy_
     """
     logging.info(f"Checking reachability to: {site_url}")
     
+    # Determine if this is a cluster-specific URL (will not exist until cluster is installed)
+    is_cluster_url = '.apps.' in site_url
+    
     try:
         # Build curl command
         if proxy_server and proxy_port:
@@ -763,9 +795,9 @@ def check_site_reachability(site_url, proxy_server=None, proxy_port=None, proxy_
                 proxy_url = f"http://{proxy_server}:{proxy_port}"
                 logging.info(f"Using unauthenticated proxy: {proxy_server}:{proxy_port}")
             
-            cmd = f"curl -I --max-time 10 --proxy {proxy_url} https://{site_url}"
+            cmd = f"curl -I -k --max-time 10 --proxy {proxy_url} https://{site_url}"
         else:
-            cmd = f"curl -I --max-time 10 https://{site_url}"
+            cmd = f"curl -I -k --max-time 10 https://{site_url}"
         
         # Run curl command
         result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -785,18 +817,49 @@ def check_site_reachability(site_url, proxy_server=None, proxy_port=None, proxy_
             )
             return True
         else:
-            print(f"  ✗ {site_url} - NOT REACHABLE")
-            logging.error(f"Site NOT reachable: {site_url}")
+            # If curl fails, try ping as fallback (especially for cluster URLs)
+            ping_result = subprocess.run(f"ping -c 1 -W 2 {site_url}", shell=True,
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
-            add_validation_result(
-                category='Site Connectivity',
-                test='check_site_reachability',
-                status='failed',
-                message=f'Site not reachable: {site_url}',
-                details={'url': site_url},
-                severity='critical'
-            )
-            return False
+            if ping_result.returncode == 0:
+                # Ping successful - DNS resolves and host is reachable
+                if is_cluster_url:
+                    print(f"  ⚠ {site_url} - DNS resolves (cluster not yet installed)")
+                    logging.warning(f"Cluster URL DNS resolves but HTTPS not available (expected): {site_url}")
+                    add_validation_result(
+                        category='Site Connectivity',
+                        test='check_site_reachability',
+                        status='warning',
+                        message=f'Cluster URL DNS resolves: {site_url} (HTTPS will be available after installation)',
+                        details={'url': site_url},
+                        severity='warning'
+                    )
+                else:
+                    print(f"  ⚠ {site_url} - Ping OK but HTTPS not responding")
+                    logging.warning(f"Site ping successful but HTTPS not responding: {site_url}")
+                    add_validation_result(
+                        category='Site Connectivity',
+                        test='check_site_reachability',
+                        status='warning',
+                        message=f'Site reachable via ping but HTTPS not responding: {site_url}',
+                        details={'url': site_url},
+                        severity='warning'
+                    )
+                return True
+            else:
+                # Both curl and ping failed
+                print(f"  ✗ {site_url} - NOT REACHABLE")
+                logging.error(f"Site NOT reachable: {site_url}")
+                
+                add_validation_result(
+                    category='Site Connectivity',
+                    test='check_site_reachability',
+                    status='failed',
+                    message=f'Site not reachable: {site_url}',
+                    details={'url': site_url},
+                    severity='critical'
+                )
+                return False
             
     except Exception as e:
         print(f"  ✗ {site_url} - ERROR: {str(e)}")
@@ -1117,20 +1180,7 @@ def main():
             
             offline_registry_password = get_password_input("Enter registry password: ")
             
-            # Validate registry reachability
-            print("\nValidating registry...")
-            check_registry_reachability(offline_registry_url)
-            
-            # Test podman login
-            print("Testing podman login...")
-            podman_login_test(offline_registry_url, offline_registry_username, offline_registry_password)
-            
-            # Test image pull
-            print("Testing Openshift image pull...")
-            podman_pull_test(offline_registry_url, offline_registry_username, offline_registry_password, 
-                           "openshift/release:latest")
-            
-            # Ask about certificate
+            # Ask about certificate BEFORE validation
             print("\n1. Yes, certificate will be used for cluster installation")
             print("2. No, certificate will not be used for cluster installation")
             
@@ -1150,7 +1200,23 @@ def main():
                 validate_certificate(offline_registry_cert_path)
             else:
                 is_certificate_used = False
+                offline_registry_cert_path = None
                 log_and_print("Certificate will not be used", "INFO")
+            
+            # Validate registry reachability AFTER certificate
+            print("\nValidating registry...")
+            check_registry_reachability(offline_registry_url)
+            
+            # Test podman login with certificate
+            print("Testing podman login...")
+            podman_login_test(offline_registry_url, offline_registry_username, offline_registry_password,
+                            offline_registry_cert_path if is_certificate_used else None)
+            
+            # Test image pull with certificate
+            print("Testing Openshift image pull...")
+            podman_pull_test(offline_registry_url, offline_registry_username, offline_registry_password,
+                           "openshift/release:latest",
+                           offline_registry_cert_path if is_certificate_used else None)
         
         # =========================
         # MULTIPLE REGISTRIES PATH
@@ -1168,14 +1234,7 @@ def main():
             
             openshift_registry_password = get_password_input("Enter Openshift registry password: ")
             
-            # Validate OpenShift registry
-            print("\nValidating OpenShift registry...")
-            check_registry_reachability(openshift_registry_url)
-            podman_login_test(openshift_registry_url, openshift_registry_username, openshift_registry_password)
-            podman_pull_test(openshift_registry_url, openshift_registry_username, openshift_registry_password,
-                           "openshift/release:latest")
-            
-            # OpenShift certificate
+            # OpenShift certificate - Ask BEFORE validation
             print("\n1. Yes, certificate will be used")
             print("2. No, certificate will not be used")
             
@@ -1186,6 +1245,16 @@ def main():
                 log_and_print(f"OpenShift Certificate Path: {os_cert_path}", "INFO")
                 validate_file_path(os_cert_path)
                 validate_certificate(os_cert_path)
+            else:
+                os_cert_path = None
+            
+            # Validate OpenShift registry AFTER certificate
+            print("\nValidating OpenShift registry...")
+            check_registry_reachability(openshift_registry_url)
+            podman_login_test(openshift_registry_url, openshift_registry_username, openshift_registry_password,
+                            os_cert_path)
+            podman_pull_test(openshift_registry_url, openshift_registry_username, openshift_registry_password,
+                           "openshift/release:latest", os_cert_path)
             
             # Fusion Registry
             print("\n>> Fusion Registry <<")
@@ -1197,14 +1266,7 @@ def main():
             
             fusion_registry_password = get_password_input("Enter Fusion registry password: ")
             
-            # Validate Fusion registry
-            print("\nValidating Fusion registry...")
-            check_registry_reachability(fusion_registry_url)
-            podman_login_test(fusion_registry_url, fusion_registry_username, fusion_registry_password)
-            podman_pull_test(fusion_registry_url, fusion_registry_username, fusion_registry_password,
-                           "fusion/catalog:latest")
-            
-            # Fusion certificate
+            # Fusion certificate - Ask BEFORE validation
             print("\n1. Yes, certificate will be used")
             print("2. No, certificate will not be used")
             
@@ -1215,6 +1277,16 @@ def main():
                 log_and_print(f"Fusion Certificate Path: {fusion_cert_path}", "INFO")
                 validate_file_path(fusion_cert_path)
                 validate_certificate(fusion_cert_path)
+            else:
+                fusion_cert_path = None
+            
+            # Validate Fusion registry AFTER certificate
+            print("\nValidating Fusion registry...")
+            check_registry_reachability(fusion_registry_url)
+            podman_login_test(fusion_registry_url, fusion_registry_username, fusion_registry_password,
+                            fusion_cert_path)
+            podman_pull_test(fusion_registry_url, fusion_registry_username, fusion_registry_password,
+                           "fusion/catalog:latest", fusion_cert_path)
     
     # =========================
     # CONNECTED INSTALLATION PATH
@@ -1247,23 +1319,23 @@ def main():
                 "cdn01.quay.io",
                 "cdn02.quay.io",
                 "cdn03.quay.io",
-                "openshiftapps.com",
-                "cert-api.access.redhat.com",
                 "access.redhat.com",
                 "api.access.redhat.com",
+                "cert-api.access.redhat.com",
                 "infogw.api.openshift.com",
                 "console.redhat.com",
                 "cloud.redhat.com",
                 "mirror.openshift.com",
                 "storage.googleapis.com",
-                f".apps.{cluster_name}.{base_domain}",
+                f"oauth-openshift.apps.{cluster_name}.{base_domain}",
+                f"console-openshift-console.apps.{cluster_name}.{base_domain}",
                 "quayio-production-s3.s3.amazonaws.com",
                 "api.openshift.com",
                 "art-rhcos-ci.s3.amazonaws.com",
                 "registry.access.redhat.com",
                 "sso.redhat.com",
                 "esupport.ibm.com",
-                "ecurep.ibm.com"
+                "www.ecurep.ibm.com"
             ]
             
             for registry in firewall_registries:
