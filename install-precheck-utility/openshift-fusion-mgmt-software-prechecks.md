@@ -274,7 +274,7 @@ If firewall is selected, the script performs:
   - `gcr.io` - Google Container Registry
   - `registry.redhat.io` - Red Hat Container Registry
   - `quay.io` - Quay.io Container Registry
-  - `cdn01.quay.io`, `cdn02.quay.io`, `cdn03.quay.io`, `cdn04.quay.io`, `cdn05.quay.io`, `cdn06.quay.io` - Quay.io CDN endpoints
+  - `cdn01.quay.io`, `cdn02.quay.io`, `cdn03.quay.io` - Quay.io CDN endpoints
   - `access.redhat.com` - Red Hat Access Portal
   - `api.access.redhat.com` - Red Hat API Access
   - `cert-api.access.redhat.com` - Red Hat Certificate API
