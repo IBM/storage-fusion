@@ -424,6 +424,36 @@ def check_registry_reachability(registry_url):
         )
         return False
 
+def get_ocp_release_digest(ocp_version, architecture="x86_64"):
+    """
+    Get the OCP release digest for a given version
+    Returns: digest string or None if failed
+    """
+    log_and_print(f"  Getting OCP release digest for version {ocp_version}...", "INFO")
+    
+    try:
+        # Build the oc adm release info command
+        release_image = f"quay.io/openshift-release-dev/ocp-release:{ocp_version}-{architecture}"
+        cmd = f"oc adm release info {release_image} | sed -n 's/Pull From: .*@//p'"
+        
+        result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        
+        if result.returncode == 0 and result.stdout.strip():
+            digest = result.stdout.strip()
+            print(f"  ✓ OCP Release Digest: {digest}")
+            logging.info(f"OCP release digest for {ocp_version}: {digest}")
+            return digest
+        else:
+            print(f"  ✗ Failed to get OCP release digest")
+            print(f"  Error: {result.stderr}")
+            logging.error(f"Failed to get OCP release digest: {result.stderr}")
+            return None
+            
+    except Exception as e:
+        print(f"  ✗ Error getting OCP release digest: {str(e)}")
+        logging.error(f"Error getting OCP release digest: {str(e)}")
+        return None
+
 def podman_login_test(registry_url, username, password, cert_path=None):
     """
     Test podman login to registry
@@ -1083,6 +1113,12 @@ def main():
     logging.info("IBM Fusion HCI Network Validation Tool Started")
     logging.info("="*80)
     
+    # Initialize variables that may be set conditionally
+    registry_type = None
+    offline_registry_url = None
+    openshift_registry_url = None
+    fusion_registry_url = None
+    
     # =========================
     # STEP 1: Get Cluster Name
     # =========================
@@ -1152,6 +1188,22 @@ def main():
     if type_of_install == "airgap_install":
         print("\n--- Airgap Installation Configuration ---")
         
+        # Ask for OCP version
+        print("\nOpenShift Container Platform Version")
+        print("Example: 4.14.15, 4.15.10, 4.16.0")
+        ocp_version = get_user_input("Enter the OCP version: ")
+        log_and_print(f"OCP Version: {ocp_version}", "INFO")
+        
+        # Get OCP release digest
+        print("\nRetrieving OCP release digest...")
+        ocp_digest = get_ocp_release_digest(ocp_version)
+        
+        if not ocp_digest:
+            print("\n⚠ WARNING: Could not retrieve OCP release digest.")
+            print("  This may cause image pull validation to fail.")
+            print("  Please ensure 'oc' CLI is installed and configured.")
+            ocp_digest = None
+        
         # Ask about number of registries
         print("\n1. Single Registry (For Openshift, Fusion & its services - one registry)")
         print("2. Multiple Registries (Different registries for Openshift & Fusion)")
@@ -1213,10 +1265,15 @@ def main():
                             offline_registry_cert_path if is_certificate_used else None)
             
             # Test image pull with certificate
-            print("Testing Openshift image pull...")
-            podman_pull_test(offline_registry_url, offline_registry_username, offline_registry_password,
-                           "openshift/release:latest",
-                           offline_registry_cert_path if is_certificate_used else None)
+            if ocp_digest:
+                print("Testing Openshift image pull...")
+                image_name = f"@{ocp_digest}"
+                podman_pull_test(offline_registry_url, offline_registry_username, offline_registry_password,
+                               image_name,
+                               offline_registry_cert_path if is_certificate_used else None)
+            else:
+                print("⚠ Skipping image pull test (OCP digest not available)")
+                logging.warning("Skipping image pull test - OCP digest not available")
         
         # =========================
         # MULTIPLE REGISTRIES PATH
@@ -1253,8 +1310,16 @@ def main():
             check_registry_reachability(openshift_registry_url)
             podman_login_test(openshift_registry_url, openshift_registry_username, openshift_registry_password,
                             os_cert_path)
-            podman_pull_test(openshift_registry_url, openshift_registry_username, openshift_registry_password,
-                           "openshift/release:latest", os_cert_path)
+            
+            # Test image pull with OCP digest
+            if ocp_digest:
+                print("Testing Openshift image pull...")
+                image_name = f"@{ocp_digest}"
+                podman_pull_test(openshift_registry_url, openshift_registry_username, openshift_registry_password,
+                               image_name, os_cert_path)
+            else:
+                print("⚠ Skipping image pull test (OCP digest not available)")
+                logging.warning("Skipping image pull test - OCP digest not available")
             
             # Fusion Registry
             print("\n>> Fusion Registry <<")
@@ -1575,11 +1640,14 @@ def main():
     
     # Add type-specific details
     if type_of_install == "airgap_install":
-        if 'offline_registry_url' in locals():
+        # Check which registry configuration was used
+        if registry_type == "single_registry" and offline_registry_url:
             config_details["Registry:"] = offline_registry_url
-        elif 'openshift_registry_url' in locals():
-            config_details["OpenShift Registry:"] = openshift_registry_url
-            config_details["Fusion Registry:"] = fusion_registry_url
+        elif registry_type == "multiple_registries":
+            if openshift_registry_url:
+                config_details["OpenShift Registry:"] = openshift_registry_url
+            if fusion_registry_url:
+                config_details["Fusion Registry:"] = fusion_registry_url
     
     # Generate and display summary report
     print_validation_summary(
