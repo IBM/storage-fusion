@@ -579,7 +579,11 @@ def podman_pull_test(registry_url, username, password, image_name, cert_path=Non
         subprocess.run(login_cmd, shell=True, capture_output=True)
         
         # Try to pull image - use full registry URL with path if provided
-        full_image_path = f"{clean_url}/{image_name}"
+        # For digest-based references (starting with @), don't add separator
+        if image_name.startswith('@'):
+            full_image_path = f"{clean_url}{image_name}"
+        else:
+            full_image_path = f"{clean_url}/{image_name}"
         pull_cmd = f"podman pull {full_image_path}"
         result = subprocess.run(pull_cmd, shell=True, capture_output=True, text=True)
         
