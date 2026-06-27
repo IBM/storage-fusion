@@ -12,10 +12,15 @@ metadata:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: namespace-labeler
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-5"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
+  ttlSecondsAfterFinished: 3600 
   template:
     metadata:
       labels:
@@ -60,9 +65,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 # ClusterRole for namespace labeler
 apiVersion: rbac.authorization.k8s.io/v1
@@ -72,9 +80,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "-10"
 rules:
 - apiGroups: [""]
   resources: ["namespaces"]
@@ -89,9 +100,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "-10"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

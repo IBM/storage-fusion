@@ -14,8 +14,11 @@ metadata:
     app.kubernetes.io/component: rhdh-operator
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "0"
 ---
 # OperatorGroup for Red Hat Developer Hub
 apiVersion: operators.coreos.com/v1
@@ -26,13 +29,16 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-9"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "20"
 spec: {}
   # RHDH operator requires AllNamespaces install mode
   # Leave spec empty to watch all namespaces
 ---
-# Subscription for Red Hat Developer Hub Operator
+# Subscription for Red Hat Developer Hub Operators
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -42,8 +48,11 @@ metadata:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: rhdh-operator
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-8"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "30"
 spec:
   channel: {{ .Values.operators.developerHub.channel }}
   name: rhdh
@@ -64,10 +73,15 @@ metadata:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: rhdh-operator-setup
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "1"
     helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "40"
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
+  ttlSecondsAfterFinished: 3600
   template:
     metadata:
       labels:
@@ -87,7 +101,7 @@ spec:
           
           # Wait for CSV to be succeeded (max 10 minutes)
           for i in {1..120}; do
-            CSV_PHASE=$(oc get csv -n {{ .Values.operators.developerHub.namespace }} -l operators.coreos.com/rhdh.{{ .Values.operators.developerHub.namespace }}="" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+            CSV_PHASE=$(oc get csv -n {{ .Values.operators.developerHub.namespace }} --no-headers 2>/dev/null | grep -i "rhdh-operator" | awk '{print $NF}' | head -1 || echo "NotFound")
             if [ "$CSV_PHASE" = "Succeeded" ]; then
               echo "Red Hat Developer Hub operator is ready"
               exit 0
@@ -143,8 +157,11 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "0"
 data:
   message: "RHDH operator already exists in the cluster - skipping installation"
   subscription: "{{ .Values.operators.developerHub.namespace }}/rhdh-operator"

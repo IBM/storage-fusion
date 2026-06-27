@@ -14,8 +14,11 @@ metadata:
     app.kubernetes.io/component: postgres-operator
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "0"
 ---
 # OperatorGroup for PostgreSQL Operator
 apiVersion: operators.coreos.com/v1
@@ -26,8 +29,11 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-9"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "20"
 spec:
   {{- if .Values.operators.postgres.watchAllNamespaces }}
   # Watch all namespaces
@@ -46,8 +52,11 @@ metadata:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: postgres-operator
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-8"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "30"
 spec:
   channel: {{ .Values.operators.postgres.channel }}
   name: crunchy-postgres-operator
@@ -68,10 +77,15 @@ metadata:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: postgres-operator-setup
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "1"
     helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "40"
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
+  ttlSecondsAfterFinished: 3600
   template:
     metadata:
       labels:
@@ -91,7 +105,7 @@ spec:
           
           # Wait for CSV to be succeeded (max 10 minutes)
           for i in {1..120}; do
-            CSV_PHASE=$(oc get csv -n {{ .Values.operators.postgres.namespace }} -l operators.coreos.com/crunchy-postgres-operator.{{ .Values.operators.postgres.namespace }}="" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+            CSV_PHASE=$(oc get csv -n {{ .Values.operators.postgres.namespace }} --no-headers 2>/dev/null | grep -i "postgresoperator" | awk '{print $NF}' | head -1 || echo "NotFound")
             if [ "$CSV_PHASE" = "Succeeded" ]; then
               echo "Crunchy PostgreSQL operator is ready"
               exit 0
@@ -147,8 +161,11 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "0"
 data:
   message: "Crunchy PostgreSQL operator already exists in the cluster - skipping installation"
   subscription: "{{ .Values.operators.postgres.namespace }}/crunchy-postgres-operator"

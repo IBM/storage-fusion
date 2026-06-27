@@ -362,7 +362,7 @@ When reporting issues, gather:
 ### Support Channels
 
 - **Documentation**: [Fusion Developer Hub Docs](../README.md)
-- **GitHub Issues**: [Report Issues](https://github.com/ProjectAbell/Fusion-AI/issues)
+- **GitHub Issues**: [Report Issues](https://github.com/IBM/storage-fusion/issues)
 - **IBM Fusion Support**: Contact your IBM Fusion support team
 - **Red Hat Support**: [Red Hat Customer Portal](https://access.redhat.com/support)
 

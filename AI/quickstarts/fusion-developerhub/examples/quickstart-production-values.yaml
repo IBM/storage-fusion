@@ -58,7 +58,6 @@ developerHub:
     # IBM Fusion AI Homepage (enabled by default)
     homepage:
       enabled: true
-      companyLogo: "https://raw.githubusercontent.com/IBM/storage-fusion/main/AI/quickstarts/fusion-developerhub/assets/fusion-logo.svg"
       welcomeTitle: "Welcome to IBM Fusion AI Platform"
       welcomeMessage: |
         Accelerate AI development with:

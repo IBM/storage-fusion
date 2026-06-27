@@ -1,26 +1,23 @@
 # Global configuration shared across all components
+# Production Configuration for IBM Fusion Developer Hub
+# This file provides production-ready settings with HA, security, and monitoring
 global:
-  # OpenShift cluster wildcard domain (e.g., apps.cluster.example.com)
-  wildcardDomain: apps.cluster.example.com
-  
+  # IMPORTANT: Change this to match your OpenShift cluster domain
+  wildcardDomain: apps.<cluster-domain>.com
   # Name of the certificate secret for ingress (leave empty for self-signed)
   wildcardCertName: ""
-  
   # Default namespace for model deployments
   modelsNamespace: maas-models
-  
   # Tools image for jobs (should contain oc, kubectl, bash)
   toolsImage: quay.io/openshift/origin-cli:latest
 
-# Operator installation and configuration
+# Operators Configuration
 operators:
   # Enable operator installation (disable if operators already exist)
   enabled: true
-  
   # Skip operator installation if they already exist in the cluster
   # Set to true to use existing operators instead of installing new ones
   skipIfExists: true
-  
   # Red Hat Developer Hub Operator
   developerHub:
     enabled: true
@@ -36,7 +33,6 @@ operators:
     # It will automatically watch all namespaces
     # Install plan approval (Automatic or Manual)
     installPlanApproval: Automatic
-  
   # PostgreSQL Operator (Crunchy Postgres for Kubernetes)
   postgres:
     enabled: true
@@ -54,36 +50,50 @@ operators:
     watchAllNamespaces: true
     # Install plan approval (Automatic or Manual)
     installPlanApproval: Automatic
+  # Red Hat Developer Hub Operator
+  rhdh:
+    namespace: rhdh-operator
+    channel: fast
+    installPlanApproval: Automatic
+  # Crunchy PostgreSQL Operator
+  postgresql:
+    namespace: postgres-operator
+    channel: v5
+    installPlanApproval: Automatic
 
-# Monitoring and observability (optional for Developer Hub)
+# Monitoring Configuration
 monitoring:
   # Enable monitoring stack
-  enabled: false
+  enabled: true
+  # Prometheus integration
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+  # Grafana dashboards
+  grafana:
+    enabled: true
 
 # Additional labels to apply to all resources
 commonLabels: {}
-  # environment: production
-  # team: ai-platform
+# environment: production
+# team: ai-platform
 
 # Additional annotations to apply to all resources
 commonAnnotations: {}
-  # managed-by: helm
+# managed-by: helm
 
-# Made with Bob
-
-# Red Hat Developer Hub Configuration
+# Developer Hub Configuration
 developerHub:
   # Enable Developer Hub deployment
   enabled: true
-  
   # Create Backstage instance (requires operator CRDs to exist)
   # Set to true to create the instance immediately
   # Default is true for easier initial setup
   createInstance: true
-  
   # Developer Hub instance name
   instanceName: developer-hub
-  
   # Namespace for Developer Hub instance
   # IMPORTANT: This should match the --namespace flag used with helm install/upgrade
   # Leave empty to use .Release.Namespace automatically
@@ -94,15 +104,12 @@ developerHub:
     # Create a dedicated service account (default: false, uses "default" SA)
     # Set to true if you need custom RBAC permissions
     create: false
-    
     # Name of the service account to use
     # If not set and create is true, a name is generated using the fullname template
     # If not set and create is false, uses "default" service account
     name: ""
-    
     # Annotations to add to the service account
     annotations: {}
-  
   # Storage configuration for dynamic plugins
   storage:
     # Storage class for dynamic plugins PVC (ReadWriteMany access mode required)
@@ -112,53 +119,37 @@ developerHub:
     # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
     # - If using NFS: use "nfs-client" or your NFS storage class
     # - Other filesystem storage classes that support RWX
-    storageClassName: ""
-    
+    storageClassName: "" # Uses cluster default
     # Storage size for dynamic plugins
     size: 5Gi
-  
-  # Number of replicas
-  replicas: 2
-  
+  # High Availability - 3 replicas
+  replicas: 3
   # Application configuration
   config:
     # Application title
     title: "IBM Fusion Developer Hub"
-    
     # Organization name
     organizationName: "IBM Fusion"
-    
     # Hostname for the Developer Hub (leave empty for auto-generation)
     hostname: ""
-    
-    # Homepage customization (OPTIONAL)
-    # By default, uses the standard Red Hat Developer Hub homepage.
-    # Set enabled: true to use IBM Fusion custom homepage with:
-    # - IBM Fusion branding and welcome message
-    # - Quick access links to AI-powered development tools
-    # - Featured content highlighting modernization capabilities
-    #
-    # See docs/homepage-customization.md for full customization options.
+    # IBM Fusion AI Homepage (enabled by default)
     homepage:
       # Enable Fusion custom homepage (default: true - uses Fusion custom homepage)
       enabled: true
-      
       # Company logo URL (displayed in top-left corner)
       # Recommended size: 200x50px or similar aspect ratio
       # Leave empty to use default IBM Fusion branding
       # Example: "https://your-cdn.com/logo.png" or "data:image/svg+xml;base64,..."
-      companyLogo: ""
-      
+      companyLogo: "https://raw.githubusercontent.com/IBM/storage-fusion/main/AI/quickstarts/fusion-developerhub/assets/fusion-logo.svg"
       # Company logo icon (small icon for mobile/compact view)
       # Recommended size: 32x32px
       companyLogoIcon: ""
-      
       # Welcome message on homepage (optional - defaults to Fusion welcome message)
       # Uncomment to customize:
       # welcomeTitle: "Welcome to Your Company Developer Hub"
       # welcomeMessage: |
       #   Your custom welcome message here
-      
+
       # Quick access links (optional - defaults to Fusion quick links)
       # Uncomment to customize:
       # quickLinks:
@@ -166,7 +157,7 @@ developerHub:
       #     description: "Start with templates"
       #     url: "/create"
       #     icon: "add"
-      
+
       # Featured content sections (optional - defaults to Fusion featured content)
       # Uncomment to customize:
       # featuredContent:
@@ -175,33 +166,84 @@ developerHub:
       #     links:
       #       - text: "Link 1"
       #         url: "/path1"
-  
+
+      welcomeTitle: "Welcome to IBM Fusion AI Platform"
+      welcomeMessage: |
+        Accelerate AI development with:
+        • Automatic model discovery from OpenShift AI
+        • Self-service templates for AI applications
+        • Integrated development tools
+        • Enterprise-grade security and governance
+      # OpenShift AI Model Connector (KEY FEATURE)
+      plugins:
+        - name: openshift-ai-connector
+          enabled: true
+          config:
+            # Discover models every 30 seconds
+            discoveryInterval: 30s
+            # Namespaces to scan for models
+            namespaces:
+              - model-serving
+              - maas-runtime
+              - redhat-ods-applications
+            # Display options
+            displayOptions:
+              showMetrics: true
+              showEndpoints: true
+              showStatus: true
+              refreshInterval: 30s
+    # Catalog configuration
+    catalog:
+      enabled: true
+      # Catalog providers for automatic discovery
+      providers:
+        # OpenShift AI provider
+        openshiftAI:
+          enabled: true
+          schedule:
+            frequency:
+              minutes: 1
+            timeout:
+              minutes: 3
+    # TechDocs configuration
+    techdocs:
+      enabled: true
+      builder: local
+      generator:
+        runIn: local
+      publisher:
+        type: local
+    # Authentication (configure for production)
+    auth:
+      environment: production
+      # Add your OIDC provider here
+      # providers:
+      #   oidc:
+      #     enabled: true
+      #     clientId: "your-client-id"
+      #     clientSecret: "your-client-secret"
+      #     issuer: "https://your-sso.com"
   # PostgreSQL Database configuration
   database:
     # Use PostgreSQL operator for database
     useOperator: true
-    
     # PostgreSQL cluster name
     clusterName: developerhub-postgres
-    
     # Note: The database configuration automatically includes pluginDivisionMode: 'database'
     # This setting tells Backstage to create separate databases for each plugin,
     # which requires the PostgreSQL user to have CREATEDB privilege.
     # The CREATEDB privilege is automatically granted during deployment.
-    
+
     # Number of PostgreSQL instances (for HA)
     instances: 3
-    
     # PostgreSQL configuration
     maxConnections: "200"
     sharedBuffers: "256MB"
     effectiveCacheSize: "1GB"
     workMem: "16MB"
-    
     # Storage configuration
     storageSize: 20Gi
-    storageClassName: ""  # Use default
-    
+    storageClassName: "" # Use default
     # Resource limits
     resources:
       limits:
@@ -210,64 +252,54 @@ developerHub:
       requests:
         cpu: "1"
         memory: 2Gi
-    
     # Backup configuration
     backup:
       enabled: true
-      useODF: true  # Use IBM Fusion / OpenShift Data Foundation
+      useODF: true # Use IBM Fusion / OpenShift Data Foundation
       odfStorageClass: openshift-storage.noobaa.io
       destinationPath: s3://developerhub-postgres-backup
-      s3Endpoint: ""  # Auto-populated from OBC
+      s3Endpoint: "" # Auto-populated from OBC
       retentionPolicy: "30d"
-  
   # Catalog configuration
   catalog:
     enabled: true
-    
     # GitHub integration
     github:
       enabled: false
       target: https://github.com/your-org
-    
     # GitLab integration
     gitlab:
       enabled: false
       target: https://gitlab.com/your-org
-  
   # TechDocs configuration
   techdocs:
     enabled: true
     s3Bucket: developerhub-techdocs
     s3Region: us-south
-    s3Endpoint: ""  # Set to IBM Fusion endpoint (leave empty to use local storage)
-  
+    s3Endpoint: "" # Set to IBM Fusion endpoint (leave empty to use local storage)
   # Authentication configuration
   auth:
     enabled: true
-    
     # Guest access (no authentication required)
     # WARNING: Allows anyone to access Developer Hub without authentication
     # Only enable for demos, testing, or internal development environments
     # Default: true for easier initial setup
     guest:
       enabled: true
-    
     # GitHub OAuth
     github:
       enabled: false
-      clientId: ""  # GitHub OAuth App Client ID
-      clientSecret: ""  # GitHub OAuth App Client Secret
-    
+      clientId: "" # GitHub OAuth App Client ID
+      clientSecret: "" # GitHub OAuth App Client Secret
     # OIDC (OpenShift, Keycloak, etc.)
     # Set metadataUrl to enable OIDC authentication
     # Default: disabled to allow guest access
     oidc:
       enabled: false
-      metadataUrl: ""  # Set to your OIDC provider (e.g., https://keycloak.example.com/auth/realms/master/.well-known/openid-configuration)
-      clientId: ""  # OIDC Client ID
-      clientSecret: ""  # OIDC Client Secret
+      metadataUrl: "" # Set to your OIDC provider (e.g., https://keycloak.example.com/auth/realms/master/.well-known/openid-configuration)
+      clientId: "" # OIDC Client ID
+      clientSecret: "" # OIDC Client Secret
       signInResolver: "emailMatchingUserEntityProfileEmail"
-  
   # Extra environment variables from secrets
   # The developerhub-secrets is automatically added when auth providers are enabled
   # Add additional secrets here if needed
@@ -277,33 +309,27 @@ developerHub:
   #     - name: custom-secrets
   extraEnvs:
     secrets: []
-  
-  # Resource limits for Developer Hub pods
+  # Production resources
   resources:
     limits:
-      cpu: "2"
+      cpu: "2000m"
       memory: 4Gi
     requests:
-      cpu: "1"
+      cpu: "1000m"
       memory: 2Gi
-  
   # Route configuration
   route:
     enabled: true
     tls:
       enabled: true
-      secretName: ""  # Leave empty for auto-generated cert
-
-  
+      secretName: "" # Leave empty for auto-generated cert
   # IBM Fusion AI Configuration
   fusion:
-    enabled: true
-    
+    enabled: true # Enable IBM Fusion features including templates
     # Fusion AI API endpoints
     api:
       baseUrl: "https://fusion-api.example.com"
       timeout: 30000
-    
     # AI/ML capabilities
     ai:
       enabled: true
@@ -317,33 +343,27 @@ developerHub:
         - name: granite-chat
           type: conversational
           endpoint: ""
-      
       # Integration with Red Hat OpenShift AI (RHOAI)
       # Enables automatic discovery of deployed AI models
       # Requires creating the rhdh-rhoai-connector-token secret
       # Default: false (requires additional setup)
       rhoaiConnector:
-        enabled: false
+        enabled: true
         # Name of the secret containing the access token for RHOAI
         tokenSecretName: "rhdh-rhoai-connector-token"
-        
         # RBAC configuration for RHOAI connector
         # The connector needs cluster-level permissions to read CRDs and InferenceServices
         rbac:
           # Automatically create ClusterRole and ClusterRoleBinding when connector is enabled
           # Set to false if you want to manage RBAC manually
-          create: true
-          
+          create: true # Automatically creates required RBAC
           # Namespaces to watch for InferenceServices (empty = all namespaces)
           # Example: ["rhoai-models", "ai-workloads"]
-          watchNamespaces: []
-          
+          watchNamespaces: [] # Watch all namespaces
           # Model Registry namespace configuration
-          # Set this to grant access to RHOAI model registry
-          # Leave empty to skip model registry RoleBinding creation
-          modelRegistryNamespace: ""  # Example: "rhoai-model-registries" or "odh-model-registries"
+          # Uncomment and set to grant access to RHOAI model registry
+          modelRegistryNamespace: "rhoai-model-registries" # or "odh-model-registries"
           modelRegistryRoleName: "registry-user-modelregistry-public"
-    
     # Application modernization tools
     modernization:
       enabled: true
@@ -354,43 +374,190 @@ developerHub:
           enabled: true
         - name: app-navigator
           enabled: true
-  
-  # Security Configuration
+  # Security configuration
   security:
     # Network policies
     networkPolicy:
       enabled: true
-    
     # Pod Security Standards
     podSecurityStandards:
       enabled: true
-    
-    # Resource quotas
+    # Resource quotas for the namespace
     resourceQuota:
-      cpu: "16"
-      memory: "32Gi"
-      cpuLimit: "32"
-      memoryLimit: "64Gi"
-      pvc: "10"
-    
+      cpu: "32"
+      memory: "64Gi"
+      cpuLimit: "64"
+      memoryLimit: "128Gi"
+      pvc: "20"
     # Pod security context (OpenShift SCC compliant)
     podSecurityContext:
       runAsNonRoot: true
-      runAsUser: null  # Let OpenShift assign from namespace range
-      fsGroup: null    # Let OpenShift assign from namespace range
+      runAsUser: null # Let OpenShift assign from namespace range
+      fsGroup: null # Let OpenShift assign from namespace range
       seccompProfile:
         type: RuntimeDefault
-    
     # Container security context
     containerSecurityContext:
       allowPrivilegeEscalation: false
-      runAsUser: null  # Let OpenShift assign from namespace range
+      runAsUser: null # Let OpenShift assign from namespace range
       capabilities:
         drop:
           - ALL
-      readOnlyRootFilesystem: false  # Developer Hub needs to write temp files
+      readOnlyRootFilesystem: false # Developer Hub needs to write temp files
 
 # OpenShift Console QuickStart Configuration
 quickstart:
   # Enable deployment of the Getting Started QuickStart
   enabled: true
+
+# PostgreSQL HA Configuration
+postgresql:
+  enabled: true
+  # High Availability - 3 instances
+  instances: 3
+  # Database configuration
+  database:
+    # CRITICAL: Use schema-based plugin isolation instead of separate databases
+    # This prevents "permission denied to create database" errors
+    pluginDivisionMode: schema
+  # Production resources
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  # Storage configuration
+  storage:
+    size: 20Gi
+    # Storage class for PostgreSQL (ReadWriteOnce access mode is sufficient)
+    # Leave empty to use cluster default storage class
+    #
+    # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-ceph-rbd"
+    # - Other block storage classes that support RWO
+    storageClassName: "" # Uses cluster default
+  # Automated backups
+  backup:
+    enabled: true
+    schedule: "0 2 * * *" # Daily at 2 AM
+    retention: "30d"
+    # Backup to ODF
+    repos:
+      - name: repo1
+        schedules:
+          full: "0 2 * * 0" # Weekly full backup on Sunday
+          differential: "0 2 * * 1-6" # Daily differential
+        volume:
+          volumeClaimSpec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 50Gi
+            # Storage class for backup volumes (ReadWriteOnce is sufficient)
+            # Leave empty to use cluster default
+            #
+            # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-ceph-rbd"
+            # - Other block storage classes that support RWO
+            storageClassName: "" # Uses cluster default
+
+# Security Configuration
+security:
+  # Network policies
+  networkPolicy:
+    enabled: true
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                network.openshift.io/policy-group: ingress
+    egress:
+      - to:
+          - namespaceSelector: {}
+        ports:
+          - protocol: TCP
+            port: 443
+          - protocol: TCP
+            port: 5432
+  # Pod security standards
+  podSecurity:
+    enabled: true
+    enforce: restricted
+  # Security context
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    runAsNonRoot: true
+
+# RBAC Configuration
+rbac:
+  enabled: true
+  # Create service account
+  create: true
+
+# IBM Fusion AI Features
+fusion:
+  enabled: true
+  # AI capabilities
+  ai:
+    enabled: true
+    models:
+      # Models will be discovered automatically from OpenShift AI
+      autoDiscovery: true
+    # RHOAI Connector - enables model discovery from OpenShift AI
+    rhoaiConnector:
+      enabled: true
+      tokenSecretName: "rhdh-rhoai-connector-token"
+      rbac:
+        create: true
+        watchNamespaces: [] # Empty = watch all namespaces
+  # Modernization tools
+  modernization:
+    enabled: true
+    tools:
+      - transformation-advisor
+      - mono2micro
+      - app-navigator
+
+# Templates Configuration
+templates:
+  enabled: true
+  # IBM Fusion AI templates
+  locations:
+    - type: url
+      target: https://github.com/IBM/storage-fusion/blob/main/AI/quickstarts/fusion-developerhub/templates/fusion-ai-template.yaml
+
+# Ingress/Route Configuration
+route:
+  enabled: true
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# Resource Quotas (optional)
+resourceQuota:
+  enabled: false
+  # Uncomment to enable
+  # hard:
+  #   requests.cpu: "10"
+  #   requests.memory: "20Gi"
+  #   limits.cpu: "20"
+  #   limits.memory: "40Gi"
+
+# Horizontal Pod Autoscaling (optional)
+autoscaling:
+  enabled: false
+  # Uncomment to enable
+  # minReplicas: 3
+  # maxReplicas: 10
+  # targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+# Made with Bob

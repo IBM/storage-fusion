@@ -115,8 +115,8 @@ Before starting, ensure you have:
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/ProjectAbell/Fusion-AI.git
-cd Fusion-AI/quickstarts/fusion-developerhub
+git clone https://github.com/IBM/storage-fusion.git
+cd storage-fusion/AI/quickstarts/fusion-developerhub
 ```
 
 ### Step 2: Choose Your Configuration
