@@ -40,8 +40,8 @@ Deploy Red Hat Developer Hub on IBM Fusion with:
 
 ```bash
 # Clone repository
-git clone https://github.com/IBM/storage-fusion.git
-cd storage-fusion/AI/quickstarts/fusion-developerhub
+git clone https://github.com/ProjectAbell/Fusion-AI.git
+cd Fusion-AI/quickstarts/fusion-developerhub
 
 # Deploy with guest access (demos/testing)
 helm upgrade --install fusion-hub ./helm-charts/fusion-developer-hub \
@@ -288,7 +288,7 @@ Apache License 2.0 - See [LICENSE](LICENSE) for details
 ## 🆘 Support
 
 - **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/IBM/storage-fusion/issues)
+- **Issues**: [GitHub Issues](https://github.com/ProjectAbell/Fusion-AI/issues)
 - **IBM Fusion Support**: Contact your IBM Fusion support team
 
 ---

@@ -140,8 +140,10 @@ Deploy IBM Fusion Developer Hub using either Helm for direct installation or Git
 - **Red Hat OpenShift 4.12+** cluster on IBM Fusion HCI
 - **Cluster admin access**
 - **Red Hat OpenShift AI (RHOAI)** installed and configured
-  - Required for automatic model discovery and AI capabilities
+  - Required for automatic model discovery and AI capabilities (enabled by default)
+  - **RHOAI access token secret** (`rhdh-rhoai-connector-token`) - verify this secret exists in your deployment namespace. If not, see [RHOAI Integration Guide](docs/getting-started/rhoai-integration.md) for setup instructions
   - Installation guide: [`../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md`](../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md)
+  - **Note:** Model discovery can be disabled if not needed (see [Section 3.4.4](#344-disable-rhoai-model-discovery-optional))
 - **100GB available storage** (ODF recommended)
 
 #### Required CLI Tools
@@ -157,8 +159,10 @@ Deploy IBM Fusion Developer Hub using either Helm for direct installation or Git
 - **Red Hat OpenShift 4.12+** cluster on IBM Fusion HCI
 - **Cluster admin access**
 - **Red Hat OpenShift AI (RHOAI)** installed and configured
-  - Required for automatic model discovery and AI capabilities
+  - Required for automatic model discovery and AI capabilities (enabled by default)
+  - **RHOAI access token secret** (`rhdh-rhoai-connector-token`) - verify this secret exists in your deployment namespace. If not, see [RHOAI Integration Guide](docs/getting-started/rhoai-integration.md) for setup instructions
   - Installation guide: [`../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md`](../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md)
+  - **Note:** Model discovery can be disabled if not needed (see [Section 3.4.4](#344-disable-rhoai-model-discovery-optional))
 - **100GB available storage** (ODF recommended)
 
 **Required CLI Tools:**
@@ -172,6 +176,9 @@ oc version
 
 # Check RHOAI installation
 oc get dsc -n redhat-ods-operator
+
+# Verify RHOAI token secret exists (replace <namespace> with your deployment namespace)
+oc get secret rhdh-rhoai-connector-token -n <namespace>
 
 # Check storage classes (must have RWX support)
 oc get sc
@@ -990,6 +997,7 @@ developerHub:
 - Save **Client ID** and **Client Secret**
 
 **2. Create Secret**:
+Create a Kubernetes secret in the namespace where your RHDH is deployed:
 ```bash
 oc create secret generic github-auth-secret \
   -n <namespace> \
@@ -1107,6 +1115,34 @@ developerHub:
 - **Guest Access profile:** RHOAI connector is **disabled** by default
 
 **For detailed RHOAI integration**, see: [`docs/getting-started/rhoai-integration.md`](docs/getting-started/rhoai-integration.md)
+
+#### 3.4.4 Disable RHOAI Model Discovery (Optional)
+
+> **⚠️ IMPORTANT:** RHOAI model discovery is **enabled by default** in production and development environments. Disabling it will prevent automatic discovery and cataloging of AI models deployed in OpenShift AI.
+
+If you don't need automatic model discovery from Red Hat OpenShift AI, you can disable it by setting the following in your environment values file:
+
+```yaml
+developerHub:
+  fusion:
+    ai:
+      rhoaiConnector:
+        enabled: false  # Disables RHOAI model discovery
+```
+
+**What gets disabled:**
+- Automatic discovery of InferenceServices from OpenShift AI
+- Model catalog integration with RHOAI
+- Model endpoint and metadata display in Developer Hub
+- RHOAI-specific plugins and sidecars
+
+**What remains enabled:**
+- Custom homepage with quick access sections
+- Fusion AI templates and blueprints
+- Software catalog and TechDocs
+- All other Developer Hub features
+
+**Note:** The homepage and quick access sections will continue to work even with RHOAI disabled, as they are controlled by the `homepage.enabled` setting (enabled by default).
 
 ### 3.5 Apply Your Changes
 
@@ -1357,75 +1393,132 @@ This guide covers:
 
 ## Upgrade
 
-Keep your IBM Fusion Developer Hub installation up-to-date with the latest features and security patches. This section covers upgrade procedures for both Helm and GitOps deployments using our reverse versioning model.
+Keep your IBM Fusion Developer Hub installation up-to-date with the latest features and security patches. This section covers upgrade procedures for both Helm and GitOps deployments.
 
 **In this section:**
 - [5.1 Upgrade for Helm-Based Deployment](#51-upgrade-for-helm-based-deployment)
 - [5.2 Upgrade for GitOps-Based Deployment](#52-upgrade-for-gitops-based-deployment)
-- [5.3 Upgrade Best Practices](#53-upgrade-best-practices)
-
-This section covers upgrading IBM Fusion Developer Hub to newer versions for both Helm-based and GitOps-based deployments.
+- [5.3 Rollback Procedure](#53-rollback-procedure)
 
 ### 5.1 Upgrade for Helm-Based Deployment
 
-For deployments installed directly using Helm, follow the standard Helm upgrade workflow.
-
-#### Upgrade Process
+For deployments installed directly using Helm, we use the same **snapshot-based versioning** approach as GitOps deployments.
 
 ```bash
-# Step 1: Update your local repository
-cd storage-fusion/AI/quickstarts/fusion-developerhub
+# Step 1: Archive current configuration (before pulling changes)
+cd Fusion-AI/quickstarts/fusion-developerhub/deploy/helm/environments/prod
+cp values.yaml value-v1-june2026.yaml
+
+# Step 2: Pull latest changes
+cd Fusion-AI/quickstarts/fusion-developerhub
 git pull origin main
 
-# Step 2: Review changes
+# Step 3: Review changes (optional)
 helm diff upgrade fusion-developer-hub \
   ./deploy/helm \
   -n fusion-developer-hub \
   -f deploy/helm/environments/prod/values.yaml
 
-# Step 3: Perform upgrade
+# Step 4: Perform upgrade
 helm upgrade fusion-developer-hub \
   ./deploy/helm \
   -n fusion-developer-hub \
   -f deploy/helm/environments/prod/values.yaml \
   --timeout 20m
 
-# Step 4: Monitor the upgrade
-watch oc get pods -n fusion-developer-hub
+# Step 5: Verify deployment
+oc get pods -n fusion-developer-hub
+oc get route -n fusion-developer-hub
 ```
 
 **What gets upgraded:**
 - Developer Hub application to latest version
 - Configuration changes from values file
-- Template updates
-- Plugin updates
+- Template and plugin updates
 
-**Note**: The upgrade process performs a rolling update, maintaining availability during the upgrade.
-
-For detailed Helm upgrade procedures, rollback steps, and troubleshooting, refer to the [Day-2 Operations section in the main README](README.md#day-2-operations).
+**Note**: The upgrade performs a rolling update, maintaining availability during the process. The snapshot archive allows easy rollback if needed.
 
 ### 5.2 Upgrade for GitOps-Based Deployment
 
-For production deployments managed by ArgoCD, upgrades require careful review and manual approval. Production environments typically have **auto-sync disabled** to ensure changes are reviewed before deployment.
+For production deployments managed by ArgoCD, we use a **snapshot-based versioning** approach that archives the current configuration before making changes.
 
-#### 5.2.1 Upgrade Steps
+#### 5.2.1 Understanding Snapshot Versioning
 
-**Step 1: Understand How Upgrades Work**
+**Key Concept**: The active configuration is always named [`values.yaml`](deploy/helm/environments/prod/values.yaml). Before making changes, we archive the current version with a date-stamped filename.
 
-[Section 5.2.2](#522-understanding-the-versioning-model) may help you understand the upgrade model before proceeding.
+**Directory Structure:**
+```
+deploy/helm/environments/prod/
+├── values.yaml                 # CURRENT/ACTIVE production config
+├── value-v0-may2026.yaml      # May 2026 snapshot
+└── value-v1-june2026.yaml     # June 2026 snapshot (future)
+```
+
+**Benefits:**
+- ✅ No ArgoCD Application CR changes needed
+- ✅ Complete version history preserved
+- ✅ Easy rollback (simple file copy)
+- ✅ Clear audit trail
+
+#### 5.2.2 Upgrade Steps
+
+**Step 1: Archive Current Configuration**
+
+Before making any changes, create a snapshot of the current production configuration:
+
+```bash
+# Navigate to production directory
+cd quickstarts/fusion-developerhub/deploy/helm/environments/prod
+
+# Archive current version with date
+cp values.yaml value-v1-june2026.yaml
+```
 
 **Step 2: Pull Latest Changes**
 
-Pull the latest changes from IBM's upstream repository into your fork. If you encounter merge conflicts, [section 5.2.3](#523-customer-customization--merge-conflicts) may help with resolution. Review your changes carefully before committing.
+Pull the latest changes from IBM's upstream repository:
+
+```bash
+cd Fusion-AI/quickstarts/fusion-developerhub
+git pull origin main
+```
+
+**If you encounter merge conflicts** (this is normal if you customized the same fields IBM updated):
+1. Review the conflict - understand what IBM changed vs. your customization
+2. Manually resolve - keep your value, adopt IBM's, or merge both
+3. Test the result - verify your configuration still works
 
 **Step 3: Review and Commit**
 
-After resolving conflicts, review all changes thoroughly, test if possible, then commit and push to your fork.
+```bash
+# Review all changes
+git status
+git diff
 
-**Step 4: Sync in ArgoCD**
+# Add changes
+git add deploy/helm/environments/prod/
 
-- **Development environment**: If auto-sync is enabled, ArgoCD will automatically deploy changes
-- **Production environment**: Auto-sync is typically disabled. Access ArgoCD UI, review the diff carefully, then manually sync
+# Commit with descriptive message
+git commit -m "chore: Archive v1 (June 2026) and apply upstream updates
+
+Changes:
+- [List key changes here]
+
+Archived version:
+- value-v1-june2026.yaml"
+
+# Push to your repository
+git push origin main
+```
+
+**Step 4: Deploy via ArgoCD**
+
+- **Development environment**: If auto-sync is enabled, ArgoCD will automatically deploy changes within 3 minutes
+- **Production environment**: Auto-sync is typically disabled for safety
+  1. Access ArgoCD UI
+  2. Select the `fusion-developer-hub` application
+  3. Review the diff carefully
+  4. Click "Sync" to deploy
 
 **Step 5: Verify Deployment**
 
@@ -1433,125 +1526,54 @@ After resolving conflicts, review all changes thoroughly, test if possible, then
 # Check pods are running
 oc get pods -n fusion-developer-hub
 
-# Access Developer Hub and verify functionality
+# Verify route is accessible
 oc get route -n fusion-developer-hub
+
+# Access Developer Hub and test functionality
 ```
 
-#### 5.2.2 Understanding the Versioning Model
+### 5.3 Rollback Procedure
 
-IBM Fusion Developer Hub uses an approach that keeps the current release always named `values.yaml` (no version suffix), making upgrades and fresh installs simple.
+#### For Helm Deployments
 
-**How It Works:**
+```bash
+# List release history
+helm history fusion-developer-hub -n fusion-developer-hub
 
-1. **Current files are always unversioned:**
-   - Base chart: `deploy/helm/values.yaml`
-   - Each environment: `deploy/helm/environments/<env>/values.yaml`
-   - ArgoCD Application CRs always reference these unversioned paths
-
-2. **When IBM releases an update:**
-   - The current `values.yaml` is copied to `versions/values-v0.yaml` (or v1, v2, etc.)
-   - The live `values.yaml` is updated in-place with new changes
-   - This happens for both base values and all 3 environment files independently
-
-3. **Version history is preserved:**
-   - Old versions are stored in `versions/` subdirectories
-   - Each file maintains its own version history
-   - Fresh installs only need the current `values.yaml` files - no chaining required
-
-**Directory Structure:**
-
-```
-quickstarts/fusion-developerhub/
-├── deploy/helm/
-│   ├── values.yaml                    # Current base defaults (no version)
-│   └── versions/
-│       ├── values-v0.yaml             # Previous release
-│       └── values-v1.yaml             # Older release
-│
-├── environments/
-│   ├── production/
-│   │   ├── values.yaml                # Current production config (no version)
-│   │   └── versions/
-│   │       ├── values-v0.yaml         # Previous production release
-│   │       └── values-v1.yaml         # Older production release
-│   │
-│   ├── staging/
-│   │   ├── values.yaml                # Current staging config
-│   │   └── versions/
-│   │       └── values-v0.yaml         # Previous staging release
-│   │
-│   └── development/
-│       ├── values.yaml                # Current development config
-│       └── versions/
-│           └── values-v0.yaml         # Previous development release
-│
-└── deploy/gitops/environments/
-    └── prod/
-        └── application.yaml           # Always references unversioned values.yaml
+# Rollback to previous revision
+helm rollback fusion-developer-hub <revision-number> -n fusion-developer-hub
 ```
 
-**Key Benefits:**
+#### For GitOps Deployments
 
-- **No Application CR updates needed** - ArgoCD always points to `values.yaml`
-- **Fresh installs are simple** - Just use current `values.yaml` files
-- **Clear what's current** - No version suffix = latest release
-- **Version history preserved** - Old versions in `versions/` for reference
-- **Independent versioning** - Base and each environment maintain separate histories
+**Quick Rollback** - Restore a previous snapshot:
 
-**Helm Value Precedence (last wins):**
+```bash
+# Navigate to production directory
+cd quickstarts/fusion-developerhub/deploy/helm/environments/prod
 
-1. Base `deploy/helm/values.yaml` (chart defaults)
-2. Environment-specific `deploy/helm/environments/<env>/values.yaml` (via `valueFiles` in Application CR)
-3. Inline `valuesObject` fields in Application CR (highest priority)
+# Restore previous version
+cp value-v0-may2026.yaml values.yaml
 
-#### 5.2.3 Customer Customization & Merge Conflicts
+# Commit and push
+git add values.yaml
+git commit -m "rollback: Restore v0 (May 2026) configuration"
+git push origin main
 
-**Expected Workflow:**
-
-Customers fork the IBM repository and may customize `environments/<env>/values.yaml` directly with their organization-specific settings.
-
-**When Pulling Upstream Updates:**
-
-When IBM releases an update and you pull/rebase from upstream, you may encounter **Git merge conflicts** if IBM changed the same fields you customized. This is **expected and normal** - it's standard Git practice, not an error.
-
-**How to Handle Merge Conflicts:**
-
-1. **Review the conflict** - Understand what IBM changed vs. your customization
-2. **Manually resolve** - Choose to keep your value, adopt IBM's, or merge both
-3. **Test the result** - Verify your configuration still works
-4. **Commit the resolution** - Complete the merge
-
-**Example Conflict:**
-
-```yaml
-<<<<<<< HEAD (your customization)
-developerHub:
-  replicas: 5  # You increased for high load
-=======
-developerHub:
-  replicas: 3  # IBM's new default
->>>>>>> upstream/main
+# ArgoCD will auto-sync or manually sync in UI
 ```
 
-**Resolution:** Keep your value (5) since it's specific to your needs, or adopt IBM's if appropriate.
+**Git Revert** - Undo specific commits:
 
-**Best Practice:** Document your customizations in comments so you remember why you changed defaults:
+```bash
+# Revert the last commit
+git revert HEAD
 
-```yaml
-developerHub:
-  replicas: 5  # Increased from 3 for high-traffic production environment
+# Push the revert
+git push origin main
 ```
 
-#### 5.2.4 Rollback
-
-If you need to rollback, use standard Git practices (revert commits) or ArgoCD's built-in rollback feature. Refer to [Git documentation](https://git-scm.com/docs/git-revert) and [ArgoCD rollback documentation](https://argo-cd.readthedocs.io/en/stable/user-guide/commands/argocd_app_rollback/) for detailed instructions.
-
-### 5.3 Upgrade Best Practices
-
-- Always test upgrades in development environment first
-- Review IBM's release notes for breaking changes
-- Document your customizations with comments in values.yaml files
-- Keep auto-sync disabled for production environments
+For more details on version management, see [`deploy/helm/VERSION_MANAGEMENT.md`](deploy/helm/VERSION_MANAGEMENT.md).
 - Review diffs carefully in ArgoCD UI before syncing
 
 ## Troubleshooting
@@ -1651,7 +1673,6 @@ helm install fusion-developer-hub \
 ## Additional Resources
 
 ### Setup and Configuration
-- [Complete Setup Guide](SETUP.md) - Comprehensive setup with all prerequisites
 - [Production Deployment Guide](docs/README.md) - Advanced configuration options
 - [Homepage Customization](docs/homepage-customization.md) - Customize the UI
 - [RHOAI Integration](docs/getting-started/rhoai-integration.md) - Deep dive into AI integration
@@ -1664,7 +1685,6 @@ helm install fusion-developer-hub \
 ### Troubleshooting
 - [Troubleshooting Guide](docs/troubleshooting/README.md) - Comprehensive troubleshooting
 - [PostgreSQL Issues](docs/troubleshooting/postgresql-troubleshooting.md) - Database troubleshooting
-- [Readiness Probe 503 Fix](docs/troubleshooting/READINESS_PROBE_503_FIX.md) - Fix common startup issues
 
 ## Support
 

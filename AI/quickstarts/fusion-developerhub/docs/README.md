@@ -97,7 +97,7 @@ oc logs -n fusion-dev-hub -l app.kubernetes.io/name=backstage --tail=100
 
 ### Support Channels
 
-- **Documentation Issues**: [GitHub Issues](https://github.com/IBM/storage-fusion/issues)
+- **Documentation Issues**: [GitHub Issues](https://github.com/ProjectAbell/Fusion-AI/issues)
 - **IBM Fusion Support**: Contact your IBM Fusion support team
 - **Red Hat Developer Hub**: [Red Hat Support](https://access.redhat.com/support)
 

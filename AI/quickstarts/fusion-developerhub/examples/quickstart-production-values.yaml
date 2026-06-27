@@ -60,11 +60,8 @@ developerHub:
       enabled: true
       welcomeTitle: "Welcome to IBM Fusion AI Platform"
       welcomeMessage: |
-        Accelerate AI development with:
-        • Automatic model discovery from OpenShift AI
-        • Self-service templates for AI applications
-        • Integrated development tools
-        • Enterprise-grade security and governance
+        Fusion Developer Hub is a unified portal for AI platform development.
+        Browse blueprints, deploy models, access community resources and quickstarts to accelerate your development and modernization journey.
       
       # OpenShift AI Model Connector (KEY FEATURE)
       plugins:

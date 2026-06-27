@@ -922,17 +922,17 @@ spec:
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/data.json
                     subPath: data.json
                   - name: homepage-data
-                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/community-icon.png
-                    subPath: community-icon.png
-                  - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/ai-models-icon.png
                     subPath: ai-models-icon.png
                   - name: homepage-data
-                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/doc-icon.png
-                    subPath: doc-icon.png
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/ibm-blue.svg
+                    subPath: ibm-blue.svg
                   - name: homepage-data
-                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/quickstart-icon.png
-                    subPath: quickstart-icon.png
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/redhat-red.svg
+                    subPath: redhat-red.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/nvidia-green.svg
+                    subPath: nvidia-green.svg
         {{- end }}
   
   {{- if .Values.developerHub.database.useOperator }}
