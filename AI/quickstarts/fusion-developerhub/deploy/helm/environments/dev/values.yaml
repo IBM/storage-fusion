@@ -175,7 +175,7 @@ developerHub:
         
         🚀 **Getting Started**
 
-        Follow the [Quickstart Guide](https://community.ibm.com/community/user/blogs/anushka-jaiswal/2026/05/29/quickstart-developer-hub-on-ibm-fusion-with-redhat) to begin navigating your portal — explore the software catalog, view available blueprints, and access unified documentation.
+        Follow the [Quickstart Guide](https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops) to begin navigating your portal — explore the software catalog, view available blueprints, and access unified documentation.
       
       # Quick access links (optional - defaults to Fusion quick links). Add quicklinks here if you want to override the default quicklinks. Defaults are present in dynamic-plugins.yaml file
       # Uncomment to customize:

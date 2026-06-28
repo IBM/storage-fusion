@@ -1406,11 +1406,11 @@ For deployments installed directly using Helm, we use the same **snapshot-based 
 
 ```bash
 # Step 1: Archive current configuration (before pulling changes)
-cd Fusion-AI/quickstarts/fusion-developerhub/deploy/helm/environments/prod
+cd storage-fusion/AI/quickstarts/fusion-developerhub/deploy/helm/environments/prod
 cp values.yaml value-v1-june2026.yaml
 
 # Step 2: Pull latest changes
-cd Fusion-AI/quickstarts/fusion-developerhub
+cd storage-fusion/AI/quickstarts/fusion-developerhub
 git pull origin main
 
 # Step 3: Review changes (optional)
@@ -1468,7 +1468,7 @@ Before making any changes, create a snapshot of the current production configura
 
 ```bash
 # Navigate to production directory
-cd quickstarts/fusion-developerhub/deploy/helm/environments/prod
+cd storage-fusion/AI/quickstarts/fusion-developerhub/deploy/helm/environments/prod
 
 # Archive current version with date
 cp values.yaml value-v1-june2026.yaml
@@ -1479,7 +1479,7 @@ cp values.yaml value-v1-june2026.yaml
 Pull the latest changes from IBM's upstream repository:
 
 ```bash
-cd Fusion-AI/quickstarts/fusion-developerhub
+cd storage-fusion/AI/quickstarts/fusion-developerhub
 git pull origin main
 ```
 
@@ -1676,6 +1676,7 @@ helm install fusion-developer-hub \
 - [Production Deployment Guide](docs/README.md) - Advanced configuration options
 - [Homepage Customization](docs/homepage-customization.md) - Customize the UI
 - [RHOAI Integration](docs/getting-started/rhoai-integration.md) - Deep dive into AI integration
+- [Quickstart: Fusion Developer Hub via GitOps](https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops) - Step-by-step GitOps deployment guide
 
 ### AI Platform Components
 - [Red Hat OpenShift AI Installation](../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md) - Install RHOAI on Fusion

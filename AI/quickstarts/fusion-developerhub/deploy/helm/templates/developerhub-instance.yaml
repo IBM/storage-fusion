@@ -498,7 +498,7 @@ data:
                     
                     **Getting Started**
 
-                    Follow the [IBM Fusion Developer Hub Exploration Guide](https://community.ibm.com/community/user/blogs/anushka-jaiswal/2026/05/29/quickstart-developer-hub-on-ibm-fusion-with-redhat) to begin navigating your portal — explore the software catalog, view available blueprints, and access unified documentation.
+                    Follow the [IBM Fusion Developer Hub Exploration Guide](https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops) to begin navigating your portal — explore the software catalog, view available blueprints, and access unified documentation.
                     {{- end }}
             # Quick Access
             - mountPoint: home.page/cards
