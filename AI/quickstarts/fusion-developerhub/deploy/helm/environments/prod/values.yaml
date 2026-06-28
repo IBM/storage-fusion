@@ -335,6 +335,12 @@ developerHub:
           target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
+
+        # Storage Fusion Repository
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/catalog-info.yaml
+          rules:
+            - allow: [Component]
     # GitHub integration for catalog imports
     github:
       enabled: false
