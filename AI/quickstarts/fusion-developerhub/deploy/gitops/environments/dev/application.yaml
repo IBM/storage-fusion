@@ -13,7 +13,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/your-org/your-repo.git #IMPORTANT: Replace with your repo URL
-    path: quickstarts/fusion-developerhub/deploy/helm
+    path: AI/quickstarts/fusion-developerhub/deploy/helm
     targetRevision: main # Replace with your target branch or tag
     helm:
       valueFiles:

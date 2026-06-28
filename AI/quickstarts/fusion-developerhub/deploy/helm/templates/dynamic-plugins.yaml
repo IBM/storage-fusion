@@ -108,12 +108,12 @@ data:
         "links": [
           {
             "label": "Fusion HCI Knowledge Center",
-            "url": "https://www.ibm.com/docs/en/fusion-hci-systems/2.13.0",
+            "url": "https://www.ibm.com/docs/en/fusion-hci-systems",
             "iconUrl": "/homepage/icons/ibm-blue.svg"
           },
           {
             "label": "Fusion SDS Knowledge Center",
-            "url": "https://www.ibm.com/docs/en/fusion-software/2.13.0",
+            "url": "https://www.ibm.com/docs/en/fusion-software",
             "iconUrl": "/homepage/icons/ibm-blue.svg"
           }
         ]

@@ -303,32 +303,37 @@ developerHub:
       locations:
         # NVIDIA RAG Blueprint
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/dynamic-plugins/AI/NVIDIA%20Blueprints/NVIDIA%20RAG/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20RAG/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
+
         # NVIDIA AIQ Blueprint
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/dynamic-plugins/AI/NVIDIA%20Blueprints/NVIDIA%20AIQ/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20AIQ/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
+
         # NVIDIA VSS Blueprint
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/dynamic-plugins/AI/NVIDIA%20Blueprints/NVIDIA%20VSS/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20VSS/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
+
         # Fusion Developer Hub Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/dynamic-plugins/AI/quickstarts/fusion-developerhub/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
+
         # Fusion GitOps Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/dynamic-plugins/AI/quickstarts/fusion-gitops/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
+
         # Model-as-a-Service Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/dynamic-plugins/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
     # GitHub integration for catalog imports
