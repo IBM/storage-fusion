@@ -1,0 +1,42 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: nvidia-rag-blueprint
+  title: Guide to deploy NVIDIA RAG Blueprint on IBM Fusion
+  description: |
+    Deploy a Retrieval-Augmented Generation (RAG) blueprint on IBM Fusion HCI. 
+    It enables users to ask questions and get accurate answers grounded in their own documents instead of relying on generic LLM guesses.
+    
+    Key features include multi-modal document intelligence, processing complex documents through OCR, PDF layout parsing, and table or chart extraction. Answers are grounded with context and citations via NVIDIA NIM, keeping responses traceable. Infrastructure is converged, with compute, GPU, and storage unified under a single OpenShift-managed system. Performance is production-ready, with NVMe-backed storage delivering the throughput RAG workloads need.
+  tags:
+    - nvidia
+    - rag
+    - ai
+    - blueprint
+    - fusion
+    - gpu
+    - llm
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+    
+  links:
+    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/02/03/deploying-nvidia-rag-on-fusion-hci
+      title: Read on IBM Tech Exchange
+      icon: article
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
+      title: View on Fusion Tech Community
+      icon: web
+    - url: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20RAG/Fusion_NVIDIA_RAG_Guide.md
+      title: Complete deployment guide on GitHub
+      icon: docs
+    - url: https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/deploy-helm.md
+      title: NVIDIA Documentation
+      icon: launch
+spec:
+  type: blueprint
+  lifecycle: production
+  owner: IBM
+  
+  providesApis: []
+  consumesApis: []
