@@ -36,14 +36,7 @@ metadata:
 spec:
   type: quickstart
   lifecycle: production
-  owner: fusion-team
-  system: fusion-ai-platform
+  owner: IBM
   
   providesApis: []
   consumesApis: []
-  
-  dependsOn:
-    - resource:default/openshift
-    - resource:default/fusion-storage
-
-# Made with Bob

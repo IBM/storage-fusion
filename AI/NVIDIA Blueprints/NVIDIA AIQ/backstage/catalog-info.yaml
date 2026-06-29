@@ -38,13 +38,7 @@ metadata:
 spec:
   type: blueprint
   lifecycle: production
-  owner: fusion-team
-  system: fusion-ai-platform
+  owner: IBM
   
   providesApis: []
   consumesApis: []
-  
-  dependsOn:
-    - resource:default/nvidia-gpu
-    - resource:default/fusion-storage
-    - component:default/nvidia-rag-blueprint
