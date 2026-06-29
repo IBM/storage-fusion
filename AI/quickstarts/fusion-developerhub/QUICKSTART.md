@@ -509,7 +509,7 @@ Find the `repoURL` field (around line 14) and change it to point to your fork:
 spec:
   source:
     repoURL: https://github.com/<YOUR-USERNAME>/storage-fusion.git  # ← Change to your username
-    targetRevision: main  # Keep 'main' or change only if using a custom branch
+    targetRevision: master  # Keep 'master' or change only if using a custom branch
 ```
 
 **Example:** If your GitHub username is `john-doe`, change it to:
@@ -581,7 +581,7 @@ spec:
   source:
     repoURL: <your-fork>              # Your Git repository
     path: quickstarts/.../helm-charts # Path to Helm chart
-    targetRevision: main              # Git branch to track
+    targetRevision: master            # Git branch to track
     helm:
       valueFiles:
         - environments/prod/values.yaml  # Environment-specific config
@@ -603,11 +603,11 @@ git add deploy/gitops/environments/prod/application.yaml
 # Commit with descriptive message
 git commit -m "Configure Fusion Developer Hub for production cluster"
 
-# Push to your forked repository (default: main branch)
-git push origin main
+# Push to your forked repository (default: master branch)
+git push origin master
 ```
 
-> **Note:** By default, the Application CR uses `main` branch (`targetRevision: main`). If you want to use a custom branch, create your branch, commit there, and update `targetRevision` in the Application CR to match your branch name.
+> **Note:** By default, the Application CR uses `master` branch (`targetRevision: master`). If you want to use a custom branch, create your branch, commit there, and update `targetRevision` in the Application CR to match your branch name.
 
 **Step 6: Deploy to Your Cluster**
 
@@ -1156,8 +1156,8 @@ git add deploy/helm/environments/prod/values.yaml
 git commit -m "Customize Developer Hub homepage and catalog"
 
 # 2. Push to your repository
-# Replace 'main' with your branch name (e.g., 'main', 'master', 'develop')
-git push origin main
+# Replace 'master' with your branch name (e.g., 'main', 'master', 'develop')
+git push origin master
 
 # 3. ArgoCD will auto-sync within 3 minutes
 # Or force immediate sync:
@@ -1411,7 +1411,7 @@ cp values.yaml value-v1-june2026.yaml
 
 # Step 2: Pull latest changes
 cd storage-fusion/AI/quickstarts/fusion-developerhub
-git pull origin main
+git pull origin master
 
 # Step 3: Review changes (optional)
 helm diff upgrade fusion-developer-hub \
@@ -1480,7 +1480,7 @@ Pull the latest changes from IBM's upstream repository:
 
 ```bash
 cd storage-fusion/AI/quickstarts/fusion-developerhub
-git pull origin main
+git pull origin master
 ```
 
 **If you encounter merge conflicts** (this is normal if you customized the same fields IBM updated):
@@ -1508,7 +1508,7 @@ Archived version:
 - value-v1-june2026.yaml"
 
 # Push to your repository
-git push origin main
+git push origin master
 ```
 
 **Step 4: Deploy via ArgoCD**
@@ -1558,7 +1558,7 @@ cp value-v0-may2026.yaml values.yaml
 # Commit and push
 git add values.yaml
 git commit -m "rollback: Restore v0 (May 2026) configuration"
-git push origin main
+git push origin master
 
 # ArgoCD will auto-sync or manually sync in UI
 ```
@@ -1570,7 +1570,7 @@ git push origin main
 git revert HEAD
 
 # Push the revert
-git push origin main
+git push origin master
 ```
 
 For more details on version management, see [`deploy/helm/VERSION_MANAGEMENT.md`](deploy/helm/VERSION_MANAGEMENT.md).

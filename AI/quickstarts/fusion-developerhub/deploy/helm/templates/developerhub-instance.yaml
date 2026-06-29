@@ -118,7 +118,6 @@ metadata:
 spec:
   # Allow multiple retries with exponential backoff
   backoffLimit: 20
-  ttlSecondsAfterFinished: 1800
   template:
     metadata:
       labels:
@@ -295,7 +294,6 @@ metadata:
     argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
   backoffLimit: 10
-  ttlSecondsAfterFinished: 1800
   template:
     metadata:
       labels:

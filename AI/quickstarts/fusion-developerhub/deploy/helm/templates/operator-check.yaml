@@ -19,7 +19,6 @@ metadata:
     argocd.argoproj.io/sync-options: Force=true,Replace=true
     # helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
-  ttlSecondsAfterFinished: 3600
   backoffLimit: 1
   template:
     metadata:

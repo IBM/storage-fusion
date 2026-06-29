@@ -4,10 +4,10 @@
 [![OpenShift](https://img.shields.io/badge/OpenShift-4.12+-red.svg)](https://www.redhat.com/en/technologies/cloud-computing/openshift)
 [![Red Hat](https://img.shields.io/badge/Red%20Hat-Certified-red.svg)](https://www.redhat.com/)
 
-Production-ready Helm chart for deploying Red Hat Developer Hub with IBM Fusion AI components on IBM Fusion platform using Kubernetes operators.
+Production-ready deployment of Red Hat Developer Hub with IBM Fusion AI components on IBM Fusion platform. Supports both **Helm** (direct install) and **GitOps with ArgoCD** (Git-driven, automated) deployment models, using Kubernetes operators for enterprise-grade lifecycle management.
 
 > **Platform**: IBM Fusion on Red Hat OpenShift 4.12+
-> This chart uses operator-based deployment for enterprise-grade reliability, high availability, and automated lifecycle management.
+> See [QUICKSTART.md](QUICKSTART.md) for the full step-by-step deployment guide including GitOps setup, customization, upgrade, and troubleshooting.
 
 ## 🎯 Purpose
 
@@ -19,24 +19,28 @@ Deploy Red Hat Developer Hub on IBM Fusion with:
 
 ## ✨ Key Features
 
-- 🎨 **Pre-configured Homepage** - IBM Fusion branding with AI capabilities
+- 🎨 **Pre-configured Homepage** - IBM Fusion branding with automatic OpenShift AI model discovery
 - 🔐 **OIDC Authentication** - Integrated with IBM Fusion identity providers
 - 🤖 **AI-Powered Development** - WatsonX and Granite models for code generation
+- 🧩 **Pre-built AI Templates** - Chatbot, RAG, code generation, and object detection app templates
+- 🔗 **GitHub Integration** - Connect GitHub.com or GitHub Enterprise for SCM-backed catalog entities
+- 🔭 **RHOAI Model Registry** - Automatic cataloging of deployed KServe InferenceService models
 - 🔄 **Application Modernization** - Transformation Advisor and Mono2Micro
-- 📦 **Software Catalog** - Discover and manage Fusion components
+- 📦 **Software Catalog** - Discover and manage Fusion components and NVIDIA blueprints
 - 🚀 **Self-Service Templates** - Rapid application creation with AI
 - 🔒 **Enterprise Security** - Production-grade security and compliance
+- 🔁 **GitOps Ready** - Native ArgoCD integration with sync-wave ordering
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - IBM Fusion platform on Red Hat OpenShift 4.12+
-- Helm 3.8+
-- `oc` CLI tools
+- Helm 3.8+ and `oc` CLI tools
 - Cluster admin access for operator installation
+- For GitOps: ArgoCD / OpenShift GitOps installed
 
-### Deploy Developer Hub
+### Option A — Deploy with Helm
 
 ```bash
 # Clone repository
@@ -44,7 +48,7 @@ git clone https://github.com/ProjectAbell/Fusion-AI.git
 cd Fusion-AI/quickstarts/fusion-developerhub
 
 # Deploy with guest access (demos/testing)
-helm upgrade --install fusion-hub ./helm-charts/fusion-developer-hub \
+helm upgrade --install fusion-hub ./deploy/helm \
   -f examples/operator-fusion-guest-access-values.yaml \
   --set global.wildcardDomain=apps.your-cluster.example.com \
   --namespace fusion-dev-hub \
@@ -59,6 +63,15 @@ oc wait --for=condition=ready pod \
 # Get the route
 oc get route -n fusion-dev-hub
 ```
+
+### Option B — Deploy with GitOps (ArgoCD)
+
+```bash
+# Apply the ArgoCD Application CR for your target environment
+oc apply -f deploy/gitops/environments/dev/application.yaml
+```
+
+ArgoCD will sync all resources in the correct order using sync-wave annotations. See [QUICKSTART.md — GitOps deployment](QUICKSTART.md#22-deploy-using-gitops) for full configuration steps.
 
 Access Developer Hub at: `https://backstage-fusion-hub-fusion-dev-hub.apps.your-cluster.example.com`
 
@@ -227,11 +240,13 @@ oc logs -n fusion-dev-hub -l postgres-operator.crunchydata.com/cluster=fusion-po
 ### Upgrade
 
 ```bash
-helm upgrade fusion-hub ./helm-charts/fusion-developer-hub \
+helm upgrade fusion-hub ./deploy/helm \
   -f examples/operator-fusion-production-values.yaml \
   --set global.wildcardDomain=apps.your-cluster.example.com \
   --namespace fusion-hub
 ```
+
+For GitOps upgrades (update chart version or values in Git, then sync via ArgoCD) and rollback procedures, see [QUICKSTART.md — Upgrade](QUICKSTART.md#upgrade).
 
 ## 🔍 Troubleshooting
 
