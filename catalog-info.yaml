@@ -1,0 +1,50 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ibm-storage-fusion
+  title: IBM Storage Fusion
+  description: |
+    IBM Storage Fusion is a container-native hybrid cloud data platform that offers simplified deployment and data management 
+    for Kubernetes applications on Red Hat OpenShift Container Platform.
+    
+    This repository contains:
+    - Backup and Restore Recipes
+    - Reference Applications
+    - Helpful Utilities and Scripts
+    - AI Platform Quickstarts
+  tags:
+    - storage
+    - fusion
+    - openshift
+    - kubernetes
+    - ibm
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+    
+  links:
+    - url: https://github.com/IBM/storage-fusion
+      title: GitHub Repository
+      icon: github
+    - url: https://www.ibm.com/products/storage-fusion
+      title: Product Page
+      icon: web
+    - url: https://www.ibm.com/docs/en/fusion-software
+      title: Fusion Software Documentation
+      icon: docs
+    - url: https://www.ibm.com/docs/en/fusion-hci-systems
+      title: Fusion HCI Systems Documentation
+      icon: docs
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/overview/
+      title: Fusion Tech Community
+      icon: group
+    - url: https://github.com/IBM/storage-fusion/tree/main/AI/quickstarts
+      title: AI Quickstarts
+      icon: catalog
+spec:
+  type: platform
+  lifecycle: production
+  owner: IBM
+  
+  providesApis: []
+  consumesApis: []
