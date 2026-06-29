@@ -1,0 +1,87 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-developer-hub-staging
+  namespace: openshift-gitops # ArgoCD namespace
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    environment: staging
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/your-repo.git #IMPORTANT: Replace with your repo URL
+    path: AI/quickstarts/fusion-developerhub/deploy/helm
+    targetRevision: main # Replace with your target branch or tag
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/staging/values.yaml   
+      valuesObject:
+        global:
+          # IMPORTANT: Change this to match your OpenShift cluster domain
+          # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+          wildcardDomain: apps.<cluster-domain>.com 
+        developerHub:
+          storage:
+            # IMPORTANT: Must support ReadWriteMany (RWX) access mode
+            # ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
+            storageClassName: ""
+        argocd:
+         enabled: true
+         rbac:
+            enabled: true
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fusion-developer-hub-staging
+  
+  revisionHistoryLimit: 10
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: operators.coreos.com
+      kind: Subscription
+      jsonPointers:
+        - /status
+        - /spec/installPlanApproval
+    - group: operators.coreos.com
+      kind: InstallPlan
+      jsonPointers:
+        - /status
+    - group: operators.coreos.com
+      kind: ClusterServiceVersion
+      jsonPointers:
+        - /status
+        - /metadata/annotations
+   
+  info:
+    - name: 'Deployment Order'
+      value: |
+        Wave -10: RBAC Foundation (18 resources - ArgoCD RBAC, Job ServiceAccounts, Developer Hub RBAC)
+        Wave 0: Namespaces (4 resources - Postgres & RHDH operator namespaces)
+        Wave 10: Pre-install Jobs (2 resources - Operator check, Namespace labeler)
+        Wave 20: OperatorGroups (2 resources - must be Healthy + Synced)
+        Wave 30: Subscriptions (2 resources - Postgres & RHDH operators, must be Healthy + Synced)
+        Wave 40: Operator Validation (3 resources - Wait jobs & CRD validation, must be Healthy + Synced)
+        Wave 50: Configuration (15 resources - ConfigMaps, RHOAI RBAC, Secrets, Policies)
+        Wave 60: Database (3 resources - PostgresCluster, CREATEDB Job, Backup setup)
+        Wave 70: Application (2 resources - Backstage CR, PVC)

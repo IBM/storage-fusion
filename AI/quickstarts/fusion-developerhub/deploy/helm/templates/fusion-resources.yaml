@@ -11,6 +11,8 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: fusion-templates
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 data:
   app-config-fusion-templates.yaml: |
     catalog:
@@ -210,6 +212,8 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: security
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 spec:
   podSelector:
     matchLabels:
@@ -275,13 +279,15 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: security
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 spec:
   limits:
     - max:
         cpu: "4"
         memory: 8Gi
       min:
-        cpu: 100m
+        cpu: 50m
         memory: 128Mi
       default:
         cpu: "1"
@@ -294,7 +300,7 @@ spec:
         cpu: "8"
         memory: 16Gi
       min:
-        cpu: 100m
+        cpu: 50m
         memory: 128Mi
       type: Pod
 ---
@@ -306,6 +312,8 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: security
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 spec:
   hard:
     requests.cpu: "{{ .Values.developerHub.security.resourceQuota.cpu }}"

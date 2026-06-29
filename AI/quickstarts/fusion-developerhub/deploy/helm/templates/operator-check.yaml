@@ -11,10 +11,15 @@ metadata:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: operator-check
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-5"
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
+    # helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
+  ttlSecondsAfterFinished: 3600
   backoffLimit: 1
   template:
     metadata:
@@ -42,7 +47,7 @@ spec:
           # Check if RHDH operator exists
           {{- if .Values.operators.developerHub.enabled }}
           echo "Checking for Red Hat Developer Hub operator..."
-          if oc get csv -n {{ .Values.operators.developerHub.namespace }} -l operators.coreos.com/rhdh.{{ .Values.operators.developerHub.namespace }}="" 2>/dev/null | grep -q rhdh; then
+          if oc get csv -n {{ .Values.operators.developerHub.namespace }} --no-headers 2>/dev/null | grep -i "rhdh-operator" | grep -q "Succeeded"; then
             echo "  ✓ RHDH operator already exists"
             RHDH_EXISTS=true
           else
@@ -54,7 +59,7 @@ spec:
           {{- if .Values.operators.postgres.enabled }}
           echo ""
           echo "Checking for Crunchy PostgreSQL operator..."
-          if oc get csv -n {{ .Values.operators.postgres.namespace }} -l operators.coreos.com/crunchy-postgres-operator.{{ .Values.operators.postgres.namespace }}="" 2>/dev/null | grep -q crunchy-postgres-operator; then
+          if oc get csv -n {{ .Values.operators.postgres.namespace }} --no-headers 2>/dev/null | grep -i "postgresoperator" | grep -q "Succeeded"; then
             echo "  ✓ Crunchy PostgreSQL operator already exists"
             POSTGRES_EXISTS=true
           else
@@ -103,9 +108,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-6"
     helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -114,9 +122,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-6"
     helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "-10"
 rules:
 - apiGroups: ["operators.coreos.com"]
   resources: ["clusterserviceversions", "subscriptions"]
@@ -135,9 +146,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-6"
+    {{- end }}
     helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/sync-wave: "-10"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

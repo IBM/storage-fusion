@@ -1,0 +1,661 @@
+# Global configuration shared across all components
+global:
+  # IMPORTANT: Change this to match your OpenShift cluster domain
+  wildcardDomain: apps.<cluster-domain>.com
+  # Name of the certificate secret for ingress (leave empty for self-signed)
+  wildcardCertName: ""
+  # Default namespace for model deployments
+  modelsNamespace: maas-models
+  # Tools image for jobs (should contain oc, kubectl, bash)
+  toolsImage: quay.io/openshift/origin-cli:latest
+
+# Operators Configuration
+operators:
+  # Enable operator installation (disable if operators already exist)
+  enabled: true
+  # Skip operator installation if they already exist in the cluster
+  # Set to true to use existing operators instead of installing new ones
+  skipIfExists: true
+  # Red Hat Developer Hub Operator
+  developerHub:
+    enabled: true
+    # Operator channel (fast, stable)
+    channel: fast
+    # Specific operator version (CSV name)
+    # Leave empty for latest version in channel
+    # Example: "rhdh-operator.v1.2.0"
+    startingCSV: ""
+    # Operator namespace
+    namespace: rhdh-operator
+    # Note: RHDH operator requires AllNamespaces install mode
+    # It will automatically watch all namespaces
+    # Install plan approval (Automatic or Manual)
+    installPlanApproval: Automatic
+  # PostgreSQL Operator (Crunchy Postgres for Kubernetes)
+  postgres:
+    enabled: true
+    # Operator channel (v5, stable)
+    channel: v5
+    # Specific operator version (CSV name)
+    # Leave empty for latest version in channel
+    # Example: "postgresoperator.v5.4.0"
+    startingCSV: ""
+    # Operator namespace
+    namespace: postgres-operator
+    # Operator catalog source
+    source: certified-operators
+    # Watch all namespaces
+    watchAllNamespaces: true
+    # Install plan approval (Automatic or Manual)
+    installPlanApproval: Automatic
+
+  # Red Hat Developer Hub Operator # Production-additional
+  # rhdh:
+  #   namespace: rhdh-operator
+  #   channel: fast
+  #   installPlanApproval: Automatic
+  # # Crunchy PostgreSQL Operator
+  # postgresql:
+  #   namespace: postgres-operator
+  #   channel: v5
+  #   installPlanApproval: Automatic
+
+# ArgoCD RBAC Configuration
+# Grants ArgoCD permissions to manage resources like NetworkPolicy, ResourceQuota, LimitRange
+argocd:
+  enabled: false
+  rbac:
+    # Enable ArgoCD RBAC (set to true when deploying via ArgoCD)
+    enabled: false
+    # ArgoCD service account name
+    serviceAccountName: openshift-gitops-argocd-application-controller
+    # ArgoCD namespace
+    namespace: openshift-gitops
+
+# Monitoring Configuration
+monitoring:
+  # Enable monitoring stack
+  enabled: false
+  # Prometheus integration
+  prometheus:
+    enabled: false
+    serviceMonitor:
+      enabled: false
+      interval: 30s
+  # Grafana dashboards
+  grafana:
+    enabled: false
+
+# Additional labels to apply to all resources
+commonLabels: {}
+# environment: production
+# team: ai-platform
+
+# Additional annotations to apply to all resources
+commonAnnotations: {}
+# managed-by: helm
+
+# Developer Hub Configuration
+developerHub:
+  # Enable Developer Hub deployment
+  enabled: true
+  # Create Backstage instance (requires operator CRDs to exist)
+  # Set to true to create the instance immediately
+  # Default is true for easier initial setup
+  createInstance: true
+  # Developer Hub instance name
+  instanceName: developer-hub
+  # Namespace for Developer Hub instance
+  # IMPORTANT: This should match the --namespace flag used with helm install/upgrade
+  # Leave empty to use .Release.Namespace automatically
+  namespace: ""
+  # Service Account configuration
+  # Used for RBAC permissions, especially for RHOAI connector
+  serviceAccount:
+    # Create a dedicated service account (default: false, uses "default" SA)
+    # Set to true if you need custom RBAC permissions
+    create: false
+    # Name of the service account to use
+    # If not set and create is true, a name is generated using the fullname template
+    # If not set and create is false, uses "default" service account
+    name: ""
+    # Annotations to add to the service account
+    annotations: {}
+  # Storage configuration for dynamic plugins
+  storage:
+    # Storage class for dynamic plugins PVC (ReadWriteMany access mode required)
+    # Leave empty to use cluster default storage class
+    #
+    # IMPORTANT: Must support ReadWriteMany (RWX) access mode
+    # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
+    # - If using NFS: use "nfs-client" or your NFS storage class
+    # - Other filesystem storage classes that support RWX
+    storageClassName: "" # Uses cluster default
+    # Storage size for dynamic plugins
+    size: 5Gi
+  # High Availability - 3 replicas
+  replicas: 2
+  # Application configuration
+  config:
+    # Application title
+    title: "IBM Fusion Developer Hub"
+    # Organization name
+    organizationName: "IBM Fusion"
+    # Hostname for the Developer Hub (leave empty for auto-generation)
+    hostname: ""
+    # IBM Fusion AI Homepage (enabled by default)
+    homepage:
+      # Enable Fusion custom homepage (default: true - uses Fusion custom homepage)
+      enabled: true
+      # Welcome message on homepage (optional - defaults to Fusion welcome message)
+      # Uncomment to customize:
+      # welcomeTitle: "Welcome to Your Company Developer Hub"
+      # welcomeMessage: |
+      #   Your custom welcome message here
+
+      # Company logo URL (displayed in top-left corner)
+      # Recommended size: 200x50px or similar aspect ratio
+      # Leave empty to use default IBM Fusion branding
+      # Example: "https://your-cdn.com/logo.png" or "data:image/svg+xml;base64,..."
+      companyLogo: "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiPgo8cGF0aCBkPSJNMCAwIEMwLjY2IDAgMS4zMiAwIDIgMCBDMy4zMiAyLjY0IDQuNjQgNS4yOCA2IDggQzQuMjMxNTg1NzcgOS4xMDgwMzY5MiAyLjQ2MDAxMDI0IDEwLjIxMTAyNzI2IDAuNjg3NSAxMS4zMTI1IEMwLjEyNTg3MTU4IDExLjY3ODc1NDg4IC0wLjQzNTc1Njg0IDEyLjA0NTAwOTc3IC0xLjAxNDQwNDMgMTIuNDIyMzYzMjggQy00LjYwNzA0NjA1IDE0LjcxNTE3MTYyIC04LjEyMzE2NTQ2IDE2LjUwNjIxNTggLTEyLjA5Mzc1IDE4LjA2NjQwNjI1IEMtMTkuOTEwNDgxNTggMjEuMzE4NzYzMjggLTE5LjkxMDQ4MTU4IDIxLjMxODc2MzI4IC0yNiAyNyBDLTI4LjMzNDg3MTIgMzUuNDE1NTQ2NzggLTI3LjE2NDM4MDI4IDQ0LjQ1NzEyNTc0IC0yNiA1MyBDLTI1LjI3NzQ4MDQ3IDUzLjQxMTM3MjA3IC0yNC41NTQ5NjA5NCA1My44MjI3NDQxNCAtMjMuODEwNTQ2ODggNTQuMjQ2NTgyMDMgQy0xNS44NDE2ODA5OCA1OC43ODYwMTY1NCAtNy44NzkwNjM1MiA2My4zMzYyMzc1NiAwLjA3NzIwOTQ3IDY3Ljg5NzcwNTA4IEMxLjMzNjc5MTU4IDY4LjYxOTc5NjcyIDIuNTk2NTExNDMgNjkuMzQxNjQ4MTcgMy44NTYzODQyOCA3MC4wNjMyMzI0MiBDNy44MDUwNjc0OCA3Mi4zMjUyNTYgMTEuNzQ3Njk3NjIgNzQuNTk3NTI4MzUgMTUuNjg3NSA3Ni44NzUgQzE2LjcxMzU5Mzc1IDc3LjQ2Mjk3MzYzIDE3LjczOTY4NzUgNzguMDUwOTQ3MjcgMTguNzk2ODc1IDc4LjY1NjczODI4IEMyMC4yMDI1OTc2NiA3OS40NzI0NzMxNCAyMC4yMDI1OTc2NiA3OS40NzI0NzMxNCAyMS42MzY3MTg3NSA4MC4zMDQ2ODc1IEMyMi40NTg3Mzc3OSA4MC43Nzg5MDEzNyAyMy4yODA3NTY4NCA4MS4yNTMxMTUyMyAyNC4xMjc2ODU1NSA4MS43NDE2OTkyMiBDMjYgODMgMjYgODMgMjcgODUgQzI2LjIyMjY1NjI1IDg2LjcyNjU2MjUgMjYuMjIyNjU2MjUgODYuNzI2NTYyNSAyNS4wNjI1IDg4LjYyNSBDMjQuMzgxODc1IDg5LjczODc1IDIzLjcwMTI1IDkwLjg1MjUgMjMgOTIgQzE5LjQ1NTY1NTczIDkwLjY1NTQ0MzAyIDE2LjE5MjAwODA3IDg5LjA4NzcxNjU2IDEyLjg4NjcxODc1IDg3LjIzNDM3NSBDMTEuODk2OTYwNDUgODYuNjgwNDgwOTYgMTAuOTA3MjAyMTUgODYuMTI2NTg2OTEgOS44ODc0NTExNyA4NS41NTU5MDgyIEM4LjMwMzQ3NTM0IDg0LjY2MTk4MzY0IDguMzAzNDc1MzQgODQuNjYxOTgzNjQgNi42ODc1IDgzLjc1IEM1LjU5NDc3NzgzIDgzLjEzNTM1ODg5IDQuNTAyMDU1NjYgODIuNTIwNzE3NzcgMy4zNzYyMjA3IDgxLjg4NzQ1MTE3IEMtNC41NTA0NjIzNSA3Ny40MTQ5NTUgLTEyLjQ0MzgwOTY1IDcyLjg4NjI5MzQyIC0yMC4zMTI1IDY4LjMxMjUgQy0yMS44MzE5NDIxNCA2Ny40MzEyNjQ2NSAtMjEuODMxOTQyMTQgNjcuNDMxMjY0NjUgLTIzLjM4MjA4MDA4IDY2LjUzMjIyNjU2IEMtMjQuNzk1ODk5NjYgNjUuNzA2MDk4NjMgLTI0Ljc5NTg5OTY2IDY1LjcwNjA5ODYzIC0yNi4yMzgyODEyNSA2NC44NjMyODEyNSBDLTI3LjQ3NjM4NTUgNjQuMTQwNzIxNDQgLTI3LjQ3NjM4NTUgNjQuMTQwNzIxNDQgLTI4LjczOTUwMTk1IDYzLjQwMzU2NDQ1IEMtMjkuNDg1NDY2MzEgNjIuOTQwMzg4MTggLTMwLjIzMTQzMDY2IDYyLjQ3NzIxMTkxIC0zMSA2MiBDLTMxLjc0MzYyNzkzIDYxLjYxOTA4MjAzIC0zMi40ODcyNTU4NiA2MS4yMzgxNjQwNiAtMzMuMjUzNDE3OTcgNjAuODQ1NzAzMTIgQy0zNi4wNDI3MDgwMyA1Ny44OTgxMTY3NiAtMzUuNjcwMzE0OCA1NC40NjEyODA5MSAtMzUuNzA3MDMxMjUgNTAuNjA1NDY4NzUgQy0zNS43MjI3MTY1MiA0OS43ODA0OTM5MyAtMzUuNzM4NDAxNzkgNDguOTU1NTE5MSAtMzUuNzU0NTYyMzggNDguMTA1NTQ1MDQgQy0zNS43NzkxODk3IDQ2LjM1OTc4ODY5IC0zNS43OTI3NjkyNyA0NC42MTM4NDY3MiAtMzUuNzk2MTQyNTggNDIuODY3OTE5OTIgQy0zNS44MTIzOTMxOSA0MC4yMDUwMDI3MiAtMzUuODk3Nzg4NTkgMzcuNTUwMDM3MjEgLTM1Ljk4NjMyODEyIDM0Ljg4ODY3MTg4IEMtMzYuMTkzOTg3OTkgMjIuNjk2ODQ0MTIgLTM2LjE5Mzk4Nzk5IDIyLjY5Njg0NDEyIC0zMy4zOTU5OTYwOSAxOC43MjA0NTg5OCBDLTMxLjAxMDg5OTc3IDE3LjA4NTkyMzE3IC0yOC42ODI2NzgzIDE2LjA3NzA1OTU2IC0yNiAxNSBDLTIzLjg4NDMwODg1IDEzLjgxNTkzMzc0IC0yMS43ODA3MTM1MiAxMi42MTAwODI2MSAtMTkuNjg3NSAxMS4zODY3MTg3NSBDLTE3LjQ2MDQxNjUgMTAuMTQ5ODg3MzQgLTE1LjIzMTIxMzY0IDguOTE2ODY1MSAtMTMgNy42ODc1IEMtMTAuNzQ5MjA2OTIgNi40NDI4MzkzNCAtOC40OTkxNjMxNiA1LjE5NjgyMjM0IC02LjI1IDMuOTQ5MjE4NzUgQy01LjI2NTE1NjI1IDMuNDA2MTIwNjEgLTQuMjgwMzEyNSAyLjg2MzAyMjQ2IC0zLjI2NTYyNSAyLjMwMzQ2NjggQy0xLjEwMzczOTAzIDEuMTkwNTAxODUgLTEuMTAzNzM5MDMgMS4xOTA1MDE4NSAwIDAgWiAiIGZpbGw9IiNBNDQ0RTEiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQ3LDM2KSIvPgo8cGF0aCBkPSJNMCAwIEMyLjAxOTIyMjIgMS4wMTUzMDM3NyA0LjAxMzY5IDIuMDgwOTI4NDEgNS45ODQzNzUgMy4xODc1IEM3LjA4Mzk0NTMxIDMuODAzNjcxODcgOC4xODM1MTU2MiA0LjQxOTg0Mzc1IDkuMzE2NDA2MjUgNS4wNTQ2ODc1IEMxMS4wMTYwMzUxNiA2LjAxNzYxNzE5IDExLjAxNjAzNTE2IDYuMDE3NjE3MTkgMTIuNzUgNyBDMTMuODk4NTU0NjkgNy42NDE5NTMxMyAxNS4wNDcxMDkzOCA4LjI4MzkwNjI1IDE2LjIzMDQ2ODc1IDguOTQ1MzEyNSBDMjQuNzMxNTUzMjMgMTMuNzMxNTUzMjMgMjQuNzMxNTUzMjMgMTMuNzMxNTUzMjMgMjcgMTYgQzI3LjI0MDUwOTAzIDE3Ljg3Mjk1NTMyIDI3LjI0MDUwOTAzIDE3Ljg3Mjk1NTMyIDI3LjIyNzA1MDc4IDIwLjE3NDMxNjQxIEMyNy4yMjY4OTk3MiAyMS4wMzUwNTc2OCAyNy4yMjY3NDg2NiAyMS44OTU3OTg5NSAyNy4yMjY1OTMwMiAyMi43ODI2MjMyOSBDMjcuMjE2MjcwNDUgMjMuNzEyODczMjMgMjcuMjA1OTQ3ODggMjQuNjQzMTIzMTcgMjcuMTk1MzEyNSAyNS42MDE1NjI1IEMyNy4xOTI0ODI2IDI2LjU1MzE2MjU0IDI3LjE4OTY1MjcxIDI3LjUwNDc2MjU3IDI3LjE4NjczNzA2IDI4LjQ4NTE5ODk3IEMyNy4xNzU1MTk4OSAzMS41MzE5MjU5MiAyNy4xNTA0MTI2MyAzNC41NzgzNjE1NCAyNy4xMjUgMzcuNjI1IEMyNy4xMTQ5NzIxOCAzOS42ODc0OTU3NiAyNy4xMDU4NDU5OSA0MS43NDk5OTYxMiAyNy4wOTc2NTYyNSA0My44MTI1IEMyNy4wNzU1NzU1NCA0OC44NzUxMTI2NyAyNy4wNDEwMzUzIDUzLjkzNzUwNjkgMjcgNTkgQzI0LjM2IDU5IDIxLjcyIDU5IDE5IDU5IEMxOS4wNzk2ODAxOCA1Ny45NDIwMDE5NSAxOS4xNTkzNjAzNSA1Ni44ODQwMDM5MSAxOS4yNDE0NTUwOCA1NS43OTM5NDUzMSBDMjEuMjg0OTAzMiAzNi42ODMwODY3OCAyMS4yODQ5MDMyIDM2LjY4MzA4Njc4IDE1Ljk4ODI4MTI1IDE5LjA1MzcxMDk0IEMxMC43MTEyMTAyOCAxNC40MDg2NjEyNiAzLjk4MjY1MjI0IDExLjA3OTUxMzcgLTMgMTAgQy03LjMwNDcxODM3IDEwLjM2NzAyMDI4IC0xMC4zMDYxOTYxMiAxMS40NTkwNDk2NSAtMTMuOTkyMTg3NSAxMy42Njc5Njg3NSBDLTE0LjkzMzg0NzY2IDE0LjIyNTMyNzE1IC0xNS44NzU1MDc4MSAxNC43ODI2ODU1NSAtMTYuODQ1NzAzMTIgMTUuMzU2OTMzNTkgQy0xNy44NDUzNzEwOSAxNS45NjEwMjA1MSAtMTguODQ1MDM5MDYgMTYuNTY1MTA3NDIgLTE5Ljg3NSAxNy4xODc1IEMtMjIuMDA3NjQ0ODEgMTguNDU0NzA5MzQgLTI0LjE0MDQ2Mjc2IDE5LjcyMTYyNzMzIC0yNi4yNzM0Mzc1IDIwLjk4ODI4MTI1IEMtMjcuMzcyNjg1NTUgMjEuNjQ1MjE5NzMgLTI4LjQ3MTkzMzU5IDIyLjMwMjE1ODIgLTI5LjYwNDQ5MjE5IDIyLjk3OTAwMzkxIEMtMzUuMjEzMjM3ODUgMjYuMzE3MzEyNTUgLTQwLjg1Nzk0MDg0IDI5LjU5MzM1OTQ4IC00Ni41IDMyLjg3NSBDLTQ4LjUzMTQxOTUxIDM0LjA1OTYwNTIgLTUwLjU2MjY4NTM5IDM1LjI0NDQ3MzkxIC01Mi41OTM3NSAzNi40Mjk2ODc1IEMtNTQuMDYyNSAzNy4yODY0NTgzMyAtNTUuNTMxMjUgMzguMTQzMjI5MTcgLTU3IDM5IEMtNTkuMDI0NTczOCAzNy4wNjc0NTIyOCAtNjAuNDIxMDU3OTIgMzUuMzY4NDEzMTIgLTYyIDMzIEMtNjIgMzIuMDEgLTYyIDMxLjAyIC02MiAzMCBDLTYxLjI3NzQ4MDQ3IDI5LjU4ODYyNzkzIC02MC41NTQ5NjA5NCAyOS4xNzcyNTU4NiAtNTkuODEwNTQ2ODggMjguNzUzNDE3OTcgQy01Ni4zNzI5NzIxOSAyNi43OTUyMTY0NyAtNTIuOTM2MTkzMjcgMjQuODM1NjI0MjEgLTQ5LjUgMjIuODc1IEMtNDguODc0NDAxODYgMjIuNTE4MDcwNjggLTQ4LjI0ODgwMzcxIDIyLjE2MTE0MTM2IC00Ny42MDQyNDgwNSAyMS43OTMzOTYgQy0zNy41MjE5NjUyNyAxNi4wMzgzMDIyMyAtMjcuNDc2ODgzNyAxMC4yMjMzMDE0NSAtMTcuNDY2Nzk2ODggNC4zNDMyNjE3MiBDLTE2LjUzOTMxNjQxIDMuNzk5NDM4NDggLTE1LjYxMTgzNTk0IDMuMjU1NjE1MjMgLTE0LjY1NjI1IDIuNjk1MzEyNSBDLTEzLjg0OTk0MTQxIDIuMjIxMDk4NjMgLTEzLjA0MzYzMjgxIDEuNzQ2ODg0NzcgLTEyLjIxMjg5MDYyIDEuMjU4MzAwNzggQy0xMS40ODI2MzY3MiAwLjg0MzA2MTUyIC0xMC43NTIzODI4MSAwLjQyNzgyMjI3IC0xMCAwIEMtOS4zNjc3MTQ4NCAtMC40MjY4NDA4MiAtOC43MzU0Mjk2OSAtMC44NTM2ODE2NCAtOC4wODM5ODQzOCAtMS4yOTM0NTcwMyBDLTQuODkzODEwMjMgLTIuMzc1MDM2NjkgLTMuMDQ0NjQ3ODEgLTEuMjkwNTcyODEgMCAwIFogIiBmaWxsPSIjQ0M0Q0I4IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg2OSw1KSIvPgo8cGF0aCBkPSJNMCAwIEMyLjY0IDAgNS4yOCAwIDggMCBDOC4yMDg4NDk0OSA4LjUwMTQyMTQ5IDguMzY4NTk2NzUgMTcuMDAxNzY1OTUgOC40NjYzMDk1NSAyNS41MDUxMjEyMyBDOC41MTMyMTY4NiAyOS40NTQwNDQ5MiA4LjU3Njc5MDQ1IDMzLjQwMTIwOTgzIDguNjc4OTU1MDggMzcuMzQ5MTIxMDkgQzguNzc2OTk5NTIgNDEuMTYxODI5OTQgOC44MzA2MDYyNCA0NC45NzI4NTE3IDguODUzODk1MTkgNDguNzg2NzI0MDkgQzguODcwNDgyMDQgNTAuMjM4OTgyNTggOC45MDI4Nzc2NyA1MS42OTExNTIwMyA4Ljk1MTU3MDUxIDUzLjE0MjY4ODc1IEM5LjMxNzA5MzgxIDY0LjQ5NDAyODQ1IDkuMzE3MDkzODEgNjQuNDk0MDI4NDUgNi4xMTM3ODQ3OSA2OC4xNTY3MDc3NiBDMy44MDQ0NDA5NyA2OS43MjIwMDI3MiAxLjU1NDUzMjQ2IDcwLjg4ODc1ODg3IC0xIDcyIEMtMS45MTE2MDg4OSA3Mi41NTgwMDI5MyAtMi44MjMyMTc3NyA3My4xMTYwMDU4NiAtMy43NjI0NTExNyA3My42OTA5MTc5NyBDLTYuMjMwMTg5MSA3NS4wOTkwMTU5NCAtOC43MDU1MTkyIDc2LjQ5MjE1NTI5IC0xMS4xODc1IDc3Ljg3NSBDLTEyLjA1MDUyNzM0IDc4LjM3MjU3ODEzIC0xMi45MTM1NTQ2OSA3OC44NzAxNTYyNSAtMTMuODAyNzM0MzggNzkuMzgyODEyNSBDLTE0LjY0NTEzNjcyIDc5Ljg1MjAzMTI1IC0xNS40ODc1MzkwNiA4MC4zMjEyNSAtMTYuMzU1NDY4NzUgODAuODA0Njg3NSBDLTE3LjEwNDY1NTc2IDgxLjIyNzMzODg3IC0xNy44NTM4NDI3NyA4MS42NDk5OTAyMyAtMTguNjI1NzMyNDIgODIuMDg1NDQ5MjIgQy0yMi43MjMzMTM4NSA4My42NjM4MDgwOSAtMjUuNzk5ODcyNDMgODMuNTA0MDQzMjQgLTI5LjgzMzI1MTk1IDgxLjgxMDA1ODU5IEMtMzAuNzkxOTExNjIgODEuMjYxNzIzNjMgLTMxLjc1MDU3MTI5IDgwLjcxMzM4ODY3IC0zMi43MzgyODEyNSA4MC4xNDg0Mzc1IEMtMzMuODA2MjY5NTMgNzkuNTQzODY3MTkgLTM0Ljg3NDI1NzgxIDc4LjkzOTI5Njg3IC0zNS45NzQ2MDkzOCA3OC4zMTY0MDYyNSBDLTM3LjA3NjExMzI4IDc3LjY3NTc0MjE5IC0zOC4xNzc2MTcxOSA3Ny4wMzUwNzgxMiAtMzkuMzEyNSA3Ni4zNzUgQy00MC40MDI0MDIzNCA3NS43NTc1MzkwNiAtNDEuNDkyMzA0NjkgNzUuMTQwMDc4MTMgLTQyLjYxNTIzNDM4IDc0LjUwMzkwNjI1IEMtNDguOTEzNTgwNSA3MC45MDU5MzM0MiAtNTUuMDM0MjI0OTggNjcuMTI2Mzk5NDYgLTYxIDYzIEMtNTkuNjggNjAuMzYgLTU4LjM2IDU3LjcyIC01NyA1NSBDLTUzLjA1MjcyMTI1IDU2LjQ0ODM0NzMxIC00OS42MjI5ODExNyA1OC4zMjYxOTQ0IC00Ni4wMzUxNTYyNSA2MC41MTE3MTg3NSBDLTQ0LjkwNTI5Mjk3IDYxLjE4NjU0Mjk3IC00My43NzU0Mjk2OSA2MS44NjEzNjcxOSAtNDIuNjExMzI4MTIgNjIuNTU2NjQwNjIgQy00MC44MzEzMDkyMyA2My42MjIwOTQ2OCAtMzkuMDU0ODk2OTkgNjQuNjkyMTYyMTMgLTM3LjI4NjM3Njk1IDY1Ljc3NjYxMTMzIEMtMzUuNTY2MDc4NjggNjYuODI4NjMzNDcgLTMzLjgzMTk4MDE5IDY3Ljg1Nzk4MzAxIC0zMi4wOTc2NTYyNSA2OC44ODY3MTg3NSBDLTMxLjA3MTY0MzA3IDY5LjUwNzY0NDA0IC0zMC4wNDU2Mjk4OCA3MC4xMjg1NjkzNCAtMjguOTg4NTI1MzkgNzAuNzY4MzEwNTUgQy0yNS4yNzg4MTgwOSA3Mi4yOTcyMjc1NyAtMjMuODQ1MzU0MiA3Mi4wOTgyNTczNCAtMjAgNzEgQy0xOS4yNjU2MzIxNyA3MC43OTE2MjAwMyAtMTguNTMxMjY0MzQgNzAuNTgzMjQwMDUgLTE3Ljc3NDY0Mjk0IDcwLjM2ODU0NTUzIEMtMTEuMjk5MzI1MDQgNjguMjc3NDkwODcgLTUuMjQxNDUyODggNjUuNDcyMTk3MjggLTEgNjAgQzIuMTAyOTU2NzQgNTAuOTcwNjQyOTQgMS4xODIwNDQzIDQwLjg1NTg5MzMzIDAuNzY4MTg4NDggMzEuNDMwOTY5MjQgQzAuNjMzMTM5NiAyNy44ODUyNzIxMSAwLjYwNzYzMTA2IDI0LjMzODg1OTQgMC41NzIyNjU2MiAyMC43OTEwMTU2MiBDMC40ODczMDA2MSAxMy44NTYyMDk3MSAwLjI4MjY0MTY0IDYuOTI5NDk0MDcgMCAwIFogIiBmaWxsPSIjQzE0QUMzIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDgsMjkpIi8+CjxwYXRoIGQ9Ik0wIDAgQzMuMzYxMzc5MTEgMS45MzIxMDkwMSA1LjU4MjQ2NzAxIDMuNzQ3MDkwNzcgNi45MjM4MjgxMiA3LjQ2Mjg5MDYyIEM4LjExMTM4MTEgMTMuNDAwNjU1NDggOC4xOTg1ODI3OSAxOS41MDU4MjA3OCA2LjEyNSAyNS4yNSBDMi45MzQ0NjMxMiAyOS42MzAwNTc3NCAtMS43ODY0NTMyMiAzMS42OTY3NzYxNSAtNi44NzUgMzMuMjUgQy0xMy4wNDUxODEyNCAzMy45NTY5OTk5MyAtMTguMTQ1Mzc3OTUgMzEuODczOTk2OTEgLTIzLjE0MDYyNSAyOC4zMjgxMjUgQy0yNi4zODcyNTU4NSAyNS4zMzU0Njc4OCAtMjcuMDAwMzU1MTcgMjIuMjMzMDY2MyAtMjcuNDM3NSAxNy45MzU1NDY4OCBDLTI3LjY3NTIxMTUxIDcuNzIxMzgwNDEgLTI3LjY3NTIxMTUxIDcuNzIxMzgwNDEgLTI0LjYzODY3MTg4IDMuNTUyNzM0MzggQy0xNy4yMzA2MTgwNiAtMy4yNzU4MTA2NyAtOC45MjE1NTY2MiAtNC40MTAyMDI1OSAwIDAgWiBNLTE3Ljg3NSAxMS4yNSBDLTE4Ljc2NDQ4MjQ3IDE0LjEwNTcwNjg3IC0xOC43NTcxNzA3OCAxNi4zOTMxNjg4MSAtMTcuODc1IDE5LjI1IEMtMTUuMzE5Njc0MDYgMjEuOTgxNDI4ODcgLTE1LjMxOTY3NDA2IDIxLjk4MTQyODg3IC0xMS44NzUgMjMuMjUgQy05LjI3NjEwMjE3IDIzLjMzMDI0NjU4IC05LjI3NjEwMjE3IDIzLjMzMDI0NjU4IC02Ljg3NSAyMi4yNSBDLTUuOTQ2ODc1IDIxLjg5OTM3NSAtNS4wMTg3NSAyMS41NDg3NSAtNC4wNjI1IDIxLjE4NzUgQy0xLjQ2MDA3NjE3IDE5LjI4ODA2OTk5IC0xLjQ2MDA3NjE3IDE5LjI4ODA2OTk5IC0xLjE4NzUgMTUuMzEyNSBDLTEuNDA3NTQ3NDIgMTEuNjkxNzE5NzcgLTEuNzQ4MTc2MjQgMTEuMzY1Mjk0MzMgLTQuNjI1IDguNzUgQy0xMC4yNTAwNjQxOSA2LjE1MzgxNjUzIC0xMy40MTYzNzAzNSA3LjE5NjcwMDMyIC0xNy44NzUgMTEuMjUgWiAiIGZpbGw9IiMwMDFENkMiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDczLjg3NSw0OC43NSkiLz4KPC9zdmc+Cg=="
+      # Company logo icon (small icon for mobile/compact view)
+      # Recommended size: 32x32px
+      companyLogoIcon: ""
+      quickAccessDataUrl: "https://raw.githubusercontent.com/IBM/storage-fusion/dynamic-plugins/AI/quickstarts/fusion-developerhub/assets/homepage"
+      
+      welcomeTitle: "Streamline Development with Fusion Developer Hub"
+      welcomeMessage: |
+        IBM Fusion Developer Hub is an enterprise-grade developer portal that centralizes tools, documentation, and platform services into a single, unified self-service experience. It eliminates the friction of navigating disparate systems by bringing blueprints, model catalogs, guided quickstarts, and operational resources together in one place. Built to grow with your organization, IBM Fusion Developer Hub standardizes how teams discover, access, and operate. It enables teams to onboard faster, collaborate more effectively, and deliver value at scale.
+
+        • Standardizes development workflows across teams
+
+        • Improves developer and application onboarding
+
+        • Drives innovation at scale
+        
+        🚀 **Getting Started**
+
+        Follow the [Quickstart Guide](https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops) to begin navigating your portal — explore the software catalog, view available blueprints, and access unified documentation.
+      
+      # Quick access links (optional - defaults to Fusion quick links). Add quicklinks here if you want to override the default quicklinks. Defaults are present in dynamic-plugins.yaml file
+      # Uncomment to customize:
+      # quickLinks:
+      #   - title: "Create Application"
+      #     description: "Start with templates"
+      #     url: "/create"
+      #     icon: "add"
+
+      # Featured content sections (optional - defaults to Fusion featured content)
+      # Uncomment to customize:
+      # featuredContent:
+      #   - title: "🚀 Your Initiative"
+      #     description: "Description here"
+      #     links:
+      #       - text: "Link 1"
+      #         url: "/path1"
+
+      # OpenShift AI Model Connector (KEY FEATURE)
+      plugins:
+        - name: openshift-ai-connector
+          enabled: false
+          config:
+            # Discover models every 30 seconds
+            discoveryInterval: 30s
+            # Namespaces to scan for models
+            namespaces:
+              - model-serving
+              - maas-runtime
+              - redhat-ods-applications
+            # Display options
+            displayOptions:
+              showMetrics: true
+              showEndpoints: true
+              showStatus: true
+              refreshInterval: 30s
+    # Catalog configuration
+    catalog:
+      enabled: true
+      # GitHub integration for catalog imports
+      github:
+        enabled: false
+        # target: https://github.com/your-org
+        # enterpriseHost: "github.ibm.com"
+        # enableToken: true
+      # Catalog providers for automatic discovery
+      providers:
+        # OpenShift AI provider
+        openshiftAI:
+          enabled: false
+          schedule:
+            frequency:
+              minutes: 1
+            timeout:
+              minutes: 3
+    # TechDocs configuration
+    techdocs:
+      enabled: true
+      # builder: local # Production-additional
+      # generator:
+      #   runIn: local
+      # publisher:
+      #   type: local
+    # Authentication (configure for production)
+    auth:
+      # environment: production
+      guest:
+        enabled: true
+      github:
+        enabled: false
+        # Uncomment to add your org url
+        # enterpriseInstanceUrl: ""
+        # allowSignInWithoutCatalog: true
+      # Add your OIDC provider here
+      # oidc:
+      #   enabled: true
+      #   metadataUrl: "https://your-sso.com/.well-known/openid-configuration"
+      #   clientId: "your-client-id"
+      #   clientSecret: "your-client-secret"
+  # PostgreSQL Database configuration
+  database:
+    # Use PostgreSQL operator for database
+    useOperator: true
+    # PostgreSQL cluster name
+    clusterName: developerhub-postgres
+    # Note: The database configuration automatically includes pluginDivisionMode: 'database'
+    # This setting tells Backstage to create separate databases for each plugin,
+    # which requires the PostgreSQL user to have CREATEDB privilege.
+    # The CREATEDB privilege is automatically granted during deployment.
+
+    # Number of PostgreSQL instances (for HA)
+    instances: 3
+    # PostgreSQL configuration
+    maxConnections: "200"
+    sharedBuffers: "256MB"
+    effectiveCacheSize: "1GB"
+    workMem: "16MB"
+    # Storage configuration
+    storageSize: 20Gi
+    storageClassName: "" # Use default
+    # Resource limits
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+    # Backup configuration
+    backup:
+      enabled: true
+      useODF: true # Use IBM Fusion / OpenShift Data Foundation
+      odfStorageClass: openshift-storage.noobaa.io
+      destinationPath: s3://developerhub-postgres-backup
+      s3Endpoint: "" # Auto-populated from OBC
+      retentionPolicy: "30d"
+  # GitHub Enterprise configuration (outside config block to match base values.yaml)
+  catalog:
+    enabled: true
+    # Fusion Blueprints Configuration
+    # Define catalog locations for IBM Fusion AI blueprints and components
+    # Each blueprint can have its own catalog-info.yaml with TechDocs support
+    blueprints:
+      enabled: true
+      locations:
+        # NVIDIA RAG Blueprint
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20RAG/backstage/catalog-info.yaml
+          rules:
+            - allow: [Component]
+
+        # NVIDIA AIQ Blueprint
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20AIQ/backstage/catalog-info.yaml
+          rules:
+            - allow: [Component]
+
+        # NVIDIA VSS Blueprint
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20VSS/backstage/catalog-info.yaml
+          rules:
+            - allow: [Component]
+
+        # Fusion Developer Hub Quickstart
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/catalog-info.yaml
+          rules:
+            - allow: [Component]
+
+        # Fusion GitOps Quickstart
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/backstage/catalog-info.yaml
+          rules:
+            - allow: [Component]
+
+        # Model-as-a-Service Quickstart
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
+          rules:
+            - allow: [Component]
+
+        # Storage Fusion Repository
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/catalog-info.yaml
+          rules:
+            - allow: [Component]
+    # GitHub integration for catalog imports
+    github:
+      enabled: false
+      target: https://github.com/your-org
+      # GitHub Enterprise Configuration (Optional)
+      # Uncomment to enable GitHub Enterprise
+      # enterpriseHost: "github.company.com"  # e.g., github.company.com (hostname only, no https://)
+
+      # Enable GitHub PAT token for repository access
+      # Requires GITHUB_TOKEN in github-auth-secret
+      enableToken: false
+    # GitLab integration
+    gitlab:
+      enabled: false
+      target: https://gitlab.com/your-org
+  # TechDocs configuration
+  techdocs:
+    enabled: true
+    s3Bucket: developerhub-techdocs
+    s3Region: us-south
+    s3Endpoint: "" # Set to IBM Fusion endpoint (leave empty to use local storage)
+  # Authentication configuration
+  auth:
+    enabled: true
+    # Authentication environment defaults to "development" (from base values.yaml)
+    # This allows both guest access AND GitHub OAuth to work together
+    #
+    # To disable guest access and use GitHub OAuth only:
+    # Set environment to "production"
+    # Note: With environment: "production", guest access will be automatically disabled
+    # environment: "production"
+    guest:
+      enabled: true
+    # GitHub OAuth Authentication
+    # Enables "Sign in with GitHub" button
+    # Requires github-auth-secret with GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET
+    github:
+      enabled: false
+      # GitHub Enterprise Configuration (Optional)
+      # Uncomment to enable GitHub Enterprise OAuth
+      # enterpriseInstanceUrl: "https://github.company.com"  # e.g., https://github.company.com (full URL with https://)
+
+      # Set to true if want to Allow any GitHub user to sign in (not just catalog users)
+      allowSignInWithoutCatalog: false
+    # OIDC (OpenShift, Keycloak, etc.)
+    # Set metadataUrl to enable OIDC authentication
+    # Default: disabled to allow guest access
+    oidc:
+      enabled: false
+      metadataUrl: "" # Set to your OIDC provider (e.g., https://keycloak.example.com/auth/realms/master/.well-known/openid-configuration)
+      clientId: "" # OIDC Client ID 
+      clientSecret: "" # OIDC Client Secret
+      signInResolver: "emailMatchingUserEntityProfileEmail"
+  # Extra environment variables from secrets
+  # The developerhub-secrets is automatically added when auth providers are enabled
+  # Add additional secrets here if needed
+  # Example:
+  # extraEnvs:
+  #   secrets:
+  #     - name: custom-secrets
+  extraEnvs:
+    secrets: []
+    # - name: github-auth-secret
+  # Production resources
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+  # Route configuration
+  route:
+    enabled: true
+    tls:
+      enabled: true
+      secretName: "" # Leave empty for auto-generated cert
+  # IBM Fusion AI Configuration
+  fusion:
+    enabled: true # Enable IBM Fusion features including templates
+    # Fusion AI API endpoints
+    api:
+      baseUrl: "https://fusion-api.example.com"
+      timeout: 30000
+    # AI/ML capabilities
+    ai:
+      enabled: true
+      models:
+        - name: watsonx
+          type: llm
+          endpoint: ""
+        - name: granite-code
+          type: code-assistant
+          endpoint: ""
+        - name: granite-chat
+          type: conversational
+          endpoint: ""
+      # Integration with Red Hat OpenShift AI (RHOAI)
+      # Enables automatic discovery of deployed AI models
+      # Requires creating the rhdh-rhoai-connector-token secret
+      # Default: false (requires additional setup)
+      rhoaiConnector:
+        enabled: false
+        # Name of the secret containing the access token for RHOAI
+        tokenSecretName: "rhdh-rhoai-connector-token"
+        # RBAC configuration for RHOAI connector
+        # The connector needs cluster-level permissions to read CRDs and InferenceServices
+        rbac:
+          # Automatically create ClusterRole and ClusterRoleBinding when connector is enabled
+          # Set to false if you want to manage RBAC manually
+          create: true # Automatically creates required RBAC
+          # Namespaces to watch for InferenceServices (empty = all namespaces)
+          # Example: ["rhoai-models", "ai-workloads"]
+          watchNamespaces: [] # Watch all namespaces
+          # Model Registry namespace configuration
+          # Set this to grant access to RHOAI model registry
+          # Leave empty to skip model registry RoleBinding creation
+          # Uncomment and set to grant access to RHOAI model registry
+          modelRegistryNamespace: ""  # Example: "rhoai-model-registries" or "odh-model-registries"
+          modelRegistryRoleName: "registry-user-modelregistry-public"
+    # Application modernization tools
+    modernization:
+      enabled: true
+      tools:
+        - name: transformation-advisor
+          enabled: true
+        - name: mono2micro
+          enabled: true
+        - name: app-navigator
+          enabled: true
+  # Security configuration
+  security:
+    # Network policies
+    networkPolicy:
+      enabled: true
+    
+    # Pod Security Standards
+    podSecurityStandards:
+      enabled: true
+    # Resource quotas for the namespace
+    resourceQuota:
+      cpu: "16"
+      memory: "32Gi"
+      cpuLimit: "32"
+      memoryLimit: "64Gi"
+      pvc: "10"
+    # Pod security context (OpenShift SCC compliant)
+    podSecurityContext:
+      runAsNonRoot: false
+      runAsUser: null # Let OpenShift assign from namespace range
+      fsGroup: null # Let OpenShift assign from namespace range
+      seccompProfile:
+        type: RuntimeDefault
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      runAsUser: null # Let OpenShift assign from namespace range
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false # Developer Hub needs to write temp files
+
+# OpenShift Console QuickStart Configuration
+quickstart:
+  # Enable deployment of the Getting Started QuickStart
+  enabled: true
+
+# PostgreSQL HA Configuration
+postgresql:
+  enabled: false
+  # High Availability - 3 instances
+  instances: 3
+  # Database configuration
+  database:
+    # CRITICAL: Use schema-based plugin isolation instead of separate databases
+    # This prevents "permission denied to create database" errors
+    pluginDivisionMode: schema
+  # Production resources
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  # Storage configuration
+  storage:
+    size: 20Gi
+    # Storage class for PostgreSQL (ReadWriteOnce access mode is sufficient)
+    # Leave empty to use cluster default storage class
+    #
+    # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-ceph-rbd"
+    # - Other block storage classes that support RWO
+    storageClassName: "" # Uses cluster default
+  # Automated backups
+  backup:
+    enabled: false
+    schedule: "0 2 * * *" # Daily at 2 AM
+    retention: "30d"
+    # Backup to ODF
+    repos:
+      - name: repo1
+        schedules:
+          full: "0 2 * * 0" # Weekly full backup on Sunday
+          differential: "0 2 * * 1-6" # Daily differential
+        volume:
+          volumeClaimSpec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 50Gi
+            # Storage class for backup volumes (ReadWriteOnce is sufficient)
+            # Leave empty to use cluster default
+            #
+            # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-ceph-rbd"
+            # - Other block storage classes that support RWO
+            storageClassName: "" # Uses cluster default
+
+# Security Configuration
+security:
+  # Network policies
+  networkPolicy:
+    enabled: false
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                network.openshift.io/policy-group: ingress
+    egress:
+      - to:
+          - namespaceSelector: {}
+        ports:
+          - protocol: TCP
+            port: 443
+          - protocol: TCP
+            port: 5432
+  # Pod security standards
+  podSecurity:
+    enabled: u2xMAAAdWSURBVGgF7VlpbFRVFP7uzHQ6LbRTCrRVBAltBSStS0FWQUNcQRQDoSoSY6L8MJqYmCCJBk00MUqMW0TUP6gkCnEjilpAZakoiqhgpSBO1dLGAgXa0nbamTl
+    enforce: restricted
+  # Security context
+  podSecurityContext:
+    runAsNonRoot: false
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    runAsNonRoot: false
+
+# RBAC Configuration
+rbac:
+  enabled: false
+  # Create service account
+  create: false
+
+# IBM Fusion AI Features
+fusion:
+  enabled: false
+  # AI capabilities
+  ai:
+    enabled: false
+    models:
+      # Models will be discovered automatically from OpenShift AI
+      autoDiscovery: false
+    # RHOAI Connector - enables model discovery from OpenShift AI
+    rhoaiConnector:
+      enabled: false
+      tokenSecretName: "rhdh-rhoai-connector-token"
+      rbac:
+        create: false
+        watchNamespaces: [] # Empty = watch all namespaces
+  # Modernization tools
+  modernization:
+    enabled: false
+    tools:
+      - transformation-advisor
+      - mono2micro
+      - app-navigator
+
+# Templates Configuration
+templates:
+  enabled: false
+  # IBM Fusion AI templates
+  locations:
+    - type: url
+      target: https://github.com/IBM/storage-fusion/blob/main/AI/quickstarts/fusion-developerhub/templates/fusion-ai-template.yaml
+
+# Ingress/Route Configuration
+route:
+  enabled: false
+  tls:
+    enabled: false
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# Resource Quotas (optional)
+resourceQuota:
+  enabled: false
+  # Uncomment to enable
+  # hard:
+  #   requests.cpu: "10"
+  #   requests.memory: "20Gi"
+  #   limits.cpu: "20"
+  #   limits.memory: "40Gi"
+
+# Horizontal Pod Autoscaling (optional)
+autoscaling:
+  enabled: false
+  # Uncomment to enable
+  # minReplicas: 3
+  # maxReplicas: 10
+  # targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80

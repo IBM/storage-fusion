@@ -1,0 +1,32 @@
+{{- if and .Values.developerHub.enabled .Values.developerHub.createInstance .Values.developerHub.catalog.blueprints.enabled }}
+---
+# Fusion Blueprints ConfigMap
+# This ConfigMap provides catalog locations for IBM Fusion AI blueprints and components
+# Each blueprint can have its own catalog-info.yaml with TechDocs support
+# Configure blueprint locations in values.yaml under developerHub.catalog.blueprints.locations
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-fusion-blueprints
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fusion-blueprints
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  app-config-fusion-blueprints.yaml: |
+    catalog:
+      locations:
+        {{- range .Values.developerHub.catalog.blueprints.locations }}
+        - type: {{ .type }}
+          target: {{ .target }}
+          {{- if .rules }}
+          rules:
+            {{- range .rules }}
+            - allow: {{ .allow | toJson }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+
+{{- end }}

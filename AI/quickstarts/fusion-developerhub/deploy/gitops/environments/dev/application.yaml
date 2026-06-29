@@ -1,0 +1,75 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-developer-hub-development
+  namespace: openshift-gitops # ArgoCD namespace
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    environment: development
+
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/your-repo.git #IMPORTANT: Replace with your repo URL
+    path: AI/quickstarts/fusion-developerhub/deploy/helm
+    targetRevision: main # Replace with your target branch or tag
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/dev/values.yaml 
+      valuesObject:
+        global:
+          # IMPORTANT: Change this to match your OpenShift cluster domain
+          # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+          wildcardDomain: apps.<cluster-domain>.com 
+        developerHub:
+          storage:
+            # IMPORTANT: Must support ReadWriteMany (RWX) access mode
+            # ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
+            storageClassName: ""
+        argocd:
+          enabled: true
+          rbac:
+            enabled: true
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fusion-developer-hub-development
+  
+  revisionHistoryLimit: 10
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: operators.coreos.com
+      kind: Subscription
+      jsonPointers:
+        - /status
+        - /spec/installPlanApproval
+    - group: operators.coreos.com
+      kind: InstallPlan
+      jsonPointers:
+        - /status
+    - group: operators.coreos.com
+      kind: ClusterServiceVersion
+      jsonPointers:
+        - /status
+        - /metadata/annotations

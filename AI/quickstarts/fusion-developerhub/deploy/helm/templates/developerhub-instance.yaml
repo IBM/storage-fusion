@@ -13,8 +13,11 @@ metadata:
     app.kubernetes.io/component: database
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "5"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "60"
 spec:
   # PostgreSQL version
   postgresVersion: {{ .Values.developerHub.database.postgresVersion | default 15 }}
@@ -105,10 +108,17 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: database-setup
+  annotations:
+    {{- if not .Values.argocd.enabled }}
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "60"
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
   # Allow multiple retries with exponential backoff
   backoffLimit: 20
-  ttlSecondsAfterFinished: 300
+  ttlSecondsAfterFinished: 1800
   template:
     metadata:
       labels:
@@ -276,9 +286,16 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: database-backup-setup
+  annotations:
+    {{- if not .Values.argocd.enabled }}
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "60"
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
   backoffLimit: 10
-  ttlSecondsAfterFinished: 300
+  ttlSecondsAfterFinished: 1800
   template:
     metadata:
       labels:
@@ -353,6 +370,8 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: developerhub
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 data:
   app-config.yaml: |
     app:
@@ -403,6 +422,12 @@ data:
       baseUrl: https://{{ .Values.developerHub.config.hostname | default (printf "backstage-%s-%s.%s" .Values.developerHub.instanceName (include "fusion-developer-hub.namespace" .) (include "fusion-developer-hub.wildcardDomain" .)) }}
       listen:
         port: 7007
+      {{- if and .Values.developerHub.catalog.github.enabled .Values.developerHub.catalog.github.enterpriseHost }}
+      # Allow backend to read from GitHub Enterprise
+      reading:
+        allow:
+          - host: {{ .Values.developerHub.catalog.github.enterpriseHost }}
+      {{- end }}
       csp:
         connect-src: ["'self'", 'http:', 'https:']
       cors:
@@ -423,6 +448,19 @@ data:
             rejectUnauthorized: false
       {{- end }}
     
+    {{- if and .Values.developerHub.catalog.github.enabled .Values.developerHub.catalog.github.enterpriseHost }}
+    # GitHub Enterprise Integration
+    # Enables repository access for catalog imports and TechDocs
+    integrations:
+      github:
+        - host: {{ .Values.developerHub.catalog.github.enterpriseHost }}
+          apiBaseUrl: https://{{ .Values.developerHub.catalog.github.enterpriseHost }}/api/v3
+          rawBaseUrl: https://{{ .Values.developerHub.catalog.github.enterpriseHost }}/raw
+          {{- if .Values.developerHub.catalog.github.enableToken }}
+          token: ${GITHUB_TOKEN}
+          {{- end }}
+    {{- end }}
+    
     # Dynamic Plugins configuration for homepage (only when homepage.enabled is true)
     {{- if and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
     dynamicPlugins:
@@ -432,58 +470,54 @@ data:
             - path: /
               importName: DynamicHomePage
           mountPoints:
-            # Search bar at the top
-            - mountPoint: home.page/cards
-              importName: SearchBar
-              config:
-                layouts:
-                  xl: { w: 10, h: 1, x: 1 }
-                  lg: { w: 10, h: 1, x: 1 }
-                  md: { w: 10, h: 1, x: 1 }
-                  sm: { w: 12, h: 1 }
-                  xs: { w: 12, h: 1 }
-            # Quick Access card (reads from <instance>-home-quick-access ConfigMap)
-            - mountPoint: home.page/cards
-              importName: QuickAccessCard
-              config:
-                layouts:
-                  xl: { w: 7, h: 8 }
-                  lg: { w: 7, h: 8 }
-                  md: { w: 7, h: 8 }
-                  sm: { w: 12, h: 8 }
-                  xs: { w: 12, h: 8 }
-            # Welcome message (Markdown card)
+            # Welcome message
             - mountPoint: home.page/cards
               importName: Markdown
               config:
                 layouts:
-                  xl: { w: 5, h: 8, x: 7 }
-                  lg: { w: 5, h: 8, x: 7 }
-                  md: { w: 5, h: 8, x: 7 }
-                  sm: { w: 12, h: 6 }
-                  xs: { w: 12, h: 6 }
+                  xl: { w: 12, h: 4 }
+                  lg: { w: 12, h: 4 }
+                  md: { w: 12, h: 4 }
+                  sm: { w: 12, h: 5 }
+                  xs: { w: 12, h: 5 }
                 props:
-                  title: {{ .Values.developerHub.config.homepage.welcomeTitle | default "Welcome to IBM Fusion Developer Hub" | quote }}
+                  title: {{ .Values.developerHub.config.homepage.welcomeTitle | default "Streamline Development with Fusion Developer Hub" | quote }}
                   content: |
                     {{- if .Values.developerHub.config.homepage.welcomeMessage }}
                     {{ .Values.developerHub.config.homepage.welcomeMessage | nindent 20 }}
                     {{- else }}
-                    Accelerate your AI-powered development and modernization journey:
+                    IBM Fusion Developer Hub is an enterprise-grade developer portal that centralizes tools, documentation, and platform services into a single, unified self-service experience. It eliminates the friction of navigating disparate systems by bringing blueprints, model catalogs, guided quickstarts, and operational resources together in one place. 
 
-                    🤖 **AI-Powered Development** — Generate code with IBM watsonx and Granite models
+                    Built to grow with your organization, IBM Fusion Developer Hub standardizes how teams discover, access, and operate. It enables teams to onboard faster, collaborate more effectively, and deliver value at scale.
 
-                    🔄 **Application Modernization** — Analyze and transform legacy applications
+                    • Standardizes development workflows across teams
 
-                    🚀 **Quick Start** — Create applications from AI-powered templates
+                    • Improves developer and application onboarding
+
+                    • Drives innovation at scale
+                    
+                    **Getting Started**
+
+                    Follow the [IBM Fusion Developer Hub Exploration Guide](https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops) to begin navigating your portal — explore the software catalog, view available blueprints, and access unified documentation.
                     {{- end }}
+            # Quick Access
+            - mountPoint: home.page/cards
+              importName: QuickAccessCard
+              config:
+                layouts:
+                  xl: { w: 12, h: 8 }
+                  lg: { w: 12, h: 8 }
+                  md: { w: 12, h: 8 }
+                  sm: { w: 12, h: 8 }
+                  xs: { w: 12, h: 8 }
             # Starred entities from the catalog
             - mountPoint: home.page/cards
               importName: CatalogStarredEntitiesCard
               config:
                 layouts:
-                  xl: { w: 6, h: 4 }
-                  lg: { w: 6, h: 4 }
-                  md: { w: 6, h: 4 }
+                  xl: { w: 12, h: 4 }
+                  lg: { w: 12, h: 4 }
+                  md: { w: 12, h: 4 }
                   sm: { w: 12, h: 4 }
                   xs: { w: 12, h: 4 }
             {{- if .Values.developerHub.config.homepage.featuredContent }}
@@ -515,9 +549,9 @@ data:
               importName: WorldClockCard
               config:
                 layouts:
-                  xl: { w: 4, h: 2 }
-                  lg: { w: 4, h: 2 }
-                  md: { w: 6, h: 2 }
+                  xl: { w: 12, h: 2 }
+                  lg: { w: 12, h: 2 }
+                  md: { w: 12, h: 2 }
                   sm: { w: 12, h: 2 }
                   xs: { w: 12, h: 2 }
                 props:
@@ -629,8 +663,9 @@ data:
     
     {{- if .Values.developerHub.auth.enabled }}
     auth:
-      {{- if .Values.developerHub.auth.guest.enabled }}
-      # Guest access enabled - no authentication required
+      {{- if .Values.developerHub.auth.environment }}
+      environment: {{ .Values.developerHub.auth.environment }}
+      {{- else if .Values.developerHub.auth.guest.enabled }}
       environment: development
       {{- else }}
       environment: production
@@ -638,13 +673,22 @@ data:
       providers:
         {{- if .Values.developerHub.auth.github.enabled }}
         github:
-          production:
+          {{ .Values.developerHub.auth.environment | default "development" }}:
             clientId: ${GITHUB_CLIENT_ID}
             clientSecret: ${GITHUB_CLIENT_SECRET}
+            {{- if .Values.developerHub.auth.github.enterpriseInstanceUrl }}
+            enterpriseInstanceUrl: {{ .Values.developerHub.auth.github.enterpriseInstanceUrl }}
+            signIn:
+              resolvers:
+                - resolver: usernameMatchingUserEntityName
+                  {{- if .Values.developerHub.auth.github.allowSignInWithoutCatalog }}
+                  dangerouslyAllowSignInWithoutUserInCatalog: true
+                  {{- end }}
+            {{- end }}
         {{- end }}
         {{- if and .Values.developerHub.auth.oidc.enabled .Values.developerHub.auth.oidc.metadataUrl }}
         oidc:
-          production:
+          {{ .Values.developerHub.auth.environment | default "production" }}:
             metadataUrl: {{ .Values.developerHub.auth.oidc.metadataUrl }}
             clientId: ${OIDC_CLIENT_ID}
             clientSecret: ${OIDC_CLIENT_SECRET}
@@ -657,7 +701,6 @@ data:
           dangerouslyAllowOutsideDevelopment: true
         {{- end }}
     {{- else }}
-    # Authentication disabled - guest access only
     auth:
       environment: development
       providers:
@@ -721,9 +764,11 @@ metadata:
     app.kubernetes.io/component: developerhub
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
-    argocd.argoproj.io/sync-wave: "2"
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "10"
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "70"
 spec:
   application:
     appConfig:
@@ -734,6 +779,9 @@ spec:
         {{- end }}
         {{- if and .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
         - name: app-config-ai-templates
+        {{- end }}
+        {{- if .Values.developerHub.enabled }}
+        - name: app-config-fusion-blueprints
         {{- end }}
     
     # Dynamic plugins ConfigMap
@@ -791,6 +839,9 @@ spec:
                 name: dynamic-plugins-root
                 persistentVolumeClaim:
                   claimName: dynamic-plugins-root
+              - name: homepage-data
+                configMap:
+                  name: {{ .Values.developerHub.instanceName }}-home-quick-access
             containers:
               - name: location
                 image: quay.io/redhat-ai-dev/model-catalog-location-service@sha256:c4471e07be6e0dbe821613053e6264a552cacda7f8604dbf306e6ac9e81e8ab9
@@ -865,6 +916,23 @@ spec:
                 workingDir: /opt/app-root/src
                 args:
                   - "--metrics-address=:8081"
+              - name: backstage-backend
+                volumeMounts:
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/data.json
+                    subPath: data.json
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/ai-models-icon.png
+                    subPath: ai-models-icon.png
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/ibm-blue.svg
+                    subPath: ibm-blue.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/redhat-red.svg
+                    subPath: redhat-red.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/nvidia-green.svg
+                    subPath: nvidia-green.svg
         {{- end }}
   
   {{- if .Values.developerHub.database.useOperator }}
@@ -879,6 +947,8 @@ metadata:
   namespace: {{ include "fusion-developer-hub.namespace" . }}
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -887,6 +957,8 @@ metadata:
   namespace: {{ include "fusion-developer-hub.namespace" . }}
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 rules:
 - apiGroups: [""]
   resources: ["configmaps", "secrets", "services", "persistentvolumeclaims"]
@@ -920,6 +992,8 @@ metadata:
   namespace: {{ include "fusion-developer-hub.namespace" . }}
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -936,6 +1010,8 @@ metadata:
   name: {{ include "fusion-developer-hub.namespace" . }}-developerhub-cluster-reader
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 rules:
 - apiGroups: ["apiextensions.k8s.io"]
   resources: ["customresourcedefinitions"]
@@ -947,6 +1023,8 @@ metadata:
   name: {{ include "fusion-developer-hub.namespace" . }}-developerhub-cluster-reader-binding
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -965,6 +1043,8 @@ metadata:
   namespace: {{ include "fusion-developer-hub.namespace" . }}
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "70"
 spec:
   {{- if .Values.developerHub.storage.storageClassName }}
   storageClassName: {{ .Values.developerHub.storage.storageClassName }}
@@ -982,6 +1062,8 @@ metadata:
   namespace: {{ include "fusion-developer-hub.namespace" . }}
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 rules:
 - apiGroups: [""]
   resources: ["configmaps"]
@@ -994,6 +1076,8 @@ metadata:
   namespace: {{ include "fusion-developer-hub.namespace" . }}
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 subjects:
 - kind: ServiceAccount
   name: default

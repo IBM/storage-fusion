@@ -50,6 +50,8 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     component: rhoai-connector
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 rules:
 - apiGroups: [""]
   resources: ["configmaps"]
@@ -64,6 +66,8 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     component: rhoai-connector
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -84,6 +88,8 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     component: rhoai-connector
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

@@ -11,10 +11,15 @@ metadata:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: crd-waiter
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "2"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "40"
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
+  ttlSecondsAfterFinished: 3600
   backoffLimit: 3
   template:
     metadata:
@@ -108,9 +113,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "1"
     helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -119,9 +127,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "1"
     helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "-10"
 rules:
 - apiGroups: ["apiextensions.k8s.io"]
   resources: ["customresourcedefinitions"]
@@ -137,9 +148,12 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
+    {{- if not .Values.argocd.enabled }}
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "1"
     helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
+    argocd.argoproj.io/sync-wave: "-10"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

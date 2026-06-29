@@ -1,0 +1,69 @@
+{{- if .Values.argocd.rbac.enabled }}
+---
+# ClusterRole to grant ArgoCD permissions for resources it needs to manage
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "fusion-developer-hub.fullname" . }}-argocd-permissions
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-rbac
+rules:
+- apiGroups: [""]
+  resources: ["resourcequotas", "limitranges"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["rhdh.redhat.com"]
+  resources: ["backstages"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["postgres-operator.crunchydata.com"]
+  resources: ["postgresclusters"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["project.openshift.io"]
+  resources: ["projects"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["objectbucket.io"]
+  resources: ["objectbucketclaims"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["operators.coreos.com"]
+  resources: ["operatorgroups", "subscriptions"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs/finalizers"]
+  verbs: ["update", "patch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps", "serviceaccounts"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+---
+# ClusterRoleBinding to bind the ClusterRole to ArgoCD's service account
+# IMPORTANT: Must be created early (wave -1) so ArgoCD has permissions before creating other resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "fusion-developer-hub.fullname" . }}-argocd-permissions
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "fusion-developer-hub.fullname" . }}-argocd-permissions
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.argocd.rbac.serviceAccountName }}
+  namespace: {{ .Values.argocd.rbac.namespace }}
+{{- end }}
+
+# Made with Bob

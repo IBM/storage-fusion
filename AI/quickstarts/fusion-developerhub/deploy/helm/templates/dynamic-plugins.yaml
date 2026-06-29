@@ -1,0 +1,149 @@
+{{- if .Values.developerHub.enabled }}
+{{- if .Values.developerHub.createInstance }}
+---
+# Dynamic Plugins ConfigMap for Red Hat Developer Hub
+# This ConfigMap enables the DynamicHomePage plugin and configures
+# the Fusion homepage layout with quick links, welcome message,
+# featured content, and timezone clocks.
+# Only created when homepage.enabled or RHOAI connector is true.
+{{- $homepageEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
+{{- $rhoaiEnabled := and .Values.developerHub.fusion .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
+{{- if or $homepageEnabled $rhoaiEnabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-dynamic-plugins
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: developerhub-plugins
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      {{- if $homepageEnabled }}
+      # Enable the Dynamic Home Page plugin — required for custom homepage rendering
+      - package: './dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page'
+        disabled: false
+      {{- end }}
+      {{- if $rhoaiEnabled }}
+      # RHOAI Model Catalog Plugin - Enables model discovery from OpenShift AI Model Registry
+      - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog:bs_1.42.5__0.7.0!red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog'
+        disabled: false
+      # TechDoc URL Reader Backend Plugin - Required for RHOAI connector
+      - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend:bs_1.42.5__0.3.0!red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend'
+        disabled: false
+      {{- end }}
+---
+# QuickAccess ConfigMap for the homepage QuickAccessCard
+# This ConfigMap provides the data for the Quick Access card on the homepage.
+# The ConfigMap name follows the RHDH convention: <backstage-instance-name>-home-quick-access
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.developerHub.instanceName }}-home-quick-access
+  namespace: {{ .Values.developerHub.namespace }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: developerhub-homepage
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  data.json: |
+    [
+      {{- if .Values.developerHub.config.homepage.quickLinks }}
+      {{- range $index, $link := .Values.developerHub.config.homepage.quickLinks }}
+      {{- if $index }},{{- end }}
+      {
+        "title": {{ $link.title | quote }},
+        "isExpanded": true,
+        "links": [
+          {
+            "label": {{ $link.title | quote }},
+            "url": {{ $link.url | quote }},
+            "iconUrl": "/homepage/icons/icons8/system-task.png"
+          }
+        ]
+      }
+      {{- end }}
+      {{- else }}
+      {
+        "title": "Blueprints & Quickstarts",
+        "isExpanded": true,
+        "links": [
+          {
+            "label": "Browse NVIDIA Blueprints",
+            "url": "/catalog?filters%5Bkind%5D=component&filters%5Btype%5D=blueprint&limit=20",
+            "iconUrl": "/homepage/icons/nvidia-green.svg"
+          },
+          {
+            "label": "Browse Fusion Quickstarts",
+            "url": "/catalog?filters%5Bkind%5D=component&filters%5Btype%5D=quickstart&limit=20",
+            "iconUrl": "/homepage/icons/ibm-blue.svg"
+          },
+          {
+            "label": "Browse Redhat Quickstarts",
+            "url": "https://docs.redhat.com/en/learn/ai-quickstarts",
+            "iconUrl": "/homepage/icons/redhat-red.svg"
+          }
+        ]
+      },
+      {
+        "title": "Deployed AI Models",
+        "isExpanded": true,
+        "links": [
+          {
+            "label": "View Deployed Models",
+            "url": "/catalog?filters%5Bkind%5D=component&filters%5Btype%5D=model-server&limit=20",
+            "iconUrl": "/homepage/icons/ai-models-icon.png"
+          }
+        ]
+      },
+      {
+        "title": "Documentation",
+        "isExpanded": false,
+        "links": [
+          {
+            "label": "Fusion HCI Knowledge Center",
+            "url": "https://www.ibm.com/docs/en/fusion-hci-systems",
+            "iconUrl": "/homepage/icons/ibm-blue.svg"
+          },
+          {
+            "label": "Fusion SDS Knowledge Center",
+            "url": "https://www.ibm.com/docs/en/fusion-software",
+            "iconUrl": "/homepage/icons/ibm-blue.svg"
+          }
+        ]
+      },
+      {
+        "title": "Resources & Community",
+        "isExpanded": false,
+        "links": [
+          {
+            "label": "Fusion Tech Community",
+            "url": "https://ibm.github.io/storage-fusion/fusion-ai/overview/",
+            "iconUrl": "/homepage/icons/ibm-blue.svg"
+          },
+          {
+            "label": "IBM Tech Exchange",
+            "url": "https://community.ibm.com/community/user/groups/community-home/recent-community-blogs?communitykey=e596ba82-cd57-4fae-8042-163e59279ff3",
+            "iconUrl": "/homepage/icons/ibm-blue.svg"
+          }
+        ]
+      }
+      {{- end }}
+    ]
+  ibm-blue.svg: |
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="100" fill="#1F70C1"/><text x="100" y="115" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="52" fill="white" letter-spacing="-2">IBM</text></svg>
+  redhat-red.svg: |
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="100" fill="#CC0000"/><text x="100" y="108" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="34" fill="white">Red Hat</text></svg>
+  nvidia-green.svg: |
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="100" fill="#76B900"/><text x="100" y="115" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="44" fill="white" letter-spacing="-1">NVIDIA</text></svg>
+binaryData:
+  ai-models-icon.png: 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
+{{- end }}
+{{- end }}
+{{- end }}

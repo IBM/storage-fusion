@@ -8,7 +8,7 @@ metadata:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
     app.kubernetes.io/component: quickstart
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-wave: "50"
 data:
   quickstart.yaml: |
     apiVersion: console.openshift.io/v1
