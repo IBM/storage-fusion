@@ -35,7 +35,7 @@ OPTIONS:
     -h, --help              Show this help message
     -n, --namespace NAME    Kubernetes namespace (default: default)
     -r, --release NAME      Helm release name (default: fusion-gitops)
-    -f, --values FILE       Helm values file (e.g., values-minimal.yaml, values-production.yaml)
+    -f, --values FILE       Helm values file (e.g., environments/dev/values.yaml, environments/prod/values.yaml)
     -d, --dry-run           Perform a dry-run without making changes
     --skip-preflight        Skip pre-flight checks
     --skip-validation       Skip post-deployment validation
@@ -44,14 +44,17 @@ OPTIONS:
     --timeout DURATION      Helm timeout duration (default: 15m)
 
 EXAMPLES:
-    # Minimal deployment (getting started)
-    $0 -f helm/fusion-gitops/values-minimal.yaml
+    # Development deployment (getting started)
+    $0 -f helm/fusion-gitops/environments/dev/values.yaml
+
+    # Staging deployment (pre-production testing)
+    $0 -f helm/fusion-gitops/environments/stage/values.yaml
 
     # Default deployment (basic HA)
     $0
 
     # Production deployment (full HA)
-    $0 -f helm/fusion-gitops/values-production.yaml
+    $0 -f helm/fusion-gitops/environments/prod/values.yaml
 
     # Dry-run deployment
     $0 --dry-run
@@ -186,12 +189,17 @@ display_config() {
     
     # Show configuration type if using pre-configured values
     if [ -n "$VALUES_FILE" ]; then
-        if [[ "$VALUES_FILE" == *"minimal"* ]]; then
+        if [[ "$VALUES_FILE" == *"dev"* ]]; then
             echo ""
-            log_info "📦 Configuration: MINIMAL (1 replica, no HA, ephemeral storage)"
+            log_info "📦 Configuration: DEVELOPMENT (1 replica, no HA, ephemeral storage)"
             log_info "   Resources: ~1.1 CPU, ~1.2Gi RAM"
             log_info "   Best for: Getting started, development, testing"
-        elif [[ "$VALUES_FILE" == *"production"* ]]; then
+        elif [[ "$VALUES_FILE" == *"stage"* ]]; then
+            echo ""
+            log_info "📦 Configuration: STAGING (2 replicas, basic HA, 20Gi storage)"
+            log_info "   Resources: ~5 CPU, ~8Gi RAM"
+            log_info "   Best for: Pre-production testing, staging environments"
+        elif [[ "$VALUES_FILE" == *"prod"* ]]; then
             echo ""
             log_info "📦 Configuration: PRODUCTION (3 replicas, full HA, 50Gi storage)"
             log_info "   Resources: ~8 CPU, ~12Gi RAM"
@@ -317,8 +325,8 @@ validate_deployment() {
         log_warning "No ArgoCD pods found yet (may still be creating)"
     fi
     
-    # Check storage (if not minimal config)
-    if [ -z "$VALUES_FILE" ] || [[ "$VALUES_FILE" != *"minimal"* ]]; then
+    # Check storage (if not dev config)
+    if [ -z "$VALUES_FILE" ] || [[ "$VALUES_FILE" != *"dev"* ]]; then
         log_info "Checking persistent storage..."
         local pvc_count=$($cli get pvc -n openshift-gitops --no-headers 2>/dev/null | wc -l)
         if [ "$pvc_count" -gt 0 ]; then

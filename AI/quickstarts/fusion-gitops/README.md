@@ -1,6 +1,6 @@
-# Red Hat GitOps Deployment for Fusion HCI
+# GitOps Deployment for Fusion HCI
 
-Deploy a complete GitOps platform on Fusion HCI with Red Hat OpenShift GitOps (ArgoCD), HashiCorp Vault for secret management, and External Secrets Operator for seamless secret synchronization across multiple backends.
+Deploy a complete GitOps platform on Fusion HCI with OpenShift GitOps (ArgoCD), HashiCorp Vault for secret management, and External Secrets Operator for seamless secret synchronization across multiple backends.
 
 ## Table of Contents
 
@@ -13,6 +13,7 @@ Deploy a complete GitOps platform on Fusion HCI with Red Hat OpenShift GitOps (A
   - [1. Deploy GitOps](#1-deploy-gitops)
   - [2. Deploy Vault (optional)](#2-deploy-vault)
   - [3. Deploy External Secrets (optional)](#3-deploy-external-secrets)
+- [Sample Application](#sample-application)
 - [Cleanup](#cleanup)
 - [Detailed Guides](#detailed-guides)
 - [Project Structure](#project-structure)
@@ -29,7 +30,7 @@ Before deploying the GitOps platform, fork this repository to your own GitHub ac
 ### Fork and Clone
 
 1. **Fork the repository** on GitHub:
-   - Navigate to the repository: `https://github.com/IBM/Fusion-AI`
+   - Navigate to the repository: `https://github.com/IBM/storage-fusion`
    - Click the "Fork" button in the top-right corner
    - Select your account or organization as the destination
 
@@ -37,11 +38,11 @@ Before deploying the GitOps platform, fork this repository to your own GitHub ac
 
 ```bash
 # Clone your fork (replace <YOUR_USERNAME> with your GitHub username)
-git clone https://github.com/<YOUR_USERNAME>/Fusion-AI.git
-cd Fusion-AI/quickstarts/fusion-gitops
+git clone https://github.com/<YOUR_USERNAME>/storage-fusion.git
+cd storage-fusion/
 
 # Add the original repository as upstream remote
-git remote add upstream https://github.com/IBM/Fusion-AI.git
+git remote add upstream https://github.com/IBM/storage-fusion.git
 
 # Verify remotes
 git remote -v
@@ -88,19 +89,22 @@ All components are designed to work together seamlessly while remaining independ
 ## Key Features
 
 ### GitOps Platform
-- **Red Hat OpenShift GitOps (ArgoCD)**: Enterprise-grade continuous delivery with declarative GitOps workflows
+- **OpenShift GitOps (ArgoCD)**: Enterprise-grade continuous delivery with declarative GitOps workflows
 - **Multi-environment support**: Pre-configured values files for development, staging, and production
 - **High availability**: Production configurations with replica sets and persistent storage
 - **RBAC integration**: OpenShift authentication and authorization out of the box
 
 ### Secret Management
 - **HashiCorp Vault**: Industry-standard secret storage with encryption at rest and in transit
-- **Auto-initialization**: Automated unsealing and root token management
+- **Auto-initialization**: Automated root token management
 - **Persistent storage**: Configurable storage classes for data durability
 - **HA deployment**: Multi-replica configurations for production workloads
 
 ### External Secrets Integration
-- **HashiCorp Vault backend**: Seamless integration with HashiCorp Vault for secure secret management
+- **Multi-backend support**: Seamless integration with multiple secret management systems
+  - **HashiCorp Vault**: On-premises enterprise secret management
+  - **AWS Secrets Manager**: Cloud-native secret management for AWS deployments
+  - **IBM Cloud Secrets Manager**: Enterprise secret management for IBM Cloud
 - **Automatic synchronization**: Real-time secret updates from external sources
 - **ClusterSecretStore**: Centralized secret store configuration
 
@@ -116,7 +120,7 @@ All components are designed to work together seamlessly while remaining independ
 │                   Fusion HCI Cluster                     │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐  │
-│  │         Red Hat OpenShift GitOps (ArgoCD)          │  │
+│  │             OpenShift GitOps (ArgoCD)              │  │
 │  ├────────────────────────────────────────────────────┤  │
 │  │  • Continuous Delivery                             │  │
 │  │  • Application Lifecycle Management                │  │
@@ -197,7 +201,7 @@ All commands should be run from the `quickstarts/fusion-gitops` directory. Each 
 
 ### 1. Deploy GitOps
 
-Deploy Red Hat OpenShift GitOps (ArgoCD) as the foundation for your GitOps platform:
+Deploy OpenShift GitOps (ArgoCD) as the foundation for your GitOps platform:
 
 ```bash
 # Navigate to the quickstart directory
@@ -228,10 +232,13 @@ Choose the appropriate values file for your environment:
 
 ```bash
 # Development/Testing (minimal resources)
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-minimal.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/dev/values.yaml
+
+# Staging (moderate resources for pre-production testing)
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/stage/values.yaml
 
 # Production (HA with persistent storage)
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-production.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/prod/values.yaml
 
 # OpenShift Data Foundation storage
 ./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-odf.yaml
@@ -436,9 +443,11 @@ oc get pods -n external-secrets-operator
 
 #### Backend Configuration
 
-After deploying the operator, configure the secret backend:
+You can also deploy it with a secret backend. External Secrets Operator supports multiple secret management systems:
 
 ##### HashiCorp Vault Backend
+
+Integrate with HashiCorp Vault for on-premises or self-hosted secret management:
 
 ```bash
 # Configure Vault as secret backend (requires Vault deployed)
@@ -446,6 +455,119 @@ After deploying the operator, configure the secret backend:
 
 # Verify ClusterSecretStore
 oc get clustersecretstore vault-backend
+
+# Check backend status
+oc describe clustersecretstore vault-backend
+```
+
+**Prerequisites**:
+- Vault instance deployed and accessible
+- Kubernetes authentication enabled in Vault
+- Vault policies configured for secret access
+
+**Use Cases**:
+- On-premises deployments
+- Existing Vault infrastructure
+
+##### AWS Secrets Manager Backend
+
+Integrate with AWS Secrets Manager for cloud-native AWS deployments:
+
+```bash
+# Prerequisites: Create AWS credentials secret
+kubectl create secret generic aws-credentials \
+  -n external-secrets-operator \
+  --from-literal=access-key-id=YOUR_ACCESS_KEY \
+  --from-literal=secret-access-key=YOUR_SECRET_KEY
+
+# Deploy with AWS Secrets Manager backend
+./scripts/deploy-external-secrets.sh --backend aws
+
+# Verify ClusterSecretStore
+oc get clustersecretstore aws-secrets-manager
+
+# Check backend status
+oc describe clustersecretstore aws-secrets-manager
+```
+
+**Prerequisites**:
+- AWS account with Secrets Manager enabled
+- IAM user or role with permissions:
+  - `secretsmanager:GetSecretValue`
+  - `secretsmanager:DescribeSecret`
+  - `secretsmanager:ListSecrets`
+
+**Use Cases**:
+- AWS-native deployments
+- EKS clusters
+- Multi-region AWS applications
+- Integration with AWS services
+
+##### IBM Cloud Secrets Manager Backend
+
+Integrate with IBM Cloud Secrets Manager for IBM Cloud deployments:
+
+```bash
+# Prerequisites: Create IBM Cloud API key secret
+kubectl create secret generic ibm-cloud-credentials \
+  -n external-secrets-operator \
+  --from-literal=api-key=YOUR_IBM_CLOUD_API_KEY
+
+# Deploy with IBM Cloud Secrets Manager backend
+./scripts/deploy-external-secrets.sh --backend ibmcloud
+
+# Verify ClusterSecretStore
+oc get clustersecretstore ibm-secrets-manager
+
+# Check backend status
+oc describe clustersecretstore ibm-secrets-manager
+```
+
+**Prerequisites**:
+- IBM Cloud account with Secrets Manager instance
+- IBM Cloud API key with access to Secrets Manager
+- Secrets Manager instance URL and region
+
+**Use Cases**:
+- IBM Cloud deployments
+- OpenShift on IBM Cloud
+- Hybrid cloud with IBM infrastructure
+- Integration with IBM Cloud services
+
+#### Creating ExternalSecrets
+
+After configuring a backend, create ExternalSecret resources to sync secrets:
+
+```bash
+# Example: Sync a secret from Vault
+cat <<EOF | oc apply -f -
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: my-app-secrets
+  namespace: default
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: my-app-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: database-password
+      remoteRef:
+        key: secret/data/prod/myapp/database
+        property: password
+    - secretKey: api-key
+      remoteRef:
+        key: secret/data/prod/myapp/api
+        property: key
+EOF
+
+# Verify secret synchronization
+oc get externalsecret my-app-secrets
+oc get secret my-app-secrets
 ```
 
 #### Validation
@@ -497,6 +619,22 @@ oc logs -n external-secrets-operator -l app=external-secrets-operator --tail=50
 ```
 
 📖 **Detailed guide**: [docs/deploying-external-secrets-guide.md](docs/deploying-external-secrets-guide.md)
+
+## Sample Application
+
+Once you have deployed the GitOps platform components (ArgoCD, Vault, and External Secrets Operator), you can deploy a complete end-to-end sample application that demonstrates the entire workflow in action.
+
+**📦 Agentic Chat Assistant Sample Application**
+
+This reference implementation showcases production-ready deployment patterns with:
+- ✅ GitOps continuous delivery using ArgoCD
+- ✅ Automated secret management with Vault and External Secrets Operator
+- ✅ Zero-downtime secret rotation using Stakater Reloader
+- ✅ Complete RAG (Retrieval-Augmented Generation) pipeline
+
+The sample application provides a practical example of deploying AI/ML workloads with secure secret management on Fusion HCI.
+
+📖 **Get started**: [fusion-gitops-sample-app/README.md](../../fusion-gitops-sample-app/README.md)
 
 ## Cleanup
 
@@ -654,9 +792,14 @@ quickstarts/fusion-gitops/
 │   ├── fusion-gitops/
 │   │   ├── Chart.yaml                      # Helm chart metadata for GitOps deployment
 │   │   ├── values.yaml                     # Default values for GitOps chart
-│   │   ├── values-minimal.yaml             # Minimal configuration for development environments
 │   │   ├── values-odf.yaml                 # OpenShift Data Foundation storage configuration
-│   │   ├── values-production.yaml          # Production-ready configuration with HA
+│   │   ├── environments/                   # Environment-specific configurations
+│   │   │   ├── dev/
+│   │   │   │   └── values.yaml             # Development environment (minimal resources)
+│   │   │   ├── stage/
+│   │   │   │   └── values.yaml             # Staging environment (moderate resources)
+│   │   │   └── prod/
+│   │   │       └── values.yaml             # Production environment (HA with persistent storage)
 │   │   └── templates/                      # Kubernetes resource templates for GitOps
 │   ├── vault-operator/
 │   │   ├── Chart.yaml                      # Helm chart metadata for Vault deployment
@@ -670,7 +813,7 @@ quickstarts/fusion-gitops/
 │       ├── examples/                       # Example configurations for different backends
 │       └── templates/                      # Kubernetes resource templates for External Secrets
 └── scripts/
-    ├── deploy-gitops.sh                    # Script to deploy Red Hat OpenShift GitOps
+    ├── deploy-gitops.sh                    # Script to deploy OpenShift GitOps
     ├── deploy-secret-manager.sh            # Script to deploy HashiCorp Vault
     ├── deploy-external-secrets.sh          # Script to deploy External Secrets Operator
     ├── validate-gitops.sh                  # Comprehensive GitOps deployment validation script

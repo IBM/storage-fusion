@@ -13,6 +13,7 @@ NC='\033[0m' # No Color
 # Default values
 NAMESPACE="external-secrets-operator"
 RELEASE_NAME="external-secrets-operator"
+VAULT_NAMESPACE="vault"
 FORCE=false
 KEEP_NAMESPACE=false
 
@@ -39,6 +40,7 @@ Remove External Secrets Operator and all related resources
 OPTIONS:
     -n, --namespace NAMESPACE       Operator namespace (default: external-secrets-operator)
     --release-name NAME             Helm release name (default: external-secrets-operator)
+    --vault-namespace NAMESPACE     Vault namespace (default: vault)
     --keep-namespace                Keep the namespace after cleanup
     --force                         Skip confirmation prompts
     -h, --help                      Show this help message
@@ -59,6 +61,9 @@ EXAMPLES:
     # Cleanup specific release
     $0 --release-name my-eso --namespace my-namespace
 
+    # Cleanup with custom Vault namespace
+    $0 --vault-namespace my-vault-ns
+
 EOF
     exit 0
 }
@@ -72,6 +77,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --release-name)
             RELEASE_NAME="$2"
+            shift 2
+            ;;
+        --vault-namespace)
+            VAULT_NAMESPACE="$2"
             shift 2
             ;;
         --keep-namespace)
@@ -123,11 +132,20 @@ echo ""
 print_info "Cleanup Configuration:"
 echo "  Namespace:       $NAMESPACE"
 echo "  Release Name:    $RELEASE_NAME"
+echo "  Vault Namespace: $VAULT_NAMESPACE"
 echo "  Keep Namespace:  $KEEP_NAMESPACE"
 echo ""
 
 print_warn "The following resources will be removed:"
+echo "  - ValidatingWebhookConfiguration (cluster-scoped)"
+echo "  - MutatingWebhookConfiguration (cluster-scoped)"
 echo "  - Helm release: $RELEASE_NAME"
+echo "  - ExternalSecretsConfig (cluster-scoped)"
+echo "  - NetworkPolicies in namespace $NAMESPACE"
+echo "  - ClusterRoleBinding: vault-tokenreview-binding (cluster-scoped)"
+echo "  - ClusterRoles (cluster-scoped, external-secrets related)"
+echo "  - ClusterRoleBindings (cluster-scoped, external-secrets related)"
+echo "  - Vault initialization Job (if present in Vault namespace: $VAULT_NAMESPACE)"
 echo "  - External Secrets Operator subscription"
 echo "  - ClusterSecretStores (all)"
 echo "  - ExternalSecrets (all in namespace)"
@@ -150,6 +168,34 @@ fi
 
 # Start cleanup
 print_info "Starting cleanup process..."
+echo ""
+
+# Step 0: Remove webhook configurations first to prevent validation errors
+print_info "Removing webhook configurations..."
+
+# Remove ValidatingWebhookConfiguration
+VALIDATING_WEBHOOKS=$($CLI get validatingwebhookconfiguration -o name 2>/dev/null | grep -E "externalsecret-validate|secretstore-validate" || echo "")
+if [ -n "$VALIDATING_WEBHOOKS" ]; then
+    echo "$VALIDATING_WEBHOOKS" | while read -r vwh; do
+        print_info "  Deleting ValidatingWebhookConfiguration: $vwh"
+        $CLI delete $vwh --ignore-not-found=true 2>/dev/null || true
+    done
+    print_info "  ValidatingWebhookConfiguration(s) removed successfully"
+else
+    print_info "  No ValidatingWebhookConfiguration found (externalsecret-validate, secretstore-validate)"
+fi
+
+# Remove MutatingWebhookConfiguration
+MUTATING_WEBHOOKS=$($CLI get mutatingwebhookconfiguration -o name 2>/dev/null | grep -E "externalsecret-mutate|secretstore-mutate" || echo "")
+if [ -n "$MUTATING_WEBHOOKS" ]; then
+    echo "$MUTATING_WEBHOOKS" | while read -r mwh; do
+        print_info "  Deleting MutatingWebhookConfiguration: $mwh"
+        $CLI delete $mwh --ignore-not-found=true 2>/dev/null || true
+    done
+    print_info "  MutatingWebhookConfiguration(s) removed"
+else
+    print_info "  No MutatingWebhookConfiguration found"
+fi
 echo ""
 
 # Step 1: Remove ExternalSecrets in the namespace
@@ -200,7 +246,88 @@ else
     print_info "  SecretStore CRD not found or no resources"
 fi
 
-# Step 4: Uninstall Helm release
+# Step 4: Remove NetworkPolicies in the namespace
+print_info "Removing NetworkPolicies in namespace $NAMESPACE..."
+if $CLI api-resources --api-group=networking.k8s.io 2>/dev/null | grep -q "^networkpolicies"; then
+    NETWORKPOLICIES=$($CLI get networkpolicy -n $NAMESPACE -o name 2>/dev/null | grep -E "allow-vault-egress|external-secrets" || echo "")
+    if [ -n "$NETWORKPOLICIES" ]; then
+        echo "$NETWORKPOLICIES" | while read -r np; do
+            print_info "  Deleting $np"
+            $CLI delete $np -n $NAMESPACE --ignore-not-found=true
+        done
+        print_info "  External Secrets NetworkPolicy resource(s) removed"
+    else
+        print_info "  No External Secrets NetworkPolicies found"
+    fi
+else
+    print_info "  NetworkPolicy resource type not available, skipping cleanup"
+fi
+echo ""
+
+# Step 5: Remove ExternalSecretsConfig (cluster-scoped)
+print_info "Removing ExternalSecretsConfig..."
+if $CLI get externalsecretsconfig cluster &> /dev/null; then
+    $CLI delete externalsecretsconfig cluster --ignore-not-found=true
+    print_info "  ExternalSecretsConfig 'cluster' removed"
+else
+    print_info "  ExternalSecretsConfig not found"
+fi
+echo ""
+
+# Step 5.a: Remove Vault TokenReview ClusterRoleBinding (has keep policy)
+print_info "Removing Vault TokenReview ClusterRoleBinding..."
+if $CLI get clusterrolebinding vault-tokenreview-binding &> /dev/null; then
+    $CLI delete clusterrolebinding vault-tokenreview-binding --ignore-not-found=true
+    print_info "  ClusterRoleBinding 'vault-tokenreview-binding' removed"
+else
+    print_info "  ClusterRoleBinding 'vault-tokenreview-binding' not found"
+fi
+echo ""
+
+# Step 5.b: Remove Vault Init Job (if exists in Vault namespace)
+print_info "Checking for Vault initialization Job..."
+if $CLI get namespace $VAULT_NAMESPACE &> /dev/null; then
+    if $CLI get job vault-init-external-secrets -n $VAULT_NAMESPACE &> /dev/null; then
+        print_info "  Removing Vault init Job from namespace: $VAULT_NAMESPACE"
+        $CLI delete job vault-init-external-secrets -n $VAULT_NAMESPACE --ignore-not-found=true
+        print_info "  Vault init Job removed"
+    else
+        print_info "  Vault init Job not found in namespace: $VAULT_NAMESPACE"
+    fi
+else
+    print_info "  Vault namespace '$VAULT_NAMESPACE' not found, skipping Job cleanup"
+fi
+echo ""
+
+# Step 7: Remove ClusterRoles and ClusterRoleBindings
+print_info "Removing External Secrets ClusterRoles and ClusterRoleBindings..."
+
+# Remove ClusterRoles
+CLUSTER_ROLES=$($CLI get clusterrole -o name 2>/dev/null | grep -E "external-secrets" || echo "")
+if [ -n "$CLUSTER_ROLES" ]; then
+    echo "$CLUSTER_ROLES" | while read -r cr; do
+        print_info "  Deleting $cr"
+        $CLI delete $cr --ignore-not-found=true 2>/dev/null || true
+    done
+    print_info "  ClusterRole(s) removed"
+else
+    print_info "  No External Secrets ClusterRoles found"
+fi
+
+# Remove ClusterRoleBindings
+CLUSTER_ROLE_BINDINGS=$($CLI get clusterrolebinding -o name 2>/dev/null | grep -E "external-secrets" || echo "")
+if [ -n "$CLUSTER_ROLE_BINDINGS" ]; then
+    echo "$CLUSTER_ROLE_BINDINGS" | while read -r crb; do
+        print_info "  Deleting $crb"
+        $CLI delete $crb --ignore-not-found=true 2>/dev/null || true
+    done
+    print_info "  ClusterRoleBinding(s) removed"
+else
+    print_info "  No External Secrets ClusterRoleBindings found"
+fi
+echo ""
+
+# Step 8: Uninstall Helm release
 if [ "$HELM_AVAILABLE" = true ]; then
     print_info "Uninstalling Helm release: $RELEASE_NAME..."
     if helm list -n $NAMESPACE | grep -q $RELEASE_NAME; then
@@ -212,8 +339,9 @@ if [ "$HELM_AVAILABLE" = true ]; then
 else
     print_warn "Skipping Helm uninstall (Helm not available)"
 fi
+echo ""
 
-# Step 5: Remove operator subscription
+# Step 9: Remove operator subscription
 print_info "Removing operator subscription..."
 if $CLI get subscription external-secrets-operator -n $NAMESPACE &> /dev/null; then
     $CLI delete subscription external-secrets-operator -n $NAMESPACE --ignore-not-found=true
@@ -221,8 +349,9 @@ if $CLI get subscription external-secrets-operator -n $NAMESPACE &> /dev/null; t
 else
     print_info "  Subscription not found"
 fi
+echo ""
 
-# Step 6: Remove CSV (ClusterServiceVersion)
+# Step 10: Remove CSV (ClusterServiceVersion)
 print_info "Removing ClusterServiceVersion..."
 CSV=$($CLI get csv -n $NAMESPACE -o name 2>/dev/null | grep external-secrets || echo "")
 if [ -n "$CSV" ]; then
@@ -231,8 +360,9 @@ if [ -n "$CSV" ]; then
 else
     print_info "  CSV not found"
 fi
+echo ""
 
-# Step 7: Remove OperatorGroup
+# Step 11: Remove OperatorGroup
 print_info "Removing OperatorGroup..."
 if $CLI get operatorgroup -n $NAMESPACE &> /dev/null; then
     OPERATORGROUPS=$($CLI get operatorgroup -n $NAMESPACE -o name 2>/dev/null || echo "")
@@ -247,8 +377,9 @@ if $CLI get operatorgroup -n $NAMESPACE &> /dev/null; then
 else
     print_info "  No OperatorGroups found"
 fi
+echo ""
 
-# Step 8: Wait for pods to terminate
+# Step 12: Wait for pods to terminate
 print_info "Waiting for pods to terminate..."
 TIMEOUT=60
 ELAPSED=0
@@ -263,8 +394,9 @@ while $CLI get pods -n $NAMESPACE 2>/dev/null | grep -q external-secrets; do
 done
 echo ""
 print_info "  Pods terminated"
+echo ""
 
-# Step 9: Remove namespace if requested
+# Step 13: Remove namespace if requested
 if [ "$KEEP_NAMESPACE" = false ]; then
     print_info "Removing namespace: $NAMESPACE..."
     $CLI delete namespace $NAMESPACE --ignore-not-found=true
@@ -273,7 +405,7 @@ else
     print_info "Keeping namespace: $NAMESPACE"
 fi
 
-# Step 10: Clean up CRDs (optional - only if no other instances)
+# Step 14: Clean up CRDs (optional - only if no other instances)
 print_warn "CRDs are NOT removed by default to prevent data loss"
 print_info "If you want to remove CRDs, run:"
 echo "  $CLI delete crd externalsecrets.external-secrets.io"
@@ -281,6 +413,7 @@ echo "  $CLI delete crd secretstores.external-secrets.io"
 echo "  $CLI delete crd clustersecretstores.external-secrets.io"
 echo "  $CLI delete crd clusterexternalsecrets.external-secrets.io"
 echo "  $CLI delete crd pushsecrets.external-secrets.io"
+echo "  $CLI delete crd externalsecretsconfigs.operator.openshift.io"
 echo ""
 
 # Summary
@@ -300,6 +433,11 @@ print_info "To verify cleanup:"
 echo "  $CLI get all -n $NAMESPACE"
 echo "  $CLI get externalsecret -A"
 echo "  $CLI get clustersecretstore"
+echo "  $CLI get networkpolicy -n $NAMESPACE"
+echo "  $CLI get clusterrole | grep external-secrets"
+echo "  $CLI get clusterrolebinding | grep external-secrets"
+echo "  $CLI get validatingwebhookconfiguration | grep external-secrets"
+echo "  $CLI get mutatingwebhookconfiguration | grep external-secrets"
 echo ""
 
 # Made with Bob
