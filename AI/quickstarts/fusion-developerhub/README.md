@@ -4,7 +4,7 @@
 [![OpenShift](https://img.shields.io/badge/OpenShift-4.12+-red.svg)](https://www.redhat.com/en/technologies/cloud-computing/openshift)
 [![Red Hat](https://img.shields.io/badge/Red%20Hat-Certified-red.svg)](https://www.redhat.com/)
 
-Production-ready deployment of Red Hat Developer Hub (Backstage) with IBM Fusion AI components on IBM Fusion HCI. Installs and manages Red Hat Developer Hub and Crunchy PostgreSQL via Kubernetes operators, and supports both **Helm** and **GitOps with ArgoCD** deployment models.
+A unified developer portal for AI-first development on IBM Fusion HCI. Provides centralized access to AI resources, documentation, NVIDIA blueprints, Fusion quickstarts, and self-service application templates — deployed and managed via Kubernetes operators with support for both **Helm** and **GitOps with ArgoCD** deployment models.
 
 > **Platform**: IBM Fusion on Red Hat OpenShift 4.12+
 > **Full guide**: See [QUICKSTART.md](QUICKSTART.md) for step-by-step instructions covering Helm and GitOps deployment, configuration, customization, upgrade, and troubleshooting.
