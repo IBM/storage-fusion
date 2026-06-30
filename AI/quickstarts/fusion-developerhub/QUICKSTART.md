@@ -126,12 +126,22 @@ IBM Fusion Developer Hub is an enterprise-ready developer portal built on Red Ha
 
 ## Installation
 
-Deploy IBM Fusion Developer Hub using either Helm for direct installation or GitOps with ArgoCD for automated, Git-driven deployments. Choose the method that best fits your workflow and infrastructure management approach.
-
 **In this section:**
 - [Prerequisites](#prerequisites)
 - [2.1 Deploy using Helm](#21-deploy-using-helm)
 - [2.2 Deploy using GitOps](#22-deploy-using-gitops)
+
+Deploy IBM Fusion Developer Hub using either Helm for direct installation or GitOps with ArgoCD for automated, Git-driven deployments. Choose the method that best fits your workflow and infrastructure management approach.
+
+For a direct Helm deployment, including prerequisites, operator installation, and configuration, see [2.1 Deploy using Helm](#21-deploy-using-helm) below or follow the detailed [Fusion Developer Hub Helm Quickstart Guide](https://community.ibm.com/community/user/blogs/anushka-jaiswal/2026/05/29/quickstart-developer-hub-on-ibm-fusion-with-redhat) on IBM Community.
+
+For production deployments, GitOps is the recommended approach because it provides a declarative and auditable deployment model, where configuration changes are tracked in Git and applied through OpenShift GitOps (ArgoCD).
+
+Before proceeding with the GitOps-based installation, OpenShift GitOps (ArgoCD) must be available on the cluster. Organizations have two options:
+
+Fusion GitOps Quick Start (Recommended): Recommended for teams looking to establish a GitOps foundation in an IBM Fusion environment. This approach provides a guided path for installing and configuring OpenShift GitOps and aligns with the examples used throughout this article.
+
+Existing OpenShift GitOps (ArgoCD) Installation: Teams that already operate and manage their own ArgoCD environment can use the same deployment workflow described in this guide. Depending on your environment, you may need to adjust namespace references, permissions, and synchronization policies to align with existing standards and practices.
 
 ### Prerequisites
 
@@ -509,7 +519,7 @@ Find the `repoURL` field (around line 14) and change it to point to your fork:
 spec:
   source:
     repoURL: https://github.com/<YOUR-USERNAME>/storage-fusion.git  # ← Change to your username
-    targetRevision: main  # Keep 'main' or change only if using a custom branch
+    targetRevision: master  # Keep 'master' or change only if using a custom branch
 ```
 
 **Example:** If your GitHub username is `john-doe`, change it to:
@@ -581,7 +591,7 @@ spec:
   source:
     repoURL: <your-fork>              # Your Git repository
     path: quickstarts/.../helm-charts # Path to Helm chart
-    targetRevision: main              # Git branch to track
+    targetRevision: <branch-name>  # Must match the branch created in Step 1 or if you are using default branch then keep master.
     helm:
       valueFiles:
         - environments/prod/values.yaml  # Environment-specific config
@@ -603,11 +613,11 @@ git add deploy/gitops/environments/prod/application.yaml
 # Commit with descriptive message
 git commit -m "Configure Fusion Developer Hub for production cluster"
 
-# Push to your forked repository (default: main branch)
-git push origin main
+# Push to your forked repository (default: master branch)
+git push origin <branch-name>
 ```
 
-> **Note:** By default, the Application CR uses `main` branch (`targetRevision: main`). If you want to use a custom branch, create your branch, commit there, and update `targetRevision` in the Application CR to match your branch name.
+> **Note:** This guide assumes you are working from the branch created in Step 1. By default, the Application CR uses `master` branch (`targetRevision: master`).Ensure the `targetRevision` field matches the branch that you push to your repository.
 
 **Step 6: Deploy to Your Cluster**
 
@@ -1156,8 +1166,8 @@ git add deploy/helm/environments/prod/values.yaml
 git commit -m "Customize Developer Hub homepage and catalog"
 
 # 2. Push to your repository
-# Replace 'main' with your branch name (e.g., 'main', 'master', 'develop')
-git push origin main
+# Replace 'master' with your branch name (e.g., 'main', 'master', 'develop')
+git push origin master
 
 # 3. ArgoCD will auto-sync within 3 minutes
 # Or force immediate sync:
@@ -1218,13 +1228,17 @@ The quickstart deploys with **Guest Access** enabled by default for easy testing
 - ✅ **Guest Login**: Click "Enter" on the homepage to access immediately
 - **Note**: If you see a GitHub login error, this is expected. Use Guest access for testing.
 
+⚠️ Production Recommendation
+
+Guest access is enabled by default to simplify evaluation and onboarding. Before deploying to production, configure GitHub OAuth, OpenShift OAuth, or another supported identity provider and disable guest access to ensure appropriate authentication and access control.
+
 ### 4.2 Browse and Navigate Through Homepage
 
 The Developer Hub homepage is your central hub for accessing all Fusion AI resources, documentation, and tools.
 
 #### Welcome and Overview
 
-The homepage displays a welcome message with a link to the [Quickstart Guide](https://community.ibm.com/community/user/blogs/anushka-jaiswal/2026/05/29/quickstart-developer-hub-on-ibm-fusion-with-redhat) to help you get started.
+The homepage displays a welcome message with a link to the [Quickstart Guide](https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops) to help you get started.
 
 #### Quick Access Sections
 
@@ -1411,7 +1425,7 @@ cp values.yaml value-v1-june2026.yaml
 
 # Step 2: Pull latest changes
 cd storage-fusion/AI/quickstarts/fusion-developerhub
-git pull origin main
+git pull origin master
 
 # Step 3: Review changes (optional)
 helm diff upgrade fusion-developer-hub \
@@ -1480,7 +1494,7 @@ Pull the latest changes from IBM's upstream repository:
 
 ```bash
 cd storage-fusion/AI/quickstarts/fusion-developerhub
-git pull origin main
+git pull origin master
 ```
 
 **If you encounter merge conflicts** (this is normal if you customized the same fields IBM updated):
@@ -1508,7 +1522,7 @@ Archived version:
 - value-v1-june2026.yaml"
 
 # Push to your repository
-git push origin main
+git push origin master
 ```
 
 **Step 4: Deploy via ArgoCD**
@@ -1558,7 +1572,7 @@ cp value-v0-may2026.yaml values.yaml
 # Commit and push
 git add values.yaml
 git commit -m "rollback: Restore v0 (May 2026) configuration"
-git push origin main
+git push origin master
 
 # ArgoCD will auto-sync or manually sync in UI
 ```
@@ -1570,7 +1584,7 @@ git push origin main
 git revert HEAD
 
 # Push the revert
-git push origin main
+git push origin master
 ```
 
 For more details on version management, see [`deploy/helm/VERSION_MANAGEMENT.md`](deploy/helm/VERSION_MANAGEMENT.md).
