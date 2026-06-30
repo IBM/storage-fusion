@@ -1,0 +1,87 @@
+# =============================================================================
+# Environment override – Production  |  Model: tiny-llama
+# =============================================================================
+# Overrides for the tiny-llama model in the production environment.
+# Supply s3.accessKeyId and s3.secretAccessKey via sealed-secrets or
+# --set flags at deploy time. Never commit real credentials.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  name: tiny-llama-test
+  displayName: "Tiny LLaMA Test"
+  namespace: deploy-models
+
+# -----------------------------------------------------------------------------
+# Project / Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  # create: true
+  labels:
+    environment: prod
+  # annotations: {}
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage Configuration
+# -----------------------------------------------------------------------------
+s3:
+  # endpoint: "https://s3.openshift-storage.svc:443"
+  # region: "us-south"
+  # bucket: "model-registry-artifacts-p-ccc9b6a9-897a-4971-9161-9c0d25448836"
+  modelPath: "tiny-llama-test/1.0.0"
+  accessKeyId: ""        # supply via --set or sealed-secret
+  secretAccessKey: ""    # supply via --set or sealed-secret
+  # verifySSL: "0"
+  connectionSecretName: ""
+  serviceAccountName: ""
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# Resource Allocation
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+    nvidia.com/gpu: "1"
+  requests:
+    cpu: "2"
+    memory: 4Gi
+    nvidia.com/gpu: "1"
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling
+# -----------------------------------------------------------------------------
+scheduling:
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# -----------------------------------------------------------------------------
+# Gateway Configuration
+# -----------------------------------------------------------------------------
+# tiny-llama-test relies on the shared OpenShift Route created by gpt-oss-20b.
+# The LLMInferenceService controller manages the HTTPRoute automatically.
+#
+# External URL for this model:
+#   https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models/tiny-llama-test/v1/
+gateway:
+  name: openshift-ai-inference
+  namespace: openshift-ingress
+  wildcardDomain: "apps.f55l020.fusion.tadn.ibm.com"
+  exposeGateway: true  # Route is owned by gpt-oss-20b
+
+# -----------------------------------------------------------------------------
+# Additional Labels / Annotations
+# -----------------------------------------------------------------------------
+labels:
+  environment: prod
+
+annotations: {}

@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-model-registry-gitops-dev
+  namespace: openshift-gitops
+  labels:
+    app: fusion-model-registry-gitops
+    environment: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: fusion-model-registry-gitops-dev
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry
+    
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/dev/values.yaml
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fusion-model-registry-gitops-dev
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  ignoreDifferences:
+    - group: build.openshift.io
+      kind: BuildConfig
+      jsonPointers:
+        - /status
+    - group: image.openshift.io
+      kind: ImageStream
+      jsonPointers:
+        - /status
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

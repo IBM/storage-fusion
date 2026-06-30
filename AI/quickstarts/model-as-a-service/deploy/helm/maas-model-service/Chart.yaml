@@ -1,0 +1,18 @@
+apiVersion: v2
+name: maas-model-service
+description: Generic chart for deploying LLM models as MaaS services on Red Hat OpenShift AI
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - ai
+  - llm
+  - model
+  - inference
+  - maas
+  - vllm
+maintainers:
+  - name: Fusion AI Platform Team
+home: https://github.com/IBM/storage-fusion
+sources:
+  - https://github.com/IBM/storage-fusion

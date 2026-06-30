@@ -1,0 +1,64 @@
+# MaaS Platform - Production Environment
+# Environment-specific platform configuration for production
+
+global:
+  wildcardDomain: apps.cluster.example.com
+  toolsImage: quay.io/openshift/origin-cli:latest
+
+platform:
+  namespaces:
+    modelRegistry: rhoai-model-registries
+    workbench: rhods-notebooks
+
+dataScienceCluster:
+  enabled: true
+  name: default-dsc
+  namespace: redhat-ods-operator
+  components:
+    dashboard:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+    kserve:
+      managementState: Managed
+      modelsAsService:
+        managementState: Removed
+      rawDeploymentServiceConfig: Headless
+      nim:
+        managementState: Managed
+    modelregistry:
+      managementState: Managed
+    feastoperator:
+      managementState: Removed
+    trustyai:
+      managementState: Managed  # Enabled for production
+    aipipelines:
+      managementState: Managed
+    ray:
+      managementState: Managed
+    trainingoperator:
+      managementState: Managed
+    trainer:
+      managementState: Removed
+    mlflowoperator:
+      managementState: Removed
+    llamastackoperator:
+      managementState: Removed
+    kueue:
+      managementState: Removed
+
+platformKuadrant:
+  enabled: true
+  namespace: kuadrant-system
+  instance:
+    enabled: true
+    name: kuadrant
+
+leaderWorkerSet:
+  enabled: true
+  namespace: openshift-lws-operator
+  instance:
+    enabled: true
+    name: cluster
+    managementState: Managed
+

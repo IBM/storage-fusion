@@ -1,0 +1,49 @@
+---
+# Gateway OpenShift Route
+# -----------------------------------------------------------------------
+# Exposes the shared openshift-ai-inference Gateway to external users
+# via the OpenShift router.  This is a cluster-level resource shared by
+# all models — only ONE instance should exist per cluster.
+#
+# Safe to set exposeGateway: true in multiple model values files:
+#   - A Helm lookup checks whether the Route already exists in the cluster.
+#     If it does, this template renders nothing — no duplicate, no conflict.
+#   - helm.sh/resource-policy: keep prevents Helm from deleting or replacing
+#     the Route if a later sync comes from a different Application.
+#   - ArgoCD ignoreDifferences on Route/status prevents spurious drift alerts.
+#
+# All models are reachable through this single Route via their HTTPRoutes:
+#   https://<host>/<model.namespace>/<model.name>/v1/completions
+#   https://<host>/<model.namespace>/<model.name>/v1/chat/completions
+#
+# The Route points at the Service the Gateway controller creates:
+#   <gateway.name>-<gateway.name>  in namespace: <gateway.namespace>
+# -----------------------------------------------------------------------
+{{- if .Values.gateway.exposeGateway }}
+{{- $existing := lookup "route.openshift.io/v1" "Route" .Values.gateway.namespace .Values.gateway.name }}
+{{- if not $existing }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- include "maas-model-deploy.labels" . | nindent 4 }}
+    gateway.networking.k8s.io/gateway-name: {{ .Values.gateway.name }}
+  annotations:
+    {{- include "maas-model-deploy.annotations" . | nindent 4 }}
+    helm.sh/resource-policy: keep
+spec:
+  host: {{ .Values.gateway.name }}-{{ .Values.gateway.namespace }}.{{ .Values.gateway.wildcardDomain }}
+  port:
+    targetPort: https
+  tls:
+    termination: passthrough
+    insecureEdgeTerminationPolicy: Redirect
+  to:
+    kind: Service
+    name: {{ .Values.gateway.name }}-{{ .Values.gateway.name }}
+    weight: 100
+  wildcardPolicy: None
+{{- end }}
+{{- end }}

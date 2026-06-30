@@ -20,8 +20,11 @@ modelRegistry:
   # Shared namespace-level connection secret used by all models in this namespace
   connectionSecret: "model-registry-connection"
   
-  # Do not create a per-model secret. Reuse the existing namespace secret instead.
-  createConnectionSecret: false
+  # Create the connection secret for the first model deployment
+  createConnectionSecret: true
+  connectionSecretData:
+    # echo -n "registry.redhat.io" | base64
+    ociHost: "cmVnaXN0cnkucmVkaGF0Lmlv"
 
 # Model source URI is resolved automatically from the model registry at deploy time
 source:
@@ -92,8 +95,9 @@ tokenRateLimiting:
 
 # Gateway configuration
 gateway:
-  # Set to true to automatically expose the gateway for external access
-  exposeExternally: true
+  # Set to false to avoid Route host permission issues with ArgoCD
+  # The gateway will still be accessible via the gateway service
+  exposeExternally: false
 
 # Monitoring configuration
 monitoring:

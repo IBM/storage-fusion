@@ -1,0 +1,86 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name:  fusion-maas-runtime-staging
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+  labels:
+    environment: staging
+    component: runtime
+spec:
+  project: fusion-maas-platform-staging
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-runtime
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/staging/values.yaml
+      parameters:
+        - name: environment
+          value: staging
+        - name: namespace
+          value: maas-staging
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: maas-staging
+  
+  syncPolicy:
+    # Manual sync for staging
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+  
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      jsonPointers:
+        - /status
+    - group: modelregistry.opendatahub.io
+      kind: ModelRegistry
+      jsonPointers:
+        - /status
+    - group: kuadrant.io
+      kind: RateLimitPolicy
+      jsonPointers:
+        - /status
+    - group: route.openshift.io
+      kind: Route
+      jsonPointers:
+        - /status
+    - group: ""
+      kind: Secret
+      name: model-registry-object-storage
+      namespace: rhoai-model-registries
+      jsonPointers:
+        - /data/AWS_ACCESS_KEY_ID
+        - /data/AWS_SECRET_ACCESS_KEY
+        - /data/AWS_S3_ENDPOINT
+        - /data/AWS_S3_BUCKET
+  
+  info:
+    - name: Description
+      value: MaaS Runtime - Staging Environment
+    - name: Component
+      value: Gateway, ModelRegistry, RBAC, Storage
+    - name: Sync Wave
+      value: "100"
+    - name: Dependencies
+      value: Requires  fusion-maas-platform-staging to be healthy
+    - name: Namespace
+      value: maas-staging
+    - name: Sync Mode
+      value: Manual - Requires approval
+

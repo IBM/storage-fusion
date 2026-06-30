@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name:  fusion-maas-platform-orchestrator-staging
+  namespace: openshift-gitops
+  labels:
+    environment: staging
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  project: fusion-maas-platform-staging
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/staging/applications
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+  
+  syncPolicy:
+    # Manual sync for staging - requires approval
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+  
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: route.openshift.io
+      kind: Route
+      jsonPointers:
+        - /status
+

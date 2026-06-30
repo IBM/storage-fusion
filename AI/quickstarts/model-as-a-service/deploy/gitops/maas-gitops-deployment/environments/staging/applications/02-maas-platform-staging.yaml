@@ -1,0 +1,69 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name:  fusion-maas-platform-config-staging
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+  labels:
+    environment: staging
+    component: platform
+spec:
+  project: fusion-maas-platform-staging
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-platform
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/staging/values.yaml
+      parameters:
+        - name: environment
+          value: staging
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: redhat-ods-operator
+  
+  syncPolicy:
+    # Manual sync for staging
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+  
+  ignoreDifferences:
+    - group: datasciencecluster.opendatahub.io
+      kind: DataScienceCluster
+      jsonPointers:
+        - /status
+    - group: authorino.kuadrant.io
+      kind: Authorino
+      jsonPointers:
+        - /status
+    - group: kuadrant.io
+      kind: Kuadrant
+      jsonPointers:
+        - /status
+  
+  info:
+    - name: Description
+      value: MaaS Platform Configuration - Staging Environment
+    - name: Component
+      value: DataScienceCluster, Authorino, Kuadrant instances
+    - name: Sync Wave
+      value: "50"
+    - name: Dependencies
+      value: Requires  fusion-maas-operators-staging to be healthy
+    - name: Sync Mode
+      value: Manual - Requires approval
+

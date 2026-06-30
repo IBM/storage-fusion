@@ -1,0 +1,91 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-maas-runtime-prod
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: maas-prod-alerts
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: maas-prod-alerts
+  labels:
+    environment: prod
+    component: runtime
+    criticality: critical
+spec:
+  project: fusion-maas-platform-prod
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master  # Use tags for production
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-runtime
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/prod/values.yaml
+      parameters:
+        - name: environment
+          value: prod
+        - name: namespace
+          value: maas-prod
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: maas-prod
+  
+  syncPolicy:
+    # MANUAL sync only - NO automation in production
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 2
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
+  
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      jsonPointers:
+        - /status
+    - group: modelregistry.opendatahub.io
+      kind: ModelRegistry
+      jsonPointers:
+        - /status
+    - group: kuadrant.io
+      kind: RateLimitPolicy
+      jsonPointers:
+        - /status
+    - group: route.openshift.io
+      kind: Route
+      jsonPointers:
+        - /status
+    - group: ""
+      kind: Secret
+      name: model-registry-object-storage
+      namespace: rhoai-model-registries
+      jsonPointers:
+        - /data/AWS_ACCESS_KEY_ID
+        - /data/AWS_SECRET_ACCESS_KEY
+        - /data/AWS_S3_ENDPOINT
+        - /data/AWS_S3_BUCKET
+  
+  info:
+    - name: Description
+      value: MaaS Runtime - Production Environment
+    - name: Component
+      value: Gateway, ModelRegistry, RBAC, Storage
+    - name: Sync Wave
+      value: "100"
+    - name: Dependencies
+      value: Requires fusion-maas-platform-prod to be healthy
+    - name: Namespace
+      value: maas-prod
+    - name: Sync Mode
+      value: MANUAL ONLY - Requires approval and change window
+    - name: Criticality
+      value: CRITICAL - Production runtime serving live traffic
+

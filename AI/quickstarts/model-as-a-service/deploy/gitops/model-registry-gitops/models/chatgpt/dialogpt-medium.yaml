@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: ModelVersion
+metadata:
+  name: dialogpt-medium
+  labels:
+    model-type: public
+    source: huggingface
+    task: conversational-ai
+    governance-status: approved
+spec:
+  modelName: "DialoGPT Medium Conversational AI"
+  version: "1.0.0"
+  description: |
+    Microsoft DialoGPT medium model for conversational AI applications.
+    This model is trained on Reddit conversations and can generate human-like
+    responses in a conversational context. Suitable for chatbots, customer
+    support automation, and interactive AI assistants.
+  
+  author: "microsoft"
+  
+  # Base model information (public model from Hugging Face)
+  baseModel:
+    name: "microsoft/DialoGPT-medium"
+    source: "huggingface"
+    sourceUrl: "https://huggingface.co/microsoft/DialoGPT-medium"
+    version: "main"
+    license: "MIT"
+    licenseUrl: "https://huggingface.co/microsoft/DialoGPT-medium/blob/main/LICENSE"
+  
+  # Governance and compliance metadata
+  governance:
+    approvedBy: "platform-team@company.com"
+    approvalDate: "2024-01-15"
+    approvalTicket: "JIRA-12345"
+    licenseVerified: true
+    securityScanned: true
+    scanDate: "2024-01-14"
+    scanTool: "trivy"
+    complianceStatus: "approved"
+    restrictions:
+      - "Requires human-in-the-loop for customer-facing applications"
+      - "Monitor for bias in responses"
+      - "Not approved for medical or legal advice"
+  
+  # Model storage and artifacts
+  storage:
+    uri: "hf://microsoft/DialoGPT-medium"
+    type: "huggingface"
+    size: "345MB"
+    format: "pytorch"
+  
+  # Model metadata and capabilities
+  metadata:
+    framework: "transformers"
+    frameworkVersion: "4.35.0"
+    modelType: "causal-lm"
+    architecture: "GPT2"
+    parameters: "345M"
+    contextLength: "1024"
+    languages:
+      - "en"
+    tasks:
+      - "conversational"
+      - "text-generation"
+      - "dialogue"
+    
+    # Performance metrics (from Hugging Face model card)
+    metrics:
+      perplexity: "16.5"
+      bleu: "0.45"
+      
+    # Training information
+    training:
+      dataset: "Reddit conversations"
+      datasetSize: "147M conversations"
+      trainingFramework: "PyTorch"
+      
+    # Hardware requirements
+    requirements:
+      minMemory: "2GB"
+      recommendedMemory: "4GB"
+      gpu: "optional"
+      minCpu: "2 cores"
+  
+  # Use case and deployment information
+  useCases:
+    - name: "Customer Support Chatbot"
+      description: "Automated responses for common customer inquiries"
+      status: "approved"
+      
+    - name: "Interactive Assistant"
+      description: "Conversational AI for internal tools"
+      status: "approved"
+      
+    - name: "Training Data Generation"
+      description: "Generate synthetic conversation data"
+      status: "approved"
+  
+  # Deployment configuration
+  deployment:
+    servingFramework: "kserve"
+    runtime: "huggingface"
+    replicas: 2
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2"
+      limits:
+        memory: "8Gi"
+        cpu: "4"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPU: 70
+  
+  # Tags for searchability
+  tags:
+    - "chatbot"
+    - "conversational-ai"
+    - "gpt2"
+    - "microsoft"
+    - "huggingface"
+    - "public-model"
+    - "approved"
+    - "production-ready"
+

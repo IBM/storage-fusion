@@ -158,7 +158,7 @@ monitoring:
       app: grafana
     consoleLink:
       enabled: true
-      displayName: "Code Assistant Metrics"
+      displayName: "Fusion Agentic Assistant Metrics"
       section: "Observability"
     dashboards:
       maasOverview:
@@ -174,7 +174,7 @@ authentication:
     namespace: keycloak
     realm:
       name: maas
-      displayName: "Code Assistant Platform"
+      displayName: "Fusion Agentic Assistant Platform"
       admin:
         username: admin
       user:
@@ -231,45 +231,6 @@ modelRegistry:
     enabled: true
     autoRegister: true
     syncSchedule: "0 3 * * *"
-
-workbench:
-  enabled: true
-  namespace: rhods-notebooks
-  createNamespace: false
-  objectStorage:
-    enabled: true
-    useODF: true
-    odfStorageClass: openshift-storage.noobaa.io
-    bucketClass: noobaa-default-bucket-class
-    defaultBucket: workbench-data
-    region: us-south
-    verifySSL: true
-    storageClass: STANDARD
-    autoCreateBuckets: true
-    bucketPrefix: workbench-
-  dataConnections:
-    enabled: true
-    createDefault: true
-    defaultConnectionName: fusion-storage
-  storage:
-    defaultPVCSize: 20Gi
-    sharedStorage:
-      enabled: false
-      size: 100Gi
-  resources:
-    defaultRequests:
-      cpu: "1"
-      memory: 8Gi
-    defaultLimits:
-      cpu: "2"
-      memory: 16Gi
-    gpu:
-      enabled: true
-      defaultLimit: "0"
-  culling:
-    enabled: true
-    idleTimeout: 60
-    checkInterval: 5
 
 commonLabels:
   use-case: Fusion-Agentic-Assistance-Platform

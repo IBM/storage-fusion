@@ -1,0 +1,22 @@
+{{- if .Values.project.create }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "maas-model-deploy.namespace" . }}
+  labels:
+    {{- include "maas-model-deploy.labels" . | nindent 4 }}
+    # Required for OpenShift AI dashboard visibility
+    opendatahub.io/dashboard: "true"
+    {{- with .Values.project.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    # Shared resource – keep after first creation so a second model application
+    # targeting the same namespace does not attempt to recreate or delete it.
+    helm.sh/resource-policy: keep
+    {{- include "maas-model-deploy.annotations" . | nindent 4 }}
+    {{- with .Values.project.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

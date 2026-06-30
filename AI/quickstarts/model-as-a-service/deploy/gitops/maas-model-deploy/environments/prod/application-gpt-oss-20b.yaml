@@ -1,0 +1,118 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-maas-model-deploy-prod-gpt-oss-20b
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "200"
+  labels:
+    environment: prod
+    component: model-deploy
+    model: gpt-oss-20b
+spec:
+  project: fusion-maas-model-deploy-prod
+
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/prod/values-gpt-oss-20b.yaml
+      parameters:
+        - name: model.namespace
+          value: deploy-models
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: deploy-models
+
+  # Prod: manual sync ONLY, no prune — strict change management, change windows enforced
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+
+  ignoreDifferences:
+    - group: serving.kserve.io
+      kind: LLMInferenceService
+      jsonPointers:
+        - /status
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jsonPointers:
+        - /status
+    # The gateway OpenShift Route is a shared cluster resource — it may be
+    # rendered by any Application that sets exposeGateway: true.
+    # Ignore status and the instance/model labels that ArgoCD stamps on it
+    # to prevent the two prod Applications fighting over ownership.
+    - group: route.openshift.io
+      kind: Route
+      name: openshift-ai-inference
+      jsonPointers:
+        - /status
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["app.kubernetes.io/managed-by"]
+        - .metadata.labels["maas.redhat.com/model"]
+        - .metadata.labels["helm.sh/chart"]
+    # S3 connection secret – credentials are runtime-injected
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data/AWS_ACCESS_KEY_ID
+        - /data/AWS_SECRET_ACCESS_KEY
+    # storage-config – shared; ignore data, labels, and annotations entirely
+    - group: ""
+      kind: Secret
+      name: storage-config
+      jqPathExpressions:
+        - .data
+        - .metadata.labels
+        - .metadata.annotations
+    # Shared resources (Namespace, connection Secret, ServiceAccount) have
+    # instance-specific labels stamped by whichever app synced last.
+    # Match by kind only (no name) so this works regardless of the namespace /
+    # connection secret name configured in values.yaml.
+    - group: ""
+      kind: Namespace
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["maas.redhat.com/model"]
+    - group: ""
+      kind: Secret
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["maas.redhat.com/model"]
+    - group: ""
+      kind: ServiceAccount
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["maas.redhat.com/model"]
+
+  info:
+    - name: Description
+      value: MaaS Model Deploy – Production Environment (gpt-oss-20b)
+    - name: Component
+      value: LLMInferenceService, HTTPRoute, OpenShift Route, S3 Connection Secret, ServiceAccount, Namespace
+    - name: Sync Wave
+      value: "200"
+    - name: Dependencies
+      value: Requires fusion-maas-runtime-prod to be healthy
+    - name: Namespace
+      value: deploy-models
+    - name: Model
+      value: gpt-oss-20b
+    - name: Gateway
+      value: openshift-ai-inference (openshift-ingress)
+    - name: External URL
+      value: https://openshift-ai-inference-openshift-ingress.<wildcardDomain>/deploy-models/gpt-oss-20b/v1/

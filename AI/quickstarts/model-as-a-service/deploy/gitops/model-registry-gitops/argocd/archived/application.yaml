@@ -1,0 +1,71 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-model-registry-gitops
+  namespace: openshift-gitops
+  labels:
+    app: fusion-model-registry-gitops
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry
+    
+    # Use Helm to deploy with values from file
+    helm:
+      # Reference the values.yaml file in the helm directory
+      valueFiles:
+        - values.yaml
+      
+      # Users can override specific values inline if needed
+      # Uncomment and modify as needed:
+      # values: |
+      #   namespace: my-custom-namespace
+      #   modelRegistry:
+      #     namespace: my-registry-namespace
+      #     obcName: my-custom-obc
+      #   reconciler:
+      #     config:
+      #       logLevel: DEBUG
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fusion-model-registry-gitops
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Ignore differences in certain fields
+  ignoreDifferences:
+    - group: build.openshift.io
+      kind: BuildConfig
+      jsonPointers:
+        - /status
+    - group: image.openshift.io
+      kind: ImageStream
+      jsonPointers:
+        - /status
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+

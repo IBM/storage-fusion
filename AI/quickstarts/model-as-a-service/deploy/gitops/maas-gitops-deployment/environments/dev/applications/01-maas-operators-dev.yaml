@@ -1,0 +1,67 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-maas-operators-dev
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    environment: dev
+    component: operators
+spec:
+  project: fusion-maas-platform-dev
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-operators
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/dev/values.yaml
+      parameters:
+        - name: environment
+          value: dev
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-operators
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  ignoreDifferences:
+    - group: operators.coreos.com
+      kind: Subscription
+      jsonPointers:
+        - /status
+    - group: operators.coreos.com
+      kind: InstallPlan
+      jsonPointers:
+        - /status
+    - group: operators.coreos.com
+      kind: ClusterServiceVersion
+      jsonPointers:
+        - /status
+  
+  info:
+    - name: Description
+      value: MaaS Operators - Development Environment
+    - name: Component
+      value: Platform Operators (RHOAI, Authorino, Kuadrant)
+    - name: Sync Wave
+      value: "0"
+

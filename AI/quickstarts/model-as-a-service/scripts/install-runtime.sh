@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CHARTS_DIR="$PROJECT_ROOT/deploy"
+CHARTS_DIR="$PROJECT_ROOT/deploy/helm"
 
 # Colors for output
 RED='\033[0;31m'

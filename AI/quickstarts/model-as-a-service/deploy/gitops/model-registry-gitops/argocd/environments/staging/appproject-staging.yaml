@@ -1,0 +1,82 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-model-registry-gitops-staging
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    app: fusion-model-registry-gitops
+    environment: staging
+spec:
+  description: Model Registry GitOps - Staging Environment
+  
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+  
+  destinations:
+    - namespace: fusion-model-registry-gitops-staging
+      server: https://kubernetes.default.svc
+    - namespace: maas-staging
+      server: https://kubernetes.default.svc
+    - namespace: rhoai-model-registries
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: batch
+      kind: Job
+    - group: batch
+      kind: CronJob
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+    - group: build.openshift.io
+      kind: BuildConfig
+    - group: image.openshift.io
+      kind: ImageStream
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+  
+  roles:
+    - name: admin
+      description: Admin role for model registry staging environment
+      policies:
+        - p, proj:fusion-model-registry-gitops-staging:admin, applications, *, fusion-model-registry-gitops-staging/*, allow
+      groups:
+        - model-registry-admins
+        - maas-staging-admins
+    
+    - name: deployer
+      description: Deployer role for model registry staging environment
+      policies:
+        - p, proj:fusion-model-registry-gitops-staging:deployer, applications, get, fusion-model-registry-gitops-staging/*, allow
+        - p, proj:fusion-model-registry-gitops-staging:deployer, applications, sync, fusion-model-registry-gitops-staging/*, allow
+      groups:
+        - model-registry-deployers
+        - maas-deployers
+    
+    - name: viewer
+      description: Read-only role for model registry staging environment
+      policies:
+        - p, proj:fusion-model-registry-gitops-staging:viewer, applications, get, fusion-model-registry-gitops-staging/*, allow
+      groups:
+        - model-registry-viewers
+        - maas-viewers
+  
+  orphanedResources:
+    warn: true

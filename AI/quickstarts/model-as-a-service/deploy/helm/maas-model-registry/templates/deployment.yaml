@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-reconciler
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: reconciler
+spec:
+  replicas: {{ .Values.reconciler.replicaCount }}
+  selector:
+    matchLabels:
+      app: model-registry-gitops
+      component: reconciler
+  template:
+    metadata:
+      labels:
+        app: model-registry-gitops
+        component: reconciler
+    spec:
+      serviceAccountName: {{ include "model-registry-gitops.serviceAccountName" . }}
+      containers:
+        - name: reconciler
+          image: "{{ .Values.reconciler.image.repository }}:{{ .Values.reconciler.image.tag }}"
+          imagePullPolicy: {{ .Values.reconciler.image.pullPolicy }}
+          env:
+            # Namespace configuration - USER CONFIGURABLE
+            - name: NAMESPACE
+              value: {{ .Values.namespace | quote }}
+            - name: TARGET_NAMESPACE
+              value: {{ .Values.modelRegistry.namespace | quote }}
+            - name: REGISTRY_NAMESPACE
+              value: {{ .Values.modelRegistry.namespace | quote }}
+            
+            # OBC configuration - USER CONFIGURABLE
+            - name: OBC_NAME
+              value: {{ .Values.modelRegistry.obcName | quote }}
+            
+            # Model Registry configuration - USER CONFIGURABLE
+            - name: REGISTRY_HOST
+              value: {{ include "model-registry-gitops.registryHost" . | quote }}
+            - name: REGISTRY_PORT
+              value: {{ .Values.modelRegistry.servicePort | quote }}
+            - name: REGISTRY_SECURE
+              value: {{ if hasKey .Values.modelRegistry "secure" }}{{ .Values.modelRegistry.secure | quote }}{{ else }}"true"{{ end }}
+            - name: REGISTRY_VERIFY_SSL
+              value: {{ if hasKey .Values.modelRegistry "verifySSL" }}{{ .Values.modelRegistry.verifySSL | quote }}{{ else }}"false"{{ end }}
+            
+            # Reconciliation settings - USER CONFIGURABLE
+            - name: RECONCILE_INTERVAL
+              value: {{ .Values.reconciler.config.reconcileInterval | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.reconciler.config.logLevel | quote }}
+            - name: SEQUENTIAL_DELAY
+              value: {{ .Values.reconciler.config.sequentialDelay | quote }}
+            - name: CLEANUP_AFTER_UPLOAD
+              value: {{ .Values.reconciler.config.cleanupAfterUpload | quote }}
+          resources:
+            {{- toYaml .Values.reconciler.resources | nindent 12 }}
+          volumeMounts:
+            - name: cache
+              mountPath: /tmp/hf_cache
+      volumes:
+        - name: cache
+          emptyDir:
+            sizeLimit: {{ .Values.reconciler.cache.size }}
+

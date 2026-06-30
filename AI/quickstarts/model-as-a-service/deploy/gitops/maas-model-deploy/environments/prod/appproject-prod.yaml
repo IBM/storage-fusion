@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-maas-model-deploy-prod
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    environment: prod
+    component: model-deploy
+spec:
+  description: MaaS Model Deploy – Production Environment
+
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: admin
+      description: Admin role for model-deploy prod environment
+      policies:
+        - p, proj:fusion-maas-model-deploy-prod:admin, applications, *, fusion-maas-model-deploy-prod/*, allow
+      groups:
+        - maas-admins
+
+    - name: viewer
+      description: Read-only role for model-deploy prod environment
+      policies:
+        - p, proj:fusion-maas-model-deploy-prod:viewer, applications, get, fusion-maas-model-deploy-prod/*, allow
+      groups:
+        - maas-viewers
+        - maas-developers
+
+  orphanedResources:
+    warn: true
