@@ -1,0 +1,68 @@
+# Application 1: Reloader
+# Automatically reloads deployments when ConfigMaps or Secrets change
+# Configured for OpenShift with appropriate namespace exclusions
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reloader
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: reloader
+    validated-patterns.io/pattern: llmops-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://stakater.github.io/stakater-charts
+    chart: reloader
+    targetRevision: 1.0.119
+    helm:
+      parameters:
+        - name: reloader.ignoreNamespaces
+          value: "kube-system,kube-public,kube-node-lease,openshift-*,argocd,openshift-gitops"
+        - name: reloader.isOpenshift
+          value: "true"
+        - name: reloader.deployment.securityContext.runAsUser
+          value: "null"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: reloader
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# Application 2: LLMOps Platform
+# Deploys the LLMOps platform components including chat application
+# Includes all platform resources from the applications directory
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llmops-platform
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/name: llmops-platform
+    validated-patterns.io/pattern: llmops-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: main
+    path: AI/fusion-gitops-sample-app/gitops/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: llmops-platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+# Made with Bob

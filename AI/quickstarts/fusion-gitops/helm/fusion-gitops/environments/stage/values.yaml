@@ -1,0 +1,155 @@
+# Staging Environment Values for Fusion GitOps
+# Balanced configuration for pre-production testing
+
+# Use existing storage classes
+storage:
+  defaultStorageClass: ocs-storagecluster-cephfs
+  sharedStorageClass: ocs-storagecluster-cephfs
+
+# ArgoCD configuration - staging setup
+argocd:
+  enabled: true
+  
+  server:
+    replicas: 2
+    autoscale:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 75
+      targetMemoryUtilizationPercentage: 80
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+  
+  repo:
+    replicas: 2
+    autoscale:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 75
+      targetMemoryUtilizationPercentage: 80
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    storage:
+      enabled: true
+      size: 20Gi
+      storageClassName: ocs-storagecluster-cephfs
+      accessModes:
+        - ReadWriteMany
+    env:
+      - name: ARGOCD_EXEC_TIMEOUT
+        value: "240s"
+      - name: ARGOCD_GIT_ATTEMPTS_COUNT
+        value: "4"
+  
+  controller:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+    sharding:
+      enabled: false
+    env:
+      - name: ARGOCD_RECONCILIATION_TIMEOUT
+        value: "240s"
+      - name: ARGOCD_REPO_SERVER_TIMEOUT_SECONDS
+        value: "240"
+  
+  redis:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  ha:
+    enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  dex:
+    enabled: true
+    openShiftOAuth: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  rbac:
+    defaultPolicy: 'role:readonly'
+    policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+    scopes: '[groups]'
+  
+  notifications:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  applicationSet:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "15"
+    requests.memory: "30Gi"
+    limits.cpu: "30"
+    limits.memory: "60Gi"
+    persistentvolumeclaims: "15"
+    requests.storage: "150Gi"
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+
+# Made with Bob

@@ -18,6 +18,10 @@ REPLICAS=3
 RELEASE_NAME="vault-operator"
 VALUES_FILE=""
 DRY_RUN=false
+SEAL_TYPE="shamir"
+KMS_KEY_ID=""
+KMS_REGION=""
+KMS_ENDPOINT=""
 
 # Function to print colored output
 print_info() {
@@ -46,15 +50,29 @@ OPTIONS:
     -r, --replicas COUNT            Number of Vault replicas (default: 3)
     -f, --values-file FILE          Custom values file
     --release-name NAME             Helm release name (default: vault-operator)
+    --seal-type TYPE                Seal type: shamir or awskms (default: shamir)
+    --kms-key-id ID                 AWS KMS key ID, ARN, or alias (required for awskms)
+    --kms-region REGION             AWS region for KMS (required for awskms)
+    --kms-endpoint URL              Custom AWS KMS endpoint (optional)
     --dry-run                       Show what would be deployed without deploying
     -h, --help                      Show this help message
 
 EXAMPLES:
-    # Deploy with defaults
+    # Deploy with defaults (Shamir seal)
     $0
 
     # Deploy with custom storage class
     $0 --storage-class fusion-block-storage
+
+    # Deploy with AWS KMS auto-unseal
+    $0 --seal-type awskms \\
+       --kms-key-id "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012" \\
+       --kms-region us-east-1
+
+    # Deploy with AWS KMS using alias
+    $0 --seal-type awskms \\
+       --kms-key-id "alias/vault-unseal" \\
+       --kms-region us-east-1
 
     # Deploy with custom values file
     $0 -f my-values.yaml
@@ -64,6 +82,16 @@ EXAMPLES:
 
     # Deploy to custom namespace with 5 replicas
     $0 -n vault-prod -r 5 -z 20Gi
+
+NOTE:
+    When using AWS KMS auto-unseal, you must create a secret with AWS credentials:
+    
+    kubectl create secret generic vault-aws-kms-credentials \\
+      --from-literal=access-key-id=YOUR_ACCESS_KEY_ID \\
+      --from-literal=secret-access-key=YOUR_SECRET_ACCESS_KEY \\
+      -n vault
+    
+    Alternatively, use IAM roles for service accounts (IRSA) or instance profiles.
 
 EOF
     exit 1
@@ -96,6 +124,22 @@ while [[ $# -gt 0 ]]; do
             RELEASE_NAME="$2"
             shift 2
             ;;
+        --seal-type)
+            SEAL_TYPE="$2"
+            shift 2
+            ;;
+        --kms-key-id)
+            KMS_KEY_ID="$2"
+            shift 2
+            ;;
+        --kms-region)
+            KMS_REGION="$2"
+            shift 2
+            ;;
+        --kms-endpoint)
+            KMS_ENDPOINT="$2"
+            shift 2
+            ;;
         --dry-run)
             DRY_RUN=true
             shift
@@ -119,25 +163,9 @@ else
     print_info "Detected Kubernetes cluster"
 fi
 
-# Set default namespace if not provided
-if [ -z "$NAMESPACE" ]; then
-    # Try to get current namespace from context
-    current_ns=""
-    if [ "$CLI" = "oc" ]; then
-        current_ns=$(oc project -q 2>/dev/null || echo "")
-    else
-        current_ns=$(kubectl config view --minify --output 'jsonpath={..namespace}' 2>/dev/null || echo "")
-    fi
-    
-    # Use current namespace if available, otherwise default to vault
-    if [ -n "$current_ns" ]; then
-        NAMESPACE="$current_ns"
-        print_info "Using current namespace: $NAMESPACE"
-    else
-        NAMESPACE="vault"
-        print_info "Using default namespace: $NAMESPACE"
-    fi
-fi
+# Default namespace
+NAMESPACE="${NAMESPACE:-vault}"
+print_info "Using namespace: $NAMESPACE"
 
 # Check if Helm is installed
 if ! command -v helm &> /dev/null; then
@@ -172,6 +200,51 @@ if [ ! -f "$CHART_DIR/Chart.yaml" ]; then
 fi
 
 print_info "Found Vault operator chart at $CHART_DIR"
+
+# Validate seal type
+if [[ "$SEAL_TYPE" != "shamir" && "$SEAL_TYPE" != "awskms" ]]; then
+    print_error "Invalid seal type: $SEAL_TYPE"
+    print_error "Valid options are: shamir, awskms"
+    exit 1
+fi
+
+# Validate AWS KMS parameters if using awskms seal
+if [ "$SEAL_TYPE" = "awskms" ]; then
+    if [ -z "$KMS_KEY_ID" ]; then
+        print_error "AWS KMS key ID is required when using awskms seal type"
+        print_error "Use --kms-key-id to specify the KMS key ID, ARN, or alias"
+        exit 1
+    fi
+    
+    if [ -z "$KMS_REGION" ]; then
+        print_error "AWS region is required when using awskms seal type"
+        print_error "Use --kms-region to specify the AWS region"
+        exit 1
+    fi
+    
+    print_info "AWS KMS auto-unseal configuration:"
+    echo "  KMS Key ID: $KMS_KEY_ID"
+    echo "  Region:     $KMS_REGION"
+    if [ -n "$KMS_ENDPOINT" ]; then
+        echo "  Endpoint:   $KMS_ENDPOINT"
+    fi
+    echo ""
+    
+    # Check if AWS credentials secret exists
+    if ! $CLI get secret vault-aws-kms-credentials -n $NAMESPACE &> /dev/null; then
+        print_warn "AWS credentials secret 'vault-aws-kms-credentials' not found in namespace '$NAMESPACE'"
+        print_warn "Vault will attempt to use IAM roles or instance profiles"
+        print_warn "If those are not configured, create the secret with:"
+        echo ""
+        echo "  $CLI create secret generic vault-aws-kms-credentials \\"
+        echo "    --from-literal=access-key-id=YOUR_ACCESS_KEY_ID \\"
+        echo "    --from-literal=secret-access-key=YOUR_SECRET_ACCESS_KEY \\"
+        echo "    -n $NAMESPACE"
+        echo ""
+    else
+        print_info "✓ AWS credentials secret found"
+    fi
+fi
 
 # Validate Vault configuration before deployment
 print_info "Validating Vault configuration..."
@@ -231,6 +304,18 @@ HELM_CMD="$HELM_CMD --set vault.storage.storageClassName=$STORAGE_CLASS"
 HELM_CMD="$HELM_CMD --set vault.storage.size=$STORAGE_SIZE"
 HELM_CMD="$HELM_CMD --set vault.replicas=$INITIAL_REPLICAS"
 
+# Add seal configuration
+HELM_CMD="$HELM_CMD --set vault.seal.type=$SEAL_TYPE"
+
+if [ "$SEAL_TYPE" = "awskms" ]; then
+    HELM_CMD="$HELM_CMD --set vault.seal.awskms.kmsKeyId=$KMS_KEY_ID"
+    HELM_CMD="$HELM_CMD --set vault.seal.awskms.region=$KMS_REGION"
+    
+    if [ -n "$KMS_ENDPOINT" ]; then
+        HELM_CMD="$HELM_CMD --set vault.seal.awskms.endpoint=$KMS_ENDPOINT"
+    fi
+fi
+
 # Add custom values file if provided
 if [ -n "$VALUES_FILE" ]; then
     if [ ! -f "$VALUES_FILE" ]; then
@@ -254,6 +339,14 @@ echo "  Release Name:    $RELEASE_NAME"
 echo "  Namespace:       $NAMESPACE"
 echo "  Storage Class:   $STORAGE_CLASS"
 echo "  Storage Size:    $STORAGE_SIZE"
+echo "  Seal Type:       $SEAL_TYPE"
+if [ "$SEAL_TYPE" = "awskms" ]; then
+    echo "  KMS Key ID:      $KMS_KEY_ID"
+    echo "  KMS Region:      $KMS_REGION"
+    if [ -n "$KMS_ENDPOINT" ]; then
+        echo "  KMS Endpoint:    $KMS_ENDPOINT"
+    fi
+fi
 if [ "$REQUESTED_REPLICAS" -gt 1 ]; then
     echo "  Initial Replicas: $INITIAL_REPLICAS (will scale to $REQUESTED_REPLICAS after unsealing)"
 else
@@ -325,7 +418,7 @@ if [ "$DRY_RUN" = false ]; then
     echo ""
     
     if command -v ansible-playbook &> /dev/null; then
-        VAULT_NAMESPACE=$NAMESPACE ansible-playbook "$PLAYBOOK_PATH"
+        VAULT_NAMESPACE=$NAMESPACE VAULT_SEAL_TYPE=$SEAL_TYPE ansible-playbook "$PLAYBOOK_PATH"
         
         if [ $? -eq 0 ]; then
             echo ""
@@ -378,6 +471,26 @@ if [ "$DRY_RUN" = false ]; then
                 unseal_pod() {
                     local pod_name=$1
                     
+                    # Check if using AWS KMS auto-unseal
+                    if [ "$SEAL_TYPE" = "awskms" ]; then
+                        print_info "Waiting for $pod_name to auto-unseal (AWS KMS)..."
+                        
+                        # Wait for pod to auto-unseal (up to 120 seconds for replicas joining Raft)
+                        for i in {1..24}; do
+                            if $CLI exec -n $NAMESPACE $pod_name -- vault status -format=json 2>/dev/null | grep -q '"sealed": false'; then
+                                print_info "✓ $pod_name auto-unsealed successfully"
+                                return 0
+                            fi
+                            sleep 5
+                        done
+                        
+                        print_warn "⚠ $pod_name did not auto-unseal within 120 seconds"
+                        print_info "  Check AWS KMS credentials and permissions"
+                        print_info "  Verify pod logs: $CLI logs -n $NAMESPACE $pod_name"
+                        return 1
+                    fi
+                    
+                    # Shamir seal - manual unsealing required
                     print_info "Unsealing $pod_name..."
                     
                     # Check if already unsealed
@@ -476,8 +589,16 @@ if [ "$DRY_RUN" = false ]; then
                             fi
                         else
                             print_error "Failed to unseal $POD_NAME"
-                            print_info "You can manually unseal it later using:"
-                            echo "  ./scripts/unseal-secret-manager.sh -n $NAMESPACE"
+                            if [ "$SEAL_TYPE" = "awskms" ]; then
+                                print_info "Troubleshooting steps for AWS KMS auto-unseal:"
+                                echo "  1. Check pod logs: $CLI logs -n $NAMESPACE $POD_NAME"
+                                echo "  2. Verify AWS credentials secret exists and is correct"
+                                echo "  3. Verify IAM permissions for KMS key access"
+                                echo "  4. Check pod status: $CLI exec -n $NAMESPACE $POD_NAME -- vault status"
+                            else
+                                print_info "You can manually unseal it later using:"
+                                echo "  ./scripts/unseal-secret-manager.sh -n $NAMESPACE"
+                            fi
                         fi
                     done
                     
@@ -527,7 +648,11 @@ if [ "$DRY_RUN" = false ]; then
             echo ""
             print_info "To access Vault:"
             echo "  1. Get the root token:"
-            echo "     $CLI get secret vault-unseal-keys -n $NAMESPACE -o jsonpath='{.data.root-token}' | base64 -d"
+            if [ "$SEAL_TYPE" = "awskms" ]; then
+                echo "     $CLI get secret vault-recovery-keys -n $NAMESPACE -o jsonpath='{.data.root-token}' | base64 -d"
+            else
+                echo "     $CLI get secret vault-unseal-keys -n $NAMESPACE -o jsonpath='{.data.root-token}' | base64 -d"
+            fi
             echo ""
             echo "  2. Access Vault UI (if route/ingress configured):"
             echo "     $CLI get route vault -n $NAMESPACE -o jsonpath='{.spec.host}' 2>/dev/null || echo 'No route configured'"
@@ -539,7 +664,12 @@ if [ "$DRY_RUN" = false ]; then
             echo "  4. Validate deployment:"
             echo "     ./scripts/validate-secret-manager.sh -n $NAMESPACE"
             echo ""
-            print_warn "IMPORTANT: Back up the vault-unseal-keys secret to a secure location!"
+            if [ "$SEAL_TYPE" = "awskms" ]; then
+                print_warn "IMPORTANT: Back up the vault-recovery-keys secret to a secure location!"
+                print_info "NOTE: Vault is using AWS KMS auto-unseal. Recovery keys are only needed for disaster recovery."
+            else
+                print_warn "IMPORTANT: Back up the vault-unseal-keys secret to a secure location!"
+            fi
         else
             print_error "Vault initialization failed"
             echo ""
