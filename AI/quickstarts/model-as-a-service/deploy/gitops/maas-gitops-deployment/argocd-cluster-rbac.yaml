@@ -1,0 +1,142 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-maas-cluster-admin
+  labels:
+    app.kubernetes.io/name: argocd-maas-cluster-admin
+    app.kubernetes.io/part-of: argocd
+rules:
+  # DataScienceCluster permissions
+  - apiGroups:
+      - datasciencecluster.opendatahub.io
+    resources:
+      - datascienceclusters
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  
+  # Kuadrant permissions
+  - apiGroups:
+      - kuadrant.io
+    resources:
+      - kuadrants
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  
+  # Authorino permissions
+  - apiGroups:
+      - authorino.kuadrant.io
+    resources:
+      - authorinos
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  
+  # ModelRegistry permissions
+  - apiGroups:
+      - modelregistry.opendatahub.io
+    resources:
+      - modelregistries
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  
+  # Batch jobs and cronjobs permissions
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+      - cronjobs
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  
+  # ObjectBucketClaim permissions
+  - apiGroups:
+      - objectbucket.io
+    resources:
+      - objectbucketclaims
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  
+  # OpenShift Route permissions
+  # The `custom-host` subresource is required to set spec.host explicitly.
+  # Without it OpenShift rejects Routes with a manually specified hostname.
+  - apiGroups:
+      - route.openshift.io
+    resources:
+      - routes
+      - routes/custom-host
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+
+  # Gateway API permissions
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - gateways
+      - gatewayclasses
+      - httproutes
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-maas-cluster-admin
+  labels:
+    app.kubernetes.io/name: argocd-maas-cluster-admin
+    app.kubernetes.io/part-of: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-maas-cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: openshift-gitops-argocd-application-controller
+    namespace: openshift-gitops

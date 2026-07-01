@@ -1,0 +1,74 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-maas-platform-config-prod
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: maas-prod-alerts
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: maas-prod-alerts
+  labels:
+    environment: prod
+    component: platform
+    criticality: high
+spec:
+  project: fusion-maas-platform-prod
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master  # Use tags for production
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-platform
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/prod/values.yaml
+      parameters:
+        - name: environment
+          value: prod
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: redhat-ods-operator
+  
+  syncPolicy:
+    # MANUAL sync only - NO automation in production
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 2
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
+  
+  ignoreDifferences:
+    - group: datasciencecluster.opendatahub.io
+      kind: DataScienceCluster
+      jsonPointers:
+        - /status
+    - group: authorino.kuadrant.io
+      kind: Authorino
+      jsonPointers:
+        - /status
+    - group: kuadrant.io
+      kind: Kuadrant
+      jsonPointers:
+        - /status
+  
+  info:
+    - name: Description
+      value: MaaS Platform Configuration - Production Environment
+    - name: Component
+      value: DataScienceCluster, Authorino, Kuadrant instances
+    - name: Sync Wave
+      value: "50"
+    - name: Dependencies
+      value: Requires maas-operators-prod to be healthy
+    - name: Sync Mode
+      value: MANUAL ONLY - Requires approval and change window
+    - name: Criticality
+      value: HIGH - Production platform configuration
+

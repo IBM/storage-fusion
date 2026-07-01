@@ -1,0 +1,165 @@
+# MaaS Runtime - Development Environment
+# Environment-specific runtime configuration for dev
+
+global:
+  wildcardDomain: apps.cluster.example.com
+  wildcardCertName: ""
+  modelsNamespace: maas-dev
+  toolsImage: image-registry.openshift-image-registry.svc:5000/openshift/tools:latest
+
+gateway:
+  enabled: true
+  createGatewayClass: true
+  name: openshift-ai-inference
+  namespace: openshift-ingress
+  gatewayClassName: openshift-ai-inference
+  controllerName: openshift.io/gateway-controller/v1
+  istioRevision: openshift-gateway
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+          - group: ''
+            kind: Secret
+            name: router-certs-default
+        mode: Terminate
+  labels: {}
+  annotations: {}
+
+tiers:
+  free:
+    requestRates:
+      - limit: 10
+        window: 2m
+    tokenRates:
+      - limit: 500
+        window: 1m
+  premium:
+    requestRates:
+      - limit: 20
+        window: 2m
+    tokenRates:
+      - limit: 10000
+        window: 1m
+  enterprise:
+    requestRates:
+      - limit: 50
+        window: 2m
+    tokenRates:
+      - limit: 20000
+        window: 1m
+
+userMapping:
+  free: []
+  premium: []
+  enterprise: []
+
+monitoring:
+  enabled: true
+  clusterMonitoring:
+    enabled: true
+    userWorkloadMonitoring: true
+  grafana:
+    enabled: false  # Disabled in dev
+    namespace: grafana
+    selectors:
+      app: grafana
+    consoleLink:
+      enabled: false
+    dashboards:
+      maasOverview:
+        enabled: false
+      modelMetrics:
+        enabled: false
+      gpuUtilization:
+        enabled: false
+
+authentication:
+  keycloak:
+    enabled: false
+
+rbac:
+  enabled: true
+  modelServiceAccount:
+    name: maas-model-sa
+    namespace: maas-dev
+
+modelRegistry:
+  enabled: true
+  namespace: rhoai-model-registries
+  createNamespace: false
+  name: model-registry
+  exposeHttpPort: true
+  objectStorage:
+    enabled: true
+    autoCreateBucket: true
+    odfStorageClass: openshift-storage.noobaa.io
+    bucketClass: noobaa-default-bucket-class
+    bucketRetentionPolicy: false
+    maxObjects: ""
+    maxSize: ""
+    endpoint: ""
+    bucket: model-registry-artifacts-dev
+    region: us-south
+    accessKeyId: ""
+    secretAccessKey: ""
+    verifySSL: true
+    storageClass: STANDARD
+  database:
+    type: postgres
+    external: false
+    internalDatabase:
+      storageSize: 5Gi  # Smaller for dev
+      storageClassName: ""
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  service:
+    type: ClusterIP
+    restPort: 8080
+    grpcPort: 9090
+  ingress:
+    enabled: true
+    hostname: ""
+    tls:
+      enabled: true
+      secretName: ""
+  versioning:
+    enabled: true
+    format: semantic
+    autoIncrement: true
+  metadata:
+    requiredFields:
+      - name
+      - description
+      - framework
+      - version
+    customFields: []
+  catalogIntegration:
+    enabled: true
+    autoRegister: true
+    syncSchedule: "0 3 * * *"
+
+networkPolicies:
+  enabled: false
+
+commonLabels:
+  environment: dev
+
+commonAnnotations: {}
+

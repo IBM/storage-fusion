@@ -1,0 +1,172 @@
+{{- if .Values.cronJob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: model-sync
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: sync
+spec:
+  schedule: {{ .Values.cronJob.schedule | quote }}
+  
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: model-sync
+            component: sync
+            {{- with .Values.commonLabels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        spec:
+          serviceAccountName: {{ include "model-registry-gitops.serviceAccountName" . }}
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          
+          containers:
+            - name: git-sync
+              image: registry.redhat.io/openshift4/ose-tools-rhel8:latest
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                capabilities:
+                  drop:
+                    - ALL
+                seccompProfile:
+                  type: RuntimeDefault
+              command: ["/bin/bash", "-c"]
+              args:
+                - |
+                  set -e
+                  
+                  echo "Git sync starting..."
+                  
+                  # Setup Git authentication
+                  if [ -f /git-credentials/token ]; then
+                    echo "Using token authentication..."
+                    GIT_USERNAME=$(cat /git-credentials/username)
+                    GIT_TOKEN=$(cat /git-credentials/token)
+                    
+                    git config --global credential.helper store
+                    echo "https://${GIT_USERNAME}:${GIT_TOKEN}@${GIT_HOST}" > ~/.git-credentials
+                    
+                  elif [ -f /git-credentials/password ]; then
+                    echo "Using password authentication..."
+                    GIT_USERNAME=$(cat /git-credentials/username)
+                    GIT_PASSWORD=$(cat /git-credentials/password)
+                    
+                    git config --global credential.helper store
+                    echo "https://${GIT_USERNAME}:${GIT_PASSWORD}@${GIT_HOST}" > ~/.git-credentials
+                    
+                  elif [ -f /git-credentials/ssh-privatekey ]; then
+                    echo "Using SSH key authentication..."
+                    
+                    mkdir -p ~/.ssh
+                    chmod 700 ~/.ssh
+                    cp /git-credentials/ssh-privatekey ~/.ssh/id_rsa
+                    chmod 600 ~/.ssh/id_rsa
+                    
+                    ssh-keyscan -H ${GIT_HOST} >> ~/.ssh/known_hosts 2>/dev/null || true
+                    
+                    git config --global core.sshCommand "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no"
+                  else
+                    echo "No Git credentials found, attempting public access..."
+                  fi
+                  
+                  echo "Cloning repository: ${GIT_REPO}"
+                  cd /tmp
+                  git clone ${GIT_REPO} repo
+                  cd repo
+                  git checkout ${GIT_BRANCH}
+                  
+                  echo "Finding model definitions..."
+                  
+                  # Find all .yaml files and filter out schema.yaml and the models/examples subdirectory
+                  # Use || true to prevent grep from causing script failure when no matches
+                  MODEL_FILES=$(find AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models -type f -name "*.yaml" 2>/dev/null | grep -v "schema.yaml" | grep -v "/models/examples/" || true)
+                  
+                  echo "Model files found:"
+                  echo "$MODEL_FILES"
+                  
+                  if [ -z "$MODEL_FILES" ]; then
+                    echo "No model files found"
+                    exit 0
+                  fi
+                  
+                  MODEL_COUNT=$(echo "$MODEL_FILES" | wc -l | tr -d ' ')
+                  echo "Found ${MODEL_COUNT} model definition(s)"
+                  
+                  echo "Creating ConfigMap..."
+                  cat > /tmp/model-definitions-cm.yaml <<EOF
+                  apiVersion: v1
+                  kind: ConfigMap
+                  metadata:
+                    name: model-definitions
+                    namespace: ${NAMESPACE}
+                    labels:
+                      app: model-registry-gitops
+                      component: model-definitions
+                      sync-timestamp: "$(date +%s)"
+                  data:
+                  EOF
+                  
+                  for MODEL_FILE in $MODEL_FILES; do
+                    FILENAME=$(basename "$MODEL_FILE")
+                    echo "  Adding: $FILENAME"
+                    echo "  ${FILENAME}: |" >> /tmp/model-definitions-cm.yaml
+                    sed 's/^/    /' "$MODEL_FILE" >> /tmp/model-definitions-cm.yaml
+                    echo "" >> /tmp/model-definitions-cm.yaml
+                  done
+                  
+                  echo "Applying ConfigMap..."
+                  cat /tmp/model-definitions-cm.yaml
+                  
+                  echo ""
+                  echo "Applying to cluster..."
+                  oc apply -f /tmp/model-definitions-cm.yaml
+                  
+                  if [ $? -eq 0 ]; then
+                    echo "✓ ConfigMap applied successfully"
+                  else
+                    echo "✗ Failed to apply ConfigMap"
+                    exit 1
+                  fi
+                  
+                  echo "Sync complete: ${MODEL_COUNT} models"
+              
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: GIT_REPO
+                  value: {{ .Values.cronJob.git.repo | quote }}
+                - name: GIT_BRANCH
+                  value: {{ .Values.cronJob.git.branch | quote }}
+                - name: GIT_HOST
+                  value: {{ .Values.cronJob.git.host | quote }}
+                - name: NAMESPACE
+                  value: {{ .Values.namespace | quote }}
+              
+              volumeMounts:
+                - name: git-credentials
+                  mountPath: /git-credentials
+                  readOnly: true
+              
+              resources:
+                {{- toYaml .Values.cronJob.resources | nindent 16 }}
+          
+          volumes:
+            - name: git-credentials
+              secret:
+                secretName: git-credentials
+                optional: true
+                defaultMode: 0400
+{{- end }}

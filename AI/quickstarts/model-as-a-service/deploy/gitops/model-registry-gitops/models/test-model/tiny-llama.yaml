@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: ModelVersion
+metadata:
+  name: tiny-llama-test
+  labels:
+    model-type: public
+    source: huggingface
+    task: text-generation
+    governance-status: approved
+    environment: test
+spec:
+  modelName: "TinyLlama Test Model"
+  version: "1.0.0"
+  description: |
+    TinyLlama 1.1B Chat model for testing GitOps flow.
+    This is a small, efficient model perfect for testing the automated
+    registration pipeline without consuming excessive resources.
+  
+  author: "TinyLlama"
+  
+  # Base model information
+  baseModel:
+    name: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    source: "huggingface"
+    sourceUrl: "https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    version: "main"
+    license: "Apache-2.0"
+    licenseUrl: "https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0/blob/main/LICENSE"
+  
+  # Governance metadata
+  governance:
+    approvedBy: "test-team@company.com"
+    approvalDate: "2026-05-21"
+    approvalTicket: "TEST-001"
+    licenseVerified: true
+    securityScanned: true
+    scanDate: "2026-05-21"
+    scanTool: "trivy"
+    complianceStatus: "approved"
+    restrictions:
+      - "Test environment only"
+      - "Not for production use"
+  
+  # Model storage
+  storage:
+    uri: "hf://TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    type: "huggingface"
+    size: "2.2GB"
+    format: "pytorch"
+  
+  # Model metadata
+  metadata:
+    framework: "transformers"
+    frameworkVersion: "4.35.0"
+    modelType: "causal-lm"
+    architecture: "Llama"
+    parameters: "1.1B"
+    contextLength: "2048"
+    languages:
+      - "en"
+    tasks:
+      - "text-generation"
+      - "chat"
+      - "instruction-following"
+    
+    # Hardware requirements
+    requirements:
+      minMemory: "4GB"
+      recommendedMemory: "8GB"
+      gpu: "optional"
+      minCpu: "2 cores"
+  
+  # Use cases
+  useCases:
+    - name: "GitOps Testing"
+      description: "Test automated model registration pipeline"
+      status: "approved"
+      
+    - name: "Development Environment"
+      description: "Lightweight model for development and testing"
+      status: "approved"
+  
+  # Deployment configuration
+  deployment:
+    servingFramework: "kserve"
+    runtime: "huggingface"
+    replicas: 1
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "1"
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+  
+  # Tags
+  tags:
+    - "test"
+    - "tiny-llama"
+    - "chat"
+    - "huggingface"
+    - "public-model"
+    - "approved"
+    - "gitops-test"
+

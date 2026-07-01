@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-maas-platform-staging
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    environment: staging
+spec:
+  description: MaaS Platform - Staging Environment
+  
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+  
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  roles:
+    - name: admin
+      description: Admin role for MaaS staging environment
+      policies:
+        - p, proj:fusion-maas-platform-staging:admin, applications, *, fusion-maas-platform-staging/*, allow
+      groups:
+        - maas-admins
+        - maas-staging-admins
+    
+    - name: developer
+      description: Developer role for MaaS staging environment (read-only + sync)
+      policies:
+        - p, proj:fusion-maas-platform-staging:developer, applications, get, fusion-maas-platform-staging/*, allow
+        - p, proj:fusion-maas-platform-staging:developer, applications, sync, fusion-maas-platform-staging/*, allow
+      groups:
+        - maas-developers
+    
+    - name: viewer
+      description: Read-only role for MaaS staging environment
+      policies:
+        - p, proj:fusion-maas-platform-staging:viewer, applications, get, fusion-maas-platform-staging/*, allow
+      groups:
+        - maas-viewers
+        - maas-qa
+  
+  orphanedResources:
+    warn: true

@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-maas-platform-orchestrator-prod
+  namespace: openshift-gitops
+  labels:
+    environment: prod
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+    # Production requires change approval
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: maas-prod-alerts
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: maas-prod-alerts
+spec:
+  project: fusion-maas-platform-prod
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master  # Consider using tags/releases for production
+    path: AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/applications
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+  
+  syncPolicy:
+    # MANUAL sync only for production - NO automation
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      # Do NOT use PruneLast in production
+    retry:
+      limit: 2
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
+  
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: route.openshift.io
+      kind: Route
+      jsonPointers:
+        - /status
+

@@ -1,0 +1,150 @@
+# Default values for model-registry-gitops
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Namespace where the reconciler will run
+namespace: fusion-model-registry-gitops
+
+# Model Registry configuration
+modelRegistry:
+  # Namespace where Model Registry is deployed
+  namespace: rhoai-model-registries
+  
+  # Name of the ObjectBucketClaim for model storage
+  obcName: model-registry-artifacts
+  
+  # Model Registry service name
+  serviceName: model-registry-http
+  
+  # Model Registry service port
+  servicePort: 8080
+  
+  # Use secure connection (HTTPS)
+  secure: false
+  
+  # Expose HTTP port (creates model-registry-http service)
+  exposeHttpPort: true
+
+# Reconciler deployment configuration
+reconciler:
+  # Number of replicas
+  replicaCount: 1
+  
+  # Container image configuration
+  image:
+    # Use OpenShift internal registry (built with BuildConfig)
+    repository: image-registry.openshift-image-registry.svc:5000/fusion-model-registry-gitops/model-reconciler
+    tag: latest
+    pullPolicy: Always
+  
+  # Service account name
+  serviceAccountName: model-reconciler
+  
+  # Resource limits and requests
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+  
+  # Reconciliation settings
+  config:
+    # How often to reconcile (seconds)
+    reconcileInterval: 300
+    
+    # Delay between processing models (seconds)
+    sequentialDelay: 30
+    
+    # Cleanup local files after upload
+    cleanupAfterUpload: true
+    
+    # Log level (DEBUG, INFO, WARNING, ERROR)
+    logLevel: INFO
+  
+  # Cache volume configuration
+  cache:
+    # Size of the cache volume for model downloads
+    size: 200Gi
+
+# Hugging Face configuration
+huggingface:
+  # Enable if you have a Hugging Face token secret
+  enabled: false
+  
+  # Name of the secret containing the HF token
+  secretName: huggingface-token
+
+# BuildConfig configuration (OpenShift only)
+buildConfig:
+  # Enable BuildConfig for building reconciler image
+  enabled: true
+  
+  # Git repository configuration
+  git:
+    uri: https://github.com/IBM/storage-fusion.git
+    ref: master
+    contextDir: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/reconciler
+  
+  # Git credentials secret (for private repos)
+  gitCredentials:
+    enabled: true
+    secretName: git-credentials
+  
+  # Build resources
+  resources:
+    limits:
+      memory: 2Gi
+      cpu: "1"
+    requests:
+      memory: 1Gi
+      cpu: 500m
+
+# CronJob for Git sync (optional)
+cronJob:
+  # Enable CronJob for automatic Git sync
+  enabled: true
+  
+  # Schedule (cron format)
+  schedule: "*/5 * * * *"
+  
+  # Git repository to sync from
+  git:
+    repo: https://github.com/IBM/storage-fusion.git
+    branch: master
+    host: github.com
+  
+  # Resources for sync job
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# ArgoCD RBAC configuration
+argocd:
+  # Enable ArgoCD RBAC binding
+  enabled: true
+  
+  # ArgoCD namespace
+  namespace: openshift-gitops
+  
+  # ArgoCD service account name
+  serviceAccountName: openshift-gitops-argocd-application-controller
+
+# Network Policy configuration
+networkPolicy:
+  # Enable network policy for Model Registry access
+  enabled: true
+
+# Common labels to apply to all resources
+commonLabels:
+  app: model-registry-gitops
+  managed-by: helm
+
+# Common annotations to apply to all resources
+commonAnnotations: {}
+

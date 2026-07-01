@@ -1,0 +1,23 @@
+{{- if .Values.modelRegistry.enabled }}
+{{- if .Values.modelRegistry.exposeHttpPort }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-registry-http
+  namespace: {{ .Values.modelRegistry.namespace }}
+  labels:
+    {{- include "maas-runtime.labels" . | nindent 4 }}
+    app.kubernetes.io/component: model-registry-http
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-api
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: model-registry
+    app.kubernetes.io/name: model-registry
+    component: model-registry
+{{- end }}
+{{- end }}

@@ -21,6 +21,19 @@ By the end of this guide, you will have a working MaaS environment capable of se
 
 ---
 
+## Deployment Options
+
+The MaaS platform on IBM Fusion supports two deployment approaches. Choose based on your team's operational model:
+
+| Deployment Method | Recommended For |
+|---|---|
+| **Helm** | Evaluation environments, proof-of-concepts, and teams preferring direct installation and manual lifecycle management |
+| **GitOps** | Production environments and teams managing deployments through Git-based workflows and automation |
+
+This guide covers the **Helm-based deployment**. For a production-grade GitOps deployment — where all platform services are declared in Git and continuously reconciled by Red Hat OpenShift GitOps (ArgoCD) — see the [Quickstart: IBM Fusion Model-as-a-Service Platform — GitOps Deployment and Customization](https://community.ibm.com/community/user/blogs/harichandana-kotha/2026/06/29/quickstart-maas-ibm-fusion-gitops).
+
+---
+
 ## What This Quickstart Deploys
 
 This quickstart deploys a complete Model-as-a-Service (MaaS) environment on IBM Fusion and Red Hat OpenShift AI for enterprise AI model serving.
@@ -131,8 +144,13 @@ Before you begin, verify that the target environment satisfies the platform, GPU
 
 - **Red Hat OpenShift 4.20+** with cluster-admin access
 - **GPU nodes** with at least one NVIDIA GPU-capable worker
-- **Helm 3.8+** - [Install Helm](https://helm.sh/docs/intro/install/)
-- **OpenShift CLI (`oc`)** - [Install oc](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html)
+- **Helm 3.8+** — [Install Helm](https://helm.sh/docs/intro/install/)
+- **OpenShift CLI (`oc`)** — [Install oc](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html)
+
+#### For GitOps Deployment (Option B)
+
+- **Red Hat OpenShift GitOps operator** installed and configured — deploys ArgoCD into the `openshift-gitops` namespace. See [Red Hat GitOps Deployment for Fusion HCI](../fusion-gitops/README.md) for installation steps
+- **ArgoCD CLI (`argocd`)** — [Install argocd](https://argo-cd.readthedocs.io/en/stable/cli_installation/)
 
 ### GPU Enablement (Required for LLM Serving)
 If serving GPU-backed models such as vLLM-based LLMs, the following components must be installed:
@@ -176,17 +194,12 @@ helm version
 
 The following procedure walks through repository access, storage credential setup, platform installation, model deployment, and endpoint validation.
 
-### Step 1: Fork and Clone the Storage Fusion Repository
-The quickstart examples reference configurations from the storage-fusion repository. Fork this repository to your GitHub account and clone it locally.
+### Step 1: Clone the Repository
 
-Fork the repository: Fork the storage-fusion repository
-
-Clone the forked copy of this repository:
+```bash
+git clone https://github.com/IBM/storage-fusion.git
+cd storage-fusion/AI/quickstarts/model-as-a-service
 ```
-git clone git@github.com:<your-username>/storage-fusion.git
-cd storage-fusion/quickstarts/model-as-a-service
-```
-Note: The quickstarts/model-as-a-service directory is located under the AI/ parent directory within the storage-fusion repository (path: storage-fusion/AI/quickstarts/model-as-a-service).
 
 ### Step 2: Configure Storage Credentials
 
@@ -248,12 +261,16 @@ export MINIO_SECRET_KEY="minioadmin"
 
 ### Step 3: Deploy the MAAS Platform
 
-Use the automated installation script to deploy the operators, platform services, and runtime components in sequence. This step provisions the baseline infrastructure required for model registration, gateway exposure, and workbench storage.
+You can deploy the MaaS platform using either the automated installation script or GitOps with ArgoCD. Both methods provision the baseline infrastructure required for model registration, gateway exposure, and workbench storage.
+
+#### Option A: Script-Based Deployment (Recommended for Quick Start)
+
+Use the automated installation script to deploy the operators, platform services, and runtime components in sequence:
 
 ```bash
 # Deploy operators, platform, and runtime infrastructure in one command
-./quickstarts/model-as-a-service/scripts/install-runtime.sh \
-  quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/values.yaml
+./AI/quickstarts/model-as-a-service/scripts/install-runtime.sh \
+  AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/values.yaml
 
 # The script will:
 # 1. Install maas-operators (OpenShift AI, Kuadrant, cert-manager)
@@ -278,8 +295,8 @@ Enter admin password:
 Enter user password: 
 
 === Phase 1: Installing Dependency Operator Subscriptions ===
-Values file: quickstarts/mode-as-a-service/examples/Fusion-Agentic-Assistance-Platform/values.yaml
-Chart: /Users/harichandanakotha/Documents/MAAS/Fusion-AI/quickstarts/mode-as-a-service/charts/maas-operators
+Values file: AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/values.yaml
+Chart: AI/quickstarts/model-as-a-service/deploy/helm/maas-operators
 
 Release "maas-operators" has been upgraded. Happy Helming!
 NAME: maas-operators
@@ -302,8 +319,8 @@ Waiting for LeaderWorkerSetOperator CRD to be available...
 ✓ LeaderWorkerSetOperator CRD available
 
 === Phase 2: Creating DataScienceCluster and Operator Instances ===
-Values file: quickstarts/mode-as-a-service/examples/Fusion-Agentic-Assistance-Platform/values.yaml
-Chart: /Users/harichandanakotha/Documents/MAAS/Fusion-AI/quickstarts/mode-as-a-service/charts/maas-platform
+Values file: AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/values.yaml
+Chart: AI/quickstarts/model-as-a-service/deploy/helm/maas-platform
 
 Release "maas-platform" has been upgraded. Happy Helming!
 NAME: maas-platform
@@ -318,8 +335,8 @@ datasciencecluster.datasciencecluster.opendatahub.io/default-dsc condition met
 ✓ DataScienceCluster ready
 
 === Phase 3: Installing MaaS Runtime Resources ===
-Values file: quickstarts/mode-as-a-service/examples/Fusion-Agentic-Assistance-Platform/values.yaml
-Chart: /Users/harichandanakotha/Documents/MAAS/Fusion-AI/quickstarts/mode-as-a-service/charts/maas-runtime
+Values file: AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/values.yaml
+Chart: AI/quickstarts/model-as-a-service/deploy/helm/maas-runtime
 
 Installing MaaS runtime resources (gateway, model registry, workbench storage, etc.)...
 I0524 22:12:09.207063   96967 warnings.go:110] "Warning: unknown field \"spec.istio\""
@@ -387,9 +404,98 @@ default-dsc   5m    Ready   2024-01-15T10:30:00Z
 NAME             AGE   READY
 model-registry   3m    True
 ```
-### Step 3: Register Model from Model Catalog
+
+
+#### Option B: GitOps Deployment with ArgoCD (Recommended for Production)
+
+For production environments or GitOps-based workflows, deploy using ArgoCD Applications:
+
+**Prerequisites:**
+- **Red Hat OpenShift GitOps operator** installed and configured — see [Red Hat GitOps Deployment for Fusion HCI](../fusion-gitops/README.md) for installation steps
+- **ArgoCD CLI (`argocd`)** — [Install argocd](https://argo-cd.readthedocs.io/en/stable/cli_installation/)
+- Access to the Git repository containing the MaaS configurations
+
+**Step 3.1: Update Application Value Files**
+
+Before deploying, update all application manifests in `AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/applications/` to reference your custom values file:
+
+```bash
+# Edit each application file (01-maas-operators-prod.yaml, 02-maas-platform-prod.yaml, 03-maas-runtime-prod.yaml)
+# Update the helm.valueFiles section to include your custom values:
+
+# Example for 01-maas-operators-prod.yaml:
+spec:
+  source:
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/prod/values.yaml
+        - ../../../../../../examples/Fusion-Agentic-Assistance-Platform/values.yaml  # Add this line
+```
+
+**Step 3.2: Deploy the AppProject**
+
+Create the ArgoCD AppProject for production:
+
+```bash
+oc apply -f AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/appproject-prod.yaml
+```
+
+**Step 3.3: Deploy the App-of-Apps**
+
+Deploy the main application that manages all MaaS components:
+
+```bash
+oc apply -f AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/00-prod-app-of-apps.yaml
+```
+
+This creates an ArgoCD Application that manages three child applications:
+- `maas-operators-prod` (sync-wave: 0) - Installs required operators
+- `maas-platform-prod` (sync-wave: 50) - Configures DataScienceCluster and platform
+- `maas-runtime-prod` (sync-wave: 100) - Deploys runtime infrastructure
+
+**Step 3.4: Sync Applications in Order**
+
+Since production uses manual sync policy, you must sync each application manually in the correct order:
+
+```bash
+# 1. Sync operators first
+argocd app sync maas-operators-prod --prune
+
+# Wait for operators to be ready (check CSVs are in Succeeded phase)
+oc get csv -n redhat-ods-operator
+oc get csv -n kuadrant-system
+
+# 2. Sync platform
+argocd app sync fusion-maas-platform-prod --prune
+
+# Wait for DataScienceCluster to be ready
+oc wait --for=condition=Ready datasciencecluster/default-dsc --timeout=600s
+
+# 3. Sync runtime
+argocd app sync fusion-maas-runtime-prod --prune
+
+# Wait for runtime components to be ready
+oc get modelregistry -n rhoai-model-registries
+oc get gateway -n openshift-ingress
+```
+
+**Alternative: Sync via OpenShift GitOps UI**
+
+1. Navigate to **OpenShift GitOps** in the OpenShift Console
+2. Find the `maas-platform-prod` application
+3. Click **Sync** → **Synchronize** for each child application in order:
+   - First: `maas-operators-prod`
+   - Second: `maas-platform-prod`
+   - Third: `maas-runtime-prod`
+
+### Step 4: Register Model from Model Catalog
 
 Before deploying a model, you need to register it in the Model Registry. The Model Catalog provides access to curated foundation models from various sources including HuggingFace and Red Hat's model repository.
+
+You can register models using either the UI-based approach or GitOps automation.
+
+#### Option A: UI-Based Registration (Quick Start)
 
 **Quick Registration Steps:**
 
@@ -403,7 +509,7 @@ Before deploying a model, you need to register it in the Model Registry. The Mod
 4. Provide registration details:
    - **Name**: `gpt-oss-20b`
    - **Version**: `Version 1`
-   - **Model Registry**: `model-registry` (created by the installation script)
+   - **Model Registry**: `model-registry` (created during Step 3)
 
 5. Click **Register Model**
 
@@ -413,12 +519,97 @@ The model metadata is stored in the Model Registry while model artifacts remain 
 - **[Registering Models from Catalog](docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)** - Complete registration guide
 - **[Model Catalog Guide](docs/02-model-catalog-and-registry/MODEL_CATALOG_GUIDE.md)** - Adding custom catalog sources
 
-### Step 4: Deploy Your First AI Model
+#### Option B: GitOps-Based Model Registration (Recommended for Production)
+
+For automated model registration using GitOps, deploy the Model Registry GitOps application. This approach automatically registers models defined in Git and stores them in the S3 object storage created during Step 3.
+
+**Prerequisites:**
+- ArgoCD/OpenShift GitOps installed
+- MaaS Platform deployed (Step 3 completed)
+- Model Registry and S3 storage available
+
+**Step 4.1: Deploy the AppProject**
+
+Create the ArgoCD AppProject for model registry:
+
+```bash
+oc apply -f AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/prod/appproject-prod.yaml
+```
+
+**Step 4.2: Deploy the Model Registry GitOps Application**
+
+Deploy the application that manages model registration:
+
+```bash
+oc apply -f AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/prod/application.yaml
+```
+
+This creates an ArgoCD Application (`model-registry-gitops-prod`) that:
+- Watches model definitions in `AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models/`
+- Automatically downloads models from HuggingFace or other sources
+- Uploads model artifacts to the S3 object storage (created in Step 3)
+- Registers model metadata in the Model Registry
+- Runs periodic synchronization via CronJob
+
+**Step 4.3: Sync the Application**
+
+Since production uses manual sync, trigger the initial sync:
+
+```bash
+# Sync the application
+argocd app sync model-registry-gitops-prod --prune
+
+# Verify the reconciler is running
+oc get pods -n model-registry-gitops-prod
+oc get cronjob -n model-registry-gitops-prod
+```
+
+**Step 4.4: Verify Model Registration**
+
+Check that models are being registered:
+
+```bash
+# Check reconciler logs
+oc logs -n model-registry-gitops-prod -l app=model-reconciler --tail=50
+
+# Verify models in the registry (via Model Registry API)
+oc get configmap -n model-registry-gitops-prod
+
+# Check S3 storage for model artifacts
+oc get objectbucketclaim -n rhoai-model-registries
+```
+
+**Available Models:**
+
+The following models are pre-configured in `AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models/`:
+- **Granite Models**: `granite/granite-4.1-8b.yaml`
+- **GPT-OSS Models**: `gpt-oss/gpt-oss-20b-hf.yaml`
+- **Qwen Models**: `qwen/qwen3-8b-fp8-dynamic-hf.yaml`
+- **Test Models**: `test-model/tiny-llama.yaml`
+
+**Adding New Models:**
+
+To register additional models follow the doc AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/docs/REGISTER_MODELS.md
+
+Commit the file to Git, and ArgoCD will automatically sync and register the model.
+
+
+**For more details, see:**
+- **[Model Registry GitOps README](deploy/gitops/model-registry-gitops/README.md)** - Complete GitOps setup guide
+- **[Model Schema](deploy/gitops/model-registry-gitops/models/schema.yaml)** - Model definition schema
+
+### Step 5: Deploy Your First AI Model
+
+Use **Option A (Helm)** for a quick, imperative deployment — ideal for local development or a first-time setup. Use **Option B (GitOps)** for production, where Git is the source of truth and ArgoCD handles reconciliation automatically on every approved sync.
+
+---
+
+#### Option A: Helm Deployment (Quick Start)
 
 ```bash
 # Deploy GPT-OSS-20B model for Fusion Agentic Assistance Platform using the deployment script
-./quickstarts/model-as-a-service/scripts/deploy-model.sh \
-  quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/models/gpt-oss-20b-values.yaml
+./AI/quickstarts/model-as-a-service/scripts/deploy-model.sh \
+  AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/models/gpt-oss-20b-values.yaml
 
 # The script will:
 # 1. Deploy the model using maas-model-service chart
@@ -426,11 +617,11 @@ The model metadata is stored in the Model Registry while model artifacts remain 
 # 3. Set up monitoring and routes
 ```
 
-#### Expected output:
+##### Expected output:
 
 ```bash
-% ./quickstarts/model-as-a-service/scripts/deploy-model.sh \
-  quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/models/gpt-oss-20b-values.yaml
+% ./AI/quickstarts/model-as-a-service/scripts/deploy-model.sh \
+  AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/models/gpt-oss-20b-values.yaml
 === MaaS Model Deployment ===
 
 Checking prerequisites...
@@ -438,8 +629,8 @@ Checking prerequisites...
 
 Model deployment details:
   Release name: gpt-oss-20b-version-1
-  Values file: quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/models/gpt-oss-20b-values.yaml
-  Chart: /Users/harichandanakotha/Documents/MAAS/Fusion-AI/quickstarts/model-as-a-service/deploy/maas-model-service
+  Values file: AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/models/gpt-oss-20b-values.yaml
+  Chart: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-service
 
 Checking for MaaS runtime...
 Model registry deployment mode detected
@@ -521,37 +712,114 @@ NAME          READY   URL                                                  AGE
 gpt-oss-20b   True    https://gateway.example.com/deploy-models-rhoai/...   3m
 ```
 
-### Step 5: Test Your Model
+---
+
+#### Option B: GitOps Deployment with ArgoCD (Recommended for Production)
+
+ArgoCD manages the model deployment lifecycle declaratively — commit a change to Git and ArgoCD reconciles it on the cluster. Manual sync is required for production so every deployment is intentional.
+
+##### Prerequisites
+
+Verify the MaaS runtime and ArgoCD are healthy before deploying:
 
 ```bash
-# Get the model endpoint
-MODEL_URL=$(oc get route gpt-oss-20b -n deploy-models-rhoai -o jsonpath='{.spec.host}')
+# Confirm the MaaS runtime (Gateway + ModelRegistry) is running
+oc get application fusion-maas-runtime-prod -n openshift-gitops
 
-# Get authentication token
-TOKEN=$(oc whoami -t)
-
-# Test the model
-curl -k -X POST "https://${MODEL_URL}/v1/completions" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-oss-20b",
-    "prompt": "Write a Python function to calculate fibonacci numbers:",
-    "max_tokens": 100,
-    "temperature": 0.7
-  }'
+# Confirm ArgoCD pods are running
+oc get pods -n openshift-gitops
 ```
 
-The model is automatically exposed through the gateway route when external gateway exposure is enabled in the values file.
+##### Configure your model and S3 credentials
+
+Edit [`AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values.yaml`](AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values.yaml) with your model and S3 details:
+
+```yaml
+model:
+  name: my-model           # Kubernetes resource name
+  displayName: "My Model"  # Shown in RHOAI dashboard
+  namespace: deploy-models
+
+s3:
+  endpoint: "https://s3.openshift-storage.svc:443"
+  region: "us-south"
+  bucket: "my-model-bucket"
+  modelPath: "my-model/1.0.0"   # <model-folder>/<version> inside the bucket
+  verifySSL: "0"                 # "0" for internal ODF/NooBaa; "1" for public S3
+  accessKeyId: ""                # Supply at sync time — do not commit to Git
+  secretAccessKey: ""            # Supply at sync time — do not commit to Git
+```
+
+
+##### Update the Application manifest
+
+Before applying, confirm the Application CR points to your repository and branch.
+
+Open [`AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/application.yaml`](AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/application.yaml) and set:
+
+```yaml
+spec:
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git          # your repo
+    targetRevision: master                                       # your branch or tag
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/prod/values.yaml
+```
+
+##### Deploy to Production
 
 ```bash
-# Get the gateway route (exposed automatically by the deployment)
+# 1. Apply the AppProject (creates RBAC)
+oc apply -f AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/appproject-prod.yaml
+
+# 2. Apply the Application manifest
+oc apply -f AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/application.yaml
+
+# 3. In the ArgoCD UI: open fusion-maas-model-deploy-prod, review the diff,
+#    then click Sync during an approved change window.
+# Or via CLI (requires appropriate role):
+argocd app sync fusion-maas-model-deploy-prod
+```
+
+##### Monitor
+
+```bash
+# Check ArgoCD application sync status
+oc get applications.argoproj.io fusion-maas-model-deploy-prod -n openshift-gitops
+
+# Check model resources
+oc get llminferenceservice -n deploy-models
+oc get pods -n deploy-models
+oc get secret -n deploy-models
+```
+
+See [`AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/README.md`](AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/README.md) for the full runbook including rollback and troubleshooting.
+
+### Step 6: Test Your Model
+
+Use the option that matches how you deployed the model in Step 5.
+
+---
+
+#### Option A: Helm Deployment (Quick Start)
+
+The Helm script deploys into namespace `deploy-models-rhoai` and exposes the model through the gateway route automatically.
+
+```bash
+# Get the gateway route
 GATEWAY_HOST=$(oc get route openshift-ai-inference -n openshift-ingress -o jsonpath='{.spec.host}')
 
 # Get authentication token
 TOKEN=$(oc whoami -t)
 
-# Test the model through the gateway
+# List available models
+curl -k "https://${GATEWAY_HOST}/deploy-models-rhoai/gpt-oss-20b-version-1/v1/models" \
+  -H "Authorization: Bearer ${TOKEN}"
+
+# Test the model
 # Pattern: https://<gateway-host>/<namespace>/<model-name>/v1/completions
 curl -k -X POST "https://${GATEWAY_HOST}/deploy-models-rhoai/gpt-oss-20b-version-1/v1/completions" \
   -H "Authorization: Bearer ${TOKEN}" \
@@ -564,6 +832,32 @@ curl -k -X POST "https://${GATEWAY_HOST}/deploy-models-rhoai/gpt-oss-20b-version
   }'
 ```
 
+---
+
+#### Option B: GitOps Deployment with ArgoCD (Production)
+
+The GitOps deployment lands in namespace `deploy-models`. Replace `<model-name>` with the value you set for `model.name` in your prod values file.
+
+```bash
+# 1. Confirm the inference service is ready
+oc get llminferenceservice -n deploy-models
+
+# 2. Resolve the gateway hostname and your token
+GATEWAY_HOST=$(oc get route openshift-ai-inference -n openshift-ingress -o jsonpath='{.spec.host}')
+TOKEN=$(oc whoami -t)
+
+# 3. Send a test prompt
+# Pattern: https://<gateway-host>/<namespace>/<model-name>/v1/completions
+curl -k -X POST "https://${GATEWAY_HOST}/deploy-models/<model-name>/v1/completions" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "<model-name>", "prompt": "Hello", "max_tokens": 50}'
+```
+
+For full testing steps — ArgoCD health checks, HTTPRoute verification, live inference examples, and troubleshooting — see [`deploy/gitops/maas-model-deploy/TEST_MODELS.md`](AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/TEST_MODELS.md).
+
+---
+
 At this stage, the platform is ready with a deployed model that is accessible through the configured gateway endpoint.
 
 ---
@@ -575,13 +869,14 @@ After completing the quickstart, the environment includes the following platform
 | Component | Description | Namespace |
 |-----------|-------------|-----------|
 | **OpenShift AI** | Core AI platform | `redhat-ods-operator` |
-| **Kuadrant** | API gateway & rate limiting | `kuadrant-system` |
+| **Red Hat Connectivity Link** | API gateway, routing & rate limiting (Kuadrant) | `kuadrant-system` |
 | **Model Registry** | Model versioning & storage | `rhoai-model-registries` |
 | **Gateway** | Intelligent routing | `openshift-ingress` |
 | **GPT-OSS-20B** | Code assistance model | `deploy-models-rhoai` |
-| **Monitoring** | Prometheus & Grafana | `openshift-monitoring` |
+| **Monitoring** | Prometheus platform monitoring; Grafana operator installed (dashboards not configured) | `openshift-monitoring` |
 
 ---
+
 
 
 ## Key Features
@@ -611,82 +906,44 @@ The runtime integrates with Prometheus and Grafana so that operators can monitor
 ```text
 model-as-a-service/
 ├── deploy/
-│   ├── maas-operators/            # Operator installation chart
-│   │   ├── Chart.yaml
-│   │   ├── values.yaml
-│   │   └── templates/
-│   │       ├── namespaces.yaml
-│   │       ├── operatorgroups.yaml
-│   │       └── subscriptions.yaml
+│   ├── helm/                      # Helm charts
+│   │   ├── maas-operators/        # Operator subscriptions
+│   │   ├── maas-platform/         # DataScienceCluster & platform config
+│   │   ├── maas-runtime/          # Gateway, Model Registry, RBAC
+│   │   ├── maas-model-service/    # Model deployment chart
+│   │   └── maas-model-registry/   # Model registry reconciler
 │   │
-│   ├── maas-platform/             # Platform bootstrap chart
-│   │   ├── Chart.yaml
-│   │   ├── values.yaml
-│   │   └── templates/
-│   │       ├── datasciencecluster.yaml
-│   │       └── operator-instances.yaml
-│   │
-│   ├── maas-runtime/              # Core MaaS infrastructure
-│   │   ├── Chart.yaml
-│   │   ├── values.yaml
-│   │   └── templates/
-│   │       ├── namespace.yaml
-│   │       ├── rbac.yaml
-│   │       ├── tier-groups.yaml
-│   │       ├── gateway.yaml
-│   │       ├── modelregistry.yaml
-│   │       └── workbench-storage.yaml
-│   │
-│   ├── maas-model-service/        # Generic model deployment
-│       ├── Chart.yaml
-│       ├── values.yaml
-│       └── templates/
-│           ├── llminferenceservice.yaml
-│           ├── ratelimitpolicy.yaml
-│           ├── servicemonitor.yaml
-│           ├── connection-secret.yaml
-│           ├── route.yaml
-│           └── namespace.yaml
+│   └── gitops/                    # ArgoCD Applications
+│       ├── maas-gitops-deployment/      # Platform GitOps (operators, platform, runtime)
+│       │   └── environments/            # dev, staging, prod
+│       │       └── prod/
+│       │           ├── 00-prod-app-of-apps.yaml
+│       │           ├── appproject-prod.yaml
+│       │           └── applications/
+│       │               ├── 01-maas-operators-prod.yaml
+│       │               ├── 02-maas-platform-prod.yaml
+│       │               └── 03-maas-runtime-prod.yaml
+│       │
+│       └── model-registry-gitops/       # Model registration GitOps
+│           ├── argocd/environments/     # ArgoCD apps (dev, staging, prod)
+│           ├── models/                  # Model definitions (granite, gpt-oss, qwen)
+│           └── docs/
 │
 ├── examples/
-│   ├── Fusion-Agentic-Assistance-Platform/  # Fusion Agentic Assistance Platform use case
-│   │   ├── README.md
-│   │   ├── values.yaml
-│   │   └── models/
-│   │       ├── gpt-oss-values.yaml
-│   │       ├── gpt-oss-20b-values.yaml
-│   │       └── nemotron-values.yaml
-│   │
-│   ├── model-registry-deployment/ # Model registry examples
-│   │   ├── README.md
-│   │   ├── gpt-oss-20b-values.yaml
-│   │   ├── granite-31-8b-lab-v1-values.yaml
-│   │   └── qwen3-8b-fp8-dynamic-values.yaml
-│   │
-│   ├── model-registry-gitops/     # GitOps for model registry
-│   ├── operators-gitops-deployment/ # GitOps for operators
-│   ├── maas-runtime-gitops-deployment/ # GitOps for runtime
-│   ├── maas-model-service-gitops-deployment/ # GitOps for models
-│   └── workbench-model-testing/   # Model testing workflow
+│   ├── Fusion-Agentic-Assistance-Platform/  # Complete use case
+│   │   ├── values.yaml                      # Combined configuration
+│   │   └── models/                          # Model-specific values
+│   └── model-registry-deployment/           # Model deployment examples
 │
-├── docs/
-│   ├── GETTING_STARTED.md
-│   ├── DEPLOYMENT_ORDER.md
-│   ├── configuration/
-│   │   ├── MODEL_CATALOG_GUIDE.md
-│   │   ├── MODEL_REGISTRY_GUIDE.md
-│   │   └── WORKBENCH_STORAGE_GUIDE.md
-│   ├── deployment/
-│   │   └── DEPLOYING_MODEL_SERVICES.md
-│   └── operations/
-│       └── ADDING_MODELS_TO_REGISTRY.md
+├── scripts/
+│   ├── install-runtime.sh         # Automated platform deployment
+│   └── deploy-model.sh            # Model deployment
 │
-└── blogs/
-    ├── published/
-    │   ├── gitops-series/
-    │   ├── quick-start/
-    │   └── techxchange-series/
-    └── planning/
+└── docs/
+    ├── GETTING_STARTED.md
+    ├── 01-setup/                  # Deployment guides
+    ├── 02-model-catalog-and-registry/
+    └── 03-model-deployment/
 ```
 
 ## IBM Fusion for AI Quick Start Features
@@ -728,6 +985,15 @@ maas-runtime (requires platform)
     ↓
 maas-model-service (requires runtime)
 ```
+
+### GitOps Deployment Guides
+
+For production deployments using Red Hat OpenShift GitOps (ArgoCD):
+
+- **[MaaS GitOps Deployment README](deploy/gitops/maas-gitops-deployment/README.md)** - Environment-specific GitOps deployment structure
+- **[MaaS Platform Deployment Guide](deploy/gitops/maas-gitops-deployment/environments/DEPLOYMENT_GUIDE.md)** - Full operational runbook: step-by-step sync, troubleshooting, RBAC, and migration
+- **[Model Registry GitOps README](deploy/gitops/model-registry-gitops/README.md)** - Architecture overview and prerequisites for automated model registration
+- **[Model Deploy GitOps README](deploy/gitops/maas-model-deploy/README.md)** - Per-model ArgoCD Applications, multi-model design, and values file conventions
 
 ### Helm Chart Guides
 

@@ -1,0 +1,394 @@
+# Global configuration shared across all components
+global:
+  # OpenShift cluster wildcard domain (e.g., apps.cluster.example.com)
+  wildcardDomain: apps.cluster.example.com
+  
+  # Name of the certificate secret for ingress (leave empty for self-signed)
+  wildcardCertName: ""
+  
+  # Default namespace for model deployments
+  modelsNamespace: maas-models
+  
+  # Tools image for jobs (should contain oc, kubectl, bash)
+  toolsImage: image-registry.openshift-image-registry.svc:5000/openshift/tools:latest
+
+# Gateway API configuration for OpenShift AI Inference
+gateway:
+  # Enable GatewayClass and Gateway creation
+  enabled: true
+
+  # Create the cluster GatewayClass resource
+  createGatewayClass: true
+
+  # Gateway name
+  name: openshift-ai-inference
+  
+  # Gateway namespace
+  namespace: openshift-ingress
+  
+  # GatewayClass name
+  gatewayClassName: openshift-ai-inference
+  
+  # Controller name for GatewayClass
+  controllerName: openshift.io/gateway-controller/v1
+  
+  # Istio revision label (optional)
+  istioRevision: openshift-gateway
+  
+  # Listeners configuration
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+          - group: ''
+            kind: Secret
+            name: router-certs-default
+        mode: Terminate
+      
+  # Labels for the gateway
+  labels: {}
+    
+  # Annotations for the gateway
+  annotations: {}
+#     security.opendatahub.io/authorino-tls-bootstrap: "true"
+
+# Tier-based access control configuration
+tiers:
+  # Free tier - basic access
+  free:
+    # Request rate limits
+    requestRates:
+      - limit: 5
+        window: 2m
+    
+    # Token rate limits
+    tokenRates:
+      - limit: 100
+        window: 1m
+  
+  # Premium tier - enhanced access
+  premium:
+    requestRates:
+      - limit: 20
+        window: 2m
+    
+    tokenRates:
+      - limit: 10000
+        window: 1m
+  
+  # Enterprise tier - full access
+  enterprise:
+    requestRates:
+      - limit: 50
+        window: 2m
+    
+    tokenRates:
+      - limit: 20000
+        window: 1m
+
+# User to tier mapping
+# Maps OpenShift users to access tiers
+userMapping:
+  free: []
+    # - user1
+    # - user2
+  
+  premium: []
+    # - user3
+    # - user4
+  
+  enterprise: []
+    # - admin
+    # - poweruser
+
+# Monitoring and observability
+monitoring:
+  # Enable monitoring stack
+  enabled: true
+  
+  # Cluster monitoring configuration
+  clusterMonitoring:
+    enabled: true
+    userWorkloadMonitoring: true
+  
+  # Grafana configuration
+  grafana:
+    enabled: true
+    namespace: grafana
+    
+    # Grafana instance selectors (labels to match Grafana CR)
+    selectors:
+      app: grafana
+    
+    # Create console link for Grafana
+    consoleLink:
+      enabled: true
+      displayName: "MaaS Metrics Dashboard"
+      section: "Observability"
+    
+    # Default dashboards to deploy
+    dashboards:
+      maasOverview:
+        enabled: true
+      modelMetrics:
+        enabled: true
+      gpuUtilization:
+        enabled: true
+
+# Authentication and authorization
+authentication:
+  # Keycloak configuration (optional)
+  keycloak:
+    enabled: false
+    namespace: keycloak
+    
+    # Realm configuration
+    realm:
+      name: maas
+      displayName: "MaaS Platform"
+      
+      # Admin user
+      admin:
+        username: admin
+        password: ""  # Set via --set or secure method
+      
+      # Default user configuration
+      user:
+        password: ""  # Set via --set or secure method
+        count: 5  # Creates user1-user5
+    
+    # Remove kubeadmin user after Keycloak setup
+    removeKubeAdmin: false
+    
+    # OAuth integration
+    oauth:
+      enabled: true
+
+# RBAC configuration
+rbac:
+  # Create default roles and bindings
+  enabled: true
+  
+  # Service account for model deployments
+  modelServiceAccount:
+    name: maas-model-sa
+    namespace: maas-models
+
+# Kuadrant configuration
+# kuadrant:
+#   # Kuadrant instance configuration
+#   instance:
+#     name: kuadrant
+#     namespace: kuadrant-system
+  
+#   # Authorino TLS configuration
+#   authorino:
+#     tls:
+#       enabled: true
+#       secretName: authorino-server-cert
+
+# Model Registry configuration
+modelRegistry:
+  # Enable Model Registry
+  enabled: true
+
+  # Namespace for Model Registry (must already exist; typically created by DataScienceCluster)
+  namespace: rhoai-model-registries
+  createNamespace: false
+  
+  # Model Registry instance name
+  name: model-registry
+  
+  # IBM Fusion Object Storage configuration
+  objectStorage:
+    # Enable IBM Fusion Object Storage (required)
+    enabled: true
+    
+    # Automatic bucket creation using OpenShift Data Foundation (ODF)
+    # When enabled, creates an ObjectBucketClaim for automatic provisioning
+    # Recommended: true for zero-configuration deployment
+    autoCreateBucket: true
+    
+    # OpenShift Data Foundation StorageClass for ObjectBucketClaim
+    # Default: openshift-storage.noobaa.io (NooBaa Multi-Cloud Gateway)
+    odfStorageClass: openshift-storage.noobaa.io
+    
+    # BucketClass to use for ObjectBucketClaim
+    # Defines the data placement policy within IBM Fusion
+    bucketClass: noobaa-default-bucket-class
+    
+    # Bucket retention policy settings (optional)
+    bucketRetentionPolicy: false
+    
+    # Maximum number of objects in bucket (optional, for quota management)
+    maxObjects: ""
+    
+    # Maximum bucket size (optional, e.g., "100Gi", "1Ti")
+    maxSize: ""
+    
+    # Fusion endpoint URL (only required if autoCreateBucket: false)
+    # Will be auto-populated from ObjectBucketClaim when autoCreateBucket: true
+    endpoint: ""
+    
+    # Fusion bucket name for model artifacts
+    bucket: model-registry-artifacts
+    
+    # Fusion region (for IBM Cloud Object Storage integration)
+    region: us-south
+    
+    # Fusion credentials (only required if autoCreateBucket: false)
+    # Will be auto-populated from ObjectBucketClaim when autoCreateBucket: true
+    accessKeyId: ""
+    secretAccessKey: ""
+    
+    # SSL verification (recommended: true)
+    verifySSL: true
+    
+    # Storage class for objects
+    storageClass: STANDARD
+  
+  # Database configuration for Model Registry
+  database:
+    # Database type: postgres (default) or mysql
+    type: postgres
+    
+    # Use external database or deploy one
+    external: false
+    
+    # External database configuration
+    externalDatabase:
+      host: ""
+      port: 5432
+      database: modelregistry
+      username: modelregistry
+      password: ""  # Set via --set or secure method
+      sslMode: require
+    
+    # Internal database configuration (if external: false)
+    internalDatabase:
+      # Storage size for database PVC
+      storageSize: 10Gi
+      
+      # Storage class
+      storageClassName: ""  # Use default
+      
+      # Resource limits
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  
+  # Expose HTTP port 8080 for direct API access (bypasses kube-rbac-proxy)
+  # Set to true if you need HTTP access without authentication
+  exposeHttpPort: true
+  
+  # Model Registry service configuration
+  service:
+    # Service type
+    type: ClusterIP
+    
+    # REST API port
+    restPort: 8080
+    
+    # gRPC port
+    grpcPort: 9090
+  
+  # Ingress/Route configuration
+  ingress:
+    # Enable ingress/route
+    enabled: true
+    
+    # Hostname (leave empty for auto-generation)
+    hostname: ""
+    
+    # TLS configuration
+    tls:
+      enabled: true
+      secretName: ""  # Leave empty for auto-generated cert
+  
+  # Model versioning configuration
+  versioning:
+    # Enable automatic versioning
+    enabled: true
+    
+    # Version format: semantic (1.0.0) or timestamp (20240101-120000)
+    format: semantic
+    
+    # Auto-increment version on model update
+    autoIncrement: true
+  
+  # Model metadata configuration
+  metadata:
+    # Required metadata fields
+    requiredFields:
+      - name
+      - description
+      - framework
+      - version
+    
+    # Custom metadata fields
+    customFields: []
+      # - field: use-case
+      #   type: string
+      #   required: false
+      # - field: accuracy
+      #   type: float
+      #   required: false
+  
+  # Integration with Model Catalog
+  catalogIntegration:
+    # Enable integration with Model Catalog
+    enabled: true
+    
+    # Automatically register models from catalog
+    autoRegister: true
+    
+    # Sync interval (cron format)
+    syncSchedule: "0 3 * * *"  # Daily at 3 AM
+
+# Resource quotas and limits (optional)
+# resourceQuotas:
+#   enabled: false
+  
+#   # Quota for models namespace
+#   modelsNamespace:
+#     requests:
+#       cpu: "100"
+#       memory: "500Gi"
+#       nvidia.com/gpu: "10"
+#     limits:
+#       cpu: "200"
+#       memory: "1000Gi"
+#       nvidia.com/gpu: "10"
+
+# Network policies (optional)
+networkPolicies:
+  enabled: false
+  
+  # Allow ingress from specific namespaces
+  allowFrom:
+    - openshift-ingress
+    - openshift-monitoring
+
+# Additional labels to apply to all resources
+commonLabels: {}
+  # environment: production
+  # team: ai-platform
+
+# Additional annotations to apply to all resources
+commonAnnotations: {}
+  # managed-by: helm

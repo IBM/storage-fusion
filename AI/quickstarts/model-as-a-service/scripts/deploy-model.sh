@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CHARTS_DIR="$PROJECT_ROOT/deploy"
+CHARTS_DIR="$PROJECT_ROOT/deploy/helm"
 
 # Colors for output
 RED='\033[0;31m'
@@ -342,7 +342,7 @@ if [ "$EXPOSE_GATEWAY" = "true" ] && [ -n "$GATEWAY_HOST" ]; then
 else
     echo -e "${YELLOW}Gateway not exposed externally.${NC}"
     echo "To expose the gateway, set 'gateway.exposeExternally: true' in your values file"
-    echo "Or see: quickstarts/model-as-a-service/docs/GETTING_STARTED.md"
+    echo "Or see: AI/quickstarts/model-as-a-service/docs/GETTING_STARTED.md"
 fi
 
 echo ""

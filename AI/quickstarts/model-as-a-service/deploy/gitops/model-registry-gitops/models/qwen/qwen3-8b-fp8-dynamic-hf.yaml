@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: ModelVersion
+metadata:
+  name: qwen3-8b-fp8-dynamic-hf
+  labels:
+    model-type: public
+    source: huggingface
+    task: text-generation
+    governance-status: approved
+spec:
+  modelName: "Qwen3-8B-FP8-dynamic"
+  version: "1.0.0"
+  description: |
+    Qwen3-8B-FP8-dynamic is an advanced language model from Alibaba Cloud's Qwen family.
+    This 8.19 billion parameter model features FP8 (8-bit floating point) dynamic quantization
+    for efficient inference while maintaining high performance. It excels at text generation,
+    conversational AI, and tool-calling capabilities.
+    
+    This version is pulled from Hugging Face and stored in S3 object storage.
+  
+  author: "Alibaba Cloud"
+  
+  # Base model information (public model from Hugging Face)
+  baseModel:
+    name: "Qwen/Qwen3-8B-FP8"
+    source: "huggingface"
+    sourceUrl: "https://huggingface.co/Qwen/Qwen3-8B-FP8"
+    version: "main"
+    license: "Apache-2.0"
+    licenseUrl: "https://www.apache.org/licenses/LICENSE-2.0"
+  
+  # Governance and compliance metadata
+  governance:
+    approvedBy: "platform-team@company.com"
+    approvalDate: "2026-06-18"
+    approvalTicket: "JIRA-78901"
+    licenseVerified: true
+    securityScanned: true
+    scanDate: "2026-06-17"
+    scanTool: "trivy"
+    complianceStatus: "approved"
+    restrictions:
+      - "Requires GPU infrastructure for optimal performance"
+      - "Monitor for bias in responses"
+      - "Approved for production enterprise workloads"
+  
+  # Model storage and artifacts
+  storage:
+    uri: "hf://Qwen/Qwen3-8B-FP8"
+    type: "huggingface"
+    size: "8.5GB"
+    format: "safetensors"
+  
+  # Model metadata and capabilities
+  metadata:
+    framework: "transformers"
+    frameworkVersion: "4.40.0"
+    modelType: "causal-lm"
+    architecture: "Qwen3"
+    parameters: "8.19B"
+    contextLength: "32768"
+    languages:
+      - "en"
+      - "zh"
+    tasks:
+      - "text-generation"
+      - "conversational"
+      - "tool-calling"
+    
+    # Performance metrics
+    metrics:
+      perplexity: "TBD"
+      
+    # Training information
+    training:
+      dataset: "Alibaba Cloud curated multilingual datasets"
+      trainingFramework: "PyTorch"
+      
+    # Hardware requirements
+    requirements:
+      minMemory: "32GB"
+      recommendedMemory: "64GB"
+      gpu: "required"
+      minCpu: "8 cores"
+  
+  # Use case and deployment information
+  useCases:
+    - name: "Multilingual Chatbot"
+      description: "Conversational AI supporting English and Chinese"
+      status: "approved"
+      
+    - name: "Tool-Calling Agent"
+      description: "AI agent with function calling capabilities"
+      status: "approved"
+      
+    - name: "Text Generation"
+      description: "High-quality text generation for content creation"
+      status: "approved"
+  
+  # Deployment configuration
+  deployment:
+    servingFramework: "kserve"
+    runtime: "huggingface"
+    replicas: 1
+    resources:
+      requests:
+        memory: "32Gi"
+        cpu: "8"
+      limits:
+        memory: "64Gi"
+        cpu: "16"
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPU: 70
+  
+  # Tags for searchability
+  tags:
+    - "llm"
+    - "qwen"
+    - "alibaba"
+    - "huggingface"
+    - "public-model"
+    - "approved"
+    - "production-ready"
+    - "multilingual"

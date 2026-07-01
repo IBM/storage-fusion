@@ -1,0 +1,159 @@
+# =============================================================================
+# MaaS Model Deploy – values.yaml
+# =============================================================================
+# This chart creates the namespace, S3 connection secret, a ServiceAccount,
+# and the LLMInferenceService CR required to deploy an LLM model stored in
+# an S3-compatible object store (e.g., OpenShift Data Foundation / NooBaa).
+#
+# Override any of the values below for your own S3 bucket and model path.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  # Kubernetes resource name for the model (used in resource names and URLs)
+  name: tiny-llama-test
+
+  # Display name shown in the OpenShift AI dashboard
+  displayName: "Tiny LLaMA Test"
+
+  # Target namespace where the model will be deployed
+  # Use "deploy-models" as the default; override per environment
+  namespace: deploy-models
+
+# -----------------------------------------------------------------------------
+# Project / Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  # Create the namespace if it does not already exist
+  create: true
+
+  # Additional labels for the namespace
+  labels: {}
+    # team: ai-platform
+    # environment: dev
+
+  # Additional annotations for the namespace
+  annotations: {}
+    # description: "Model deployment namespace"
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage Configuration
+# -----------------------------------------------------------------------------
+# These values populate the S3 connection secret that LLMInferenceService uses
+# to pull model artefacts.  Provide your own bucket details when deploying a
+# different model.
+#
+# Sensitive values (accessKeyId / secretAccessKey) should be supplied via:
+#   --set s3.accessKeyId=<value> --set s3.secretAccessKey=<value>
+# or through a sealed-secret / external-secrets operator — never commit them
+# in plain text to source control.
+# -----------------------------------------------------------------------------
+s3:
+  # S3-compatible endpoint URL
+  # Example: https://s3.openshift-storage.svc:443 (ODF / NooBaa internal)
+  #          https://s3.amazonaws.com             (AWS S3)
+  endpoint: "https://s3.openshift-storage.svc:443"
+
+  # AWS / S3 region
+  region: "us-south"
+
+  # Bucket that contains the model artefacts
+  bucket: "model-registry-artifacts-p-ccc9b6a9-897a-4971-9161-9c0d25448836"
+
+  # Path (prefix) inside the bucket where the model files reside
+  # Format: <model-folder>/<version>
+  modelPath: "tiny-llama-test/1.0.0"
+
+  # S3 Access Key ID  – override at deploy time, do NOT commit real keys
+  accessKeyId: ""
+
+  # S3 Secret Access Key – override at deploy time, do NOT commit real keys
+  secretAccessKey: ""
+
+  # Verify SSL certificate of the S3 endpoint
+  # Set to "0" to disable verification for self-signed certs (e.g., internal ODF)
+  verifySSL: "0"
+
+  # Override the auto-generated connection secret name
+  # Defaults to: <model.namespace>-connection
+  connectionSecretName: ""
+
+  # Override the auto-generated ServiceAccount name
+  # Defaults to: <connectionSecretName>-sa
+  serviceAccountName: ""
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  # Number of model serving replicas
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# Resource Allocation
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+  requests:
+    cpu: "2"
+    memory: 4Gi
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling
+# -----------------------------------------------------------------------------
+scheduling:
+  # Node selector for GPU placement
+  nodeSelector: {}
+    # node-role.kubernetes.io/gpu: ""
+
+  # GPU tolerations
+  tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+
+  # Affinity rules
+  affinity: {}
+
+
+# -----------------------------------------------------------------------------
+# Gateway Configuration
+# -----------------------------------------------------------------------------
+# The LLMInferenceService controller automatically creates and manages the
+# HTTPRoute for each model (including InferencePool backendRefs, URL rewrites,
+# and per-endpoint rules). Do NOT create HTTPRoutes from this chart.
+#
+# This block only controls the OpenShift Route that exposes the shared
+# openshift-ai-inference Gateway to external users — a ONE-TIME cluster resource.
+# Set exposeGateway: true on exactly ONE model deployment per cluster.
+#
+# All models are then reachable via a single base URL:
+#   https://<gateway.name>-<gateway.namespace>.<wildcardDomain>/<model.namespace>/<model.name>/v1/
+gateway:
+  # Name of the shared Gateway (must match maas-runtime gateway.name)
+  name: openshift-ai-inference
+
+  # Namespace where the Gateway lives (must match maas-runtime gateway.namespace)
+  namespace: openshift-ingress
+
+  # Cluster wildcard domain – required for the OpenShift Route hostname
+  # Find yours with: oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+  wildcardDomain: "apps.cluster.example.com"
+
+  # Create the OpenShift Route that exposes the Gateway to external users.
+  # Set to true on exactly ONE model per cluster (the first one deployed).
+  # All other models set this to false and share the same Route.
+  exposeGateway: false
+
+# -----------------------------------------------------------------------------
+# Additional Labels / Annotations
+# -----------------------------------------------------------------------------
+labels: {}
+  # team: ai-platform
+
+annotations: {}
+  # managed-by: helm

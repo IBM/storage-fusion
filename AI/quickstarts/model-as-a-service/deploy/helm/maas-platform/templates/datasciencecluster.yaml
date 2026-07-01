@@ -1,0 +1,45 @@
+{{- if .Values.dataScienceCluster.enabled }}
+apiVersion: datasciencecluster.opendatahub.io/v2
+kind: DataScienceCluster
+metadata:
+  name: {{ .Values.dataScienceCluster.name }}
+  namespace: {{ .Values.dataScienceCluster.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  components:
+    dashboard:
+      managementState: {{ .Values.dataScienceCluster.components.dashboard.managementState }}
+    workbenches:
+      managementState: {{ .Values.dataScienceCluster.components.workbenches.managementState }}
+    kserve:
+      managementState: {{ .Values.dataScienceCluster.components.kserve.managementState }}
+      modelsAsService:
+        managementState: {{ .Values.dataScienceCluster.components.kserve.modelsAsService.managementState }}
+      rawDeploymentServiceConfig: {{ .Values.dataScienceCluster.components.kserve.rawDeploymentServiceConfig }}
+      nim:
+        managementState: {{ .Values.dataScienceCluster.components.kserve.nim.managementState }}
+    modelregistry:
+      managementState: {{ .Values.dataScienceCluster.components.modelregistry.managementState }}
+      registriesNamespace: {{ .Values.platform.namespaces.modelRegistry }}
+    feastoperator:
+      managementState: {{ .Values.dataScienceCluster.components.feastoperator.managementState }}
+    trustyai:
+      managementState: {{ .Values.dataScienceCluster.components.trustyai.managementState }}
+    aipipelines:
+      managementState: {{ .Values.dataScienceCluster.components.aipipelines.managementState }}
+    ray:
+      managementState: {{ .Values.dataScienceCluster.components.ray.managementState }}
+    trainingoperator:
+      managementState: {{ .Values.dataScienceCluster.components.trainingoperator.managementState }}
+    trainer:
+      managementState: {{ .Values.dataScienceCluster.components.trainer.managementState }}
+    mlflowoperator:
+      managementState: {{ .Values.dataScienceCluster.components.mlflowoperator.managementState }}
+    llamastackoperator:
+      managementState: {{ .Values.dataScienceCluster.components.llamastackoperator.managementState }}
+    kueue:
+      managementState: {{ .Values.dataScienceCluster.components.kueue.managementState }}
+{{- end }}

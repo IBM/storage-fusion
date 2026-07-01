@@ -1,0 +1,38 @@
+---
+# storage-config Secret
+# -----------------------------------------------------------------------
+# KServe's storage-initializer reads S3 credentials from a secret named
+# "storage-config" in the model namespace.  Each key in the secret is the
+# name of a data connection (matching the connection secret name), and the
+# value is a JSON object with the S3 credentials.
+#
+# This mirrors the secret that RHOAI creates automatically when you deploy
+# a model via the dashboard.  Without it, the KServe init-container cannot
+# authenticate to S3 and the pod will fail to start.
+# -----------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: storage-config
+  namespace: {{ include "maas-model-deploy.namespace" . }}
+  labels:
+    {{- include "maas-model-deploy.labels" . | nindent 4 }}
+    opendatahub.io/managed: "true"
+  annotations:
+    # Shared resource – keep after first creation so a second model application
+    # targeting the same namespace does not attempt to recreate or delete it.
+    helm.sh/resource-policy: keep
+    {{- include "maas-model-deploy.annotations" . | nindent 4 }}
+type: Opaque
+stringData:
+  # Key = connection secret name; value = JSON credentials used by KServe
+  {{ include "maas-model-deploy.connectionSecretName" . }}: |
+    {
+      "type": "s3",
+      "access_key_id": {{ .Values.s3.accessKeyId | required "s3.accessKeyId is required" | quote }},
+      "secret_access_key": {{ .Values.s3.secretAccessKey | required "s3.secretAccessKey is required" | quote }},
+      "endpoint_url": {{ .Values.s3.endpoint | quote }},
+      "region": {{ .Values.s3.region | quote }},
+      "bucket": {{ .Values.s3.bucket | quote }},
+      "cabundle_configmap": "odh-kserve-custom-ca-bundle"
+    }

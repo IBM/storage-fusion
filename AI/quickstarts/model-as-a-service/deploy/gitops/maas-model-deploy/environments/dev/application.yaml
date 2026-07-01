@@ -1,0 +1,120 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-maas-model-deploy-dev
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "200"
+  labels:
+    environment: dev
+    component: model-deploy
+spec:
+  project: fusion-maas-model-deploy-dev
+
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/dev/values.yaml
+      parameters:
+        - name: model.namespace
+          value: deploy-models-dev
+        # Supply credentials via sealed-secrets or external-secrets in production.
+        # For quick-start testing you can pass them here, but do NOT commit real keys.
+        # - name: s3.accessKeyId
+        #   value: <override-at-deploy-time>
+        # - name: s3.secretAccessKey
+        #   value: <override-at-deploy-time>
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: deploy-models-dev
+
+  # Dev: fully automated — fast iteration, continuous deployment
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: serving.kserve.io
+      kind: LLMInferenceService
+      jsonPointers:
+        - /status
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jsonPointers:
+        - /status
+    # The gateway OpenShift Route is a shared cluster resource — it may be
+    # rendered by any Application that sets exposeGateway: true.
+    # Ignore status and the instance/model labels that ArgoCD stamps on it
+    # to prevent multiple Applications fighting over ownership.
+    - group: route.openshift.io
+      kind: Route
+      name: openshift-ai-inference
+      jsonPointers:
+        - /status
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["app.kubernetes.io/managed-by"]
+        - .metadata.labels["maas.redhat.com/model"]
+        - .metadata.labels["helm.sh/chart"]
+    # S3 connection secret – credentials are runtime-injected; name and namespace are
+    # driven by model.namespace / s3.connectionSecretName so we match all Secrets
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data/AWS_ACCESS_KEY_ID
+        - /data/AWS_SECRET_ACCESS_KEY
+    # storage-config – key name inside data is dynamic (connection secret name);
+    # ignore entire data map and labels regardless of name or namespace
+    - group: ""
+      kind: Secret
+      name: storage-config
+      jqPathExpressions:
+        - .data
+        - .metadata.labels
+    # Shared resources – ignore instance-specific labels stamped at sync time
+    - group: ""
+      kind: Namespace
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["maas.redhat.com/model"]
+    - group: ""
+      kind: Secret
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["maas.redhat.com/model"]
+    - group: ""
+      kind: ServiceAccount
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["maas.redhat.com/model"]
+
+  info:
+    - name: Description
+      value: MaaS Model Deploy – Development Environment
+    - name: Component
+      value: LLMInferenceService, HTTPRoute, S3 Connection Secret, ServiceAccount, Namespace
+    - name: Sync Wave
+      value: "200"
+    - name: Dependencies
+      value: Requires fusion-maas-runtime-dev to be healthy
+    - name: Namespace
+      value: deploy-models-dev
+    - name: Gateway
+      value: openshift-ai-inference (openshift-ingress)

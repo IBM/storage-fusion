@@ -1,0 +1,52 @@
+{{- if .Values.buildConfig.enabled }}
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: model-reconciler
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: reconciler
+spec:
+  lookupPolicy:
+    local: true
+
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: model-reconciler
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: reconciler
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: model-reconciler:latest
+  
+  source:
+    type: Git
+    git:
+      uri: {{ .Values.buildConfig.git.uri }}
+      ref: {{ .Values.buildConfig.git.ref }}
+    contextDir: {{ .Values.buildConfig.git.contextDir }}
+    {{- if .Values.buildConfig.gitCredentials.enabled }}
+    sourceSecret:
+      name: {{ .Values.buildConfig.gitCredentials.secretName }}
+    {{- end }}
+  
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  
+  triggers:
+    - type: ConfigChange
+  
+  resources:
+    {{- toYaml .Values.buildConfig.resources | nindent 4 }}
+{{- end }}
+

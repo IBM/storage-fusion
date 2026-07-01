@@ -1,0 +1,16 @@
+apiVersion: v2
+name: maas-operators
+description: Operator installation chart for MaaS platform dependencies
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - operators
+  - openshift
+  - subscriptions
+  - operator-lifecycle-manager
+maintainers:
+  - name: Fusion AI Platform Team
+home: https://github.com/IBM/storage-fusion
+sources:
+  - https://github.com/IBM/storage-fusion

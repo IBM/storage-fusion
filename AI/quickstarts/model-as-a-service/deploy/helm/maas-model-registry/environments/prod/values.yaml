@@ -1,0 +1,75 @@
+# Production environment overrides for maas-model-registry
+
+# Namespace where the reconciler will run
+namespace: fusion-model-registry-gitops-prod
+
+# Model Registry configuration
+modelRegistry:
+  # Namespace where Model Registry is deployed
+  namespace: rhoai-model-registries
+  
+  # Model Registry service name
+  serviceName: model-registry-http
+  
+  # Model Registry service port (8080 for HTTP, 8443 for HTTPS)
+  servicePort: 8080
+  
+  # Use secure connection (HTTPS)
+  secure: false
+  
+  # Verify SSL certificates (set to false for self-signed certs)
+  verifySSL: false
+  
+  # Name of the ObjectBucketClaim for model storage
+  obcName: model-registry-artifacts-prod
+
+# Reconciler deployment configuration
+reconciler:
+  # Container image configuration
+  image:
+    # Use OpenShift internal registry (built with BuildConfig)
+    repository: image-registry.openshift-image-registry.svc:5000/fusion-model-registry-gitops-prod/model-reconciler
+    tag: latest
+    pullPolicy: Always
+  
+  # Reconciliation settings
+  config:
+    # How often to reconcile (seconds) - less frequent in prod
+    reconcileInterval: 600
+    
+    # Log level (DEBUG, INFO, WARNING, ERROR)
+    logLevel: WARNING
+  
+  # Resource limits and requests - higher for production
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits:
+      memory: "16Gi"
+      cpu: "8000m"
+
+# BuildConfig configuration (OpenShift only)
+buildConfig:
+  # Git repository configuration
+  git:
+    ref: main  # Use main branch for production
+
+# CronJob for Git sync
+cronJob:
+  # Schedule (cron format) - less frequent in prod
+  schedule: "*/10 * * * *"
+  
+  # Git repository to sync from
+  git:
+    branch: main
+  
+  # Resources for sync job - increased for large repo
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "200m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+

@@ -1,0 +1,52 @@
+---
+# LLMInferenceService
+# -----------------------------------------------------------------------
+# Core serving CR that drives model deployment on Red Hat OpenShift AI.
+# The URI is built from the configured bucket and model path so that the
+# KServe storage-initialiser downloads artefacts from S3 at pod start-up.
+#
+# API version: serving.kserve.io/v1alpha2 (as observed in the cluster).
+# -----------------------------------------------------------------------
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  name: {{ .Values.model.name }}
+  namespace: {{ include "maas-model-deploy.namespace" . }}
+  labels:
+    {{- include "maas-model-deploy.labels" . | nindent 4 }}
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/genai-asset: "true"
+  annotations:
+    {{- include "maas-model-deploy.annotations" . | nindent 4 }}
+    opendatahub.io/model-type: generative
+    opendatahub.io/connections: {{ include "maas-model-deploy.connectionSecretName" . }}
+    opendatahub.io/connection-path: {{ .Values.s3.modelPath | quote }}
+    openshift.io/display-name: {{ include "maas-model-deploy.displayName" . | quote }}
+    security.opendatahub.io/enable-auth: "false"
+spec:
+  model:
+    name: {{ .Values.model.name }}
+    uri: {{ printf "s3://%s/%s" .Values.s3.bucket .Values.s3.modelPath | quote }}
+  replicas: {{ .Values.inference.replicas }}
+  router:
+    gateway: {}
+    route: {}
+    scheduler: {}
+  template:
+    containers:
+      - name: main
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+    serviceAccountName: {{ include "maas-model-deploy.serviceAccountName" . }}
+    {{- if .Values.scheduling.nodeSelector }}
+    nodeSelector:
+      {{- toYaml .Values.scheduling.nodeSelector | nindent 6 }}
+    {{- end }}
+    {{- if .Values.scheduling.tolerations }}
+    tolerations:
+      {{- toYaml .Values.scheduling.tolerations | nindent 6 }}
+    {{- end }}
+    {{- if .Values.scheduling.affinity }}
+    affinity:
+      {{- toYaml .Values.scheduling.affinity | nindent 6 }}
+    {{- end }}

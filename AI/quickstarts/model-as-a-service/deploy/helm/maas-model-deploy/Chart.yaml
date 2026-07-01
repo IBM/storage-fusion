@@ -1,0 +1,20 @@
+apiVersion: v2
+name: maas-model-deploy
+description: Helm chart for deploying LLM models from S3-compatible object storage on Red Hat OpenShift AI using LLMInferenceService
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - ai
+  - llm
+  - model
+  - inference
+  - maas
+  - vllm
+  - s3
+  - kserve
+maintainers:
+  - name: Fusion AI Platform Team
+home: https://github.com/IBM/storage-fusion
+sources:
+  - https://github.com/IBM/storage-fusion

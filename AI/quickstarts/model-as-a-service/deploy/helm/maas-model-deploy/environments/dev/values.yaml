@@ -1,0 +1,92 @@
+# =============================================================================
+# Environment override – Development
+# =============================================================================
+# All keys from values.yaml are listed here for visibility.
+# Keys that differ from the base default are set explicitly.
+# Keys matching the base default are commented out — uncomment to override.
+#
+# Supply s3.accessKeyId and s3.secretAccessKey via sealed-secrets or
+# --set flags at deploy time. Never commit real credentials.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  # name: tiny-llama-test
+  # displayName: "Tiny LLaMA Test"
+  namespace: deploy-models-dev
+
+# -----------------------------------------------------------------------------
+# Project / Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  # create: true
+  labels:
+    environment: dev
+  # annotations: {}
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage Configuration
+# -----------------------------------------------------------------------------
+s3:
+  # endpoint: "https://s3.openshift-storage.svc:443"
+  # region: "us-south"
+  # bucket: "model-registry-artifacts-p-ccc9b6a9-897a-4971-9161-9c0d25448836"
+  # modelPath: "tiny-llama-test/1.0.0"
+  accessKeyId: ""        # supply via --set or sealed-secret
+  secretAccessKey: ""    # supply via --set or sealed-secret
+  # verifySSL: "0"
+  connectionSecretName: ""
+  serviceAccountName: ""
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# Resource Allocation
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+    nvidia.com/gpu: "1"
+  requests:
+    cpu: "2"
+    memory: 4Gi
+    nvidia.com/gpu: "1"
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling
+# -----------------------------------------------------------------------------
+scheduling:
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+
+# -----------------------------------------------------------------------------
+# Gateway Configuration
+# -----------------------------------------------------------------------------
+# dev: no external Route — gateway not exposed externally in dev.
+# The LLMInferenceService controller manages the HTTPRoute automatically.
+# Models are accessible cluster-internally via the gateway-internal DNS.
+#
+# Internal URL for this model:
+#   http://openshift-ai-inference-openshift-ingress.svc.cluster.local/deploy-models-dev/<model.name>/v1/
+gateway:
+  name: openshift-ai-inference
+  namespace: openshift-ingress
+  wildcardDomain: "apps.cluster.example.com"   # TODO: replace with actual cluster domain
+  exposeGateway: false
+
+# -----------------------------------------------------------------------------
+# Additional Labels / Annotations
+# -----------------------------------------------------------------------------
+labels:
+  environment: dev
+
+annotations: {}
