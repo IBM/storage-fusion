@@ -69,7 +69,7 @@ oc get storageclass
 kubectl get storageclass
 ```
 
-> **Note**: For minimal deployments without persistent storage, use the `values-minimal.yaml` profile.
+> **Note**: For minimal deployments without persistent storage, use the development environment profile (`environments/dev/values.yaml`).
 
 ### Resource Requirements
 
@@ -115,12 +115,12 @@ The `deploy-gitops.sh` script supports the following options:
 
 ### Deployment Examples
 
-#### 1. Minimal Deployment (Getting Started)
+#### 1. Development Deployment (Getting Started)
 
 Perfect for development, testing, or learning GitOps:
 
 ```bash
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-minimal.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/dev/values.yaml
 ```
 
 **What you get**:
@@ -130,7 +130,22 @@ Perfect for development, testing, or learning GitOps:
 - ~1.1 CPU, ~1.2Gi RAM
 - Quick startup time
 
-#### 2. Default Deployment (Standard Production)
+#### 2. Staging Deployment (Pre-Production Testing)
+
+Recommended for staging and pre-production environments:
+
+```bash
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/stage/values.yaml
+```
+
+**What you get**:
+- 2 replicas with basic HA
+- 20Gi persistent storage
+- Moderate resource allocation
+- ~5 CPU, ~8Gi RAM
+- Pre-production validation
+
+#### 3. Default Deployment (Standard Production)
 
 Recommended for most production workloads:
 
@@ -145,12 +160,12 @@ Recommended for most production workloads:
 - ~3.5 CPU, ~5.5Gi RAM
 - Production-ready configuration
 
-#### 3. Production Deployment (Mission-Critical)
+#### 4. Production Deployment (Mission-Critical)
 
 For high-availability, mission-critical deployments:
 
 ```bash
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-production.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/prod/values.yaml
 ```
 
 **What you get**:
@@ -160,7 +175,7 @@ For high-availability, mission-critical deployments:
 - ~8 CPU, ~12Gi RAM
 - Enhanced monitoring and security
 
-#### 4. Dry-Run Deployment
+#### 5. Dry-Run Deployment
 
 Preview what will be deployed without making changes:
 
@@ -168,7 +183,7 @@ Preview what will be deployed without making changes:
 ./scripts/deploy-gitops.sh --dry-run
 ```
 
-#### 5. Deploy to Specific Namespace
+#### 6. Deploy to Specific Namespace
 
 Deploy to a custom namespace:
 
@@ -176,7 +191,7 @@ Deploy to a custom namespace:
 ./scripts/deploy-gitops.sh -n openshift-gitops
 ```
 
-#### 6. Verbose Deployment with Custom Release Name
+#### 7. Verbose Deployment with Custom Release Name
 
 Get detailed output during deployment:
 
@@ -184,12 +199,12 @@ Get detailed output during deployment:
 ./scripts/deploy-gitops.sh -v -r my-gitops -n my-namespace
 ```
 
-#### 7. Automated Deployment (CI/CD)
+#### 8. Automated Deployment (CI/CD)
 
 Skip confirmation prompts for automation:
 
 ```bash
-./scripts/deploy-gitops.sh --force -f helm/fusion-gitops/values-production.yaml
+./scripts/deploy-gitops.sh --force -f helm/fusion-gitops/environments/prod/values.yaml
 ```
 
 ### Deployment Process
@@ -220,7 +235,7 @@ The script follows this process:
 
 ## Configuration Profiles
 
-### Minimal Profile (`values-minimal.yaml`)
+### Development Profile (`environments/dev/values.yaml`)
 
 **Best for**: Development, testing, learning, resource-constrained environments
 
@@ -247,10 +262,40 @@ The script follows this process:
 
 **Deployment**:
 ```bash
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-minimal.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/dev/values.yaml
 ```
 
-### Default Profile (No values file)
+### Staging Profile (`environments/stage/values.yaml`)
+
+**Best for**: Pre-production testing, staging environments, integration testing
+
+**Configuration**:
+- **Replicas**: 2 (server, repo)
+- **High Availability**: Basic (Redis HA enabled)
+- **Storage**: 20Gi persistent (RWX)
+- **Autoscaling**: Enabled (2-4 replicas)
+- **Notifications**: Enabled
+- **Network Policies**: Enabled
+- **Resource Quotas**: Enabled
+
+**Resource Requirements**:
+- CPU: ~5 cores
+- Memory: ~8Gi
+- Storage: 20Gi
+
+**Use Cases**:
+- Pre-production validation
+- Integration testing
+- Staging environments
+- Performance testing
+- User acceptance testing (UAT)
+
+**Deployment**:
+```bash
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/stage/values.yaml
+```
+
+### Default Profile
 
 **Best for**: Standard production workloads, general-purpose deployments
 
@@ -279,7 +324,7 @@ The script follows this process:
 ./scripts/deploy-gitops.sh
 ```
 
-### Production Profile (`values-production.yaml`)
+### Production Profile (`environments/prod/values.yaml`)
 
 **Best for**: Mission-critical deployments, high-scale environments
 
@@ -307,7 +352,7 @@ The script follows this process:
 
 **Deployment**:
 ```bash
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-production.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/prod/values.yaml
 ```
 
 ### Custom Configuration
@@ -316,13 +361,13 @@ You can create your own values file by copying and modifying an existing profile
 
 ```bash
 # Copy a profile as a starting point
-cp helm/fusion-gitops/values-production.yaml helm/fusion-gitops/values-custom.yaml
+cp helm/fusion-gitops/environments/prod/values.yaml helm/fusion-gitops/environments/custom/values.yaml
 
 # Edit the file
-vim helm/fusion-gitops/values-custom.yaml
+vim helm/fusion-gitops/environments/custom/values.yaml
 
 # Deploy with custom values
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-custom.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/custom/values.yaml
 ```
 
 ## Validation
@@ -658,8 +703,8 @@ oc get storageclass
 ./scripts/deploy-gitops.sh \
   --set storage.defaultStorageClass=<your-storage-class>
 
-# Or use minimal profile (no persistent storage)
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-minimal.yaml
+# Or use development profile (no persistent storage)
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/dev/values.yaml
 ```
 
 #### Issue: Insufficient Resources
@@ -675,8 +720,8 @@ Events show "Insufficient cpu" or "Insufficient memory"
 # Check node resources
 oc describe nodes | grep -A 5 "Allocated resources"
 
-# Use minimal profile
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-minimal.yaml
+# Use development profile
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/dev/values.yaml
 
 # Or scale down resources in custom values file
 ```

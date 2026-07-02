@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: llmops-platform
+
+resources:
+  # Wave 0: RBAC - Must be created first for ArgoCD permissions
+  - rbac.yaml
+
+  # Wave 1: ConfigMap - No dependencies, provides configuration
+  - configmap.yaml
+
+  # Wave 2: Secrets Management - Depends on Vault/SecretStore
+  # Choose ONE option:
+  # Option 1: ExternalSecret with HashiCorp Vault (Recommended for Production)
+  - externalsecret-llmops.yaml
+  # Option 2: Hardcoded Secrets (Development/Testing only)
+  # - secrets.yaml
+
+  # Wave 3: Application - Depends on ConfigMap and Secrets
+  - chat-app-deployment.yaml
+
+commonLabels:
+  app.kubernetes.io/name: llmops-platform
+  app.kubernetes.io/component: application
+  validated-patterns.io/pattern: llmops-platform

@@ -80,12 +80,12 @@ argocd repo add https://github.com/YOUR_ORG/YOUR_REPO.git \
 
 After forking, you should customize these files for your environment:
 
-1. **`fusion-AgenticAssistanceSampleApp/config/config.yaml`**
+1. **`fusion-gitops-sample-app/config/config.yaml`**
    - Update CAS endpoint URL
    - Update model endpoint URL
    - Configure your specific settings
 
-2. **`fusion-AgenticAssistanceSampleApp/gitops/applications/secrets.yaml`**
+2. **`fusion-gitops-sample-app/gitops/applications/secrets.yaml`**
    - Add your CAS API key (base64 encoded)
    - Add any other required credentials
 
@@ -95,10 +95,10 @@ After forking, you should customize these files for your environment:
    - Update model path if using different model
 
 4. **Container Image** (if building custom image)
-   - Update image registry in `fusion-AgenticAssistanceSampleApp/gitops/applications/chat-app-deployment.yaml`
+   - Update image registry in `fusion-gitops-sample-app/gitops/applications/chat-app-deployment.yaml`
    - Build and push your custom image:
      ```bash
-     cd fusion-AgenticAssistanceSampleApp
+     cd fusion-gitops-sample-app
      docker build -t YOUR_REGISTRY/fusion-chat-app:latest -f Dockerfile.chat-app .
      docker push YOUR_REGISTRY/fusion-chat-app:latest
      ```
@@ -139,7 +139,7 @@ git push origin main
 ├── fusion-gitops-argocd/                   # ArgoCD installation
 │   └── argocd-install.yaml                 # OpenShift GitOps operator
 │
-├── fusion-AgenticAssistanceSampleApp/      # Main chat application
+├── fusion-gitops-sample-app/      # Main chat application
 │   ├── chat_app.py                         # Enhanced Streamlit UI
 │   ├── src/
 │   │   ├── rag_flow.py                     # RAG orchestrator
@@ -322,7 +322,7 @@ The chat application needs to be containerized and pushed to a registry.
 
 ```bash
 # Navigate to the app directory
-cd fusion-AgenticAssistanceSampleApp
+cd fusion-gitops-sample-app
 
 # Build the image (replace with your registry)
 podman build --no-cache --platform linux/amd64 \
@@ -346,7 +346,7 @@ Update configuration for your environment.
 #### **Configure CAS Endpoint:**
 ```bash
 # Edit ConfigMap
-vi fusion-AgenticAssistanceSampleApp/gitops/applications/configmap.yaml
+vi fusion-gitops-sample-app/gitops/applications/configmap.yaml
 
 # Update:
 # - cas-endpoint: "https://your-cas-endpoint.com"
@@ -357,7 +357,7 @@ vi fusion-AgenticAssistanceSampleApp/gitops/applications/configmap.yaml
 #### **Configure CAS API Key:**
 ```bash
 # Edit Secrets
-vi fusion-AgenticAssistanceSampleApp/gitops/applications/secrets.yaml
+vi fusion-gitops-sample-app/gitops/applications/secrets.yaml
 
 # Update:
 # stringData:
@@ -521,7 +521,7 @@ After initial setup, all updates are automatic!
 ### **Making Updates:**
 ```bash
 # Update chat application
-vi fusion-AgenticAssistanceSampleApp/chat_app.py
+vi fusion-gitops-sample-app/chat_app.py
 git add .
 git commit -m "Update chat UI"
 git push

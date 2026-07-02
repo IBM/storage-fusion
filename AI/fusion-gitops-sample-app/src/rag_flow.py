@@ -11,6 +11,7 @@ from datetime import datetime
 import traceback
 
 from .cas_client import CASClient, CASSearchResult
+from .model_gateway_client import ModelGatewayClient, ModelGatewayConfig
 
 
 # Configure logging
@@ -126,14 +127,17 @@ class RAGFlowEnhanced:
         progress_callback: Optional[Callable[[ProgressUpdate], None]] = None,
         enable_detailed_attribution: bool = True,
         max_retries: int = 3,
-        timeout: int = 60
+        timeout: int = 60,
+        use_model_gateway: bool = False,
+        model_gateway_api_key: Optional[str] = None,
+        model_name: str = "granite"
     ):
         """
         Initialize enhanced RAG flow
         
         Args:
             cas_endpoint: CAS Search API endpoint
-            llm_endpoint: OpenShift AI KServe endpoint for LLM inference
+            llm_endpoint: LLM endpoint (Model Gateway or OpenShift AI KServe)
             prompt_template: Prompt template with {context} and {query} placeholders
             top_k: Number of documents to retrieve
             use_mcp: Use MCP protocol (True) or REST API (False)
@@ -143,6 +147,9 @@ class RAGFlowEnhanced:
             enable_detailed_attribution: Enable detailed source attribution with line numbers
             max_retries: Maximum number of retries for failed operations
             timeout: Request timeout in seconds
+            use_model_gateway: Use Model Gateway instead of direct KServe endpoint
+            model_gateway_api_key: API key for Model Gateway (Bearer token)
+            model_name: Model name to use with Model Gateway
         """
         self.cas_endpoint = cas_endpoint
         self.llm_endpoint = llm_endpoint
@@ -152,6 +159,8 @@ class RAGFlowEnhanced:
         self.enable_detailed_attribution = enable_detailed_attribution
         self.max_retries = max_retries
         self.timeout = timeout
+        self.use_model_gateway = use_model_gateway
+        self.model_name = model_name
         
         # Initialize CAS client with error handling
         try:
@@ -170,6 +179,23 @@ class RAGFlowEnhanced:
         except Exception as e:
             logger.error(f"Failed to initialize CAS client: {str(e)}")
             self.cas_client = None
+        
+        # Initialize Model Gateway client if enabled
+        self.model_gateway_client = None
+        if use_model_gateway and model_gateway_api_key:
+            try:
+                gateway_config = ModelGatewayConfig(
+                    base_url=llm_endpoint,
+                    api_key=model_gateway_api_key,
+                    model_name=model_name,
+                    timeout=timeout,
+                    max_retries=max_retries
+                )
+                self.model_gateway_client = ModelGatewayClient(gateway_config)
+                logger.info(f"Model Gateway client initialized: {llm_endpoint}")
+            except Exception as e:
+                logger.error(f"Failed to initialize Model Gateway client: {str(e)}")
+                self.model_gateway_client = None
         
         # Progress tracking
         self.progress_history: List[ProgressUpdate] = []
@@ -341,6 +367,78 @@ Answer:"""
     def invoke_llm_with_retry(self, prompt: str) -> str:
         """
         Invoke LLM with retry logic and error handling
+        Supports both Model Gateway and direct KServe endpoints
+        
+        Args:
+            prompt: Formatted prompt
+            
+        Returns:
+            LLM response
+        """
+        self._emit_progress(
+            ProcessingStage.LLM_INFERENCE,
+            "Invoking LLM for response generation",
+            details={"prompt_length": len(prompt), "use_model_gateway": self.use_model_gateway}
+        )
+        
+        # Use Model Gateway if configured
+        if self.use_model_gateway and self.model_gateway_client:
+            return self._invoke_via_model_gateway(prompt)
+        else:
+            return self._invoke_via_kserve(prompt)
+    
+    def _invoke_via_model_gateway(self, prompt: str) -> str:
+        """
+        Invoke LLM via Model Gateway
+        
+        Args:
+            prompt: Formatted prompt
+            
+        Returns:
+            LLM response
+        """
+        try:
+            self._emit_progress(
+                ProcessingStage.LLM_INFERENCE,
+                f"Using Model Gateway with model: {self.model_name}"
+            )
+            
+            # Use text completion endpoint
+            result = self.model_gateway_client.text_completion(
+                prompt=prompt,
+                model=self.model_name,
+                temperature=0.7,
+                max_tokens=512
+            )
+            
+            # Parse response
+            if "choices" in result:
+                llm_response = result["choices"][0].get("text", "")
+            elif "outputs" in result:
+                llm_response = result.get("outputs", [{}])[0].get("generated_text", "")
+            else:
+                llm_response = str(result)
+            
+            self._emit_progress(
+                ProcessingStage.LLM_INFERENCE,
+                "LLM response generated successfully via Model Gateway",
+                details={"response_length": len(llm_response)}
+            )
+            
+            return llm_response
+            
+        except Exception as e:
+            error_msg = f"Model Gateway inference failed: {str(e)}"
+            self._emit_progress(
+                ProcessingStage.LLM_INFERENCE,
+                "Model Gateway inference failed",
+                error=error_msg
+            )
+            raise Exception(error_msg)
+    
+    def _invoke_via_kserve(self, prompt: str) -> str:
+        """
+        Invoke LLM via direct KServe endpoint (legacy method)
         
         Args:
             prompt: Formatted prompt
@@ -349,12 +447,6 @@ Answer:"""
             LLM response
         """
         import requests
-        
-        self._emit_progress(
-            ProcessingStage.LLM_INFERENCE,
-            "Invoking LLM for response generation",
-            details={"prompt_length": len(prompt)}
-        )
         
         # Extract base URL
         if "/v1/" in self.llm_endpoint:

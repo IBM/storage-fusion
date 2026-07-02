@@ -8,7 +8,13 @@ global:
 operator:
   enabled: true
   namespace: external-secrets-operator
-  
+
+  # Create ExternalSecretsConfig resource
+  # Set to false during initial deployment (Phase 1) to avoid CRD dependency issues
+  # Set to true after operator is running and CRDs are established (Phase 2)
+  # The deployment script handles this automatically in two phases
+  createExternalSecretsConfig: false
+
   subscription:
     # Use Red Hat certified operator for OpenShift
     channel: stable-v1

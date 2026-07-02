@@ -53,8 +53,6 @@ vault:
 
   # Vault configuration
   config:
-    # Seal type: awskms, azurekeyvault, gcpckms, transit, shamir
-    seal: shamir
     # UI enabled
     ui: true
     # Listener configuration
@@ -70,6 +68,30 @@ vault:
     # Service registration
     service_registration:
       kubernetes: {}
+
+  # Seal configuration
+  # Determines how Vault encrypts the master key
+  seal:
+    # Seal type: "shamir" or "awskms"
+    # - shamir: Traditional Shamir's Secret Sharing (requires manual unsealing)
+    # - awskms: AWS KMS auto-unseal (automatic unsealing using AWS KMS)
+    type: "shamir"
+    
+    # AWS KMS configuration (only used when type is "awskms")
+    awskms:
+      # AWS region where the KMS key is located
+      region: "us-east-1"
+      # KMS key ID or ARN
+      # Examples:
+      #   - Key ID: "12345678-1234-1234-1234-123456789012"
+      #   - Key ARN: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+      #   - Alias: "alias/vault-unseal"
+      kmsKeyId: ""
+      # Optional: Custom AWS endpoint (for testing or non-standard regions)
+      endpoint: ""
+      # AWS credentials secret name (must contain 'access-key-id' and 'secret-access-key')
+      # If not specified, uses IAM role or instance profile
+      credentialsSecret: "vault-aws-kms-credentials"
 
   # Resource limits and requests
   resources:
@@ -203,5 +225,7 @@ labels: {}
 
 # Additional annotations
 annotations: {}
+
+# Made with Bob
 
 # Made with Bob

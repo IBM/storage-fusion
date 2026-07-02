@@ -1,4 +1,4 @@
-# Quickstart: Red Hat OpenShift GitOps (ArgoCD) on IBM Fusion
+# Quickstart: GitOps (ArgoCD) on IBM Fusion
 
 ## The Challenge: GitOps Setup Complexity
 
@@ -6,7 +6,7 @@ Picture this: Your team has just been tasked with deploying a new AI/ML pipeline
 
 Not quite. Setting up a production-ready GitOps platform traditionally involves:
 
-- **Days of operator installations**: Manually configuring Red Hat OpenShift GitOps, HashiCorp Vault, and External Secrets Operator
+- **Days of operator installations**: Manually configuring GitOps, HashiCorp Vault, and External Secrets Operator
 - **Configuration maze**: Wrestling with operator subscriptions, waiting for CRDs to become available, and debugging RBAC issues
 - **Storage headaches**: Setting up persistent storage with appropriate performance characteristics for each component
 - **Integration challenges**: Ensuring all components communicate securely and work together seamlessly
@@ -25,7 +25,7 @@ Whether you're deploying AI/ML workloads, managing microservices, or orchestrati
 
 This quickstart delivers three integrated components that work seamlessly together:
 
-### 🚀 Red Hat OpenShift GitOps (ArgoCD)
+### 🚀 GitOps (ArgoCD)
 Enterprise-grade continuous delivery with declarative GitOps workflows. Deploy applications, manage configurations, and maintain consistency across environments, all from Git.
 
 **Key capabilities:**
@@ -106,7 +106,7 @@ git remote -v
 
 All commands should be run from the `quickstarts/fusion-gitops` directory.
 
-### Step 1: Deploy Red Hat OpenShift GitOps
+### Step 1: Deploy GitOps
 
 Deploy ArgoCD as the foundation for your GitOps platform:
 
@@ -117,7 +117,7 @@ Deploy ArgoCD as the foundation for your GitOps platform:
 
 **What happens during deployment:**
 1. Creates `openshift-gitops-operator` namespace
-2. Installs Red Hat OpenShift GitOps operator
+2. Installs GitOps operator
 3. Waits for operator to be ready
 4. Deploys ArgoCD instance with production-ready defaults
 5. Configures persistent storage for ArgoCD components
@@ -153,10 +153,13 @@ Choose the appropriate values file for your environment:
 
 ```bash
 # Development/Testing (minimal resources)
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-minimal.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/dev/values.yaml
+
+# Staging (moderate resources for pre-production testing)
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/stage/values.yaml
 
 # Production (HA with persistent storage)
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-production.yaml
+./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/prod/values.yaml
 
 # OpenShift Data Foundation storage
 ./scripts/deploy-gitops.sh -f helm/fusion-gitops/values-odf.yaml
@@ -304,7 +307,7 @@ The Fusion GitOps Quickstart creates a layered architecture optimized for Fusion
 │                   Fusion HCI Cluster                     │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐  │
-│  │         Red Hat OpenShift GitOps (ArgoCD)          │  │
+│  │                 GitOps (ArgoCD)                    │  │
 │  ├────────────────────────────────────────────────────┤  │
 │  │  • Continuous Delivery                             │  │
 │  │  • Application Lifecycle Management                │  │
@@ -388,7 +391,7 @@ Remove deployed components safely using the provided cleanup scripts. Always cle
 
 ## Conclusion
 
-The Fusion GitOps Quickstart transforms what used to be a multi-day configuration project into a quick automated deployment. By combining Red Hat OpenShift GitOps, HashiCorp Vault, and External Secrets Operator with production-ready defaults and comprehensive automation, it eliminates the complexity of GitOps platform setup.
+The Fusion GitOps Quickstart transforms what used to be a multi-day configuration project into a quick automated deployment. By combining GitOps, HashiCorp Vault, and External Secrets Operator with production-ready defaults and comprehensive automation, it eliminates the complexity of GitOps platform setup.
 
 **What you've accomplished:**
 - Deployed enterprise-grade GitOps platform in minutes

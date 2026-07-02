@@ -1,0 +1,22 @@
+{{- if and .Values.secretStores.vault.enabled .Values.secretStores.vault.rbac.createTokenReviewBinding }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-tokenreview-binding
+  labels:
+    {{- include "external-secrets-operator.labels" . | nindent 4 }}
+  annotations:
+    "argocd.argoproj.io/sync-wave": "1"
+    "helm.sh/resource-policy": keep
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.secretStores.vault.rbac.vaultServiceAccount }}
+  namespace: {{ .Values.secretStores.vault.rbac.vaultNamespace }}
+{{- end }}
+
+# Made with Bob

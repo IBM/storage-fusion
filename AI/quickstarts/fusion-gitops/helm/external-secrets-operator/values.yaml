@@ -16,7 +16,12 @@ operator:
   enabled: true
   # Operator namespace
   namespace: external-secrets-operator
-  
+
+  # Create ExternalSecretsConfig resource
+  # Set to false during initial deployment (Phase 1) to avoid CRD dependency issues
+  # Set to true after operator is running and CRDs are established (Phase 2)
+  createExternalSecretsConfig: false
+
   # Operator subscription settings
   subscription:
     # Channel for operator updates
@@ -58,7 +63,40 @@ secretStores:
     version: "v2"
     # Namespace (Vault Enterprise)
     namespace: ""
-    
+
+    # Auto-initialize Vault configuration for External Secrets
+    # When enabled, a Job will automatically configure Vault with:
+    # - Kubernetes auth method
+    # - External Secrets policy
+    # - Kubernetes auth role
+    autoInitialize: false
+
+    # Vault seal type determines which secret contains the root token
+    # Options: "shamir" or "awskms"
+    # - "shamir": Uses Shamir's Secret Sharing (default) -> vault-unseal-keys
+    # - "awskms": Uses AWS KMS auto-unseal -> vault-recovery-keys
+    sealType: "shamir"
+
+    # Secret containing Vault root token (optional - overrides sealType)
+    # If not set, will be derived from sealType:
+    # - shamir: vault-unseal-keys
+    # - awskms: vault-recovery-keys
+    tokenSecret: ""
+
+    # RBAC configuration for Vault token review
+    rbac:
+      # Create ClusterRoleBinding for Vault to perform TokenReview
+      # Set to false when using default Kubernetes auth configuration
+      createTokenReviewBinding: false
+      # Vault service account details
+      vaultServiceAccount: "vault"
+      vaultNamespace: "vault"
+
+    # Init job configuration
+    initJob:
+      # Container image for Vault initialization
+      image: "docker.io/hashicorp/vault:1.15.0"
+
     # Authentication method
     auth:
       # Method: kubernetes, token, appRole, jwt, cert, ldap, userPass, aws, gcp, azure
@@ -70,10 +108,12 @@ secretStores:
         mountPath: "kubernetes"
         # Kubernetes role
         role: "external-secrets"
+        # Token TTL
+        ttl: "24h"
         # Service account to use
         serviceAccountRef:
-          name: external-secrets-operator
-          namespace: external-secrets-operator
+          name: external-secrets
+          namespace: external-secrets
       
       # Token auth configuration (alternative)
       token:
@@ -107,7 +147,12 @@ secretStores:
         name: vault-client-cert
         key: tls.key
         namespace: external-secrets-operator
-  
+
+    # NetworkPolicy configuration
+    # Allows External Secrets pods to reach Vault on port 8200
+    networkPolicy:
+      enabled: true
+
   # AWS Secrets Manager backend
   aws:
     enabled: false
@@ -116,7 +161,12 @@ secretStores:
     region: "us-east-1"
     # Service (SecretsManager or ParameterStore)
     service: SecretsManager
-    
+
+    # NetworkPolicy configuration
+    # Allows External Secrets pods to reach AWS Secrets Manager
+    networkPolicy:
+      enabled: true
+
     # Authentication method
     auth:
       # Method: credentials, irsa (IAM Roles for Service Accounts)
@@ -147,7 +197,12 @@ secretStores:
     serviceUrl: "https://your-instance.secrets-manager.cloud.ibm.com"
     # IBM Cloud region
     region: "us-south"
-    
+
+    # NetworkPolicy configuration
+    # Allows External Secrets pods to reach IBM Cloud Secrets Manager
+    networkPolicy:
+      enabled: true
+
     # Authentication method
     auth:
       # Method: apiKey, containerAuth

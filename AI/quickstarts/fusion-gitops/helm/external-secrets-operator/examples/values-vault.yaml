@@ -8,7 +8,13 @@ global:
 operator:
   enabled: true
   namespace: external-secrets-operator
-  
+
+  # Create ExternalSecretsConfig resource
+  # Set to false during initial deployment (Phase 1) to avoid CRD dependency issues
+  # Set to true after operator is running and CRDs are established (Phase 2)
+  # The deployment script handles this automatically in two phases
+  createExternalSecretsConfig: false
+
   subscription:
     # Use Red Hat certified operator for OpenShift
     channel: stable-v1
@@ -25,15 +31,46 @@ secretStores:
     server: "http://vault.vault.svc.cluster.local:8200"
     path: "secret"
     version: "v2"
-    
+
+    # Enable automatic Vault configuration
+    autoInitialize: true
+
+    # Vault seal type determines which secret contains the root token
+    # Options: "shamir" or "awskms"
+    # - "shamir": Uses Shamir's Secret Sharing (default) -> vault-unseal-keys
+    # - "awskms": Uses AWS KMS auto-unseal -> vault-recovery-keys
+    sealType: "shamir"
+
+    # Secret containing Vault root token (optional - overrides sealType)
+    # If not set, will be derived from sealType automatically
+    # Leave empty to use automatic selection based on sealType
+    tokenSecret: ""
+
+    # Enable automatic RBAC creation
+    rbac:
+      # Set to true to allow Vault to perform TokenReview operations
+      createTokenReviewBinding: true
+      vaultServiceAccount: "vault"
+      vaultNamespace: "vault"
+
+    # Init job configuration
+    initJob:
+      image: "docker.io/hashicorp/vault:1.15.0"
+
     auth:
       method: kubernetes
       kubernetes:
         mountPath: "kubernetes"
         role: "external-secrets"
+        ttl: "24h"
         serviceAccountRef:
-          name: external-secrets-operator
-          namespace: external-secrets-operator
+          name: external-secrets
+          namespace: external-secrets
+
+    # NetworkPolicy configuration
+    # Allows External Secrets pods to reach Vault on port 8200
+    networkPolicy:
+      enabled: true
 
 # Enable example
 examples:

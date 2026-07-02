@@ -252,10 +252,10 @@ if [ "$DRY_RUN" = false ]; then
     fi
 fi
 
-# Deploy Phase 1: Operator only (disable SecretStores)
+# Deploy Phase 1: Operator only (disable SecretStores and ExternalSecretsConfig)
 print_info "Phase 1: Deploying External Secrets Operator..."
 echo ""
-HELM_CMD_PHASE1="$HELM_CMD --set secretStores.vault.enabled=false --set secretStores.aws.enabled=false --set secretStores.ibmCloud.enabled=false"
+HELM_CMD_PHASE1="$HELM_CMD --set operator.createExternalSecretsConfig=false --set secretStores.vault.enabled=false --set secretStores.aws.enabled=false --set secretStores.ibmCloud.enabled=false"
 eval $HELM_CMD_PHASE1
 
 if [ "$DRY_RUN" = false ]; then
@@ -422,31 +422,86 @@ if [ "$DRY_RUN" = false ]; then
                             if $CLI get clustersecretstores.external-secrets.io --all-namespaces &> /dev/null; then
                                 print_info "External Secrets Operator is fully ready for SecretStore deployment"
                                 
-                                # Phase 2: Deploy SecretStores with retry mechanism
-                                print_info "Phase 2: Deploying SecretStores..."
-                                MAX_RETRIES=3
-                                RETRY_COUNT=0
-                                PHASE2_SUCCESS=false
+                                # Phase 2a: Deploy ExternalSecretsConfig
+                                print_info "Phase 2a: Deploying ExternalSecretsConfig..."
+                                HELM_CMD_PHASE2A="$HELM_CMD --set operator.createExternalSecretsConfig=true --set secretStores.vault.enabled=false --set secretStores.aws.enabled=false --set secretStores.ibmCloud.enabled=false"
                                 
-                                while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-                                    if eval $HELM_CMD; then
-                                        PHASE2_SUCCESS=true
-                                        break
-                                    else
-                                        RETRY_COUNT=$((RETRY_COUNT + 1))
-                                        if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                                            print_warn "Phase 2 deployment failed, retrying in 15 seconds... (Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
-                                            sleep 15
-                                        else
-                                            print_error "Phase 2 deployment failed after $MAX_RETRIES attempts"
-                                            exit 1
-                                        fi
-                                    fi
-                                done
-                                
-                                if [ "$PHASE2_SUCCESS" = true ]; then
+                                if eval $HELM_CMD_PHASE2A; then
+                                    print_info "ExternalSecretsConfig deployed successfully"
                                     echo ""
-                                    print_info "Phase 2 complete - SecretStores deployed successfully"
+                                    
+                                    # Wait for webhook service to be ready
+                                    print_info "Waiting for External Secrets webhook service..."
+                                    WEBHOOK_TIMEOUT=120
+                                    WEBHOOK_ELAPSED=0
+                                    WEBHOOK_NAMESPACE="external-secrets"  # Webhook is in the operator namespace
+                                    
+                                    while [ $WEBHOOK_ELAPSED -lt $WEBHOOK_TIMEOUT ]; do
+                                        # Check if webhook service exists
+                                        if $CLI get service external-secrets-webhook -n $WEBHOOK_NAMESPACE &> /dev/null; then
+                                            print_info "Webhook service found in namespace: $WEBHOOK_NAMESPACE"
+                                            
+                                            # Check if webhook endpoints are ready
+                                            ENDPOINTS=$($CLI get endpoints external-secrets-webhook -n $WEBHOOK_NAMESPACE -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null || echo "")
+                                            if [ -n "$ENDPOINTS" ]; then
+                                                print_info "Webhook service has ready endpoints"
+                                                break
+                                            else
+                                                echo -n "."
+                                            fi
+                                        else
+                                            echo -n "."
+                                        fi
+                                        
+                                        sleep 5
+                                        WEBHOOK_ELAPSED=$((WEBHOOK_ELAPSED + 5))
+                                    done
+                                    
+                                    if [ $WEBHOOK_ELAPSED -ge $WEBHOOK_TIMEOUT ]; then
+                                        print_warn "Webhook service not ready after ${WEBHOOK_TIMEOUT}s, but continuing..."
+                                        print_warn "Phase 2b deployment may fail if webhook is not available"
+                                    else
+                                        print_info "External Secrets webhook service is ready"
+                                    fi
+                                    echo ""
+                                    
+                                    # Wait additional time for webhook to be fully operational
+                                    print_info "Waiting additional 15 seconds for webhook to be fully operational..."
+                                    sleep 15
+                                    echo ""
+                                    
+                                    # Phase 2b: Deploy SecretStores with retry mechanism
+                                    print_info "Phase 2b: Deploying SecretStores..."
+                                    MAX_RETRIES=3
+                                    RETRY_COUNT=0
+                                    PHASE2B_SUCCESS=false
+                                    
+                                    # Enable both ExternalSecretsConfig and SecretStores
+                                    HELM_CMD_PHASE2B="$HELM_CMD --set operator.createExternalSecretsConfig=true"
+                                    
+                                    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                                        if eval $HELM_CMD_PHASE2B; then
+                                            PHASE2B_SUCCESS=true
+                                            break
+                                        else
+                                            RETRY_COUNT=$((RETRY_COUNT + 1))
+                                            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                                                print_warn "Phase 2b deployment failed, retrying in 15 seconds... (Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+                                                sleep 15
+                                            else
+                                                print_error "Phase 2b deployment failed after $MAX_RETRIES attempts"
+                                                exit 1
+                                            fi
+                                        fi
+                                    done
+                                    
+                                    if [ "$PHASE2B_SUCCESS" = true ]; then
+                                        echo ""
+                                        print_info "Phase 2 complete - SecretStores and ExternalSecretsConfig deployed successfully"
+                                    fi
+                                else
+                                    print_error "Phase 2a failed - could not deploy ExternalSecretsConfig"
+                                    exit 1
                                 fi
                             else
                                 print_error "Final pre-deployment check failed"
@@ -486,8 +541,6 @@ if [ "$DRY_RUN" = false ]; then
         echo "     See examples in: $CHART_DIR/examples/"
         echo ""
     fi
-    
-    print_info "For complete documentation, see: $CHART_DIR/README.md"
 fi
 
 # Made with Bob

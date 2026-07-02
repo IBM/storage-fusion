@@ -68,7 +68,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: config-init
-          image: busybox:latest
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
           command:
             - sh
             - -c
@@ -96,8 +96,19 @@ spec:
                 namespace      = "{{ include "vault.namespace" . }}"
                 pod_name       = "${VAULT_K8S_POD_NAME}"
               }
+              {{- if eq .Values.vault.seal.type "awskms" }}
+              
+              seal "awskms" {
+                region     = "{{ .Values.vault.seal.awskms.region }}"
+                kms_key_id = "{{ .Values.vault.seal.awskms.kmsKeyId }}"
+                {{- if .Values.vault.seal.awskms.endpoint }}
+                endpoint   = "{{ .Values.vault.seal.awskms.endpoint }}"
+                {{- end }}
+              }
+              {{- else }}
               
               seal "shamir" {}
+              {{- end }}
               EOF
           env:
             - name: VAULT_K8S_POD_NAME
@@ -152,6 +163,24 @@ spec:
                   fieldPath: metadata.name
             - name: VAULT_CLUSTER_ADDR
               value: "https://$(HOSTNAME).{{ .Values.vault.name }}-internal.{{ include "vault.namespace" . }}.svc.cluster.local:8201"
+            {{- if eq .Values.vault.seal.type "awskms" }}
+            - name: VAULT_SEAL_MIGRATION
+              value: "1"
+            {{- if .Values.vault.seal.awskms.credentialsSecret }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.vault.seal.awskms.credentialsSecret }}
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.vault.seal.awskms.credentialsSecret }}
+                  key: secret-access-key
+            {{- end }}
+            - name: AWS_REGION
+              value: "{{ .Values.vault.seal.awskms.region }}"
+            {{- end }}
           ports:
             - containerPort: 8200
               name: http
@@ -235,8 +264,19 @@ data:
       namespace      = "{{ include "vault.namespace" . }}"
       pod_name       = "$(VAULT_K8S_POD_NAME)"
     }
+    {{- if eq .Values.vault.seal.type "awskms" }}
+    
+    seal "awskms" {
+      region     = "{{ .Values.vault.seal.awskms.region }}"
+      kms_key_id = "{{ .Values.vault.seal.awskms.kmsKeyId }}"
+      {{- if .Values.vault.seal.awskms.endpoint }}
+      endpoint   = "{{ .Values.vault.seal.awskms.endpoint }}"
+      {{- end }}
+    }
+    {{- else }}
     
     seal "shamir" {}
+    {{- end }}
 ---
 apiVersion: v1
 kind: Service

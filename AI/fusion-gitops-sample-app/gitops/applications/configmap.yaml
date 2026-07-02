@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llmops-config
+  namespace: llmops-platform
+  labels:
+    app.kubernetes.io/name: llmops-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+data:
+  # CAS Configuration
+  cas-endpoint: "cas-endpoint"
+  cas-vector-store-id: "cas-vector-store-id" # Optional - will auto-discover if empty
+  cas-use-mcp: "false" # Use REST API (false) or MCP protocol (true) - REST recommended
+
+  # Model Gateway Configuration
+  model-gateway-endpoint: "model-gateway-endpoint"
+  model-name: "model-name" # Model name to use (granite, mistral, etc.)
+
+  # Application Settings
+  default-top-k: "5"

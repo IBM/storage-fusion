@@ -1,0 +1,122 @@
+# Example values file for Vault with AWS KMS auto-unseal
+# This configuration enables automatic unsealing using AWS KMS
+#
+# Usage:
+#   helm install vault-operator ./helm/vault-operator -f values-awskms-example.yaml
+#
+# Or with the deployment script:
+#   ./scripts/deploy-secret-manager.sh -f values-awskms-example.yaml
+
+# Global settings
+global:
+  openshift: true
+  namespace: vault
+
+# Operator configuration
+operator:
+  enabled: true
+  namespace: vault
+
+# Vault instance configuration
+vault:
+  enabled: true
+  name: vault
+  replicas: 3
+  version: "1.15.0"
+
+  # Storage configuration
+  storage:
+    storageClassName: "ocs-storagecluster-ceph-rbd"
+    size: 10Gi
+    accessMode: ReadWriteOnce
+
+  # Vault configuration
+  config:
+    ui: true
+
+  # Seal configuration - AWS KMS auto-unseal
+  seal:
+    type: "awskms"
+    
+    awskms:
+      # AWS region where the KMS key is located
+      region: "us-east-1"
+      
+      # KMS key ID, ARN, or alias
+      # Examples:
+      #   - Key ID: "12345678-1234-1234-1234-123456789012"
+      #   - Key ARN: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+      #   - Alias: "alias/vault-unseal"
+      kmsKeyId: "alias/vault-unseal"
+      
+      # Optional: Custom AWS endpoint (for testing or non-standard regions)
+      # endpoint: "https://kms.us-east-1.amazonaws.com"
+      
+      # AWS credentials secret name
+      # This secret must contain:
+      #   - access-key-id: AWS access key ID
+      #   - secret-access-key: AWS secret access key
+      #
+      # Create the secret before deploying:
+      #   kubectl create secret generic vault-aws-kms-credentials \
+      #     --from-literal=access-key-id=YOUR_ACCESS_KEY_ID \
+      #     --from-literal=secret-access-key=YOUR_SECRET_ACCESS_KEY \
+      #     -n vault
+      #
+      # Alternatively, use IAM roles for service accounts (IRSA) on EKS
+      # or instance profiles on EC2, and omit this field
+      credentialsSecret: "vault-aws-kms-credentials"
+
+  # Resource limits and requests
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+  # Vault service configuration
+  service:
+    type: ClusterIP
+    port: 8200
+    targetPort: 8200
+
+  # Route configuration for OpenShift
+  route:
+    enabled: true
+    host: ""
+    tls:
+      enabled: true
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 100
+  fsGroup: 1000
+  capabilities:
+    add:
+      - IPC_LOCK
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Affinity rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - vault
+          topologyKey: kubernetes.io/hostname
+
+# Made with Bob

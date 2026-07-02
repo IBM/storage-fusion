@@ -8,7 +8,6 @@ This guide provides comprehensive instructions for deploying and managing Extern
 - [Prerequisites](#prerequisites)
 - [Deployment Guide](#deployment-guide)
 - [Validation](#validation)
-- [Post-Deployment Configuration](#post-deployment-configuration)
 - [Cleanup Guide](#cleanup-guide)
 - [Troubleshooting](#troubleshooting)
 - [Related Documentation](#related-documentation)
@@ -17,24 +16,25 @@ This guide provides comprehensive instructions for deploying and managing Extern
 
 The External Secrets Operator deployment automation consists of two main scripts:
 
-- **`deploy-external-secrets.sh`**: Deploys External Secrets Operator with HashiCorp Vault backend support
+- **`deploy-external-secrets.sh`**: Deploys External Secrets Operator with support for multiple secret backends
 - **`cleanup-external-secrets.sh`**: Safely removes External Secrets Operator and associated resources
 
-These scripts provide a streamlined way to deploy External Secrets Operator for synchronizing secrets from HashiCorp Vault into Kubernetes secrets. The deployment includes:
+These scripts provide a streamlined way to deploy External Secrets Operator for synchronizing secrets from external secret management systems into Kubernetes secrets. The deployment includes:
 
 - Red Hat certified External Secrets Operator installation
-- HashiCorp Vault backend integration
+- Multiple backend support: HashiCorp Vault, AWS Secrets Manager, IBM Cloud Secrets Manager
 - Two-phase deployment process for reliable CRD initialization
 - Automatic validation and health checks
 - Configurable SecretStore resources
 
 ### What is External Secrets Operator?
 
-External Secrets Operator synchronizes secrets from HashiCorp Vault into Kubernetes secrets. This enables:
+External Secrets Operator synchronizes secrets from external secret management systems into Kubernetes secrets. This enables:
 
-- **Centralized Secret Management**: Store secrets in enterprise-grade Vault
+- **Centralized Secret Management**: Store secrets in enterprise-grade secret management systems
 - **GitOps-Friendly**: Manage secret references in Git without exposing values
-- **Audit and Compliance**: Leverage Vault audit logs and access controls
+- **Audit and Compliance**: Leverage backend audit logs and access controls
+- **Multi-Cloud Support**: Use AWS, IBM Cloud, or on-premises Vault solutions
 
 ## Prerequisites
 
@@ -80,6 +80,12 @@ quickstarts/fusion-gitops/scripts/deploy-external-secrets.sh
 
 # Deploy with Vault backend
 ./scripts/deploy-external-secrets.sh --backend vault
+
+# Deploy with AWS Secrets Manager
+./scripts/deploy-external-secrets.sh --backend aws
+
+# Deploy with IBM Cloud Secrets Manager
+./scripts/deploy-external-secrets.sh --backend ibmcloud
 ```
 
 ### Available Options
@@ -87,7 +93,7 @@ quickstarts/fusion-gitops/scripts/deploy-external-secrets.sh
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--namespace` | `-n` | Operator namespace | `external-secrets-operator` |
-| `--backend` | `-b` | Secret backend: standalone, vault | Required |
+| `--backend` | `-b` | Secret backend: standalone, vault, aws, ibmcloud | Required |
 | `--values-file` | `-f` | Custom values file | Auto-selected based on backend |
 | `--release-name` | | Helm release name | `external-secrets-operator` |
 | `--standalone` | | Deploy operator only (no backend) | `false` |
@@ -99,7 +105,9 @@ quickstarts/fusion-gitops/scripts/deploy-external-secrets.sh
 | Backend | Description | Use Case |
 |---------|-------------|----------|
 | **standalone** | Operator only, no external vault | Testing, development, learning |
-| **vault** | HashiCorp Vault integration | Enterprise secret management |
+| **vault** | HashiCorp Vault integration | On-premises enterprise secret management |
+| **aws** | AWS Secrets Manager integration | AWS cloud-native deployments |
+| **ibmcloud** | IBM Cloud Secrets Manager integration | IBM Cloud deployments |
 
 ### Deployment Examples
 
@@ -143,7 +151,60 @@ Deploy with Vault backend integration:
 - ClusterSecretStore configured for Vault
 - Kubernetes service account for Vault authentication
 
-#### Example 3: Custom Namespace
+#### Example 3: Deploy with AWS Secrets Manager
+
+Deploy with AWS Secrets Manager backend:
+
+```bash
+./scripts/deploy-external-secrets.sh --backend aws
+```
+
+**Prerequisites**:
+- AWS account with Secrets Manager enabled
+- AWS credentials (Access Key ID and Secret Access Key) or IRSA configured
+- Appropriate IAM permissions for secret access
+
+**What gets deployed**:
+- External Secrets Operator
+- ClusterSecretStore configured for AWS Secrets Manager
+- Network policies for AWS API access
+
+**Required credentials**:
+```bash
+# Create AWS credentials secret
+oc create secret generic aws-credentials \
+  -n external-secrets-operator \
+  --from-literal=access-key-id=YOUR_ACCESS_KEY_ID \
+  --from-literal=secret-access-key=YOUR_SECRET_ACCESS_KEY
+```
+
+#### Example 4: Deploy with IBM Cloud Secrets Manager
+
+Deploy with IBM Cloud Secrets Manager backend:
+
+```bash
+./scripts/deploy-external-secrets.sh --backend ibmcloud
+```
+
+**Prerequisites**:
+- IBM Cloud account with Secrets Manager instance
+- IBM Cloud API key with access to Secrets Manager
+- Secrets Manager instance URL
+
+**What gets deployed**:
+- External Secrets Operator
+- ClusterSecretStore configured for IBM Cloud Secrets Manager
+- Network policies for IBM Cloud API access
+
+**Required credentials**:
+```bash
+# Create IBM Cloud credentials secret
+oc create secret generic ibm-cloud-credentials \
+  -n external-secrets-operator \
+  --from-literal=api-key=YOUR_IBM_CLOUD_API_KEY
+```
+
+#### Example 5: Custom Namespace
 
 Deploy to a specific namespace:
 
@@ -153,7 +214,7 @@ Deploy to a specific namespace:
   --namespace my-secrets-namespace
 ```
 
-#### Example 4: Custom Values File
+#### Example 6: Custom Values File
 
 Deploy with custom configuration:
 
@@ -163,7 +224,7 @@ Deploy with custom configuration:
   --values-file my-custom-values.yaml
 ```
 
-#### Example 5: Dry Run (Preview)
+#### Example 7: Dry Run (Preview)
 
 Preview what would be deployed without making changes:
 
@@ -299,7 +360,7 @@ kubectl get pods -n external-secrets-operator -l app=external-secrets-operator
 
 ```bash
 # Check if CRDs are installed
-kubectl get crd | grep external-secrets
+oc get crd | grep external-secrets
 
 # Expected output:
 # clustersecretstores.external-secrets.io
@@ -313,14 +374,14 @@ kubectl get crd | grep external-secrets
 
 ```bash
 # Check ClusterSecretStore
-kubectl get clustersecretstore
+oc get clustersecretstore
 
 # Expected output (for Vault backend):
 # NAME                    AGE   STATUS   CAPABILITIES   READY
 # vault-backend           5m    Valid    ReadWrite      True
 
 # Get detailed status
-kubectl describe clustersecretstore vault-backend
+oc describe clustersecretstore vault-backend
 ```
 
 #### Verify Operator Logs
@@ -335,75 +396,6 @@ kubectl logs -n external-secrets-operator -l app=external-secrets-operator
 # - "controller started" messages
 # - No error messages
 # - Successful reconciliation logs
-```
-
-## Post-Deployment Configuration
-
-### Standalone Mode
-
-**Use Case**: Testing, development, learning
-
-**Configuration**:
-```bash
-./scripts/deploy-external-secrets.sh --standalone
-```
-
-**What's deployed**:
-- ✓ External Secrets Operator
-- ✗ No ClusterSecretStore
-- ✗ No backend integration
-
-**Next steps**:
-1. Verify operator is running
-2. Test operator functionality
-3. Add backend integration when ready
-
-### HashiCorp Vault Backend
-
-**Use Case**: Enterprise secret management, on-premises deployments
-
-**Prerequisites**:
-```bash
-# Vault must be accessible from the cluster
-# Example: http://vault.vault.svc.cluster.local:8200
-
-# Kubernetes auth must be configured in Vault
-vault auth enable kubernetes
-vault write auth/kubernetes/config \
-  kubernetes_host="https://kubernetes.default.svc:443"
-
-# Create a policy for secret access
-vault policy write external-secrets - <<EOF
-path "secret/data/*" {
-  capabilities = ["read"]
-}
-EOF
-
-# Create a role
-vault write auth/kubernetes/role/external-secrets \
-  bound_service_account_names=external-secrets-operator \
-  bound_service_account_namespaces=external-secrets-operator \
-  policies=external-secrets \
-  ttl=24h
-```
-
-**Deployment**:
-```bash
-./scripts/deploy-external-secrets.sh --backend vault
-```
-
-**Configuration** (values-vault.yaml):
-```yaml
-secretStores:
-  vault:
-    enabled: true
-    server: "http://vault.vault.svc.cluster.local:8200"
-    path: "secret"
-    version: "v2"
-    auth:
-      kubernetes:
-        mountPath: "kubernetes"
-        role: "external-secrets"
 ```
 
 ## Cleanup Guide
@@ -549,11 +541,11 @@ The cleanup script removes resources in the following order:
 
 **To manually remove CRDs** (only if no other instances exist):
 ```bash
-kubectl delete crd externalsecrets.external-secrets.io
-kubectl delete crd secretstores.external-secrets.io
-kubectl delete crd clustersecretstores.external-secrets.io
-kubectl delete crd clusterexternalsecrets.external-secrets.io
-kubectl delete crd pushsecrets.external-secrets.io
+oc delete crd externalsecrets.external-secrets.io
+oc delete crd secretstores.external-secrets.io
+oc delete crd clustersecretstores.external-secrets.io
+oc delete crd clusterexternalsecrets.external-secrets.io
+oc delete crd pushsecrets.external-secrets.io
 ```
 
 > **Warning**: Removing CRDs will delete ALL ExternalSecret and SecretStore resources cluster-wide, even in other namespaces!
@@ -634,17 +626,17 @@ CRD exists but is not ready to accept resources
 **Solution**:
 ```bash
 # Check CRD status
-kubectl get crd clustersecretstores.external-secrets.io -o yaml
+oc get crd clustersecretstores.external-secrets.io -o yaml
 
 # Check CRD conditions
-kubectl get crd clustersecretstores.external-secrets.io \
+oc get crd clustersecretstores.external-secrets.io \
   -o jsonpath='{.status.conditions}'
 
 # Wait longer and retry
 # The script includes a 45-second wait, but some clusters may need more time
 
 # Manually verify API server registration
-kubectl api-resources --api-group=external-secrets.io
+oc api-resources --api-group=external-secrets.io
 ```
 
 #### Issue: Phase 2 Deployment Failed
@@ -657,10 +649,10 @@ Error: Phase 2 deployment failed after 3 attempts
 **Solution**:
 ```bash
 # Check if CRDs are fully ready
-kubectl get crd clustersecretstores.external-secrets.io
+oc get crd clustersecretstores.external-secrets.io
 
 # Verify API server can accept resources
-kubectl get clustersecretstores.external-secrets.io --all-namespaces
+oc get clustersecretstores.external-secrets.io --all-namespaces
 
 # Check operator logs for errors
 oc logs -n external-secrets-operator -l app=external-secrets-operator
@@ -681,7 +673,7 @@ ClusterSecretStore shows STATUS: Invalid or READY: False
 **Solution**:
 ```bash
 # Check ClusterSecretStore status
-kubectl describe clustersecretstore <name>
+oc describe clustersecretstore <name>
 
 # Common issues:
 # 1. Backend not accessible
@@ -690,11 +682,33 @@ kubectl describe clustersecretstore <name>
 
 # For Vault backend:
 # - Verify Vault is accessible
-kubectl exec -n external-secrets-operator <operator-pod> -- \
+oc exec -n external-secrets-operator <operator-pod> -- \
   curl -v http://vault.vault.svc.cluster.local:8200/v1/sys/health
 
 # - Check Vault authentication
-kubectl logs -n external-secrets-operator -l app=external-secrets-operator | grep vault
+oc logs -n external-secrets-operator -l app=external-secrets-operator | grep vault
+
+# For AWS backend:
+# - Verify AWS credentials are correct
+oc get secret aws-credentials -n external-secrets-operator -o yaml
+
+# - Test AWS connectivity
+oc exec -n external-secrets-operator <operator-pod> -- \
+  curl -v https://secretsmanager.${AWS_REGION}.amazonaws.com
+
+# - Check AWS authentication
+oc logs -n external-secrets-operator -l app=external-secrets-operator | grep -i aws
+
+# For IBM Cloud backend:
+# - Verify IBM Cloud API key is correct
+oc get secret ibm-cloud-credentials -n external-secrets-operator -o yaml
+
+# - Test IBM Cloud connectivity
+oc exec -n external-secrets-operator <operator-pod> -- \
+  curl -v https://${IBM_INSTANCE_ID}.${IBM_REGION}.secrets-manager.appdomain.cloud
+
+# - Check IBM Cloud authentication
+oc logs -n external-secrets-operator -l app=external-secrets-operator | grep -i ibm
 ```
 
 #### Issue: ExternalSecret Not Syncing
@@ -708,7 +722,7 @@ ExternalSecret shows errors in status
 **Solution**:
 ```bash
 # Check ExternalSecret status
-kubectl describe externalsecret <name> -n <namespace>
+oc describe externalsecret <name> -n <namespace>
 
 # Check operator logs
 oc logs -n external-secrets-operator -l app=external-secrets-operator
@@ -718,11 +732,21 @@ oc logs -n external-secrets-operator -l app=external-secrets-operator
 # 2. Insufficient permissions
 # 3. Invalid secret key mapping
 
-# Verify secret exists in backend (Vault example)
+# Verify secret exists in backend
+
+# Vault example:
 vault kv get secret/data/your-secret
 
+# AWS example:
+aws secretsmanager get-secret-value \
+  --secret-id prod/myapp/database \
+  --region ${AWS_REGION}
+
+# IBM Cloud example:
+ibmcloud secrets-manager secret --secret-id myapp-database-credentials
+
 # Check SecretStore reference is correct
-kubectl get externalsecret <name> -n <namespace> -o yaml
+oc get externalsecret <name> -n <namespace> -o yaml
 ```
 
 #### Issue: Cleanup Script Stuck
@@ -736,19 +760,19 @@ Timeout waiting for pods to terminate
 **Solution**:
 ```bash
 # Force delete stuck resources
-kubectl delete externalsecret --all -n external-secrets-operator --force --grace-period=0
+oc delete externalsecret --all -n external-secrets-operator --force --grace-period=0
 
 # Remove finalizers from ClusterSecretStores
-kubectl patch clustersecretstore <name> \
+oc patch clustersecretstore <name> \
   -p '{"metadata":{"finalizers":[]}}' --type=merge
 
 # Force delete namespace
-kubectl delete namespace external-secrets-operator --force --grace-period=0
+oc delete namespace external-secrets-operator --force --grace-period=0
 
 # If namespace is stuck in Terminating state
-kubectl get namespace external-secrets-operator -o json | \
+oc get namespace external-secrets-operator -o json | \
   jq '.spec.finalizers = []' | \
-  kubectl replace --raw "/api/v1/namespaces/external-secrets-operator/finalize" -f -
+  oc replace --raw "/api/v1/namespaces/external-secrets-operator/finalize" -f -
 ```
 
 ### Debug Mode
@@ -763,7 +787,7 @@ bash -x ./scripts/deploy-external-secrets.sh --backend vault
 oc get all -n external-secrets-operator
 
 # Check all custom resources
-kubectl get externalsecret,secretstore,clustersecretstore --all-namespaces
+oc get externalsecret,secretstore,clustersecretstore --all-namespaces
 
 # Check events
 oc get events -n external-secrets-operator --sort-by='.lastTimestamp'
@@ -781,7 +805,7 @@ If you encounter issues not covered here:
 2. **Check Resource Status**:
    ```bash
    oc get all -n external-secrets-operator
-   kubectl get externalsecret,secretstore,clustersecretstore --all-namespaces
+   oc get externalsecret,secretstore,clustersecretstore --all-namespaces
    ```
 
 3. **Check Events**:
@@ -793,7 +817,22 @@ If you encounter issues not covered here:
 
 ### External Resources
 
+#### External Secrets Operator
 - [External Secrets Operator Documentation](https://external-secrets.io/)
 - [External Secrets API Reference](https://external-secrets.io/latest/api/externalsecret/)
+- [Provider Documentation](https://external-secrets.io/latest/provider/aws-secrets-manager/)
+
+#### HashiCorp Vault
 - [HashiCorp Vault Documentation](https://www.vaultproject.io/docs)
 - [HashiCorp Vault Kubernetes Auth](https://www.vaultproject.io/docs/auth/kubernetes)
+- [Vault KV Secrets Engine](https://www.vaultproject.io/docs/secrets/kv)
+
+#### AWS Secrets Manager
+- [AWS Secrets Manager Documentation](https://docs.aws.amazon.com/secretsmanager/)
+- [AWS Secrets Manager API Reference](https://docs.aws.amazon.com/secretsmanager/latest/apireference/)
+- [IAM Roles for Service Accounts (IRSA)](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
+
+#### IBM Cloud Secrets Manager
+- [IBM Cloud Secrets Manager Documentation](https://cloud.ibm.com/docs/secrets-manager)
+- [IBM Cloud Secrets Manager API Reference](https://cloud.ibm.com/apidocs/secrets-manager)
+- [IBM Cloud IAM Documentation](https://cloud.ibm.com/docs/account?topic=account-iamoverview)

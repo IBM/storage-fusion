@@ -1,0 +1,100 @@
+{{- if and .Values.secretStores.vault.enabled .Values.secretStores.vault.autoInitialize }}
+{{- /* Determine tokenSecret based on sealType if not explicitly set */ -}}
+{{- $tokenSecret := .Values.secretStores.vault.tokenSecret -}}
+{{- if not $tokenSecret -}}
+  {{- if eq .Values.secretStores.vault.sealType "awskms" -}}
+    {{- $tokenSecret = "vault-recovery-keys" -}}
+  {{- else -}}
+    {{- $tokenSecret = "vault-unseal-keys" -}}
+  {{- end -}}
+{{- end -}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init-external-secrets
+  namespace: {{ .Values.secretStores.vault.rbac.vaultNamespace }}
+  labels:
+    {{- include "external-secrets-operator.labels" . | nindent 4 }}
+  annotations:
+    "argocd.argoproj.io/sync-wave": "2"
+    "argocd.argoproj.io/hook": PostSync
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+    {{- if not .Values.secretStores.vault.tokenSecret }}
+    "vault.seal-type": {{ .Values.secretStores.vault.sealType | quote }}
+    "vault.token-secret": {{ $tokenSecret | quote }}
+    {{- end }}
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "external-secrets-operator.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.secretStores.vault.rbac.vaultServiceAccount }}
+      automountServiceAccountToken: true # 👈 CRITICAL: Ensures /var/run/secrets/kubernetes.io exists in this pod
+      restartPolicy: OnFailure
+      containers:
+      - name: vault-init
+        image: {{ .Values.secretStores.vault.initJob.image | default "hashicorp/vault:1.15.0" }}
+        env:
+        - name: VAULT_ADDR
+          value: "{{ .Values.secretStores.vault.server }}"
+        - name: VAULT_SKIP_VERIFY
+          value: "true"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          
+          echo "Waiting for Vault to be ready..."
+          until vault status > /dev/null 2>&1; do
+            echo "Vault not ready, waiting..."
+            sleep 5
+          done
+          
+          echo "Getting Vault root token..."
+          export VAULT_TOKEN=$(cat /vault-token/root-token)
+          
+          echo "Enabling Kubernetes auth method..."
+          vault auth enable kubernetes 2>/dev/null || echo "Kubernetes auth already enabled"
+          
+          echo "Configuring Kubernetes auth..."
+          vault write auth/kubernetes/config \
+              kubernetes_host='https://kubernetes.default.svc:443'
+          
+          echo "Note: Vault will auto-discover token_reviewer_jwt and kubernetes_ca_cert from /var/run/secrets/kubernetes.io/"
+          
+          echo "Creating external-secrets policy..."
+          vault policy write external-secrets-policy - <<EOF
+          path "{{ .Values.secretStores.vault.path }}/data/*" {
+            capabilities = ["read"]
+          }
+          path "{{ .Values.secretStores.vault.path }}/metadata/*" {
+            capabilities = ["list"]
+          }
+          EOF
+          
+          echo "Creating Kubernetes auth role..."
+          vault write auth/kubernetes/role/{{ .Values.secretStores.vault.auth.kubernetes.role }} \
+              bound_service_account_names=external-secrets \
+              bound_service_account_namespaces=external-secrets \
+              policies=external-secrets-policy \
+              ttl={{ .Values.secretStores.vault.auth.kubernetes.ttl | default "24h" }}
+          
+          echo "Vault initialization complete!"
+        volumeMounts:
+        - name: vault-token
+          mountPath: /vault-token
+          readOnly: true
+      volumes:
+      - name: vault-token
+        secret:
+          secretName: {{ $tokenSecret }}
+          items:
+          - key: root-token
+            path: root-token
+{{- end }}

@@ -1,23 +1,17 @@
-# Production values for Red Hat GitOps on Fusion HCI
-# This configuration is optimized for production workloads
-#
-# PREREQUISITES: Ensure these storage classes exist in your cluster:
-#   - rook-cephfs (or your RWX storage class)
-#
-# Verify with: kubectl get storageclass
+# Production Environment Values for Fusion GitOps
+# Optimized for production workloads with HA and enhanced resources
 
-# Use existing storage classes (production environment)
+# Use existing storage classes
 storage:
-  defaultStorageClass: rook-cephfs
-  sharedStorageClass: rook-cephfs
+  defaultStorageClass: ocs-storagecluster-cephfs
+  sharedStorageClass: ocs-storagecluster-cephfs
 
-# ArgoCD configuration - patches existing openshift-gitops instance
+# ArgoCD configuration - production settings
 argocd:
   enabled: true
   
-  # Server configuration - production settings
   server:
-    replicas: 3  # Increased for HA
+    replicas: 3
     autoscale:
       enabled: true
       minReplicas: 3
@@ -32,9 +26,8 @@ argocd:
         cpu: 2000m
         memory: 2Gi
   
-  # Repository server - production settings
   repo:
-    replicas: 3  # Increased for HA
+    replicas: 3
     autoscale:
       enabled: true
       minReplicas: 3
@@ -50,19 +43,18 @@ argocd:
         memory: 4Gi
     storage:
       enabled: true
-      size: 50Gi  # Larger for production repos
-      storageClassName: rook-cephfs
+      size: 50Gi
+      storageClassName: ocs-storagecluster-cephfs
       accessModes:
         - ReadWriteMany
     env:
       - name: ARGOCD_EXEC_TIMEOUT
-        value: "300s"  # Longer timeout for large repos
+        value: "300s"
       - name: ARGOCD_GIT_ATTEMPTS_COUNT
         value: "5"
   
-  # Application controller - production settings
   controller:
-    replicas: 2  # Enable sharding for better performance
+    replicas: 2
     sharding:
       enabled: true
       replicas: 2
@@ -79,7 +71,6 @@ argocd:
       - name: ARGOCD_REPO_SERVER_TIMEOUT_SECONDS
         value: "300"
   
-  # Redis - production settings with HA
   redis:
     resources:
       requests:
@@ -88,14 +79,7 @@ argocd:
       limits:
         cpu: 1000m
         memory: 1Gi
-    storage:
-      enabled: true
-      size: 10Gi  # Larger for production cache
-      storageClassName: rook-cephfs
-      accessModes:
-        - ReadWriteOnce
   
-  # High availability - enabled for production
   ha:
     enabled: true
     resources:
@@ -106,7 +90,6 @@ argocd:
         cpu: 500m
         memory: 512Mi
   
-  # Dex/SSO - production settings
   dex:
     enabled: true
     openShiftOAuth: true
@@ -118,19 +101,17 @@ argocd:
         cpu: 500m
         memory: 512Mi
   
-  # RBAC - production security
   rbac:
-    defaultPolicy: 'role:readonly'  # Secure default
+    defaultPolicy: 'role:readonly'
     policy: |
       g, system:cluster-admins, role:admin
       g, cluster-admins, role:admin
-      # Add your production RBAC policies here
+      # Add production RBAC policies here
     scopes: '[groups]'
   
-  # Notifications - enabled for production
   notifications:
     enabled: true
-    replicas: 2  # HA for notifications
+    replicas: 2
     resources:
       requests:
         cpu: 250m
@@ -139,7 +120,6 @@ argocd:
         cpu: 500m
         memory: 512Mi
   
-  # ApplicationSet - production settings
   applicationSet:
     resources:
       requests:
@@ -149,14 +129,12 @@ argocd:
         cpu: 1000m
         memory: 1Gi
 
-# Network policies - enabled for production security
 networkPolicy:
   enabled: true
   policyTypes:
     - Ingress
     - Egress
 
-# Resource quotas - production limits
 resourceQuota:
   enabled: true
   hard:
@@ -167,7 +145,6 @@ resourceQuota:
     persistentvolumeclaims: "20"
     requests.storage: "200Gi"
 
-# Monitoring - enabled for production
 monitoring:
   enabled: true
   prometheus:

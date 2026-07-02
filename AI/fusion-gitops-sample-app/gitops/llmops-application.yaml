@@ -14,9 +14,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.ibm.com/Purnanand-Kumar1/Fusion-AI.git
+    repoURL: https://github.com/IBM/storage-fusion.git
     targetRevision: main
-    path: fusion-AgenticAssistanceSampleApp/gitops/applications
+    path: fusion-gitops-sample-app/gitops/applications
   destination:
     server: https://kubernetes.default.svc
     namespace: llmops-platform
@@ -43,7 +43,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.ibm.com/Purnanand-Kumar1/Fusion-AI.git
+    repoURL: https://github.com/IBM/storage-fusion.git
     targetRevision: main
     path: fusion-model-serving/gitops/models
   destination:

@@ -11,9 +11,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.ibm.com/Purnanand-Kumar1/Fusion-AI.git
+    repoURL: https://github.com/IBM/storage-fusion.git
     targetRevision: main
-    path: fusion-AgenticAssistanceSampleApp/gitops
+    path: fusion-gitops-sample-app/gitops
   destination:
     server: https://kubernetes.default.svc
     namespace: openshift-gitops

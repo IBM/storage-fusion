@@ -1,0 +1,102 @@
+# Development Environment Values for Fusion GitOps
+# Optimized for development and testing with minimal resources
+
+# Use existing storage classes
+storage:
+  defaultStorageClass: ocs-storagecluster-cephfs
+  sharedStorageClass: ocs-storagecluster-cephfs
+
+# ArgoCD configuration - minimal setup for dev
+argocd:
+  enabled: true
+  
+  server:
+    replicas: 1
+    autoscale:
+      enabled: false
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  repo:
+    replicas: 1
+    autoscale:
+      enabled: false
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    storage:
+      enabled: false
+  
+  controller:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    sharding:
+      enabled: false
+  
+  redis:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  ha:
+    enabled: false
+  
+  dex:
+    enabled: true
+    openShiftOAuth: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  
+  rbac:
+    defaultPolicy: 'role:admin'
+    policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+    scopes: '[groups]'
+  
+  notifications:
+    enabled: false
+  
+  applicationSet:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+networkPolicy:
+  enabled: false
+
+resourceQuota:
+  enabled: false
+
+monitoring:
+  enabled: false
+
+# Made with Bob
