@@ -959,7 +959,7 @@ For model registry workflows, the platform supports IBM Fusion Object Storage in
 
 ### Fusion Agentic Assistance Platform
 
-The Fusion Agentic Assistance Platform demonstrates how the platform can serve AI-powered assistance workloads with agentic capabilities. Reference material is available in [fusion-AgenticAssistanceSampleApp/README.md](../../fusion-AgenticAssistanceSampleApp/README.md), with example model configurations for GPT-OSS-20B and Nemotron-based deployments.
+The Fusion Agentic Assistance Platform demonstrates how the platform can serve AI-powered assistance workloads with agentic capabilities. Reference material is available in [fusion-gitops-sample-app/README.md](../../fusion-gitops-sample-app/README.md), with example model configurations for GPT-OSS-20B and Nemotron-based deployments.
 
 ### Chatbot (Coming Soon)
 
