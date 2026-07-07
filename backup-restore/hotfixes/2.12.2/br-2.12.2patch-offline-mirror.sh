@@ -9,7 +9,13 @@ HCI_PREFIX="cp.icr.io/cp/fusion-hci"
 SDS_PREFIX="cp.icr.io/cp/fusion-sds"
 CPOPEN_PREFIX="icr.io/cpopen"
 
-TRANSACTIONMANAGER=guardian-transaction-manager@sha256:34609296996c0416d1d84e775ba3cf33b78cdbdfe5e50eebcb632ef20135f895
+TRANSACTIONMANAGER=guardian-transaction-manager@sha256:d235e55a3178c22525dbefd684f2bb86e68064c0935f48a1f8dbfa94e714c133
+
+ISFDATAPROTECTION_HCI=isf-data-protection-operator@sha256:652aa928c1c0f88c67f1aceb147ea610c6f409f9ea77db43c805fddee0e744ca
+ISFDATAPROTECTION_SDS=isf-data-protection-operator@sha256:63b3a35d0f344f543bba4e207a43a5b808e308281cbfb82036eb1290eb3f4822
+
+OADP_VELERO_14=fbr-velero@sha256:72965e20fe79a155c27de91259a037750c3fabf015ce63bb60b75f848d9b0a5b
+OADP_VELERO_15=fbr-velero15@sha256:b31d07dba095ddeee21bef10079638ba260bdec2698b9810775f859c45ed0f83
 
 #check_cmd:
 # Returns:
@@ -65,11 +71,17 @@ copy_images() {
 
 declare -a IMAGES=(
   $TRANSACTIONMANAGER
+  $OADP_VELERO_14
+  $OADP_VELERO_15
 )
 
-declare -a FUSIONIMAGES_HCI=()
+declare -a FUSIONIMAGES_HCI=(
+  "$ISFDATAPROTECTION_HCI"
+)
 
-declare -a FUSIONIMAGES_SDS=()
+declare -a FUSIONIMAGES_SDS=(
+  "$ISFDATAPROTECTION_SDS"
+)
 
 ICR_IMAGE_PATHS=()
 

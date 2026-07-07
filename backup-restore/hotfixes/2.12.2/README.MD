@@ -6,7 +6,19 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
-## Hotfix hotfix-2.12.2.2 (Latest)
+## Hotfix hotfix-2.12.2.3 (Latest)
+
+**Release Date:** July 8th, 2026
+
+### Issues Fixed
+
+1. **VMs with Ceph RBD Block PVCs don’t boot up after being restored**
+2. **Cancellation of Restore job deletes the target namespace**
+3. **Velero repo maintenance jobs don’t run if BackupRepository name has more than 63 characters**
+4. **Default recipe used for Restore job when a custom recipe was used for Backup**
+
+
+## Hotfix hotfix-2.12.2.2
 
 **Release Date:** May 10th, 2026
 
