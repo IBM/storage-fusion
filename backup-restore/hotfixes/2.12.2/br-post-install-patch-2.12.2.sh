@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.2 release.
-HOTFIX_NUMBER=1
+HOTFIX_NUMBER=3
 EXPECTED_VERSION=2.12.2
 IMAGE_SOURCE="br-2.12.2patch-offline-mirror.sh"
 
@@ -232,6 +232,45 @@ update_operator_csv() {
     fi
 }
 
+update_isf_operator_csv() {
+    name=$1
+    image=$2
+    if (oc get csv -n "$ISF_NS" "$name" -o yaml >$DIR/"$name".save.yaml); then
+        echo "Scaling down isf-data-protection-operator-controller-manager deployment..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$ISF_NS" isf-data-protection-operator-controller-manager --replicas=0
+
+        echo "Patching clusterserviceversion/$name..."
+        index=$(oc get csv -n "$ISF_NS" "$name" -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
+        patch="[{\"op\":\"replace\", \"path\":\"/spec/install/spec/deployments/${index}/spec/template/spec/containers/0/image\", \"value\":\"${image}\"}]"
+
+        [ -z "$DRY_RUN" ] && oc patch csv -n "$ISF_NS" "$name" --type='json' -p "${patch}"
+        [ -n "$DRY_RUN" ] && oc patch csv -n "$ISF_NS" "$name" --type='json' -p "${patch}" --dry-run=client -o yaml >$DIR/"$name".patch.yaml
+
+        echo "Scaling up isf-data-protection-operator-controller-manager deployment..."
+        [ -z "$DRY_RUN" ] && oc scale deployment -n "$ISF_NS" isf-data-protection-operator-controller-manager --replicas=1
+    else
+        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
+    fi
+}
+
+set_velero_image() {
+    OADP_VERSION=$(get_oadp_version)
+    if [[ $OADP_VERSION == *"1.4"* ]]; then
+        image=$1
+    else
+        image=$2
+    fi
+
+    echo "Patching OADP $OADP_VERSION"
+
+    if (oc -n "$BR_NS" get dpa velero -o yaml >$DIR/velero.save.yaml); then
+        echo "Patching deployment/velero image..."
+        patch="[{\"op\": \"replace\", \"path\": \"/spec/unsupportedOverrides/veleroImageFqin\", \"value\":\"${image}\"}, {\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp14\", \"value\": \"${oadp_velero_14}\"},{\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp15\", \"value\": \"${oadp_velero_15}\"}]"
+        oc -n "$BR_NS" ${DRY_RUN:+"${DRY_RUN}"} patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" -o yaml >$DIR/velero.patch.yaml
+        echo "Velero Deployement is restarting with replacement image"
+        oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
+    fi
+}
 check_for_required_dependencies
 
 oc whoami > /dev/null || ( echo "Not logged in to your cluster" ; exit 1)
@@ -266,13 +305,84 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
     exit 0
 fi
 
+patch_tm_clusterrole() {
+    TMCLUSTERROLE=transaction-manager-$BR_NS
+    echo "Patching $TMCLUSTERROLE clusterrole..."
+    
+    # Get the ClusterRole as JSON and backup
+    oc get clusterrole ${TMCLUSTERROLE} -o json > "$DIR/clusterrole-$TMCLUSTERROLE-backup.json"
+    
+    # Use jq to:
+    # 1. Remove "namespaces" from all resources arrays
+    # 2. Remove rules with empty resources arrays
+    # 3. Add standalone namespaces rule with correct verbs
+    jq '
+      # Remove "namespaces" from all resources arrays
+      .rules |= map(
+        if .resources then
+          .resources |= map(select(. != "namespaces"))
+        else . end
+      ) |
+      # Remove rules with empty resources arrays
+      .rules |= map(select(.resources and (.resources | length) > 0)) |
+      # Add standalone namespaces rule
+      .rules += [{
+        "apiGroups": [""],
+        "resources": ["namespaces"],
+        "verbs": ["get", "list", "update", "create", "patch", "watch"]
+      }]
+    ' "$DIR/clusterrole-$TMCLUSTERROLE-backup.json" > "$DIR/clusterrole-$TMCLUSTERROLE-filtered.json"
+    
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to process ClusterRole with jq"
+        return 1
+    fi
+    
+    # Replace the ClusterRole
+    oc replace -f "$DIR/clusterrole-$TMCLUSTERROLE-filtered.json"
+    
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to replace ClusterRole"
+        return 1
+    fi
+    
+    echo "Successfully patched $TMCLUSTERROLE clusterrole"
+    
+    # Validation: Check that namespaces doesn't appear with delete verb
+    echo "Validating namespaces permissions..."
+    if oc get clusterrole ${TMCLUSTERROLE} -o json | \
+       jq -e '.rules[] | select(.resources[]? == "namespaces") | select(.verbs[]? == "delete")' > /dev/null 2>&1; then
+        echo "ERROR: Delete verb found for namespaces resource!"
+        return 1
+    else
+        echo "SUCCESS: Namespaces rule configured correctly without delete verb"
+    fi
+}
+
+
 # make hub/cluster spoke connection settings to reconcile and resolve to the configmap
 resolve_hub_connection $HUB
+
+# patch the TM clusterrole
+patch_tm_clusterrole
 
 # update transaction-manager
 tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
 set_deployment_image transaction-manager transaction-manager "${tm_image}"
 set_deployment_image dbr-controller dbr-controller "${tm_image}"
+
+# update oadp velero
+oadp_velero_14=$(build_icr_path ${BNR_PREFIX} ${OADP_VELERO_14})
+oadp_velero_15=$(build_icr_path ${BNR_PREFIX} ${OADP_VELERO_15})
+set_velero_image ${oadp_velero_14} ${oadp_velero_15}
+
+
+# update isf-data-protection-operator
+hci_image=$(build_icr_path ${HCI_PREFIX} ${ISFDATAPROTECTION_HCI})
+sds_image=$(build_icr_path ${SDS_PREFIX} ${ISFDATAPROTECTION_SDS})
+[ "$PATCH" == "HCI" ] && update_isf_operator_csv isf-operator.v2.12.2 "${hci_image}"
+[ "$PATCH" == "SDS" ] && update_isf_operator_csv isf-operator.v2.12.2 "${sds_image}"
+
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
@@ -280,3 +390,5 @@ update_hotfix_configmap ${hotfix}
 echo "Please verify that the pods for the following deployment have successfully restarted:"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "ibm-dataprotectionagent-controller-manager"
