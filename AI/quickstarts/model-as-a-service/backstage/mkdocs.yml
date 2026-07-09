@@ -1,0 +1,31 @@
+site_name: Model as a Service on IBM Fusion
+site_description: Deploy a complete MaaS platform with Red Hat OpenShift AI on IBM Fusion HCI
+
+# Point to the IBM storage-fusion repo for documentation
+repo_url: https://github.com/IBM/storage-fusion
+repo_name: IBM/storage-fusion
+
+# Point to docs directory
+docs_dir: docs
+
+# Navigation
+nav:
+  - Home: index.md
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+
+plugins:
+  - techdocs-core
+
+# Safe markdown extensions
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+# Made with Bob
