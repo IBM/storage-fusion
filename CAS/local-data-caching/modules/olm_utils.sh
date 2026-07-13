@@ -7,6 +7,10 @@ if [[ -n "${LOADED_OLM_UTILS_SH:-}" ]]; then
 fi
 export LOADED_OLM_UTILS_SH=1
 
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/logging.sh
+source "${PROJECT_DIR}/lib/logging.sh"
+
 #----------------------------------------
 # Function: Check if Fusion operator is installed (HCI or SDS)
 #----------------------------------------

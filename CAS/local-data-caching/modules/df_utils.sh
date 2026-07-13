@@ -7,12 +7,15 @@ if [[ -n "${LOADED_DF_UTILS_SH:-}" ]]; then
 fi
 export LOADED_DF_UTILS_SH=1
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# shellcheck source=lib/logging.sh
+source "${PROJECT_ROOT}/lib/logging.sh"
 # shellcheck source=lib/utils.sh
-source "${SCRIPT_DIR}/../lib/utils.sh"
+source "${PROJECT_ROOT}/lib/utils.sh"
 
 # shellcheck source=config/config.env
-source "$ROOT_DIR/config/config.env"
+source "${PROJECT_ROOT}/config/config.env"
 
 #========================================
 # OpenShift Data Foundation Utility Functions
@@ -26,6 +29,7 @@ source "$ROOT_DIR/config/config.env"
 #   4. create_pvc_local_disks()
 #   5. create_expose_rbd_daemonset()
 #   6. convert_hdd_to_ssd()
+#   7. get_odf_version()
 #========================================
 
 #----------------------------------------
@@ -142,8 +146,7 @@ configure_fdf() {
 # Function: Patch Ceph CSI drivers (RBD and CephFS)
 #----------------------------------------
 patch_ceph_csi_drivers() {
-	drivers=("rbd" "cephfs")
-	for driver in "${drivers[@]}"; do
+	for driver in rbd cephfs; do
 		if oc get -n "$OCS_NAMESPACE" "driver.csi.ceph.io/openshift-storage.${driver}.csi.ceph.com" &>/dev/null; then
 			patch_ceph_csi_driver "$driver"
 		fi
@@ -216,43 +219,52 @@ delete_scale_rbd_sc() {
 }
 
 #----------------------------------------
-# Function: Create PVCs for local disks
+# Helper: Emit YAML for all local-disk PVCs
 #----------------------------------------
-create_pvc_local_disks() {
+rbd_pvcs_yaml() {
+	local pvc_size
+	pvc_size=$(( FILESYSTEM_CAPACITY / NO_OF_RBD_PVCS ))
 	local i=1
-	local pvc_names
 	while (( i <= NO_OF_RBD_PVCS )); do
-		local pvc_name="local-disk${i}"
-		cat <<EOF | oc apply -f -
+		cat <<EOF
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: ${pvc_name}
+  name: local-disk${i}
   namespace: ${LOCAL_STORAGE_PROJECT}
 spec:
   accessModes:
     - ${LOCAL_DISK_PVC_ACCESS_MODE}
   resources:
     requests:
-      storage: ${FILESYSTEM_CAPACITY}
+      storage: ${pvc_size}
   storageClassName: ${LOCAL_DISK_PVC_STORAGE_CLASS}
   volumeMode: ${LOCAL_DISK_PVC_VOLUME_MODE}
 EOF
-		pvc_names+="${pvc_name} "
 		((++i))
 	done
+}
+
+#----------------------------------------
+# Function: Create PVCs for local disks
+#----------------------------------------
+create_pvc_local_disks() {
+	rbd_pvcs_yaml | oc apply -f -
 
 	local interval=10 # 10 seconds
 	while true; do
 		local unbound_pvcs=""
 		local i=1
 
-		for pvc_name in ${pvc_names}; do
+		while (( i <= NO_OF_RBD_PVCS )); do
+			local pvc_name="local-disk${i}"
 			local pvc_phase
 			pvc_phase="$(oc get pvc -n "${LOCAL_STORAGE_PROJECT}" "${pvc_name}" -ojsonpath='{.status.phase}')"
 			if [[ "${pvc_phase}"  != "Bound" ]]; then
 				unbound_pvcs+="${pvc_name} "
 			fi
+			((++i))
 		done
 
 		if [[ "${unbound_pvcs}" == "" ]]; then
@@ -310,4 +322,15 @@ convert_hdd_to_ssd() {
 			done
 		' >/dev/null 2>&1
 	done
+}
+
+#----------------------------------------
+# Function: Get installed ODF version from subscription
+#----------------------------------------
+get_odf_version() {
+	local ver
+	ver=$(oc get subscription odf-operator -n "$OCS_NAMESPACE" \
+		-o jsonpath='{.status.currentCSV}' 2>/dev/null \
+		| grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+	echo "${ver#v}"
 }

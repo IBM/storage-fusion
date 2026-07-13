@@ -9,12 +9,7 @@ metadata:
 spec:
   local:
     blockSize: 4M
-    pools:
-    - disks:
-      - disk0
-      - disk1
-      - disk2
-      name: system
+    pools: []
     replication: 1-way
     type: shared
   seLinuxOptions:

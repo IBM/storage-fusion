@@ -10,14 +10,10 @@ source "$ROOT_DIR/lib/constants.sh"
 source "$ROOT_DIR/config/config.env"
 set +a
 
+# shellcheck source=lib/logging.sh
+source "$ROOT_DIR/lib/logging.sh"
 # shellcheck source=modules/df_utils.sh
 source "$ROOT_DIR/modules/df_utils.sh"
-
-LOG_DIR="./logs"
-LOG_FILE="$LOG_DIR/cleanup-data-cache-$(date +'%Y%m%d_%H%M%S').log"
-mkdir -p "$LOG_DIR"
-exec > >(tee -a "$LOG_FILE") 2>&1
-echo "Logging initialized. All output will be saved to $LOG_FILE"
 
 oc project default
 
@@ -37,13 +33,12 @@ echo "Fusion environment: ${ENV}"
 wait_for_delete() {
 	local namespace="$1"
 	shift
-	local resources=("$@")
 
 	local any_exist=true
 	while $any_exist; do
 		any_exist=false
 		local existing_resources=""
-		for resource in "${resources[@]}"; do
+		for resource in "$@"; do
 			local count
 			count=$(oc get "${resource}" -n "${namespace}" --no-headers=true 2>/dev/null | wc -l)
 			if [[ "${count}" -gt 0 ]]; then
@@ -137,7 +132,7 @@ cleanup_cnsa() {
 		echo "Skipping local storage cleanup - filesystem with device volumes was found"
 	else
 		envsubst <templates/daemonset_expose_rbd.yaml | oc delete -f - --ignore-not-found=true
-		envsubst <templates/pvc_local_disks.yaml | oc delete -f - --ignore-not-found=true
+		rbd_pvcs_yaml | oc delete -f - --ignore-not-found=true
 		oc delete project "$LOCAL_STORAGE_PROJECT" --ignore-not-found=true
 	fi
 	oc delete project "$SCALE_NAMESPACE" --ignore-not-found=true --wait=false

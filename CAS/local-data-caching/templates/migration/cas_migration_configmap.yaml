@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${MIGRATION_CM_NAME}
+  namespace: ${CAS_NAMESPACE}
+  labels:
+    app: ${MIGRATION_APP_LABEL}
+    migration-phase: ${MIGRATION_PHASE}
+data:
+  migration.sh: |
+${MIGRATION_SCRIPT}

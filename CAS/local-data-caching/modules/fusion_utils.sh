@@ -7,6 +7,10 @@ if [[ -n "${LOADED_FUSION_UTILS_SH:-}" ]]; then
 fi
 export LOADED_FUSION_UTILS_SH=1
 
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/logging.sh
+source "${PROJECT_DIR}/lib/logging.sh"
+
 #========================================
 # IBM Spectrum Fusion Utility Functions
 #========================================
@@ -22,6 +26,7 @@ export LOADED_FUSION_UTILS_SH=1
 #   7. deploy_fsi()
 #   8. deploy_scale_service()
 #   9. is_scale_deployed()
+#  10. get_fusion_version()
 #========================================
 
 #----------------------------------------
@@ -249,3 +254,13 @@ is_scale_deployed() {
 	fi
 }
 
+#----------------------------------------
+# Function: Get installed Fusion version from CSV
+#----------------------------------------
+get_fusion_version() {
+	local ver
+	ver=$(oc get csv -A --no-headers \
+		-o custom-columns=NAME:.metadata.name,VERSION:.spec.version 2>/dev/null \
+		| grep "$FUSION_PACKAGE_NAME" | awk '{print $2}' | head -n1)
+	echo "${ver#v}"
+}

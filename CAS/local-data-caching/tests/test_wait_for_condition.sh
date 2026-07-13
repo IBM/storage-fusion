@@ -10,6 +10,8 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # Source required files
 # shellcheck source=lib/constants.sh
 source "${PROJECT_ROOT}/lib/constants.sh"
+# shellcheck source=lib/logging.sh
+source "${PROJECT_ROOT}/lib/logging.sh"
 # shellcheck source=lib/utils.sh
 source "${PROJECT_ROOT}/lib/utils.sh"
 
