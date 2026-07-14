@@ -128,7 +128,12 @@ IBM_OPEN_REGISTRY_NS="cpopen"
 # Scale Filesystem Default Values
 #========================================
 DEFAULT_FS_NAME="cache-fs"
-DEFAULT_FS_SIZE="250Gi"
+DEFAULT_FS_SIZE="256Gi"
+
+#========================================
+# CAS Migration Configuration
+#========================================
+MIGRATION_APP_LABEL="cas-data-cache-migration"
 
 #========================================
 # LOCAL_DISK_PVC Configuration
@@ -136,7 +141,7 @@ DEFAULT_FS_SIZE="250Gi"
 LOCAL_DISK_PVC_ACCESS_MODE="ReadWriteMany"
 LOCAL_DISK_PVC_STORAGE_CLASS_SOURCE="ocs-storagecluster-ceph-rbd"
 LOCAL_DISK_PVC_VOLUME_MODE="Block"
-NO_OF_RBD_PVCS=3
+NO_OF_RBD_PVCS=4
 
 #========================================
 # Retry and Timeout Configuration

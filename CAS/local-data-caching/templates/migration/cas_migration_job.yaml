@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${JOB_NAME}
+  namespace: ${CAS_NAMESPACE}
+  labels:
+    app: ${MIGRATION_APP_LABEL}
+    migration-phase: ${MIGRATION_PHASE}
+    migration-timestamp: "${MIGRATION_TIMESTAMP}"
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: ${MIGRATION_APP_LABEL}
+        app.kubernetes.io/name: cas.isf.ibm.com
+        migration-phase: ${MIGRATION_PHASE}
+        job-name: ${JOB_NAME}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: cas-migration-sa
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: migration
+        image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+        command:
+        - /bin/bash
+        - /scripts/migration.sh
+        env:
+        - name: MIGRATION_PHASE
+          value: "${MIGRATION_PHASE}"
+        - name: FILESYSTEM_NAME
+          value: "${FILESYSTEM_NAME}"
+        - name: CAS_NAMESPACE
+          value: "${CAS_NAMESPACE}"
+        - name: SCALE_NAMESPACE
+          value: "${SCALE_NAMESPACE}"
+        - name: MIGRATION_TIMESTAMP
+          value: "${MIGRATION_TIMESTAMP}"
+        - name: JOB_NAME
+          value: "${JOB_NAME}"
+        - name: MIGRATION_PVC_NAME
+          value: "${MIGRATION_PVC_NAME}"
+        - name: DRY_RUN_JOB
+          value: "${DRY_RUN_JOB}"
+        volumeMounts:
+        - name: migration-scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: pvc-volume
+          mountPath: /mnt/${MIGRATION_PVC_NAME}
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "100m"
+      volumes:
+      - name: migration-scripts
+        configMap:
+          name: ${MIGRATION_CM_NAME}
+          defaultMode: 493
+      - name: pvc-volume
+        persistentVolumeClaim:
+          claimName: ${MIGRATION_PVC_NAME}

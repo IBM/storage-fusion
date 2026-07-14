@@ -7,6 +7,10 @@ if [[ -n "${LOADED_SCALE_UTILS_SH:-}" ]]; then
 fi
 export LOADED_SCALE_UTILS_SH=1
 
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/logging.sh
+source "${PROJECT_DIR}/lib/logging.sh"
+
 #========================================
 # IBM Spectrum Scale Utility Functions
 #========================================
@@ -45,6 +49,10 @@ export LOADED_SCALE_UTILS_SH=1
 #
 #   Configuration:
 #    19. scale_set_config()
+#
+#   Version Detection:
+#    20. cnsa_product_to_csv()
+#    21. get_cnsa_version()
 #========================================
 
 #========================================
@@ -136,7 +144,7 @@ get_device_id() {
 get_device_ids_for_local_disks() {
 	local devices
 	devices=$(get_rbd_devices)
-	DEVICE_IDS=()
+	DEVICE_IDS=""
 
 	for pvc in local-disk1 local-disk2 local-disk3; do
 		local pv pool img dev
@@ -145,13 +153,13 @@ get_device_ids_for_local_disks() {
 		dev=$(get_device_id "$devices" "$pool" "$img")
 
 		if [[ -n "$dev" ]]; then
-			DEVICE_IDS+=("$dev")
+			DEVICE_IDS="${DEVICE_IDS}${DEVICE_IDS:+ }${dev}"
 		else
 			logger warn "No device found for PVC: $pvc"
 		fi
 	done
 
-	if [[ ${#DEVICE_IDS[@]} -eq 0 ]]; then
+	if [[ -z "$DEVICE_IDS" ]]; then
 		logger error "No RBD device IDs found for any local-disk PVCs"
 		return 1
 	fi
@@ -247,7 +255,9 @@ verify_scale_cluster() {
 # Function: Patch device regex in Scale cluster CR
 #----------------------------------------
 patch_device_regex_in_scale_cluster() {
-	local first="${DEVICE_IDS[0]}"
+	# shellcheck disable=SC2086  # intentional word-split of space-separated string
+	set -- $DEVICE_IDS
+	local first="$1"
 	local prefix="${first%%[0-9]*}"
 	local pattern="${prefix}*"
 
@@ -273,7 +283,7 @@ create_local_disks() {
 
 	logger info "Creating LocalDisk CRs on node '$node'..."
 
-	for dev in "${DEVICE_IDS[@]}"; do
+	for dev in $DEVICE_IDS; do
 		cat <<EOF | oc apply -f -
 apiVersion: scale.spectrum.ibm.com/v1beta1
 kind: LocalDisk
@@ -385,7 +395,23 @@ is_fs_created() {
 # Function: Create Spectrum Scale FileSystem
 #----------------------------------------
 create_fs() {
-	if ! envsubst <templates/filesystem.yaml | oc apply -f - >/dev/null 2>&1; then
+	CNSA_GTE_6010="${1:-false}"
+
+	# CNSA < 60.1.0: does not manage LocalDisk PVCs
+	if [[ "${CNSA_GTE_6010}" == false ]]; then
+		get_device_ids_for_local_disks
+		patch_device_regex_in_scale_cluster
+		ensure_local_disks
+	fi
+
+	local fs_manifest
+	fs_manifest=$(envsubst <templates/filesystem.yaml)
+
+	if [[ "${CNSA_GTE_6010}" == true ]]; then
+		fs_manifest=$(yq e ".spec.local.pools[0].deviceVolumes = {\"capacity\": \"${FILESYSTEM_CAPACITY}\", \"storageClass\": \"${LOCAL_DISK_PVC_STORAGE_CLASS}\"}" - <<< "${fs_manifest}")
+	fi
+
+	if ! oc apply -f - >/dev/null 2>&1 <<< "${fs_manifest}"; then
 		logger error "Failed to create Spectrum Scale FileSystem '${FILESYSTEM_NAME}'."
 		return 1
 	fi
@@ -397,7 +423,7 @@ create_fs() {
 verify_fs() {
 	logger info "Verifying Spectrum Scale FileSystem status..."
 
-	local timeout=900 # 15 minutes
+	local timeout=1800 # 30 minutes
 	local interval=30
 	local elapsed=0
 
@@ -498,4 +524,26 @@ scale_set_config() {
 	if [[ "${found_value}" != "${VALUE}" ]]; then
 		scale_core_exec "mmchconfig ${OPT}=${VALUE} --force -i"
 	fi
+}
+
+#========================================
+# Version Detection
+#========================================
+
+#----------------------------------------
+# Function: Transform CNSA product version (6.0.y.z) to CSV format (60.y.z)
+#----------------------------------------
+cnsa_product_to_csv() {
+	echo "$1" | awk -F. '{printf "%d%d.%s.%s\n", $1, $2, $3, $4}'
+}
+
+#----------------------------------------
+# Function: Get installed CNSA version from CSV (in CSV format: 60.x.y)
+#----------------------------------------
+get_cnsa_version() {
+	local ver
+	ver=$(oc get csv -A --no-headers \
+		-o custom-columns=NAME:.metadata.name,VERSION:.spec.version 2>/dev/null \
+		| grep "ibm-spectrum-scale-operator" | awk '{print $2}' | head -n1)
+	echo "${ver#v}"
 }

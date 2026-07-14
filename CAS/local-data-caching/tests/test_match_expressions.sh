@@ -10,6 +10,8 @@ export ROOT_DIR
 # Source required files
 # shellcheck source=../lib/constants.sh
 source "$ROOT_DIR/lib/constants.sh"
+# shellcheck source=../lib/logging.sh
+source "$ROOT_DIR/lib/logging.sh"
 # shellcheck source=../lib/utils.sh
 source "$ROOT_DIR/lib/utils.sh"
 # shellcheck source=../modules/df_utils.sh
@@ -20,16 +22,13 @@ source "$ROOT_DIR/config/config.env"
 # Set required environment variable
 #export OCS_BACKING_STORAGECLASS="ocs-backing-lvs"
 
-# Array of test match expressions
-test_expressions=(
-    "Exists:node-role.kubernetes.io/worker"
-    "NotIn:beta.kubernetes.io/instance-type=gx3d.160x1792.8h100,another.type"
-    "In:region=us-east,us-west"
-    "Exists:node-role.kubernetes.io/worker;NotIn:beta.kubernetes.io/instance-type=gx3d.160x1792.8h100"
-)
-
 # Loop through each test expression
-for STORAGE_NODE_MATCH in "${test_expressions[@]}"; do
+for STORAGE_NODE_MATCH in \
+    "Exists:node-role.kubernetes.io/worker" \
+    "NotIn:beta.kubernetes.io/instance-type=gx3d.160x1792.8h100,another.type" \
+    "In:region=us-east,us-west" \
+    "Exists:node-role.kubernetes.io/worker;NotIn:beta.kubernetes.io/instance-type=gx3d.160x1792.8h100" \
+; do
     echo "========================================"
     echo "STORAGE_NODE_MATCH: ${STORAGE_NODE_MATCH}"
     echo "========================================"

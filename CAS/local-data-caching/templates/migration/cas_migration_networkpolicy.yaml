@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cas-migration-network-policy
+  namespace: ${CAS_NAMESPACE}
+  labels:
+    app: ${MIGRATION_APP_LABEL}
+spec:
+  podSelector:
+    matchLabels:
+      app: ${MIGRATION_APP_LABEL}
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS (port 53 to Service ClusterIP; port 5353 is the CoreDNS pod targetPort)
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    - port: 5353
+      protocol: UDP
+    - port: 5353
+      protocol: TCP
+  # Allow Kubernetes API
+  - ports:
+    - port: 443
+      protocol: TCP
+    - port: 6443
+      protocol: TCP
+  # Allow PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: cluster-parade
+    ports:
+    - port: 5432
+      protocol: TCP
+
+# Made with Bob

@@ -7,6 +7,10 @@ if [[ -n "${LOADED_OCP_UTILS_SH:-}" ]]; then
 fi
 export LOADED_OCP_UTILS_SH=1
 
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/logging.sh
+source "${PROJECT_DIR}/lib/logging.sh"
+
 #----------------------------------------
 # Function: Check cluster connectivity
 #----------------------------------------
@@ -177,4 +181,168 @@ get_node_for_pod() {
 get_pv_from_pvc() {
 	local pvc="$1"
 	oc get pvc "$pvc" -n "${LOCAL_STORAGE_PROJECT}" -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo ""
+}
+
+#----------------------------------------
+# Function: Wait for job completion with timeout
+#----------------------------------------
+wait_for_job_completion() {
+	local job_name="${1}"
+	local namespace="${2}"
+	local timeout="${3:-1800}"
+
+	logger info "Monitoring Job: ${job_name}"
+	logger info "Timeout: ${timeout}s"
+
+	local start_time
+	start_time=$(date +%s)
+
+	while true; do
+		local elapsed
+		elapsed=$(($(date +%s) - start_time))
+
+		if [[ ${elapsed} -ge ${timeout} ]]; then
+			logger error "Timeout reached (${timeout}s)"
+			return 1
+		fi
+
+		local status
+		status=$(oc get job "${job_name}" -n "${namespace}" \
+			-o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null)
+
+		if [[ "${status}" == "True" ]]; then
+			logger success "Job completed successfully"
+			return 0
+		fi
+
+		local failed
+		failed=$(oc get job "${job_name}" -n "${namespace}" \
+			-o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null)
+
+		if [[ "${failed}" == "True" ]]; then
+			logger error "Job failed"
+			return 1
+		fi
+
+		if [[ $((elapsed % 30)) -eq 0 ]]; then
+			logger info "Still running... (${elapsed}s elapsed)"
+		fi
+
+		sleep 5
+	done
+}
+
+#----------------------------------------
+# Function: Wait for job pod to start creating successfully
+#----------------------------------------
+wait_for_job_pod_ready() {
+	local job_name="${1}"
+	local namespace="${2}"
+	local timeout="${3:-60}"
+
+	logger info "Waiting for Job pod to be created: ${job_name}"
+
+	local start_time
+	start_time=$(date +%s)
+
+	while true; do
+		local elapsed
+		elapsed=$(($(date +%s) - start_time))
+
+		if [[ ${elapsed} -ge ${timeout} ]]; then
+			logger error "Timed out waiting for Job pod (${timeout}s)"
+			return 1
+		fi
+
+		local pod_name
+		pod_name=$(oc get pods -n "${namespace}" \
+			-l "job-name=${job_name}" \
+			-o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+
+		if [[ -z "${pod_name}" ]]; then
+			sleep 2
+			continue
+		fi
+
+		local waiting_reason
+		waiting_reason=$(oc get pod "${pod_name}" -n "${namespace}" \
+			-o jsonpath='{.status.containerStatuses[0].state.waiting.reason}' 2>/dev/null || echo "")
+
+		local terminated_reason
+		terminated_reason=$(oc get pod "${pod_name}" -n "${namespace}" \
+			-o jsonpath='{.status.containerStatuses[0].state.terminated.reason}' 2>/dev/null || echo "")
+
+		if [[ -n "${terminated_reason}" ]]; then
+			local started
+			started=$(oc get pod "${pod_name}" -n "${namespace}" \
+				-o jsonpath='{.status.containerStatuses[0].started}' 2>/dev/null || echo "")
+
+			if [[ "${started}" == "true" ]]; then
+				logger info "Job pod already started before terminating: ${pod_name} (${terminated_reason})"
+				return 0
+			fi
+
+			logger error "Job pod terminated before logs could be streamed: ${pod_name} (${terminated_reason})"
+			return 1
+		fi
+
+		case "${waiting_reason}" in
+			""|ContainerCreating|PodInitializing)
+				sleep 2
+				;;
+			CrashLoopBackOff|CreateContainerConfigError|CreateContainerError|ErrImagePull|ImagePullBackOff|RunContainerError|StartError)
+				logger error "Job pod failed before logs could be streamed: ${pod_name} (${waiting_reason})"
+				return 1
+				;;
+			*)
+				sleep 2
+				;;
+		esac
+
+		local started
+		started=$(oc get pod "${pod_name}" -n "${namespace}" \
+			-o jsonpath='{.status.containerStatuses[0].started}' 2>/dev/null || echo "")
+
+		if [[ "${started}" == "true" ]]; then
+			logger success "Job pod is ready for log streaming: ${pod_name}"
+			return 0
+		fi
+	done
+}
+
+#----------------------------------------
+# Function: Stream logs from job pod
+#----------------------------------------
+stream_job_logs() {
+	local job_name="${1}"
+	local namespace="${2}"
+
+	logger info "Streaming logs from: ${job_name}"
+
+	# Wait for pod
+	local pod_name=""
+	local retries=0
+	while [[ -z "${pod_name}" ]] && [[ ${retries} -lt 30 ]]; do
+		pod_name=$(oc get pods -n "${namespace}" \
+			-l "job-name=${job_name}" \
+			-o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+
+		if [[ -z "${pod_name}" ]]; then
+			sleep 2
+			retries=$((retries + 1))
+		fi
+	done
+
+	if [[ -z "${pod_name}" ]]; then
+		logger error "Pod not found for job"
+		return 1
+	fi
+
+	logger info "Pod: ${pod_name}"
+	logger info "--- Logs Start ---"
+
+	oc logs -f "pod/${pod_name}" -n "${namespace}" 2>&1 || true
+
+	logger info "--- Logs End ---"
+	return 0
 }

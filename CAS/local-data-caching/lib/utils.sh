@@ -23,55 +23,6 @@ help() {
 }
 
 #------------------------------------------------------------
-# Logger function
-# Usage: logger [-n] <level> <message>
-# Options: -n (no newline)
-# Levels: info, warn, error, success
-#------------------------------------------------------------
-logger() {
-	local no_newline=false
-	if [[ "$1" == "-n" ]]; then
-		no_newline=true
-		shift
-	fi
-
-	local level="$1"
-	shift
-	local message="$*"
-	local timestamp
-	timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-	local newline="\n"
-	[[ "$no_newline" == true ]] && newline=""
-
-	case "$level" in
-	info)
-		echo -ne "[$timestamp] ℹ️  INFO: $message${newline}" >&2
-		;;
-	warn)
-		echo -ne "[$timestamp] ⚠️  WARNING: $message${newline}" >&2
-		;;
-	error)
-		echo -ne "[$timestamp] ❌ ERROR: $message${newline}" >&2
-		;;
-	success)
-		echo -ne "[$timestamp] ✅ SUCCESS: $message${newline}" >&2
-		;;
-	esac
-}
-
-#------------------------------------------------------------
-# Setup logging
-#------------------------------------------------------------
-LOG_DIR="./logs"
-LOG_FILE="$LOG_DIR/setup-data-cache-$(date +'%Y%m%d_%H%M%S').log"
-
-mkdir -p "$LOG_DIR"
-
-exec > >(tee -a "$LOG_FILE") 2>&1
-
-logger info "Logging initialized. All output will be saved to $LOG_FILE"
-
-#------------------------------------------------------------
 # get_param_value: Small wrapper around grep+awk
 #------------------------------------------------------------
 get_param_value() {
@@ -246,3 +197,34 @@ wait_for_condition() {
 	done
 }
 
+#------------------------------------------------------------
+# version_gte: Compare two version strings
+# Usage: version_gte A B  →  prints "true"/"false"
+#------------------------------------------------------------
+version_gte() {
+	if [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" == "$2" ]]; then
+		echo true
+	else
+		echo false
+	fi
+}
+
+#------------------------------------------------------------
+# compute_script_hash: Compute SHA256 hash of script file
+# Usage: compute_script_hash "/path/to/script.sh"
+# Returns: First 8 characters of SHA256 hash
+#------------------------------------------------------------
+compute_script_hash() {
+	local script_file="${1}"
+
+	if [[ ! -f "${script_file}" ]]; then
+		logger error "Script file not found: ${script_file}"
+		return 1
+	fi
+
+	# Compute SHA256 hash of script contents, take first 8 chars
+	local hash
+	hash=$(sha256sum "${script_file}" | awk '{print $1}' | cut -c1-8)
+	echo "${hash}"
+	return 0
+}

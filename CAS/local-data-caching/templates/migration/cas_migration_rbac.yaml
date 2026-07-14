@@ -1,0 +1,132 @@
+# ServiceAccount used by the migration Job pod
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cas-migration-sa
+  namespace: ${CAS_NAMESPACE}
+  labels:
+    app: ${MIGRATION_APP_LABEL}
+---
+# ClusterRole granting use of the anyuid SCC.
+# anyuid allows runAsUser: 0 / fsGroup: 0 which the migration container
+# requires to install tools (microdnf) and write to /usr/local/bin.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cas-migration-anyuid-scc-use
+  labels:
+    app: ${MIGRATION_APP_LABEL}
+rules:
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  resourceNames:
+  - anyuid
+  verbs:
+  - use
+---
+# ClusterRoleBinding: grants cas-migration-sa the anyuid SCC use ClusterRole.
+# Must be cluster-scoped because SCCs are cluster-scoped resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cas-migration-anyuid-scc-use
+  labels:
+    app: ${MIGRATION_APP_LABEL}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cas-migration-anyuid-scc-use
+subjects:
+- kind: ServiceAccount
+  name: cas-migration-sa
+  namespace: ${CAS_NAMESPACE}
+---
+# Role: namespaced permissions the migration Job pod needs to call the
+# Kubernetes API from inside the cluster.
+#
+# Verbs breakdown:
+#   configmaps         - read migration state, write progress marker (get/list/watch/create/patch/update)
+#   secrets            - read cluster-parade-app DB credentials (get/watch)
+#   datasources        - backup (get/list/watch), patch finalizers, restore via apply (create/update/patch/delete)
+#   deployments        - scale operator down/up (get/list/watch/patch/update)
+#   documentprocessors - delete before filesystem teardown; read domain state (get/list/watch/delete)
+#   domains            - read domain state (get/list/watch/delete)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cas-migration-role
+  namespace: ${CAS_NAMESPACE}
+  labels:
+    app: ${MIGRATION_APP_LABEL}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - watch
+- apiGroups:
+  - cas.isf.ibm.com
+  resources:
+  - datasources
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/scale
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - cas.isf.ibm.com
+  resources:
+  - documentprocessors
+  - domains
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+---
+# RoleBinding: binds cas-migration-role to cas-migration-sa in CAS_NAMESPACE
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cas-migration-role-binding
+  namespace: ${CAS_NAMESPACE}
+  labels:
+    app: ${MIGRATION_APP_LABEL}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cas-migration-role
+subjects:
+- kind: ServiceAccount
+  name: cas-migration-sa
+  namespace: ${CAS_NAMESPACE}
