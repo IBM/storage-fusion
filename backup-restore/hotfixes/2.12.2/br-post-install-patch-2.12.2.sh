@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.2 release.
-HOTFIX_NUMBER=3
+HOTFIX_NUMBER=4
 EXPECTED_VERSION=2.12.2
 IMAGE_SOURCE="br-2.12.2patch-offline-mirror.sh"
 
@@ -165,6 +165,31 @@ resolve_hub_connection() {
         KAFKA_PORT=$(oc get --namespace "${BR_NS}" "dataprotectionagent/${AGENT_NAME}" -o jsonpath='{.spec.transactionManager.kafkaPort}')
         oc --namespace "${BR_NS}" ${DRY_RUN:+"${DRY_RUN}"} set data "configmap/guardian-configmap" connectionName="${CONNECTION_NAME}" hubEndPointURL="${HUB_ENDPOINT_URL}" hubClusterName="${HUB_CLUSTER_NAME}" kafka-service="${KAFKA_ENDPOINT}" kafka-port="${KAFKA_PORT}" -o yaml >$DIR/guardian-configmap.patch.yaml
     fi
+}
+
+update_transaction_manager_role() {
+    TM_ROLES=$(
+        cat <<EOF
+- apiGroups:
+  - velero.io
+  resources:
+  - deletebackuprequests
+  - backups
+  - restores
+  - backuprepositories
+  verbs:
+  - create
+  - delete
+  - patch
+  - get
+  - list
+  - watch
+EOF
+    )
+    echo "Patching role transaction-manager in ${BR_NS} ..."
+    oc get role transaction-manager -n "${BR_NS}" -o yaml >"${DIR}/transaction-manager-role.save.yaml"
+    [ -z "$DRY_RUN" ] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" | oc apply -n ${BR_NS} -f -
+    [ -z "$DRY_RUN"] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" >"${DIR}/transaction-manager-role.patch.yaml"
 }
 
 check_for_required_dependencies() {
@@ -362,6 +387,10 @@ patch_tm_clusterrole() {
 
 # make hub/cluster spoke connection settings to reconcile and resolve to the configmap
 resolve_hub_connection $HUB
+
+# update_transaction_manager_role
+echo "Updating transaction-manager role"
+update_transaction_manager_role
 
 # patch the TM clusterrole
 patch_tm_clusterrole

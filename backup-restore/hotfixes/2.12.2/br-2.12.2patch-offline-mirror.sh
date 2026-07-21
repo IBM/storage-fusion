@@ -9,7 +9,7 @@ HCI_PREFIX="cp.icr.io/cp/fusion-hci"
 SDS_PREFIX="cp.icr.io/cp/fusion-sds"
 CPOPEN_PREFIX="icr.io/cpopen"
 
-TRANSACTIONMANAGER=guardian-transaction-manager@sha256:d235e55a3178c22525dbefd684f2bb86e68064c0935f48a1f8dbfa94e714c133
+TRANSACTIONMANAGER=guardian-transaction-manager@sha256:8d8be885786acd0bcb95d5592fac2a7686af5cfa2296f0bb9b1280cf75d27d3f
 
 ISFDATAPROTECTION_HCI=isf-data-protection-operator@sha256:652aa928c1c0f88c67f1aceb147ea610c6f409f9ea77db43c805fddee0e744ca
 ISFDATAPROTECTION_SDS=isf-data-protection-operator@sha256:63b3a35d0f344f543bba4e207a43a5b808e308281cbfb82036eb1290eb3f4822

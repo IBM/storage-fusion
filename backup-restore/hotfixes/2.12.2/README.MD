@@ -6,7 +6,17 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
-## Hotfix hotfix-2.12.2.3 (Latest)
+## Hotfix hotfix-2.12.2.4 (Latest)
+
+**Release Date:** July 21th, 2026
+
+### Issues Fixed
+
+1. Backup fails with error code ‘BMYBR0009, MessageSizeTooLargeError'
+2. Restore using the default recipe fails to restore CRDs on the target cluster
+3. Backup fails sporadically with error code ‘BMYBR0009, Failed backup etcd’
+
+## Hotfix hotfix-2.12.2.3
 
 **Release Date:** July 8th, 2026
 
