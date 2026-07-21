@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.12.1 release.
-HOTFIX_NUMBER=4
+HOTFIX_NUMBER=5
 EXPECTED_VERSION=2.12.1
 IMAGE_SOURCE="br-2.12.1patch-offline-mirror.sh"
 
@@ -232,6 +232,31 @@ update_operator_csv() {
     fi
 }
 
+update_transaction_manager_role() {
+    TM_ROLES=$(
+        cat <<EOF
+- apiGroups:
+  - velero.io
+  resources:
+  - deletebackuprequests
+  - backups
+  - restores
+  - backuprepositories
+  verbs:
+  - create
+  - delete
+  - patch
+  - get
+  - list
+  - watch
+EOF
+    )
+    echo "Patching role transaction-manager in ${BR_NS} ..."
+    oc get role transaction-manager -n "${BR_NS}" -o yaml >"${DIR}/transaction-manager-role.save.yaml"
+    [ -z "$DRY_RUN" ] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" | oc apply -n ${BR_NS} -f -
+    [ -z "$DRY_RUN"] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" >"${DIR}/transaction-manager-role.patch.yaml"
+}
+
 check_for_required_dependencies
 
 oc whoami > /dev/null || ( echo "Not logged in to your cluster" ; exit 1)
@@ -268,6 +293,10 @@ fi
 
 # make hub/cluster spoke connection settings to reconcile and resolve to the configmap
 resolve_hub_connection $HUB
+
+# update_transaction_manager_role
+echo "Updating transaction-manager role"
+update_transaction_manager_role
 
 # update idp-agent-operator
 guardianidpagentoperator_img=$(build_icr_path ${CPOPEN_PREFIX} ${IDP_AGENT_OPERATOR})
