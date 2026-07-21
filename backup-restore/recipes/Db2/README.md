@@ -62,3 +62,8 @@ clusterrole.rbac.authorization.k8s.io/transaction-manager-ibm-backup-restore con
 ```
 2. Start Restore
      Fusion UI ---> Backup & Restore ---> Backed up applications ---> Select Application ---> select Backups tab ---> Select Backup Snapshot  ---> Click Restore
+
+### Note
+1. This recipe does not support IBM Db2 Operator V2.
+2. This recipe only supports restore to the same namespace or namespaces. This can be the same namespace or namespaces on the same cluster where the backup was performed, or a different cluster. You cannot restore IBM Db2 application to a different namespace or namespaces.
+3. This recipes requires use of the Db2 Velero plugin. For more information about installing the plugin, please refer to the instructions for installing the plugin in the [IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=utilities-fusion-backup-restore-utility) documentation. You should use the **latest** version of the plugin that is documented by the [IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=utilities-fusion-backup-restore-utility).
