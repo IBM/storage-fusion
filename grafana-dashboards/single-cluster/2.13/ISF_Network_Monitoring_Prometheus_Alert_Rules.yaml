@@ -1,0 +1,157 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: isf-network-monitoring-alerts
+  namespace: openshift-monitoring
+  labels:
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+    - name: network-monitoring-alerts
+      interval: 30s
+      rules:
+        # Memory Alerts
+        - alert: SwitchMemoryHigh
+          expr: |
+            100 * (memTotalReal - memAvailReal) / memTotalReal > 85
+          for: 5m
+          labels:
+            severity: warning
+            component: network
+            alert_type: resource_utilization
+          annotations:
+            summary: "Switch memory utilization is high"
+            description: |
+              Switch {{ $labels.service }} memory utilization is {{ $value | humanize }}%.
+              This exceeds the warning threshold of 85%.
+              
+              Risk: High memory usage may lead to switch instability or performance degradation.
+              
+              Recommended action: Review memory-consuming processes and consider maintenance window for investigation.
+            switch: "{{ $labels.service }}"
+            current_value: "{{ $value | humanize }}%"
+            threshold: "85%"
+
+        - alert: SwitchMemoryCritical
+          expr: |
+            100 * (memTotalReal - memAvailReal) / memTotalReal > 95
+          for: 2m
+          labels:
+            severity: critical
+            component: network
+            alert_type: resource_utilization
+          annotations:
+            summary: "Switch memory utilization is critical"
+            description: |
+              Switch {{ $labels.service }} memory utilization is {{ $value | humanize }}%.
+              This exceeds the critical threshold of 95%.
+              
+              Risk: Switch may become unresponsive or experience service disruption.
+              
+              Immediate action required: Contact support and prepare for potential switch maintenance or failover.
+            switch: "{{ $labels.service }}"
+            current_value: "{{ $value | humanize }}%"
+            threshold: "95%"
+
+        # CPU Alerts
+        - alert: SwitchCPUHigh
+          expr: |
+            100 - ssCpuIdle > 80
+          for: 5m
+          labels:
+            severity: warning
+            component: network
+            alert_type: resource_utilization
+          annotations:
+            summary: "Switch CPU utilization is high"
+            description: |
+              Switch {{ $labels.service }} CPU utilization is {{ $value | humanize }}%.
+              This exceeds the warning threshold of 80%.
+              
+              Risk: High CPU usage may indicate excessive traffic load or control plane issues.
+              
+              Recommended action: Monitor traffic patterns and investigate any unusual control plane activity.
+            switch: "{{ $labels.service }}"
+            current_value: "{{ $value | humanize }}%"
+            threshold: "80%"
+
+        - alert: SwitchCPUCritical
+          expr: |
+            100 - ssCpuIdle > 90
+          for: 2m
+          labels:
+            severity: critical
+            component: network
+            alert_type: resource_utilization
+          annotations:
+            summary: "Switch CPU utilization is critical"
+            description: |
+              Switch {{ $labels.service }} CPU utilization is {{ $value | humanize }}%.
+              This exceeds the critical threshold of 90%.
+              
+              Risk: Switch may drop packets or fail to process control plane protocols properly.
+              
+              Immediate action required: Investigate traffic load and consider load balancing or traffic reduction measures.
+            switch: "{{ $labels.service }}"
+            current_value: "{{ $value | humanize }}%"
+            threshold: "90%"
+
+        # Temperature Alerts
+        - alert: SwitchTemperatureHigh
+          expr: |
+            max by (service) (
+              (psu1TempOrAmbientTemp / 1000) or
+              (psu2Temp / 1000) or
+              (cpuCoreSensor0 / 1000) or
+              (cpuCoreSensor1 / 1000) or
+              (mainBoardAmbientSensor / 1000) or
+              (asicTempSensor / 1000)
+            ) > 70
+          for: 5m
+          labels:
+            severity: warning
+            component: network
+            alert_type: environmental
+          annotations:
+            summary: "Switch temperature is high"
+            description: |
+              Switch {{ $labels.service }} has a sensor reading {{ $value | humanize }}°C.
+              This exceeds the warning threshold of 70°C.
+              
+              Risk: Elevated temperature may indicate cooling system issues or environmental problems.
+              
+              Recommended action: Check data center cooling, verify fan operation, and inspect for airflow obstructions.
+            switch: "{{ $labels.service }}"
+            current_value: "{{ $value | humanize }}°C"
+            threshold: "70°C"
+
+        - alert: SwitchTemperatureCritical
+          expr: |
+            max by (service) (
+              (psu1TempOrAmbientTemp / 1000) or
+              (psu2Temp / 1000) or
+              (cpuCoreSensor0 / 1000) or
+              (cpuCoreSensor1 / 1000) or
+              (mainBoardAmbientSensor / 1000) or
+              (asicTempSensor / 1000)
+            ) > 80
+          for: 2m
+          labels:
+            severity: critical
+            component: network
+            alert_type: environmental
+          annotations:
+            summary: "Switch temperature is critical"
+            description: |
+              Switch {{ $labels.service }} has a sensor reading {{ $value | humanize }}°C.
+              This exceeds the critical threshold of 80°C.
+              
+              Risk: Switch may experience thermal shutdown or hardware damage.
+              
+              Immediate action required: Verify cooling system operation immediately. Consider emergency maintenance if temperature continues to rise.
+            switch: "{{ $labels.service }}"
+            current_value: "{{ $value | humanize }}°C"
+            threshold: "80°C"
+
+# Made with Bob
