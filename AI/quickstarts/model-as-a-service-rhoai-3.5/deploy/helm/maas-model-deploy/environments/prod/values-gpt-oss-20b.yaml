@@ -1,0 +1,117 @@
+# =============================================================================
+# Environment override – Production  |  Model: gpt-oss-20b
+# =============================================================================
+# Overrides for the gpt-oss-20b model in the production environment.
+#
+# Two modes — choose one:
+#
+#   Manual mode (s3.externalSecret.enabled: false):
+#     Supply s3.accessKeyId and s3.secretAccessKey via --set flags at deploy
+#     time. Never commit real credentials in this file.
+#
+#   ESO mode (s3.externalSecret.enabled: true):
+#     ALL five S3 fields are pulled from Vault. The s3.* credential fields
+#     below are ignored. Configure s3.externalSecret.remoteRef.key to point
+#     at the Vault path for this model.
+#     Vault command:
+#       vault kv put secret/maas/model-deploy/gpt-oss-20b/s3 \
+#         access_key_id="<key>" \
+#         secret_access_key="<secret>" \
+#         endpoint="https://s3.openshift-storage.svc:443" \
+#         region="us-east-1" \
+#         bucket="<bucket-name>"
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  name: gpt-oss-20b
+  displayName: "GPT-OSS-20b"
+  namespace: deploy-models
+
+# -----------------------------------------------------------------------------
+# Project / Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  # create: true
+  labels:
+    environment: prod
+  # annotations: {}
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage Configuration
+# -----------------------------------------------------------------------------
+s3:
+  # Values sourced from secret/model-registry-object-storage in rhoai-model-registries
+  endpoint: "https://s3.openshift-storage.svc:443"
+  region: "us-south"
+  bucket: ""
+  modelPath: "gpt-oss-20b-hf/1.0.0"
+  accessKeyId: ""
+  secretAccessKey: ""
+  # verifySSL: "true"
+  connectionSecretName: ""
+  serviceAccountName: ""
+
+  # ── ESO mode ──────────────────────────────────────────────────────────────
+  # Uncomment and set enabled: true to activate ESO for this environment.
+  # externalSecret:
+  #   enabled: true
+  #   refreshInterval: 1h
+  #   secretStoreRef:
+  #     name: vault-backend
+  #     kind: ClusterSecretStore
+  #   remoteRef:
+  #     key: maas/model-deploy/gpt-oss-20b/s3
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# Resource Allocation
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+    nvidia.com/gpu: "1"
+  requests:
+    cpu: "2"
+    memory: 4Gi
+    nvidia.com/gpu: "1"
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling
+# -----------------------------------------------------------------------------
+scheduling:
+  nodeSelector: {}
+  tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+  affinity: {}
+
+# -----------------------------------------------------------------------------
+# Gateway Configuration
+# -----------------------------------------------------------------------------
+gateway:
+  name: maas-default-gateway
+  namespace: openshift-ingress
+
+# -----------------------------------------------------------------------------
+# MaaS Model Ref
+# -----------------------------------------------------------------------------
+maasModelRef:
+  enabled: true
+
+# -----------------------------------------------------------------------------
+# Additional Labels / Annotations
+# -----------------------------------------------------------------------------
+labels:
+  environment: prod
+
+annotations: {}

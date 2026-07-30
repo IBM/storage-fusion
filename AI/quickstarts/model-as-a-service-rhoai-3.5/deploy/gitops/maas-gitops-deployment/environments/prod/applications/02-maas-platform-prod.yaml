@@ -1,0 +1,85 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-maas-platform-config-prod
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: maas-prod-alerts
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: maas-prod-alerts
+  labels:
+    environment: prod
+    component: platform
+    criticality: high
+spec:
+  project: fusion-maas-platform-prod
+  
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/prod/values.yaml
+      parameters:
+        - name: environment
+          value: prod
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: redhat-ods-operator
+  
+  syncPolicy:
+    # MANUAL sync only - NO automation in production
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      # Prevents ArgoCD from blocking the entire sync when a CRD is not yet
+      # installed (e.g. OdhDashboardConfig before RHOAI Dashboard is ready).
+      # Resources with missing CRDs are skipped and retried on the next sync.
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
+  
+  ignoreDifferences:
+    - group: datasciencecluster.opendatahub.io
+      kind: DataScienceCluster
+      jsonPointers:
+        - /status
+    - group: authorino.kuadrant.io
+      kind: Authorino
+      jsonPointers:
+        - /status
+    - group: kuadrant.io
+      kind: Kuadrant
+      jsonPointers:
+        - /status
+    # OdhDashboardConfig CRD is created by RHOAI after DSC reconciles Dashboard.
+    # Ignore all fields to prevent OutOfSync during the window between DSC apply
+    # and CRD installation. Re-sync once DSC is Ready.
+    - group: opendatahub.io
+      kind: OdhDashboardConfig
+      jsonPointers:
+        - /status
+  
+  info:
+    - name: Description
+      value: MaaS Platform Configuration - Production Environment
+    - name: Component
+      value: DataScienceCluster, Authorino, Kuadrant instances
+    - name: Sync Wave
+      value: "50"
+    - name: Dependencies
+      value: Requires maas-operators-prod to be healthy
+    - name: Sync Mode
+      value: MANUAL ONLY - Requires approval and change window
+    - name: Criticality
+      value: HIGH - Production platform configuration
+

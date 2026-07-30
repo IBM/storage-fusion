@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: ModelVersion
+metadata:
+  name: granite-4.1-8b
+  labels:
+    model-type: public
+    source: huggingface
+    task: text-generation
+    governance-status: approved
+spec:
+  modelName: "IBM Granite 4.1 8B"
+  version: "1.0.0"
+  description: |
+    IBM Granite 4.1 8B is a state-of-the-art large language model with 8 billion parameters.
+    This model is part of IBM's Granite family, designed for enterprise-grade text generation,
+    conversational AI, and instruction following. It offers excellent performance for various
+    natural language processing tasks while maintaining efficiency and reliability.
+    Suitable for enterprise chatbots, content generation, code assistance, and general-purpose AI applications.
+  
+  author: "IBM"
+  
+  # Base model information (public model from Hugging Face)
+  baseModel:
+    name: "ibm-granite/granite-4.1-8b"
+    source: "huggingface"
+    sourceUrl: "https://huggingface.co/ibm-granite/granite-4.1-8b"
+    version: "main"
+    license: "Apache-2.0"
+    licenseUrl: "https://www.apache.org/licenses/LICENSE-2.0"
+  
+  # Governance and compliance metadata
+  governance:
+    approvedBy: "platform-team@company.com"
+    approvalDate: "2026-06-23"
+    approvalTicket: "JIRA-12345"
+    licenseVerified: true
+    securityScanned: true
+    scanDate: "2026-06-22"
+    scanTool: "trivy"
+    complianceStatus: "approved"
+    restrictions:
+      - "Requires GPU infrastructure for optimal performance"
+      - "Monitor for bias in responses"
+      - "Approved for production enterprise workloads"
+      - "Enterprise-grade model with IBM support"
+  
+  # Model storage and artifacts
+  storage:
+    uri: "hf://ibm-granite/granite-4.1-8b"
+    type: "huggingface"
+    size: "16GB"
+    format: "safetensors"
+  
+  # Model metadata and capabilities
+  metadata:
+    framework: "transformers"
+    frameworkVersion: "4.40.0"
+    modelType: "causal-lm"
+    architecture: "Granite"
+    parameters: "8B"
+    contextLength: "8192"
+    languages:
+      - "en"
+      - "de"
+      - "es"
+      - "fr"
+      - "ja"
+      - "pt"
+      - "zh"
+    tasks:
+      - "text-generation"
+      - "conversational"
+      - "instruction-following"
+      - "code-generation"
+      - "summarization"
+      - "question-answering"
+    
+    # Performance metrics
+    metrics:
+      perplexity: "TBD"
+      mmlu: "TBD"
+      humaneval: "TBD"
+      
+    # Training information
+    training:
+      dataset: "IBM curated enterprise datasets"
+      trainingFramework: "PyTorch"
+      trainingData: "High-quality curated data with focus on enterprise use cases"
+      
+    # Hardware requirements
+    requirements:
+      minMemory: "32GB"
+      recommendedMemory: "64GB"
+      gpu: "required"
+      minCpu: "8 cores"
+      recommendedGpu: "NVIDIA A100, H100, or equivalent"
+  
+  # Use case and deployment information
+  useCases:
+    - name: "Enterprise Chatbot"
+      description: "Advanced conversational AI for customer engagement and support"
+      status: "approved"
+      
+    - name: "Text Generation"
+      description: "High-quality text generation for content creation and documentation"
+      status: "approved"
+      
+    - name: "Code Assistant"
+      description: "AI-powered code generation and assistance for developers"
+      status: "approved"
+      
+    - name: "Document Summarization"
+      description: "Automated summarization of enterprise documents and reports"
+      status: "approved"
+      
+    - name: "Question Answering"
+      description: "Intelligent Q&A system for knowledge bases and FAQs"
+      status: "approved"
+  
+  # Deployment configuration
+  deployment:
+    servingFramework: "kserve"
+    runtime: "huggingface"
+    replicas: 1
+    resources:
+      requests:
+        memory: "32Gi"
+        cpu: "8"
+        nvidia.com/gpu: "1"
+      limits:
+        memory: "64Gi"
+        cpu: "16"
+        nvidia.com/gpu: "1"
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPU: 70
+      targetMemory: 80
+  
+  # Tags for searchability
+  tags:
+    - "llm"
+    - "granite"
+    - "ibm"
+    - "huggingface"
+    - "public-model"
+    - "approved"
+    - "production-ready"
+    - "enterprise"
+    - "multilingual"
+    - "8b-parameters"

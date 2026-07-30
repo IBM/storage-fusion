@@ -1,0 +1,60 @@
+{{- if .Values.operators.openshiftAI.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: rhoai3-operatorgroup
+  namespace: {{ .Values.operators.openshiftAI.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec: {}
+{{- end }}
+
+{{- if .Values.operators.certManager.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .Values.operators.certManager.namespace }}-og
+  namespace: {{ .Values.operators.certManager.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.certManager.namespace }}
+{{- end }}
+
+{{- if false }}
+{{- if .Values.operators.grafana.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .Values.operators.grafana.namespace }}-og
+  namespace: {{ .Values.operators.grafana.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.grafana.namespace }}
+{{- end }}
+{{- end }}
+
+{{- /* connectivityLink Subscription is installed in openshift-operators which already
+     has the cluster-provided global-operators OperatorGroup — do NOT create another one.
+     kuadrant-operator-group in kuadrant-system is created by the rhcl-operator itself
+     after installation and must not be managed here. */}}
+
+{{- if .Values.operators.leaderWorkerSet.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: leader-worker-set
+  namespace: {{ .Values.operators.leaderWorkerSet.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.leaderWorkerSet.namespace }}
+{{- end }}

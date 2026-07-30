@@ -1,0 +1,335 @@
+global:
+  # oc get ingresses.config/cluster -o jsonpath={.spec.domain}
+  wildcardDomain: apps.cluster.example.com
+  toolsImage: quay.io/openshift/origin-cli:latest
+
+platform:
+  namespaces:
+    modelRegistry: rhoai-model-registries
+    workbench: rhods-notebooks
+
+dataScienceCluster:
+  enabled: true
+  # DataScienceCluster is cluster-scoped — namespace field removed from template.
+  name: default-dsc
+  components:
+    dashboard:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+    kserve:
+      managementState: Managed
+      modelsAsService:
+        managementState: Managed
+      rawDeploymentServiceConfig: Headless
+      nim:
+        managementState: Managed
+    ogx:
+      managementState: Managed
+    modelregistry:
+      managementState: Managed
+    feastoperator:
+      managementState: Removed
+    trustyai:
+      managementState: Managed
+    aipipelines:
+      managementState: Managed
+    ray:
+      managementState: Managed
+    trainingoperator:
+      managementState: Managed
+    trainer:
+      managementState: Removed
+    mlflowoperator:
+      managementState: Removed
+    llamastackoperator:
+      managementState: Removed
+    kueue:
+      managementState: Removed
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MaaS API — PostgreSQL configuration
+# Ref: maas-setup.md §Database Setup; scripts/setup-database.sh
+#
+# enabled:          Controls whether Helm creates the maas-db-config Secret.
+#                   Set to false when externalSecret.enabled is true — the two
+#                   flags are mutually exclusive (chart will fail if both are true).
+#
+# external:         false → deploy an in-cluster PostgreSQL (Deployment + Service).
+#                           Good for dev/staging. Mirrors setup-database.sh POC mode.
+#                   true  → point at a pre-existing managed database (RDS, CloudSQL,
+#                           Crunchy Operator, etc.). No Deployment is created.
+#
+# secretNamespace:  Namespace where maas-db-config Secret is created.
+#                   RHOAI: redhat-ods-applications  |  ODH: opendatahub
+#
+# ── External mode ─────────────────────────────────────────────────────────────
+# Option A — supply a pre-built URL (simplest):
+#   connectionUrl: "postgresql://user:pass@host:5432/db?sslmode=require"
+# Option B — supply individual fields (URL is assembled automatically):
+#   externalDatabase.host / port / database / username / password / sslMode
+# Leave connectionUrl empty and fill externalDatabase.* to use Option B.
+#
+# ── ESO mode (externalSecret.enabled: true) ────────────────────────────────
+# Set enabled: false and externalSecret.enabled: true to have External Secrets
+# Operator create maas-db-config from Vault / AWS SM / IBM Cloud SM instead.
+# Helm creates an ExternalSecret CR; ESO resolves it into the real Secret.
+#
+# How the URL is assembled depends on maasDatabase.external:
+#
+#   external: true  — Vault stores the full pre-built URL in one field.
+#                     Set externalSecret.remoteRef.key / property to point at it.
+#                     e.g. vault kv put secret/maas/database connection-url="postgresql://..."
+#
+#   external: false — Vault stores individual fields (username/password/database/sslMode)
+#                     at maasDatabase.internal.externalSecret.remoteRef.key.
+#                     ESO assembles the URL via target.template — single source of truth,
+#                     no duplication in Vault. Change the password once in Vault and
+#                     both maas-db-config and maas-postgres-creds update automatically.
+# ─────────────────────────────────────────────────────────────────────────────
+maasDatabase:
+  enabled: true
+
+  # false = deploy in-cluster PostgreSQL | true = use external managed database
+  external: false
+
+  # Namespace where the maas-db-config Secret is created (must match RHOAI/ODH ns).
+  # RHOAI default: redhat-ods-applications  |  ODH default: opendatahub
+  secretNamespace: redhat-ods-applications
+
+  # ── External mode — Option A: full pre-built connection URL ────────────────
+  # Takes precedence over externalDatabase.* fields when both are set.
+  # Format: postgresql://<user>:<pass>@<host>:<port>/<db>?sslmode=<mode>
+  # SECURITY: do not commit real credentials — override per environment or use
+  # External Secrets / Sealed Secrets / Vault.
+  connectionUrl: ""
+
+  # ── External mode — Option B: individual fields (URL assembled by template) ─
+  externalDatabase:
+    host: "postgres.example.com"
+    port: 5432
+    database: maasdb
+    username: maasadmin
+    password: "changeme"        # override via env values or secret injection
+    sslMode: disable
+
+  # ── ESO mode — let External Secrets Operator own maas-db-config ──────────
+  # When enabled: true, Helm creates an ExternalSecret CR (not the Secret itself).
+  # ESO resolves the CR and writes maas-db-config into secretNamespace.
+  #
+  # REQUIREMENT: External Secrets Operator must be installed and a ClusterSecretStore
+  # named by secretStoreRef.name must exist before this Application syncs.
+  #
+  # MUTUAL EXCLUSION: set maasDatabase.enabled: false when this is true.
+  # The chart will emit a hard error if both flags are true simultaneously.
+  externalSecret:
+    # Set to true to have ESO manage maas-db-config instead of Helm.
+    enabled: false
+
+    # Refresh interval — how often ESO re-reads the value from the backend.
+    refreshInterval: 1h
+
+    # Reference to the ClusterSecretStore (or SecretStore) created by the
+    # external-secrets-operator Helm chart.
+    secretStoreRef:
+      name: vault-backend        # must match .Values.secretStores.vault.name in ESO chart
+      kind: ClusterSecretStore   # ClusterSecretStore (cluster-wide) or SecretStore (namespaced)
+
+    # Target Secret name that ESO will create in secretNamespace.
+    # Defaults to "maas-db-config" (the name maas-api expects in production).
+    # Override during testing to avoid touching the live secret, e.g.:
+    #   targetName: maas-db-config-eso-test
+    targetName: ""               # empty = use default "maas-db-config"
+
+    # ── external: true — full pre-built URL stored in Vault ───────────────────
+    # ESO reads a single field from Vault and writes it verbatim as DB_CONNECTION_URL.
+    # Only used when maasDatabase.external: true.
+    remoteRef:
+      key: maas/database         # Vault KV path  (e.g. vault kv put secret/maas/database ...)
+      property: connection-url   # Field name inside that KV secret
+
+    # ── external: false — URL assembled from maas/postgres fields (Option B) ──
+    # When maasDatabase.external is false, maas-db-config is built from the same
+    # Vault path as maas-postgres-creds using ESO target.template.
+    # The template renders:
+    #   postgresql://<username>:<password>@maas-postgres.<namespace>.svc.cluster.local:5432/<database>?sslmode=<sslMode>
+    # No extra Vault path needed — single source of truth at maas/postgres.
+    # Configure the path via maasDatabase.internal.externalSecret.remoteRef.key.
+
+  # ── Internal mode (external: false) ──────────────────────────────────────
+  # Mirrors the resources created by scripts/setup-database.sh.
+  # ⚠  POC-grade — for production set external: true and use a managed database.
+  internal:
+    # enabled: true  → deploy in-cluster Postgres Deployment + Service + maas-postgres-creds Secret.
+    # enabled: false → skip all Postgres resources (use when external: true, or when
+    #                  managing postgres entirely out-of-band).
+    # This flag is INDEPENDENT of maasDatabase.enabled (which only gates maas-db-config).
+    # Dev:  enabled: true,  externalSecret.enabled: false  → Helm creates maas-postgres-creds
+    # Prod: enabled: true,  externalSecret.enabled: true   → ESO creates maas-postgres-creds
+    enabled: true
+
+    # Namespace to deploy postgres Deployment + Service + credentials Secret.
+    # Typically the same as secretNamespace so the FQDN is resolvable in-cluster.
+    namespace: redhat-ods-applications
+
+    # Label applied to all internal postgres resources (matches setup-database.sh label).
+    purpose: poc
+
+    # PostgreSQL credentials — stored in Secret maas-postgres-creds.
+    # SECURITY: override per environment; do not commit real passwords to Git.
+    # When externalSecret.enabled is true, clear these fields (set to "")
+    # so plaintext credentials are never committed to Git.
+    username: maas
+    password: "changeme"        # setup-database.sh default is auto-generated; override here
+    database: maas
+    sslMode: disable
+
+    # ── ESO mode — let External Secrets Operator own maas-postgres-creds ────
+    # When enabled: true, Helm creates an ExternalSecret CR (not the Secret).
+    # ESO resolves it and writes maas-postgres-creds into internal.namespace.
+    # The Deployment continues to read credentials via secretKeyRef — no change.
+    #
+    # REQUIREMENT: External Secrets Operator installed + ClusterSecretStore ready.
+    #
+    # Vault secret must contain three fields at remoteRef.key:
+    #   username  → POSTGRES_USER
+    #   password  → POSTGRES_PASSWORD
+    #   database  → POSTGRES_DB
+    #
+    # e.g. vault kv put secret/maas/postgres \
+    #        username=maas password=<pw> database=maas
+    #
+    # When enabling: clear username/password above (set to "") so no plaintext
+    # credentials are committed to Git.
+    externalSecret:
+      # Set to true to have ESO manage maas-postgres-creds instead of Helm.
+      enabled: false
+
+      # Refresh interval — how often ESO re-reads the value from the backend.
+      refreshInterval: 24h
+
+      # Reference to the ClusterSecretStore created by the ESO chart.
+      secretStoreRef:
+        name: vault-backend        # must match .Values.secretStores.vault.name in ESO chart
+        kind: ClusterSecretStore
+
+      # Target Secret name that ESO will create in internal.namespace.
+      # Defaults to "maas-postgres-creds" (the name the Deployment expects).
+      # Override during testing to avoid touching the live secret, e.g.:
+      #   targetName: maas-postgres-creds-eso-test
+      targetName: ""               # empty = use default "maas-postgres-creds"
+
+      # Vault KV path containing username / password / database fields.
+      remoteRef:
+        key: maas/postgres         # vault kv put secret/maas/postgres ...
+
+    # PostgreSQL container image.
+    # Mirrors resolve_postgres_image() in setup-database.sh:
+    #   - RHOAI CSV relatedImages entry: postgresql_16_image
+    #   - Fallback: registry.redhat.io/rhel9/postgresql-16:latest
+    image: "registry.redhat.io/rhel9/postgresql-16:latest"
+
+    # Resource requests and limits — matches setup-database.sh defaults.
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+    # Readiness probe — same command used in setup-database.sh.
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+    # Persistent storage for postgres data.
+    # enabled: false → emptyDir (data lost on pod restart — matches setup-database.sh POC)
+    # enabled: true  → PVC (data survives pod restarts — recommended for staging+)
+    persistence:
+      enabled: false
+      size: 10Gi
+      storageClassName: ""      # leave empty to use cluster default StorageClass
+
+# OdhDashboardConfig is auto-created and continuously reconciled by the RHOAI
+# operator (dashboard component of DataScienceCluster). It carries
+# platform.opendatahub.io/* ownership labels and no ownerReferences, meaning
+# Helm/ArgoCD cannot own or patch it reliably — the operator will revert any
+# fields it does not manage.
+#
+# Required MaaS flags (modelAsService, genAiStudio, maasAuthPolicies) must be
+# set via a post-sync manual step in the runbook:
+#
+#   oc patch odhdashboardconfig odh-dashboard-config \
+#     -n redhat-ods-applications --type=merge \
+#     --patch '{"spec":{"dashboardConfig":{"modelAsService":true,"genAiStudio":true,"maasAuthPolicies":true}}}'
+#
+# Ref: maas-1.md lines 147-154
+
+# Gateway API — GatewayClass, Gateway, and (clusterip mode) supporting resources.
+# Ref: gateway.md section 2.12.3 and maas-1.md lines 132-135.
+#
+# GatewayClass:
+#   The Ingress Operator requires the GatewayClass to be named "openshift-default"
+#   (gateway.md line 38). The template uses Helm lookup to create it only when it
+#   does not already exist — no flag needed. On clusters where the Ingress Operator
+#   or a prior install already created it, the block is skipped automatically.
+#
+# ingressMode:
+#   route     — (default) cloud / ROSA / OSD. Gateway controller provisions a
+#               LoadBalancer Service. Wildcard DNS resolves directly to the LB IP.
+#               TLS cert is router-certs-default.
+#   clusterip — on-prem / bare-metal / HostNetwork IngressController (e.g. MetalLB
+#               clusters where wildcard DNS points to router nodes, not a LB VIP).
+#               Gateway controller creates a ClusterIP Service. An OpenShift Route
+#               (reencrypt) fronts it via the HostNetwork Router. service-ca-operator
+#               auto-provisions the backend TLS cert.
+gateway:
+  enabled: true
+  # "route" (default, cloud/ROSA) or "clusterip" (on-prem/bare-metal/HostNetwork)
+  ingressMode: route
+  # Gateway name — must be maas-default-gateway (maas-1.md line 132)
+  name: maas-default-gateway
+  namespace: openshift-ingress
+  # Must match the cluster GatewayClass name — openshift-default (gateway.md line 38)
+  gatewayClassName: openshift-default
+  # Must be exactly openshift.io/gateway-controller/v1 (gateway.md line 48)
+  controllerName: openshift.io/gateway-controller/v1
+  # Istio revision installed by the Ingress Operator in openshift-ingress
+  istioRevision: openshift-gateway
+  # Required MaaS annotations (maas-1.md lines 134-135)
+  annotations:
+    opendatahub.io/managed: "false"
+    security.opendatahub.io/authorino-tls-bootstrap: "true"
+
+  # ── clusterip mode only ───────────────────────────────────────────────────────
+  # clusterip: ConfigMap name and service-ca Secret name used by the Gateway
+  # controller to provision a ClusterIP Service with an auto-managed TLS cert.
+  clusterip:
+    # Name of the ConfigMap that carries the ClusterIP + service-ca annotation.
+    # Must match infrastructure.parametersRef.name in the Gateway spec.
+    gwOptionsConfigMap: gw-options
+    # Name of the Secret that service-ca-operator will populate with the TLS cert.
+    # Must match the certificateRefs name in the Gateway listener.
+    serviceCaSecret: maas-gw-service-tls
+
+  # ── clusterip mode only ───────────────────────────────────────────────────────
+  # route: OpenShift Route placed in front of the ClusterIP Gateway Service.
+  route:
+    # Route resource name — referenced by oc get route / validation docs.
+    name: maas-gateway-route
+
+platformKuadrant:
+  enabled: true
+  namespace: kuadrant-system
+  instance:
+    enabled: true
+    name: kuadrant
+
+leaderWorkerSet:
+  enabled: true
+  namespace: openshift-lws-operator
+  instance:
+    enabled: true
+    name: cluster
+    managementState: Managed

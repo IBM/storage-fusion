@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: ModelVersion
+metadata:
+  name: gpt-oss-20b-hf
+  labels:
+    model-type: public
+    source: huggingface
+    task: text-generation
+    governance-status: approved
+spec:
+  modelName: "GPT-OSS 20B"
+  version: "1.0.0"
+  description: |
+    GPT-OSS 20B is an open-source large language model with 21.5 billion parameters.
+    This model is optimized for text generation, conversational AI, and tool-calling capabilities.
+    Suitable for enterprise chatbots, text generation, and conversational AI applications.
+  
+  author: "OpenAI"
+  
+  # Base model information (public model from Hugging Face)
+  baseModel:
+    name: "openai/gpt-oss-20b"
+    source: "huggingface"
+    sourceUrl: "https://huggingface.co/openai/gpt-oss-20b"
+    version: "main"
+    license: "Apache-2.0"
+    licenseUrl: "https://www.apache.org/licenses/LICENSE-2.0"
+  
+  # Governance and compliance metadata
+  governance:
+    approvedBy: "platform-team@company.com"
+    approvalDate: "2026-06-18"
+    approvalTicket: "JIRA-67890"
+    licenseVerified: true
+    securityScanned: true
+    scanDate: "2026-06-17"
+    scanTool: "trivy"
+    complianceStatus: "approved"
+    restrictions:
+      - "Requires GPU infrastructure for optimal performance"
+      - "Monitor for bias in responses"
+      - "Approved for production enterprise workloads"
+  
+  # Model storage and artifacts
+  storage:
+    uri: "hf://openai/gpt-oss-20b"
+    type: "huggingface"
+    size: "40GB"
+    format: "safetensors"
+  
+  # Model metadata and capabilities
+  metadata:
+    framework: "transformers"
+    frameworkVersion: "4.40.0"
+    modelType: "causal-lm"
+    architecture: "GPT"
+    parameters: "21.5B"
+    contextLength: "8192"
+    languages:
+      - "en"
+    tasks:
+      - "text-generation"
+      - "conversational"
+      - "tool-calling"
+    
+    # Performance metrics
+    metrics:
+      perplexity: "TBD"
+      
+    # Training information
+    training:
+      dataset: "OpenAI curated datasets"
+      trainingFramework: "PyTorch"
+      
+    # Hardware requirements
+    requirements:
+      minMemory: "64GB"
+      recommendedMemory: "128GB"
+      gpu: "required"
+      minCpu: "16 cores"
+  
+  # Use case and deployment information
+  useCases:
+    - name: "Enterprise Chatbot"
+      description: "Advanced conversational AI for customer engagement"
+      status: "approved"
+      
+    - name: "Text Generation"
+      description: "High-quality text generation for content creation"
+      status: "approved"
+      
+    - name: "Tool-Calling Agent"
+      description: "AI agent with function calling capabilities"
+      status: "approved"
+  
+  # Deployment configuration
+  deployment:
+    servingFramework: "kserve"
+    runtime: "huggingface"
+    replicas: 1
+    resources:
+      requests:
+        memory: "64Gi"
+        cpu: "16"
+      limits:
+        memory: "128Gi"
+        cpu: "32"
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPU: 70
+  
+  # Tags for searchability
+  tags:
+    - "llm"
+    - "gpt"
+    - "openai"
+    - "huggingface"
+    - "public-model"
+    - "approved"
+    - "production-ready"

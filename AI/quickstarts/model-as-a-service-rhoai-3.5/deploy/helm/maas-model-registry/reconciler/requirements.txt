@@ -1,0 +1,24 @@
+# Python dependencies for Model Registry GitOps Reconciler
+
+# Kubernetes client
+kubernetes>=28.0.0
+
+# Model Registry SDK
+model-registry>=0.2.0,<0.3.0
+
+# Hugging Face Hub
+huggingface-hub>=0.20.0
+
+# AWS/S3 client
+boto3>=1.34.0
+botocore>=1.34.0
+
+# YAML parsing
+PyYAML>=6.0
+
+# HTTP requests
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Logging and utilities
+python-dateutil>=2.8.0

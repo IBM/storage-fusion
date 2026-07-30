@@ -1,0 +1,112 @@
+# MaaS Runtime - Staging Environment
+# Environment-specific runtime configuration for staging
+
+global:
+  wildcardDomain: apps.cluster.example.com
+  wildcardCertName: ""
+  modelsNamespace: maas-staging
+  toolsImage: image-registry.openshift-image-registry.svc:5000/openshift/tools:latest
+
+monitoring:
+  enabled: true
+  clusterMonitoring:
+    enabled: true
+  grafana:
+    enabled: true
+    namespace: grafana
+    selectors:
+      app: grafana
+    consoleLink:
+      enabled: true
+      displayName: "MaaS Metrics Dashboard"
+      section: "Observability"
+    dashboards:
+      maasOverview:
+        enabled: true
+      modelMetrics:
+        enabled: true
+      gpuUtilization:
+        enabled: true
+
+authentication:
+  keycloak:
+    enabled: false
+
+rbac:
+  enabled: true
+  modelServiceAccount:
+    name: maas-model-sa
+    namespace: maas-staging
+
+modelRegistry:
+  enabled: true
+  namespace: rhoai-model-registries
+  createNamespace: false
+  name: model-registry
+  exposeHttpPort: true
+  objectStorage:
+    enabled: true
+    autoCreateBucket: true          # STAGING: OBC hook Job populates credentials
+    odfStorageClass: openshift-storage.noobaa.io
+    bucketClass: noobaa-default-bucket-class
+    bucketRetentionPolicy: false
+    maxObjects: ""
+    maxSize: ""
+    endpoint: ""
+    bucket: model-registry-artifacts-staging
+    region: us-south
+    accessKeyId: ""
+    secretAccessKey: ""
+    verifySSL: true
+    storageClass: STANDARD
+    externalSecret:
+      enabled: false                # STAGING: autoCreateBucket handles credentials; no ESO needed
+  database:
+    type: postgres
+    external: false
+    externalSecret:
+      enabled: false        # STAGING: Helm path used; in-cluster postgres with randAlphaNum password
+    internalDatabase:
+      storageSize: 10Gi
+      storageClassName: ""
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  service:
+    type: ClusterIP
+    restPort: 8080
+    grpcPort: 9090
+  ingress:
+    enabled: true
+    hostname: ""
+    tls:
+      enabled: true
+      secretName: ""
+  versioning:
+    enabled: true
+    format: semantic
+    autoIncrement: true
+  metadata:
+    requiredFields:
+      - name
+      - description
+      - framework
+      - version
+    customFields: []
+  catalogIntegration:
+    enabled: true
+    autoRegister: true
+    syncSchedule: "0 3 * * *"
+
+networkPolicies:
+  enabled: false
+
+commonLabels:
+  environment: staging
+
+commonAnnotations: {}
+

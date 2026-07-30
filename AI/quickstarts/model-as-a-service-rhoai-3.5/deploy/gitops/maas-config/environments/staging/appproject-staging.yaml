@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-maas-governance-config-staging
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    environment: staging
+    component: maas-config
+spec:
+  description: MaaS Governance Config – Staging Environment (MaaSSubscription + MaaSAuthPolicy)
+
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: admin
+      description: Admin role for maas-config staging environment
+      policies:
+        - p, proj:fusion-maas-governance-config-staging:admin, applications, *, fusion-maas-governance-config-staging/fusion-maas-governance-config-staging, allow
+      groups:
+        - maas-admins
+
+    - name: developer
+      description: Developer role for maas-config staging environment
+      policies:
+        - p, proj:fusion-maas-governance-config-staging:developer, applications, get, fusion-maas-governance-config-staging/fusion-maas-governance-config-staging, allow
+        - p, proj:fusion-maas-governance-config-staging:developer, applications, sync, fusion-maas-governance-config-staging/fusion-maas-governance-config-staging, allow
+      groups:
+        - maas-developers
+
+    - name: viewer
+      description: Read-only role for maas-config staging environment
+      policies:
+        - p, proj:fusion-maas-governance-config-staging:viewer, applications, get, fusion-maas-governance-config-staging/fusion-maas-governance-config-staging, allow
+      groups:
+        - maas-viewers
+
+  orphanedResources:
+    warn: true

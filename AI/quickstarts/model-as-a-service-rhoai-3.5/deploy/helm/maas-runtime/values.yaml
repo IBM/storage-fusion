@@ -1,0 +1,427 @@
+# Global configuration shared across all components
+global:
+  # OpenShift cluster wildcard domain (e.g., apps.cluster.example.com)
+  wildcardDomain: apps.cluster.example.com
+  
+  # Name of the certificate secret for ingress (leave empty for self-signed)
+  wildcardCertName: ""
+  
+  # Default namespace for model deployments
+  modelsNamespace: maas-models
+  
+  # Tools image for jobs (should contain oc, kubectl, bash)
+  toolsImage: image-registry.openshift-image-registry.svc:5000/openshift/tools:latest
+
+# Monitoring and observability
+monitoring:
+  # Enable monitoring stack
+  enabled: true
+  
+  # Cluster monitoring configuration
+  clusterMonitoring:
+    enabled: true
+  
+  # Grafana configuration
+  grafana:
+    enabled: true
+    namespace: grafana
+    
+    # Grafana instance selectors (labels to match Grafana CR)
+    selectors:
+      app: grafana
+    
+    # Create console link for Grafana
+    consoleLink:
+      enabled: true
+      displayName: "MaaS Metrics Dashboard"
+      section: "Observability"
+    
+    # Default dashboards to deploy
+    dashboards:
+      maasOverview:
+        enabled: true
+      modelMetrics:
+        enabled: true
+      gpuUtilization:
+        enabled: true
+
+# Authentication and authorization
+authentication:
+  # Keycloak configuration (optional)
+  keycloak:
+    enabled: false
+    namespace: keycloak
+    
+    # Realm configuration
+    realm:
+      name: maas
+      displayName: "MaaS Platform"
+      
+      # Admin user
+      admin:
+        username: admin
+        password: ""  # Set via --set or secure method
+      
+      # Default user configuration
+      user:
+        password: ""  # Set via --set or secure method
+        count: 5  # Creates user1-user5
+    
+    # Remove kubeadmin user after Keycloak setup
+    removeKubeAdmin: false
+    
+    # OAuth integration
+    oauth:
+      enabled: true
+
+# RBAC configuration
+rbac:
+  # Create default roles and bindings
+  enabled: true
+  
+  # Service account for model deployments
+  modelServiceAccount:
+    name: maas-model-sa
+    namespace: maas-models
+
+# Kuadrant configuration
+# kuadrant:
+#   # Kuadrant instance configuration
+#   instance:
+#     name: kuadrant
+#     namespace: kuadrant-system
+  
+#   # Authorino TLS configuration
+#   authorino:
+#     tls:
+#       enabled: true
+#       secretName: authorino-server-cert
+
+# Model Registry configuration
+modelRegistry:
+  # Enable Model Registry
+  enabled: true
+
+  # Namespace for Model Registry (must already exist; typically created by DataScienceCluster)
+  namespace: rhoai-model-registries
+  createNamespace: false
+  
+  # Model Registry instance name
+  name: model-registry
+  
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Model Registry — IBM Fusion Object Storage configuration
+  #
+  # Three credential modes — choose one:
+  #
+  #   autoCreateBucket: true   (default) — ODF ObjectBucketClaim is created; a
+  #     post-install hook Job reads the OBC Secret and patches
+  #     model-registry-object-storage at runtime. No credentials in Git or Vault.
+  #
+  #   autoCreateBucket: false, externalSecret.enabled: false — Manual mode.
+  #     accessKeyId, secretAccessKey, endpoint are written from values into a
+  #     Helm-managed Secret. Credentials end up in Git — NOT recommended.
+  #
+  #   autoCreateBucket: false, externalSecret.enabled: true — ESO mode.
+  #     Helm creates an ExternalSecret CR; ESO reads all three sensitive fields
+  #     (access-key-id, secret-access-key, endpoint) from Vault and assembles
+  #     model-registry-object-storage using target.template so non-sensitive
+  #     fields (bucket, region, storageClass, verifySSL) stay in values.
+  #     No credentials in Git. Recommended for external/cloud object storage.
+  #
+  # MUTUAL EXCLUSION: autoCreateBucket and externalSecret.enabled cannot both be
+  # true — the OBC hook Job would overwrite the ESO-managed Secret. The chart
+  # emits a hard error if both are set.
+  # ─────────────────────────────────────────────────────────────────────────────
+  objectStorage:
+    # Enable IBM Fusion Object Storage (required)
+    enabled: true
+
+    # Automatic bucket creation using OpenShift Data Foundation (ODF).
+    # When enabled, creates an ObjectBucketClaim for automatic provisioning.
+    # Set to false when using an external / cloud object store (IBM COS, AWS S3, etc.)
+    # Recommended: true for zero-configuration on-cluster deployment.
+    autoCreateBucket: true
+
+    # OpenShift Data Foundation StorageClass for ObjectBucketClaim
+    # Default: openshift-storage.noobaa.io (NooBaa Multi-Cloud Gateway)
+    odfStorageClass: openshift-storage.noobaa.io
+
+    # BucketClass to use for ObjectBucketClaim
+    # Defines the data placement policy within IBM Fusion
+    bucketClass: noobaa-default-bucket-class
+
+    # Bucket retention policy settings (optional)
+    bucketRetentionPolicy: false
+
+    # Maximum number of objects in bucket (optional, for quota management)
+    maxObjects: ""
+
+    # Maximum bucket size (optional, e.g., "100Gi", "1Ti")
+    maxSize: ""
+    
+    # Fusion endpoint URL.
+    # autoCreateBucket: true  → auto-populated from OBC; leave empty.
+    # autoCreateBucket: false → required; set here OR clear and use externalSecret.
+    # SECURITY: do not commit real endpoints that embed tokens — use externalSecret.
+    endpoint: ""
+
+    # Fusion bucket name for model artifacts.
+    # autoCreateBucket: true  → base name for generateBucketName (OBC appends a suffix).
+    # autoCreateBucket: false → exact bucket name written into the Secret.
+    bucket: model-registry-artifacts
+
+    # Fusion region (for IBM Cloud Object Storage integration)
+    region: us-south
+
+    # Fusion credentials (only required if autoCreateBucket: false AND externalSecret.enabled: false).
+    # autoCreateBucket: true       → populated by the OBC hook Job; leave empty.
+    # externalSecret.enabled: true → populated by ESO from Vault; CLEAR these (set to "").
+    accessKeyId: ""
+    secretAccessKey: ""
+
+    # SSL verification (recommended: true)
+    verifySSL: true
+
+    # Storage class for objects
+    storageClass: STANDARD
+
+    # ── ESO mode — let External Secrets Operator own model-registry-object-storage ─
+    # Only active when autoCreateBucket: false.
+    # When enabled: true, Helm creates an ExternalSecret CR (not the Secret itself).
+    # ESO reads the three sensitive fields from Vault and stamps the full Secret
+    # via target.template — non-sensitive fields (bucket, region, storageClass,
+    # verifySSL) remain in values so Vault stays minimal.
+    #
+    # Vault secret must contain these fields at remoteRef.key:
+    #   access-key-id      → AWS_ACCESS_KEY_ID
+    #   secret-access-key  → AWS_SECRET_ACCESS_KEY
+    #   endpoint           → AWS_S3_ENDPOINT
+    #
+    # e.g. vault kv put secret/maas/model-registry/object-storage \
+    #        access-key-id="<key>" \
+    #        secret-access-key="<secret>" \
+    #        endpoint="https://s3.example.com"
+    #
+    # REQUIREMENT: External Secrets Operator installed + ClusterSecretStore ready.
+    # MUTUAL EXCLUSION: autoCreateBucket must be false when this is true.
+    # When enabling: clear accessKeyId, secretAccessKey, endpoint above (set to "").
+    externalSecret:
+      # Set to true to have ESO manage model-registry-object-storage instead of Helm.
+      # Only effective when autoCreateBucket: false.
+      enabled: false
+
+      # Refresh interval — how often ESO re-reads values from the backend.
+      refreshInterval: 24h
+
+      # Reference to the ClusterSecretStore (or SecretStore) created by the
+      # external-secrets-operator Helm chart.
+      secretStoreRef:
+        name: vault-backend        # must match ClusterSecretStore name in ESO chart
+        kind: ClusterSecretStore   # ClusterSecretStore (cluster-wide) or SecretStore (namespaced)
+
+      # Target Secret name that ESO will create in modelRegistry.namespace.
+      # Defaults to "model-registry-object-storage" (the name the CronJob expects).
+      # Override during testing to avoid touching the live secret, e.g.:
+      #   targetName: model-registry-object-storage-eso-test
+      targetName: ""               # empty = use default "model-registry-object-storage"
+
+      # Vault KV path containing access-key-id, secret-access-key, and endpoint.
+      # e.g. vault kv put secret/maas/model-registry/object-storage ...
+      remoteRef:
+        key: maas/model-registry/object-storage
+  
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Model Registry — Database configuration
+  #
+  # external: false → deploy an in-cluster PostgreSQL (Deployment + PVC + Service).
+  #                   Credentials are auto-generated by randAlphaNum — no secret
+  #                   in Git. Good for dev/staging.
+  # external: true  → point at a pre-existing managed database. No Deployment is created.
+  #
+  # ── ESO mode (externalSecret.enabled: true) ───────────────────────────────
+  # Only applies when external: true. Set enabled: true to have External Secrets
+  # Operator create model-registry-db-credentials from Vault instead of Helm.
+  # Helm creates an ExternalSecret CR; ESO resolves it into the real Secret.
+  #
+  # MUTUAL EXCLUSION: the chart will fail if both the Helm-managed Secret path
+  # (external: true, externalSecret.enabled: false) AND externalSecret.enabled:
+  # true are active with an empty targetName — they would write to the same Secret.
+  #
+  # Vault secret must contain these fields at remoteRef.key:
+  #   password   → DB_PASSWORD
+  # The remaining fields (host, port, database, username, sslMode) are non-sensitive
+  # and remain in values — only the password is fetched from Vault.
+  #
+  # e.g. vault kv put secret/maas/model-registry/database \
+  #        password=<strong-password>
+  #
+  # When enabling: clear externalDatabase.password (set to "") so no plaintext
+  # credentials are committed to Git.
+  # ─────────────────────────────────────────────────────────────────────────────
+  database:
+    type: postgres
+    external: false
+
+    # External database configuration — override per environment.
+    externalDatabase:
+      host: ""
+      port: 5432
+      database: modelregistry
+      username: modelregistry
+      password: ""  # CLEAR when externalSecret.enabled: true — set via ESO or --set
+      sslMode: require
+
+    # ── ESO mode — let External Secrets Operator own model-registry-db-credentials ─
+    # When enabled: true, Helm creates an ExternalSecret CR (not the Secret itself).
+    # ESO resolves the CR and writes model-registry-db-credentials into
+    # modelRegistry.namespace. The ModelRegistry CR reads DB_PASSWORD from that
+    # Secret via passwordSecret.key — no change to the CR required.
+    #
+    # REQUIREMENT: External Secrets Operator must be installed and a ClusterSecretStore
+    # named by secretStoreRef.name must exist before this Application syncs.
+    #
+    # Only active when modelRegistry.database.external: true.
+    externalSecret:
+      # Set to true to have ESO manage model-registry-db-credentials instead of Helm.
+      enabled: false
+
+      # Refresh interval — how often ESO re-reads the value from the backend.
+      refreshInterval: 1h
+
+      # Reference to the ClusterSecretStore (or SecretStore) created by the
+      # external-secrets-operator Helm chart.
+      secretStoreRef:
+        name: vault-backend        # must match ClusterSecretStore name in ESO chart
+        kind: ClusterSecretStore   # ClusterSecretStore (cluster-wide) or SecretStore (namespaced)
+
+      # Target Secret name that ESO will create in modelRegistry.namespace.
+      # Defaults to "model-registry-db-credentials" (the name ModelRegistry CR expects).
+      # Override during testing to avoid touching the live secret, e.g.:
+      #   targetName: model-registry-db-credentials-eso-test
+      targetName: ""               # empty = use default "model-registry-db-credentials"
+
+      # Vault KV path and field containing the database password.
+      # Only the password is fetched from Vault; other fields come from externalDatabase.*.
+      # e.g. vault kv put secret/maas/model-registry/database password=<pw>
+      remoteRef:
+        key: maas/model-registry/database   # Vault KV path
+        property: password                   # field name inside that KV secret
+    
+    # Internal database configuration (if external: false)
+    internalDatabase:
+      # Storage size for database PVC
+      storageSize: 10Gi
+      
+      # Storage class
+      storageClassName: ""  # Use default
+      
+      # Resource limits
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  
+  # Expose HTTP port 8080 for direct API access (bypasses kube-rbac-proxy)
+  # Set to true if you need HTTP access without authentication
+  exposeHttpPort: true
+  
+  # Model Registry service configuration
+  service:
+    # Service type
+    type: ClusterIP
+    
+    # REST API port
+    restPort: 8080
+    
+    # gRPC port
+    grpcPort: 9090
+  
+  # Ingress/Route configuration
+  ingress:
+    # Enable ingress/route
+    enabled: true
+    
+    # Hostname (leave empty for auto-generation)
+    hostname: ""
+    
+    # TLS configuration
+    tls:
+      enabled: true
+      secretName: ""  # Leave empty for auto-generated cert
+  
+  # Model versioning configuration
+  versioning:
+    # Enable automatic versioning
+    enabled: true
+    
+    # Version format: semantic (1.0.0) or timestamp (20240101-120000)
+    format: semantic
+    
+    # Auto-increment version on model update
+    autoIncrement: true
+  
+  # Model metadata configuration
+  metadata:
+    # Required metadata fields
+    requiredFields:
+      - name
+      - description
+      - framework
+      - version
+    
+    # Custom metadata fields
+    customFields: []
+      # - field: use-case
+      #   type: string
+      #   required: false
+      # - field: accuracy
+      #   type: float
+      #   required: false
+  
+  # Integration with Model Catalog
+  catalogIntegration:
+    # Enable integration with Model Catalog
+    enabled: true
+    
+    # Automatically register models from catalog
+    autoRegister: true
+    
+    # Sync interval (cron format)
+    syncSchedule: "0 3 * * *"  # Daily at 3 AM
+
+# Resource quotas and limits (optional)
+# resourceQuotas:
+#   enabled: false
+  
+#   # Quota for models namespace
+#   modelsNamespace:
+#     requests:
+#       cpu: "100"
+#       memory: "500Gi"
+#       nvidia.com/gpu: "10"
+#     limits:
+#       cpu: "200"
+#       memory: "1000Gi"
+#       nvidia.com/gpu: "10"
+
+# Network policies (optional)
+networkPolicies:
+  enabled: false
+  
+  # Allow ingress from specific namespaces
+  allowFrom:
+    - openshift-ingress
+    - openshift-monitoring
+
+# Additional labels to apply to all resources
+commonLabels: {}
+  # environment: production
+  # team: ai-platform
+
+# Additional annotations to apply to all resources
+commonAnnotations: {}
+  # managed-by: helm

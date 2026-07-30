@@ -1,0 +1,65 @@
+{{- range .Values.authPolicies }}
+---
+# MaaSAuthPolicy – {{ .name }}
+# -----------------------------------------------------------------------
+# Grants API gateway access to model endpoints for the specified groups /
+# users. This resource works alongside a MaaSSubscription:
+#   - MaaSSubscription  controls token quota (rate limiting).
+#   - MaaSAuthPolicy    controls gateway access (authentication gate).
+# Without a subscription, users receive 429 Too Many Requests.
+# Without an auth policy, users receive 403 Forbidden.
+#
+# Access logic: OR — any matching group OR user grants access to ALL
+# listed models. At least one of groups or users must be specified.
+#
+# meteringMetadata is optional. Omit the block if billing attribution is
+# not required. When present, all three sub-fields are independently
+# optional (organizationId, costCenter, labels).
+# -----------------------------------------------------------------------
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSAuthPolicy
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "maas-config.maasNamespace" $ }}
+  labels:
+    {{- include "maas-config.labels" $ | nindent 4 }}
+    maas.redhat.com/auth-policy: {{ .name }}
+  annotations:
+    {{- include "maas-config.annotations" $ | nindent 4 }}
+    {{- if .description }}
+    maas.redhat.com/description: {{ .description | quote }}
+    {{- end }}
+spec:
+  subjects:
+    groups:
+      {{- range .groups }}
+      - name: {{ . }}
+      {{- end }}
+    users:
+      {{- if .users }}
+      {{- range .users }}
+      - {{ . }}
+      {{- end }}
+      {{- else }}
+      []
+      {{- end }}
+  modelRefs:
+    {{- range .modelRefs }}
+    - name: {{ .name }}
+      namespace: {{ .namespace }}
+    {{- end }}
+  {{- if .meteringMetadata }}
+  # Optional: billing attribution for cost allocation and showback reporting
+  meteringMetadata:
+    {{- if .meteringMetadata.organizationId }}
+    organizationId: {{ .meteringMetadata.organizationId | quote }}
+    {{- end }}
+    {{- if .meteringMetadata.costCenter }}
+    costCenter: {{ .meteringMetadata.costCenter | quote }}
+    {{- end }}
+    {{- if .meteringMetadata.labels }}
+    labels:
+      {{- toYaml .meteringMetadata.labels | nindent 6 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

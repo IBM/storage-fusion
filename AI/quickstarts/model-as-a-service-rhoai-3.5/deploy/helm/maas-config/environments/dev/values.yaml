@@ -1,0 +1,50 @@
+# =============================================================================
+# Environment override – Development  |  maas-config
+# =============================================================================
+# Dev overrides for MaaS configuration resources.
+# Lower token limits and relaxed groups for development usage.
+#
+# IMPORTANT:
+# Authorization policies and subscriptions are independent resources. If you
+# modify a subscription to add or remove groups or models, you must manually
+# update the corresponding authorization policy to keep them synchronized.
+# =============================================================================
+
+maasNamespace: models-as-a-service
+
+# -----------------------------------------------------------------------------
+# Subscriptions
+# -----------------------------------------------------------------------------
+subscriptions:
+  - name: gpt-model-subscription
+    displayName: "GPT-OSS 20B Subscription"
+    description: "Dev subscription for GPT-OSS 20B model access"
+    priority: 1
+    groups:
+      - rhods-admins
+    users: []
+    modelRefs:
+      - name: gpt-oss-20b-100
+        namespace: deploy-models
+        tokenRateLimits:
+          - limit: 5000
+            window: "1h"
+
+# -----------------------------------------------------------------------------
+# Authorization Policies
+# -----------------------------------------------------------------------------
+authPolicies:
+  - name: gpt-model-subscription-policy
+    description: "Auth policy created for subscription \"gpt-model-subscription\""
+    groups:
+      - rhods-admins
+    users: []
+    modelRefs:
+      - name: gpt-oss-20b-100
+        namespace: deploy-models
+
+# -----------------------------------------------------------------------------
+# Additional Labels
+# -----------------------------------------------------------------------------
+labels:
+  environment: dev

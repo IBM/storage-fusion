@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-maas-governance-config-prod
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    environment: prod
+    component: maas-config
+spec:
+  description: MaaS Governance Config - Production Environment (MaaSSubscription + MaaSAuthPolicy for all models)
+
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: admin
+      description: Admin role for maas-config prod environment
+      policies:
+        - p, proj:fusion-maas-governance-config-prod:admin, applications, *, fusion-maas-governance-config-prod/fusion-maas-governance-config-prod, allow
+      groups:
+        - maas-admins
+
+    - name: viewer
+      description: Read-only role for maas-config prod environment
+      policies:
+        - p, proj:fusion-maas-governance-config-prod:viewer, applications, get, fusion-maas-governance-config-prod/fusion-maas-governance-config-prod, allow
+      groups:
+        - maas-viewers
+        - maas-developers
+
+  orphanedResources:
+    warn: true

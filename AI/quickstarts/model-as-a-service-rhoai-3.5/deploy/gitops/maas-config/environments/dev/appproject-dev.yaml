@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-maas-governance-config-dev
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    environment: dev
+    component: maas-config
+spec:
+  description: MaaS Governance Config – Development Environment (MaaSSubscription + MaaSAuthPolicy)
+
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: admin
+      description: Admin role for maas-config dev environment
+      policies:
+        - p, proj:fusion-maas-governance-config-dev:admin, applications, *, fusion-maas-governance-config-dev/fusion-maas-governance-config-dev, allow
+      groups:
+        - maas-admins
+        - maas-dev-admins
+
+    - name: developer
+      description: Developer role for maas-config dev environment
+      policies:
+        - p, proj:fusion-maas-governance-config-dev:developer, applications, get, fusion-maas-governance-config-dev/fusion-maas-governance-config-dev, allow
+        - p, proj:fusion-maas-governance-config-dev:developer, applications, sync, fusion-maas-governance-config-dev/fusion-maas-governance-config-dev, allow
+        - p, proj:fusion-maas-governance-config-dev:developer, applications, update, fusion-maas-governance-config-dev/fusion-maas-governance-config-dev, allow
+      groups:
+        - maas-developers
+
+    - name: viewer
+      description: Read-only role for maas-config dev environment
+      policies:
+        - p, proj:fusion-maas-governance-config-dev:viewer, applications, get, fusion-maas-governance-config-dev/fusion-maas-governance-config-dev, allow
+      groups:
+        - maas-viewers
+
+  orphanedResources:
+    warn: true

@@ -1,0 +1,148 @@
+# MaaS Runtime - Production Environment
+# Environment-specific runtime configuration for production
+
+global:
+  wildcardDomain: apps.cluster.example.com
+  wildcardCertName: ""
+  modelsNamespace: maas-prod
+  toolsImage: image-registry.openshift-image-registry.svc:5000/openshift/tools:latest
+
+monitoring:
+  enabled: true
+  clusterMonitoring:
+    enabled: true
+  grafana:
+    enabled: true
+    namespace: grafana
+    selectors:
+      app: grafana
+    consoleLink:
+      enabled: true
+      displayName: "MaaS Metrics Dashboard"
+      section: "Observability"
+    dashboards:
+      maasOverview:
+        enabled: true
+      modelMetrics:
+        enabled: true
+      gpuUtilization:
+        enabled: true
+
+authentication:
+  keycloak:
+    enabled: false
+
+rbac:
+  enabled: true
+  modelServiceAccount:
+    name: maas-model-sa
+    namespace: maas-prod
+
+modelRegistry:
+  enabled: true
+  namespace: rhoai-model-registries
+  createNamespace: false
+  name: model-registry
+  exposeHttpPort: true
+  objectStorage:
+    enabled: true
+    autoCreateBucket: true          # PROD: switch to false + externalSecret.enabled: true for external S3
+    odfStorageClass: openshift-storage.noobaa.io
+    bucketClass: noobaa-default-bucket-class
+    bucketRetentionPolicy: false
+    maxObjects: ""
+    maxSize: ""
+    endpoint: ""
+    bucket: model-registry-artifacts-prod
+    region: us-south
+    accessKeyId: ""                 # CLEAR when externalSecret.enabled: true
+    secretAccessKey: ""             # CLEAR when externalSecret.enabled: true
+    verifySSL: true
+    storageClass: STANDARD
+    # ── ESO path (use when pointing at external S3 / IBM COS) ─────────────────
+    # 1. vault kv put secret/maas/model-registry/object-storage \
+    #      access-key-id="<key>" secret-access-key="<secret>" endpoint="https://..."
+    # 2. Set autoCreateBucket: false, externalSecret.enabled: true
+    # 3. Clear accessKeyId, secretAccessKey, endpoint above
+    externalSecret:
+      enabled: false                # set true (with autoCreateBucket: false) to switch to ESO
+      refreshInterval: 24h
+      secretStoreRef:
+        name: vault-backend
+        kind: ClusterSecretStore
+      targetName: ""                # empty = "model-registry-object-storage"
+      remoteRef:
+        key: maas/model-registry/object-storage
+  database:
+    type: postgres
+    external: false  # Switch to true + externalSecret.enabled: true before go-live
+    # ── ESO path (recommended for prod go-live) ───────────────────────────────
+    # 1. vault kv put secret/maas/model-registry/database password=<pw>
+    # 2. Set external: true, externalSecret.enabled: true, externalDatabase.password: ""
+    externalSecret:
+      enabled: false            # set true (with external: true above) to switch to ESO
+      refreshInterval: 1h
+      secretStoreRef:
+        name: vault-backend
+        kind: ClusterSecretStore
+      targetName: ""            # empty = "model-registry-db-credentials"
+      remoteRef:
+        key: maas/model-registry/database
+        property: password
+    externalDatabase:
+      host: ""                  # REPLACE with managed DB host before go-live
+      port: 5432
+      database: modelregistry
+      username: modelregistry
+      password: ""              # CLEAR — set via ESO when externalSecret.enabled: true
+      sslMode: require
+    internalDatabase:
+      storageSize: 50Gi  # Larger for production
+      storageClassName: ""
+      resources:
+        limits:
+          cpu: "2"
+          memory: 4Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+  service:
+    type: ClusterIP
+    restPort: 8080
+    grpcPort: 9090
+  ingress:
+    enabled: true
+    hostname: ""
+    tls:
+      enabled: true
+      secretName: ""
+  versioning:
+    enabled: true
+    format: semantic
+    autoIncrement: true
+  metadata:
+    requiredFields:
+      - name
+      - description
+      - framework
+      - version
+    customFields: []
+  catalogIntegration:
+    enabled: true
+    autoRegister: true
+    syncSchedule: "0 3 * * *"
+
+networkPolicies:
+  enabled: true  # Enabled for production
+  allowFrom:
+    - openshift-ingress
+    - openshift-monitoring
+
+commonLabels:
+  environment: prod
+  criticality: high
+
+commonAnnotations:
+  managed-by: gitops
+  change-management: required
+

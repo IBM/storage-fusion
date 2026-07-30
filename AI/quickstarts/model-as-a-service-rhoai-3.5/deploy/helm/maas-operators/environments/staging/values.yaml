@@ -1,0 +1,51 @@
+# MaaS Operators - Staging Environment
+# Environment-specific operator configuration for staging
+
+operators:
+  openshiftAI:
+    enabled: true
+    channel: stable-3.x
+    namespace: redhat-ods-operator
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic
+
+  connectivityLink:
+    enabled: true
+    channel: stable
+    # Subscription must be in openshift-operators (AllNamespaces install mode).
+    # The DSC controller looks for the rhcl-operator Subscription there to satisfy
+    # KserveLLMInferenceServiceDependencies.
+    namespace: openshift-operators
+    # kuadrantNamespace is the dedicated namespace for the Kuadrant CR, Authorino,
+    # Limitador, and DNS operator components. Separate from the Subscription namespace.
+    # Ref: maas-1.md line 124 — "created a Kuadrant CR in the kuadrant-system namespace"
+    kuadrantNamespace: kuadrant-system
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic
+
+  certManager:
+    enabled: true
+    channel: stable-v1
+    namespace: cert-manager-operator
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic
+
+  leaderWorkerSet:
+    enabled: true
+    channel: stable-v1.0
+    namespace: openshift-lws-operator
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic
+
+  grafana:
+    enabled: true
+    channel: v5
+    namespace: grafana-operator
+    source: community-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic
+

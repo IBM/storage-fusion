@@ -1,0 +1,247 @@
+# =============================================================================
+# MaaS Model Service Configuration
+# =============================================================================
+# This Helm chart supports the following deployment modes:
+# 1. LLM-D Distributed Inference - Uses LLMInferenceService
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  # Unique name for the model (used in URLs and resource names)
+  name: my-model
+  
+  # Display name shown in dashboards and UIs
+  displayName: "My Model Display Name"
+  
+  # Namespace where the model will be deployed
+  # Should match the modelsNamespace from maas-runtime
+  namespace: maas-models
+
+# -----------------------------------------------------------------------------
+# Project/Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  # Create the namespace/project if it doesn't exist
+  # Set to false if the namespace already exists
+  create: true
+  
+  # Additional labels for the namespace
+  # The opendatahub.io/dashboard: "true" label is automatically added
+  # to make the project visible in OpenShift AI UI
+  labels: {}
+    # team: ai-platform
+    # environment: production
+  
+  # Additional annotations for the namespace
+  annotations: {}
+    # description: "Model deployment namespace"
+
+# -----------------------------------------------------------------------------
+# Model Registry Configuration
+# -----------------------------------------------------------------------------
+# Use this to deploy models from the model registry
+modelRegistry:
+  # Enable model registry deployment mode
+  enabled: false
+  
+  # Model registry name
+  name: "model-registry"
+  
+  # Model registry namespace
+  namespace: "rhoai-model-registries"
+  
+  # Registered model name (from model registry)
+  registeredModelName: ""
+  
+  # Model version (optional, defaults to latest)
+  modelVersion: ""
+  
+  # Model version ID (alternative to modelVersion)
+  modelVersionId: ""
+  
+  # Registered model ID (optional)
+  registeredModelId: ""
+  
+  # Connection secret for pulling model images
+  # This should contain registry credentials if needed
+  connectionSecret: ""
+  
+  # Create connection secret if it doesn't exist
+  createConnectionSecret: false
+  
+  # Connection secret data (only used if createConnectionSecret is true)
+  connectionSecretData:
+    # Base64 encoded OCI registry host (e.g., registry.redhat.io)
+    # Example: echo -n "registry.redhat.io" | base64
+    ociHost: ""
+    # Base64 encoded access type (default: ["Pull"])
+    accessType: "WyJQdWxsIl0="
+
+# -----------------------------------------------------------------------------
+# Model Source Configuration
+# -----------------------------------------------------------------------------
+# Used when modelRegistry.enabled is false
+source:
+  # OCI registry URI for the model
+  # Examples:
+  #   - oci://registry.redhat.io/rhelai1/modelcar-gpt-oss-20b:1.5
+  #   - oci://quay.io/org/model:tag
+  uri: ""
+  
+  # Alternative source types (future support)
+  # huggingface:
+  #   repo: "meta-llama/Llama-2-7b-hf"
+  #   revision: "main"
+  # s3:
+  #   bucket: "my-models"
+  #   key: "models/my-model"
+
+# -----------------------------------------------------------------------------
+# Inference Engine Configuration
+# -----------------------------------------------------------------------------
+# configuration for LLM-D mode
+inference:
+  # Inference engine to use
+  # Supported: vllm, tgi (text-generation-inference), llama-cpp
+  engine: vllm
+  
+  # Container image for the inference engine
+  image: registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3.0
+  
+  # Image pull policy
+  imagePullPolicy: IfNotPresent
+  
+  # Number of replicas (for horizontal scaling)
+  replicas: 1
+  
+  # Engine-specific arguments
+  # For vLLM, these are passed as command-line arguments
+  extraArgs: []
+    # - --enable-force-include-usage
+    # - --enable-auto-tool-choice
+    # - --tool-call-parser=qwen3_coder
+    # - --trust-remote-code
+  
+  # Environment variables
+  env: []
+    # - name: VLLM_ADDITIONAL_ARGS
+    #   value: "--max-model-len=32768 --gpu-memory-utilization=0.95"
+
+
+# -----------------------------------------------------------------------------
+# Resource Allocation
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "4"
+    memory: 24Gi
+    nvidia.com/gpu: "1"
+  requests:
+    cpu: "2"
+    memory: 16Gi
+    nvidia.com/gpu: "1"
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling Configuration
+# -----------------------------------------------------------------------------
+scheduling:
+  # Node selector for pod placement
+  nodeSelector: {}
+    # node-role.kubernetes.io/gpu: ""
+  
+  # Tolerations for GPU nodes
+  tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+  
+  # Affinity rules
+  affinity: {}
+    # podAntiAffinity:
+    #   preferredDuringSchedulingIgnoredDuringExecution:
+    #     - weight: 100
+    #       podAffinityTerm:
+    #         labelSelector:
+    #           matchExpressions:
+    #             - key: app
+    #               operator: In
+    #               values:
+    #                 - model-service
+    #         topologyKey: kubernetes.io/hostname
+
+# -----------------------------------------------------------------------------
+# Tier-based Access Control
+# -----------------------------------------------------------------------------
+# List of tiers that can access this model
+# Must match tier names defined in maas-runtime
+tiers:
+  - free
+  - premium
+  - enterprise
+
+# -----------------------------------------------------------------------------
+# Rate Limiting Configuration
+# -----------------------------------------------------------------------------
+rateLimiting:
+  # Enable rate limiting for this model
+  enabled: false
+  
+  # Custom rate limits (overrides tier defaults)
+  # Leave empty to use tier defaults from maas-runtime
+  customLimits: {}
+
+# Token-based rate limiting
+tokenRateLimiting:
+  # Enable token-based rate limiting
+  enabled: false
+  
+  # Custom token limits (overrides tier defaults)
+  customLimits: {}
+
+# -----------------------------------------------------------------------------
+# Gateway Configuration
+# -----------------------------------------------------------------------------
+gateway:
+  # Gateway name (should match the gateway created by maas-runtime)
+  name: "openshift-ai-inference"
+  
+  # Gateway namespace
+  namespace: "openshift-ingress"
+  
+  # Expose the gateway externally via OpenShift Route
+  # Set to true to create a properly configured Route with TLS passthrough
+  # This prevents issues with auto-generated routes that may have incorrect port/TLS config
+  # Note: Only one model deployment needs to set this to true (first model deployed)
+  exposeExternally: false
+  
+  # OpenShift cluster wildcard domain (e.g., apps.cluster.example.com)
+  # Required when exposeExternally is true
+  wildcardDomain: "apps.cluster.example.com"
+
+# -----------------------------------------------------------------------------
+# Monitoring Configuration
+# -----------------------------------------------------------------------------
+monitoring:
+  # Enable monitoring for this model
+  enabled: true
+  
+  # ServiceMonitor configuration
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+# -----------------------------------------------------------------------------
+# Additional Labels and Annotations
+# -----------------------------------------------------------------------------
+# Additional labels to apply to all resources
+labels: {}
+  # team: ai-platform
+  # environment: production
+
+# Additional annotations to apply to all resources
+annotations: {}
+  # managed-by: helm

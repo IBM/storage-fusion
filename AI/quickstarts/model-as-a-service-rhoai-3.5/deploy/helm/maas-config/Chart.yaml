@@ -1,0 +1,18 @@
+apiVersion: v2
+name: maas-config
+description: Helm chart for managing MaaS configuration resources – MaaSSubscription and MaaSAuthPolicy CRs in the models-as-a-service namespace
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+keywords:
+  - ai
+  - llm
+  - maas
+  - subscription
+  - authpolicy
+  - governance
+maintainers:
+  - name: Fusion AI Platform Team
+home: https://github.com/IBM/storage-fusion
+sources:
+  - https://github.com/IBM/storage-fusion

@@ -1,0 +1,248 @@
+# Default values for model-registry-gitops
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Namespace where the reconciler will run
+namespace: fusion-model-registry-gitops
+
+# Model Registry configuration
+modelRegistry:
+  # Namespace where Model Registry is deployed
+  namespace: rhoai-model-registries
+  
+  # Name of the ObjectBucketClaim for model storage
+  obcName: model-registry-artifacts
+  
+  # Model Registry service name
+  serviceName: model-registry-http
+  
+  # Model Registry service port
+  servicePort: 8080
+  
+  # Use secure connection (HTTPS)
+  secure: false
+  
+  # Expose HTTP port (creates model-registry-http service)
+  exposeHttpPort: true
+
+# Reconciler deployment configuration
+reconciler:
+  # Number of replicas
+  replicaCount: 1
+  
+  # Container image configuration
+  image:
+    # Use OpenShift internal registry (built with BuildConfig)
+    repository: image-registry.openshift-image-registry.svc:5000/fusion-model-registry-gitops/model-reconciler
+    tag: latest
+    pullPolicy: Always
+  
+  # Service account name
+  serviceAccountName: model-reconciler
+  
+  # Resource limits and requests
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+  
+  # Reconciliation settings
+  config:
+    # How often to reconcile (seconds)
+    reconcileInterval: 300
+    
+    # Delay between processing models (seconds)
+    sequentialDelay: 30
+    
+    # Cleanup local files after upload
+    cleanupAfterUpload: true
+    
+    # Log level (DEBUG, INFO, WARNING, ERROR)
+    logLevel: INFO
+  
+  # Cache volume configuration
+  cache:
+    # Size of the cache volume for model downloads
+    size: 200Gi
+
+# Hugging Face configuration
+huggingface:
+  # Enable if you have a Hugging Face token secret.
+  # When true, the reconciler will authenticate to Hugging Face using the
+  # token stored in the Secret named by secretName. Required for gated models
+  # (Llama, Mistral, etc.). Public models work without a token.
+  enabled: false
+  
+  # Name of the Secret containing the HF token.
+  # The reconciler reads key "token" from this Secret in modelRegistry.namespace
+  # (i.e. rhoai-model-registries), not the reconciler namespace.
+  #
+  # Two modes — choose one:
+  #
+  #   externalSecret.enabled: false (default) — Manual mode.
+  #     Create the Secret yourself before deploying:
+  #       oc create secret generic huggingface-token \
+  #         -n <modelRegistry.namespace> \
+  #         --from-literal=token=hf_xxxxxxxxxxxxxxxxxxxx
+  #
+  #   externalSecret.enabled: true — ESO mode.
+  #     Helm creates an ExternalSecret CR; ESO reads the token from Vault
+  #     and writes the huggingface-token Secret into modelRegistry.namespace.
+  #     Requires External Secrets Operator + ClusterSecretStore to be ready.
+  #
+  #     Vault command:
+  #       vault kv put secret/maas/model-registry-gitops/huggingface \
+  #         token="hf_xxxxxxxxxxxxxxxxxxxx"
+  secretName: huggingface-token
+
+  # ── ESO mode — let External Secrets Operator own huggingface-token ──────────
+  externalSecret:
+    # Set to true to have ESO manage huggingface-token instead of creating it manually.
+    # Only effective when huggingface.enabled: true.
+    enabled: false
+
+    # Refresh interval — how often ESO re-reads the token from the backend.
+    refreshInterval: 24h
+
+    # Reference to the ClusterSecretStore (or SecretStore) created by the
+    # external-secrets-operator Helm chart.
+    secretStoreRef:
+      name: vault-backend        # must match ClusterSecretStore name in ESO chart
+      kind: ClusterSecretStore   # ClusterSecretStore (cluster-wide) or SecretStore (namespaced)
+
+    # Target Secret name ESO will create in modelRegistry.namespace.
+    # Defaults to huggingface.secretName ("huggingface-token").
+    # Override during testing to avoid touching the live secret, e.g.:
+    #   targetName: huggingface-token-eso-test
+    targetName: ""               # empty = use huggingface.secretName
+
+    # Vault KV path and field containing the Hugging Face token.
+    # e.g. vault kv put secret/maas/model-registry-gitops/huggingface token="hf_..."
+    remoteRef:
+      key: maas/model-registry-gitops/huggingface
+      property: token
+
+# BuildConfig configuration (OpenShift only)
+buildConfig:
+  # Enable BuildConfig for building reconciler image
+  enabled: true
+  
+  # Git repository configuration
+  git:
+    uri: https://github.com/IBM/storage-fusion.git
+    ref: main
+    contextDir: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/reconciler
+  
+  # Git credentials for private repos.
+  #
+  # Two modes — choose one:
+  #
+  #   externalSecret.enabled: false (default) — Manual mode.
+  #     Create the Secret yourself before deploying:
+  #       oc create secret generic git-credentials -n <namespace> \
+  #         --from-literal=username=<user> \
+  #         --from-literal=token=<pat>
+  #     The Secret is referenced by both BuildConfig (sourceSecret) and
+  #     the model-sync CronJob (volume mount at /git-credentials).
+  #
+  #   externalSecret.enabled: true — ESO mode.
+  #     Helm creates an ExternalSecret CR; ESO reads the fields from Vault
+  #     and writes the git-credentials Secret into .Values.namespace.
+  #     Requires External Secrets Operator + ClusterSecretStore to be ready.
+  #     Vault path: secret/maas/model-registry-gitops/git-credentials
+  #       username   → /git-credentials/username  (read by CronJob)
+  #       token      → /git-credentials/token     (read by CronJob)
+  #     Optional fields (populate whichever auth method you use):
+  #       password       → /git-credentials/password
+  #       ssh-privatekey → /git-credentials/ssh-privatekey
+  #
+  #     e.g. vault kv put secret/maas/model-registry-gitops/git-credentials \
+  #              username="<git-user>" token="<personal-access-token>"
+  gitCredentials:
+    enabled: true
+    secretName: git-credentials
+
+    # ── ESO mode — let External Secrets Operator own git-credentials ───────────
+    externalSecret:
+      # Set to true to have ESO manage git-credentials instead of creating it manually.
+      enabled: false
+
+      # Refresh interval — how often ESO re-reads values from the backend.
+      refreshInterval: 24h
+
+      # Reference to the ClusterSecretStore (or SecretStore) created by the
+      # external-secrets-operator Helm chart.
+      secretStoreRef:
+        name: vault-backend        # must match ClusterSecretStore name in ESO chart
+        kind: ClusterSecretStore   # ClusterSecretStore (cluster-wide) or SecretStore (namespaced)
+
+      # Target Secret name ESO will create in .Values.namespace.
+      # Defaults to gitCredentials.secretName ("git-credentials").
+      # Override during testing to avoid touching the live secret, e.g.:
+      #   targetName: git-credentials-eso-test
+      targetName: ""               # empty = use gitCredentials.secretName
+
+      # Vault KV path containing the git credential fields.
+      # Populate whichever fields match your auth method (token, password, or ssh-privatekey).
+      remoteRef:
+        key: maas/model-registry-gitops/git-credentials
+  
+  # Build resources
+  resources:
+    limits:
+      memory: 2Gi
+      cpu: "1"
+    requests:
+      memory: 1Gi
+      cpu: 500m
+
+# CronJob for Git sync (optional)
+cronJob:
+  # Enable CronJob for automatic Git sync
+  enabled: true
+  
+  # Schedule (cron format)
+  schedule: "*/5 * * * *"
+  
+  # Git repository to sync from
+  git:
+    repo: https://github.com/IBM/storage-fusion.git
+    branch: main
+    host: github.ibm.com
+  
+  # Resources for sync job
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# ArgoCD RBAC configuration
+argocd:
+  # Enable ArgoCD RBAC binding
+  enabled: true
+  
+  # ArgoCD namespace
+  namespace: openshift-gitops
+  
+  # ArgoCD service account name
+  serviceAccountName: openshift-gitops-argocd-application-controller
+
+# Network Policy configuration
+networkPolicy:
+  # Enable network policy for Model Registry access
+  enabled: true
+
+# Common labels to apply to all resources
+commonLabels:
+  app: model-registry-gitops
+  managed-by: helm
+
+# Common annotations to apply to all resources
+commonAnnotations: {}
+

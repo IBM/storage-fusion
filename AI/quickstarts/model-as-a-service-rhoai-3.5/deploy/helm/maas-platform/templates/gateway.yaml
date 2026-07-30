@@ -1,0 +1,119 @@
+{{- if .Values.gateway.enabled | default true }}
+{{- if not (lookup "gateway.networking.k8s.io/v1" "GatewayClass" "" .Values.gateway.gatewayClassName) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: {{ .Values.gateway.gatewayClassName }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  controllerName: {{ .Values.gateway.controllerName }}
+{{- end }}
+{{- if eq (.Values.gateway.ingressMode | default "route") "clusterip" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.gateway.clusterip.gwOptionsConfigMap }}
+  namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+data:
+  service: |
+    metadata:
+      annotations:
+        service.beta.openshift.io/serving-cert-secret-name: "{{ .Values.gateway.clusterip.serviceCaSecret }}"
+    spec:
+      type: ClusterIP
+{{- end }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    {{- toYaml .Values.gateway.annotations | nindent 4 }}
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+    {{- if .Values.gateway.istioRevision }}
+    istio.io/rev: {{ .Values.gateway.istioRevision }}
+    {{- end }}
+spec:
+  gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  {{- if eq (.Values.gateway.ingressMode | default "route") "clusterip" }}
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: {{ .Values.gateway.clusterip.gwOptionsConfigMap }}
+  {{- end }}
+  listeners:
+  {{- if eq (.Values.gateway.ingressMode | default "route") "clusterip" }}
+    - name: https
+      port: 443
+      protocol: HTTPS
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: {{ .Values.gateway.clusterip.serviceCaSecret }}
+  {{- else }}
+    - name: https
+      hostname: "*.{{ .Values.global.wildcardDomain }}"
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: router-certs-default
+            namespace: openshift-ingress
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  {{- end }}
+{{- if eq (.Values.gateway.ingressMode | default "route") "clusterip" }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ .Values.gateway.route.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  host: maas.{{ .Values.global.wildcardDomain }}
+  to:
+    kind: Service
+    name: {{ .Values.gateway.name }}-{{ .Values.gateway.gatewayClassName }}
+    weight: 100
+  port:
+    targetPort: 443
+  tls:
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}
+{{- end }}
