@@ -1,0 +1,98 @@
+# =============================================================================
+# Environment override – Production  |  maas-config
+# =============================================================================
+# Single governance configuration covering all production models.
+#
+# Resources created:
+#
+#   MaaSSubscription  : maas-prod-subscription
+#     groups          : rhods-admins
+#     models          : gpt-oss-20b-100  (namespace: deploy-models)
+#                       tiny-llama-test  (namespace: deploy-models)
+#     token limit     : 10,000 / 1 hour per model
+#
+#   MaaSAuthPolicy    : maas-prod-auth-policy
+#     groups          : rhods-admins
+#     models          : gpt-oss-20b-100  (namespace: deploy-models)
+#                       tiny-llama-test  (namespace: deploy-models)
+#
+# Both resources are required for users to access each model:
+#   - Subscription  → enforces the 10,000 token/hour quota per model.
+#   - AuthPolicy    → grants API gateway access (without it: 403 Forbidden).
+#
+# To add a new model: append a new entry to modelRefs under both
+# subscriptions and authPolicies and sync the application.
+#
+# IMPORTANT:
+# Authorization policies and subscriptions are independent resources. If you
+# modify a subscription to add or remove groups or models, you must manually
+# update the corresponding authorization policy to keep them synchronized.
+# =============================================================================
+
+maasNamespace: models-as-a-service
+
+# -----------------------------------------------------------------------------
+# Subscriptions
+# One subscription governs quota for all production models.
+# -----------------------------------------------------------------------------
+subscriptions:
+  - name: maas-prod-subscription
+    displayName: "MaaS Production Subscription"
+    description: "Production subscription covering all MaaS-governed models"
+    # priority: production workloads recommended at 100 (default: 0)
+    priority: 100
+    groups:
+      - rhods-admins
+    users: []
+    modelRefs:
+      - name: gpt-oss-20b-100
+        namespace: deploy-models
+        tokenRateLimits:
+          # window units: s, m, h only — 'd' (days) is NOT supported
+          - limit: 10000
+            window: "1h"
+      - name: tiny-llama-test
+        namespace: deploy-models
+        tokenRateLimits:
+          - limit: 10000
+            window: "1h"
+
+# -----------------------------------------------------------------------------
+# Authorization Policies
+# One auth policy grants gateway access to all production models.
+# -----------------------------------------------------------------------------
+authPolicies:
+  - name: maas-prod-auth-policy
+    description: "Auth policy granting rhods-admins access to all production MaaS models"
+    groups:
+      - rhods-admins
+    users: []
+    modelRefs:
+      - name: gpt-oss-20b-100
+        namespace: deploy-models
+      - name: tiny-llama-test
+        namespace: deploy-models
+
+# -----------------------------------------------------------------------------
+# OpenShift Groups – membership override
+# -----------------------------------------------------------------------------
+# Helm replaces the entire list, so all groups must be declared here even
+# if only one is being changed.
+# -----------------------------------------------------------------------------
+groups:
+  - name: rhods-admins
+    description: "OpenShift AI administrators – manage subscriptions, auth policies and model serving"
+    users:
+      - dev_user1
+      - dev_user2
+      - prod_user1
+
+  - name: model-registry-users
+    description: "Users with access to the OpenShift AI Model Registry"
+    users: []
+
+# -----------------------------------------------------------------------------
+# Additional Labels
+# -----------------------------------------------------------------------------
+labels:
+  environment: prod

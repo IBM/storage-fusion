@@ -1,0 +1,34 @@
+{{- if and .Values.platformKuadrant.enabled .Values.platformKuadrant.instance.enabled }}
+---
+# Kuadrant CR — triggers Authorino, Limitador, and DNS operator deployment.
+# Wave 2: runs in parallel with GatewayClass; both are independent of each other.
+apiVersion: kuadrant.io/v1beta1
+kind: Kuadrant
+metadata:
+  name: {{ .Values.platformKuadrant.instance.name }}
+  namespace: {{ .Values.platformKuadrant.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec: {}
+{{- end }}
+
+{{- if and .Values.leaderWorkerSet.enabled .Values.leaderWorkerSet.instance.enabled }}
+---
+# LeaderWorkerSetOperator CR — enables multi-node distributed inference (llm-d).
+# Wave 2: independent of Gateway and Kuadrant.
+apiVersion: operator.openshift.io/v1
+kind: LeaderWorkerSetOperator
+metadata:
+  name: {{ .Values.leaderWorkerSet.instance.name }}
+  namespace: {{ .Values.leaderWorkerSet.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  managementState: {{ .Values.leaderWorkerSet.instance.managementState }}
+{{- end }}

@@ -1,0 +1,17 @@
+apiVersion: v2
+name: maas-runtime
+description: Core Models-as-a-Service runtime infrastructure for Red Hat OpenShift AI
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+keywords:
+  - ai
+  - llm
+  - maas
+  - models-as-a-service
+  - openshift-ai
+maintainers:
+  - name: Fusion AI Platform Team
+home: https://github.com/IBM/storage-fusion
+sources:
+  - https://github.com/IBM/storage-fusion

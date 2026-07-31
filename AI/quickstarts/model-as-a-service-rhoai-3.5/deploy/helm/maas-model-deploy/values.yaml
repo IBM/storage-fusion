@@ -1,0 +1,212 @@
+# =============================================================================
+# MaaS Model Deploy – values.yaml
+# =============================================================================
+# This chart creates the namespace, S3 connection secret, a ServiceAccount,
+# and the LLMInferenceService CR required to deploy an LLM model stored in
+# an S3-compatible object store (e.g., OpenShift Data Foundation / NooBaa).
+#
+# Override any of the values below for your own S3 bucket and model path.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  # Kubernetes resource name for the model (used in resource names and URLs)
+  name: tiny-llama-test
+
+  # Display name shown in the OpenShift AI dashboard
+  displayName: "Tiny LLaMA Test"
+
+  # Target namespace where the model will be deployed
+  # Use "deploy-models" as the default; override per environment
+  namespace: deploy-models
+
+# -----------------------------------------------------------------------------
+# Project / Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  # Create the namespace if it does not already exist
+  create: true
+
+  # Additional labels for the namespace
+  labels: {}
+    # team: ai-platform
+    # environment: dev
+
+  # Additional annotations for the namespace
+  annotations: {}
+    # description: "Model deployment namespace"
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage Configuration
+# -----------------------------------------------------------------------------
+# These values populate the S3 connection secret that LLMInferenceService uses
+# to pull model artefacts.  Provide your own bucket details when deploying a
+# different model.
+#
+# Two modes — choose one:
+#
+#   externalSecret.enabled: false (default) — Manual mode.
+#     Supply credentials directly in this file or via --set flags:
+#       --set s3.accessKeyId=<value> --set s3.secretAccessKey=<value>
+#     All five fields (endpoint, region, bucket, accessKeyId, secretAccessKey)
+#     are read from the values. Never commit real credentials to source control.
+#
+#   externalSecret.enabled: true — ESO mode.
+#     ALL five S3 fields are pulled from Vault via External Secrets Operator.
+#     Do NOT set accessKeyId / secretAccessKey / endpoint / region / bucket here;
+#     they are ignored in ESO mode. Configure externalSecret.remoteRef.key to
+#     point at the Vault KV path that contains all five fields.
+#
+#     Vault command:
+#       vault kv put secret/maas/model-deploy/<model-name>/s3 \
+#         access_key_id="<key>" \
+#         secret_access_key="<secret>" \
+#         endpoint="https://s3.openshift-storage.svc:443" \
+#         region="us-east-1" \
+#         bucket="<bucket-name>"
+# -----------------------------------------------------------------------------
+s3:
+  # S3-compatible endpoint URL (Manual mode only — ignored when ESO enabled)
+  # Example: https://s3.openshift-storage.svc:443 (ODF / NooBaa internal)
+  #          https://s3.amazonaws.com             (AWS S3)
+  endpoint: "https://s3.openshift-storage.svc:443"
+
+  # AWS / S3 region (Manual mode only — ignored when ESO enabled)
+  region: "us-east-1"
+
+  # Bucket that contains the model artefacts (Manual mode only — ignored when ESO enabled)
+  bucket: ""
+
+  # Path (prefix) inside the bucket where the model files reside.
+  # Used in both modes to construct the model URI (s3://<bucket>/<modelPath>).
+  # Format: <model-folder>/<version>
+  modelPath: ""
+
+  # S3 Access Key ID (Manual mode only — ignored when ESO enabled)
+  # Supply via --set or environment overlay. Do NOT commit real keys.
+  accessKeyId: ""
+
+  # S3 Secret Access Key (Manual mode only — ignored when ESO enabled)
+  # Supply via --set or environment overlay. Do NOT commit real keys.
+  secretAccessKey: ""
+
+  # Verify SSL certificate of the S3 endpoint
+  # Set to "0" to disable verification for self-signed certs (e.g., internal ODF)
+  verifySSL: "0"
+
+  # Override the auto-generated connection secret name
+  # Defaults to: <model.namespace>-connection
+  connectionSecretName: ""
+
+  # Override the auto-generated ServiceAccount name
+  # Defaults to: <connectionSecretName>-sa
+  serviceAccountName: ""
+
+  # ── ESO mode — let External Secrets Operator own the S3 credentials ─────────
+  externalSecret:
+    # Set to true to have ESO manage the S3 connection secret instead of
+    # sourcing credentials from this values file.
+    # When true, ALL five fields (access_key_id, secret_access_key, endpoint,
+    # region, bucket) are pulled from Vault — none are read from s3.* above.
+    enabled: false
+
+    # Refresh interval — how often ESO re-reads values from the backend.
+    refreshInterval: 1h
+
+    # Reference to the ClusterSecretStore (or SecretStore) created by the
+    # external-secrets-operator Helm chart.
+    secretStoreRef:
+      name: vault-backend        # must match ClusterSecretStore name in ESO chart
+      kind: ClusterSecretStore   # ClusterSecretStore (cluster-wide) or SecretStore (namespaced)
+
+    # Vault KV path that contains all five S3 fields.
+    # Expected Vault fields:
+    #   access_key_id     → AWS_ACCESS_KEY_ID
+    #   secret_access_key → AWS_SECRET_ACCESS_KEY
+    #   endpoint          → AWS_S3_ENDPOINT / serving.kserve.io/s3-endpoint annotation
+    #   region            → AWS_DEFAULT_REGION / serving.kserve.io/s3-region annotation
+    #   bucket            → AWS_S3_BUCKET
+    remoteRef:
+      key: maas/model-deploy/tiny-llama-test/s3   # override per model in environment values
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  # Number of model serving replicas
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# Resource Allocation
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+  requests:
+    cpu: "2"
+    memory: 4Gi
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling
+# -----------------------------------------------------------------------------
+scheduling:
+  # Node selector for GPU placement
+  nodeSelector: {}
+    # node-role.kubernetes.io/gpu: ""
+
+  # GPU tolerations
+  tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+
+  # Affinity rules
+  affinity: {}
+
+
+# -----------------------------------------------------------------------------
+# Gateway Configuration
+# -----------------------------------------------------------------------------
+# Name and namespace of the shared Gateway created by maas-platform.
+# The LLMInferenceService router.gateway.refs is populated from these values.
+gateway:
+  name: maas-default-gateway
+  namespace: openshift-ingress
+
+# -----------------------------------------------------------------------------
+# MaaS Model Ref
+# -----------------------------------------------------------------------------
+# When enabled, creates a MaaSModelRef CR that registers this model with the
+# MaaS controller. The controller then creates:
+#   - A subscription-aware AuthPolicy (API key + group + subscription checks)
+#   - A TokenRateLimitPolicy (per-subscription token quota via Kuadrant)
+# Set to true to activate "Publish as MaaS" governance via GitOps.
+maasModelRef:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# ArgoCD RBAC Configuration
+# -----------------------------------------------------------------------------
+# Required only when s3.externalSecret.enabled: true.
+# ESO ExternalSecret CRs are created in the model namespace; ArgoCD's
+# application-controller (running in argocd.namespace) needs permission to
+# manage them. The argocd-externalsecret-rbac.yaml template renders a
+# ClusterRole + RoleBinding using these values.
+argocd:
+  # ArgoCD namespace (where the application-controller SA lives)
+  namespace: openshift-gitops
+
+  # ArgoCD application-controller ServiceAccount name
+  serviceAccountName: openshift-gitops-argocd-application-controller
+
+# -----------------------------------------------------------------------------
+# Additional Labels / Annotations
+# -----------------------------------------------------------------------------
+labels: {}
+  # team: ai-platform
+
+annotations: {}
+  # managed-by: helm

@@ -1,0 +1,36 @@
+{{- if and .Values.monitoring.enabled .Values.monitoring.serviceMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "maas-model-service.modelName" . }}
+  namespace: {{ include "maas-model-service.namespace" . }}
+  labels:
+    {{- include "maas-model-service.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- include "maas-model-service.annotations" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "maas-model-service.selectorLabels" . | nindent 6 }}
+  
+  endpoints:
+    - port: metrics
+      interval: {{ .Values.monitoring.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.monitoring.serviceMonitor.scrapeTimeout }}
+      path: /metrics
+      scheme: http
+      
+      {{- with .Values.monitoring.serviceMonitor.metricRelabelings }}
+      metricRelabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.monitoring.serviceMonitor.relabelings }}
+      relabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

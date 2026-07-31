@@ -1,0 +1,158 @@
+{{- if and .Values.maasDatabase.internal.externalSecret.enabled (not (empty .Values.maasDatabase.internal.username)) }}
+  {{- fail "maasDatabase.internal.externalSecret.enabled is true but maasDatabase.internal.username/password are still set. Clear them to avoid committing credentials to Git." }}
+{{- end }}
+{{- if and .Values.maasDatabase.internal.enabled (not .Values.maasDatabase.external) }}
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# MaaS API — In-cluster PostgreSQL (POC / dev / staging)
+#
+# Mirrors the resources created by scripts/setup-database.sh.
+# ⚠  Uses emptyDir storage by default — data is lost on pod restart.
+#    For persistent storage set maasDatabase.internal.persistence.enabled: true.
+#    For production use an external managed database and set
+#    maasDatabase.external: true instead.
+#
+# Ref: scripts/setup-database.sh; maas-setup.md §Database Setup
+# ─────────────────────────────────────────────────────────────────────────────
+{{- if not .Values.maasDatabase.internal.externalSecret.enabled }}
+# Wave 1 — runs before GatewayClass (wave 2) and DSC (wave 4) so that the
+# maas-db-config Secret (also wave 1) can reference a live endpoint.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: maas-postgres-creds
+  namespace: {{ .Values.maasDatabase.internal.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true,Prune=false
+    helm.sh/resource-policy: keep
+  labels:
+    app: maas-postgres
+    purpose: {{ .Values.maasDatabase.internal.purpose }}
+    {{- include "maas-platform.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  POSTGRES_USER: {{ .Values.maasDatabase.internal.username | quote }}
+  POSTGRES_PASSWORD: {{ .Values.maasDatabase.internal.password | quote }}
+  POSTGRES_DB: {{ .Values.maasDatabase.internal.database | quote }}
+{{- end }}
+---
+{{- if .Values.maasDatabase.internal.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: maas-postgres-data
+  namespace: {{ .Values.maasDatabase.internal.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    # Never prune — prevents accidental data loss on ArgoCD sync.
+    argocd.argoproj.io/sync-options: Prune=false
+  labels:
+    app: maas-postgres
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.maasDatabase.internal.persistence.storageClassName }}
+  storageClassName: {{ .Values.maasDatabase.internal.persistence.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.maasDatabase.internal.persistence.size }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maas-postgres
+  namespace: {{ .Values.maasDatabase.internal.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app: maas-postgres
+    purpose: {{ .Values.maasDatabase.internal.purpose }}
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maas-postgres
+  template:
+    metadata:
+      labels:
+        app: maas-postgres
+        purpose: {{ .Values.maasDatabase.internal.purpose }}
+        {{- include "maas-platform.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          # Image resolved from RHOAI operator CSV relatedImages at install time,
+          # or override via maasDatabase.internal.image.
+          # Mirrors resolve_postgres_image() logic in setup-database.sh.
+          image: {{ .Values.maasDatabase.internal.image }}
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: maas-postgres-creds
+                  key: POSTGRES_USER
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: maas-postgres-creds
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: maas-postgres-creds
+                  key: POSTGRES_DB
+          readinessProbe:
+            exec:
+              # Same probe used in setup-database.sh
+              command: ["/usr/libexec/check-container"]
+            initialDelaySeconds: {{ .Values.maasDatabase.internal.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.maasDatabase.internal.readinessProbe.periodSeconds }}
+          resources:
+            requests:
+              memory: {{ .Values.maasDatabase.internal.resources.requests.memory }}
+              cpu: {{ .Values.maasDatabase.internal.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.maasDatabase.internal.resources.limits.memory }}
+              cpu: {{ .Values.maasDatabase.internal.resources.limits.cpu }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/pgsql/data
+      volumes:
+        - name: data
+          {{- if .Values.maasDatabase.internal.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: maas-postgres-data
+          {{- else }}
+          # ⚠ emptyDir: data is lost on pod restart — matches setup-database.sh POC mode
+          emptyDir: {}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maas-postgres
+  namespace: {{ .Values.maasDatabase.internal.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app: maas-postgres
+    purpose: {{ .Values.maasDatabase.internal.purpose }}
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: maas-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres
+{{- end }}

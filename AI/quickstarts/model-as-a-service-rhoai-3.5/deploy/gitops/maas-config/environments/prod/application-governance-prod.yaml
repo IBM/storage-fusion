@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-maas-governance-config-prod
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "300"
+  labels:
+    environment: prod
+    component: maas-config
+spec:
+  project: fusion-maas-governance-config-prod
+
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/prod/values-prod.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: models-as-a-service
+
+  # Prod: manual sync ONLY, no prune — strict change management, change windows enforced
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+
+  ignoreDifferences:
+    - group: maas.opendatahub.io
+      kind: MaaSSubscription
+      jsonPointers:
+        - /status
+    - group: maas.opendatahub.io
+      kind: MaaSAuthPolicy
+      jsonPointers:
+        - /status
+    # Group: ignore metadata fields managed by the OpenShift AI operator
+    # (e.g. cluster-side annotations). Only the users list is owned by this chart.
+    - group: user.openshift.io
+      kind: Group
+      jsonPointers:
+        - /status
+        - /metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration
+
+  info:
+    - name: Description
+      value: MaaS Governance Config – Production Environment (all models)
+    - name: Component
+      value: MaaSSubscription, MaaSAuthPolicy, Group
+    - name: Sync Wave
+      value: "300"
+    - name: Dependencies
+      value: Requires fusion-maas-model-deploy-prod-gpt-oss-20b and fusion-maas-model-deploy-prod-tiny-llama to be healthy
+    - name: Namespace
+      value: models-as-a-service
+    - name: Subscription
+      value: maas-prod-subscription (rhods-admins → gpt-oss-20b-100, tiny-llama-test, 10,000 tokens/hr each)
+    - name: AuthPolicy
+      value: maas-prod-auth-policy (rhods-admins → gpt-oss-20b-100, tiny-llama-test)
+    - name: Sync Mode
+      value: MANUAL ONLY – Requires approval and change window

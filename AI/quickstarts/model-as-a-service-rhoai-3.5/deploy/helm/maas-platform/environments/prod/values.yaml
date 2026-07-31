@@ -1,0 +1,116 @@
+# MaaS Platform - Production Environment
+# Environment-specific platform configuration for production
+
+global:
+  # oc get ingresses.config/cluster -o jsonpath={.spec.domain}
+  wildcardDomain: apps.cluster.example.com
+  toolsImage: quay.io/openshift/origin-cli:latest
+
+platform:
+  namespaces:
+    modelRegistry: rhoai-model-registries
+    workbench: rhods-notebooks
+
+dataScienceCluster:
+  enabled: true
+  # DataScienceCluster is cluster-scoped — no namespace field.
+  name: default-dsc
+  components:
+    dashboard:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+    kserve:
+      managementState: Managed
+      modelsAsService:
+        managementState: Managed
+      rawDeploymentServiceConfig: Headless
+      nim:
+        managementState: Managed
+    ogx:
+      managementState: Managed
+    modelregistry:
+      managementState: Managed
+    feastoperator:
+      managementState: Removed
+    trustyai:
+      managementState: Managed  # Enabled for production
+    aipipelines:
+      managementState: Managed
+    ray:
+      managementState: Managed
+    trainingoperator:
+      managementState: Managed
+    trainer:
+      managementState: Removed
+    mlflowoperator:
+      managementState: Removed
+    llamastackoperator:
+      managementState: Removed
+    kueue:
+      managementState: Removed
+
+# ── MaaS Database — Prod (in-cluster PostgreSQL, testing only) ────────────────
+# ⚠  Temporary: using in-cluster postgres for prod testing.
+#    Switch to external: true and a managed database before go-live.
+#
+# ESO path (recommended for prod):
+#   1. vault kv put secret/maas/postgres username=maas password=<pw> database=maas sslMode=disable
+#   2. Set enabled: false, externalSecret.enabled: true, internal.externalSecret.enabled: true
+#   3. Clear internal.username and internal.password (set to "")
+#
+# Helm path (current):
+#   enabled: true, externalSecret.enabled: false — Helm manages secrets
+maasDatabase:
+  enabled: true               # Helm creates maas-db-config Secret
+  external: false
+  secretNamespace: redhat-ods-applications
+  connectionUrl: ""
+  externalSecret:
+    enabled: false            # set true (and enabled: false above) to switch to ESO
+  internal:
+    enabled: true             # deploy in-cluster Postgres Deployment + Service
+    namespace: redhat-ods-applications
+    purpose: poc
+    username: maas
+    password: "changeme-prod-test"  # REPLACE before go-live
+    database: maas
+    sslMode: disable            # switch to "require" only when using an external managed DB with TLS
+    image: "registry.redhat.io/rhel9/postgresql-16:latest"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+    persistence:
+      enabled: true             # PVC so data survives pod restarts during testing
+      size: 10Gi
+      storageClassName: ""
+
+# ── Gateway — clusterip mode for bare-metal / HostNetwork IngressController ──
+# This cluster uses HostNetwork (not LoadBalancer) on the IngressController.
+# Wildcard DNS resolves to router node IPs, not a MetalLB VIP, so the Gateway
+# must use ClusterIP + OpenShift Route instead of a LoadBalancer Service.
+gateway:
+  ingressMode: clusterip
+
+platformKuadrant:
+  enabled: true
+  namespace: kuadrant-system
+  instance:
+    enabled: true
+    name: kuadrant
+
+leaderWorkerSet:
+  enabled: true
+  namespace: openshift-lws-operator
+  instance:
+    enabled: true
+    name: cluster
+    managementState: Managed
+

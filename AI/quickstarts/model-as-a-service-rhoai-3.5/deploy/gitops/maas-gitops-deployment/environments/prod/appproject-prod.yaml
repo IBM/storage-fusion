@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-maas-platform-prod
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    environment: prod
+spec:
+  description: MaaS Platform - Production Environment (Strict Controls)
+  
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+  
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  roles:
+    - name: admin
+      description: Admin role for MaaS production environment (limited to specific admins)
+      policies:
+        - p, proj:fusion-maas-platform-prod:admin, applications, *, fusion-maas-platform-prod/*, allow
+      groups:
+        - maas-prod-admins
+        - platform-admins
+    
+    - name: operator
+      description: Operator role for MaaS production (can sync but not delete)
+      policies:
+        - p, proj:fusion-maas-platform-prod:operator, applications, get, fusion-maas-platform-prod/*, allow
+        - p, proj:fusion-maas-platform-prod:operator, applications, sync, fusion-maas-platform-prod/*, allow
+      groups:
+        - maas-prod-operators
+    
+    - name: viewer
+      description: Read-only role for MaaS production
+      policies:
+        - p, proj:fusion-maas-platform-prod:viewer, applications, get, fusion-maas-platform-prod/*, allow
+      groups:
+        - maas-viewers
+        - maas-developers
+        - maas-qa
+  
+  # Orphaned resources - error in production (don't allow orphans)
+  orphanedResources:
+    warn: false
+    error: true

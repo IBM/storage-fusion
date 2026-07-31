@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: model-registry
+  namespace: openshift-gitops
+  labels:
+    app: fusion-model-registry-gitops
+spec:
+  description: Model Registry GitOps Project
+  
+  # Source repositories
+  sourceRepos:
+    - https://github.com/IBM/storage-fusion.git
+    - '*'  # Allow all repos for flexibility
+  
+  # Destination clusters and namespaces
+  destinations:
+    - namespace: fusion-model-registry-gitops
+      server: https://kubernetes.default.svc
+    - namespace: rhoai-model-registries
+      server: https://kubernetes.default.svc
+  
+  # Cluster resource whitelist
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  
+  # Namespace resource whitelist
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: batch
+      kind: Job
+    - group: batch
+      kind: CronJob
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+  
+  # Orphaned resources - what to do with resources not in git
+  orphanedResources:
+    warn: true

@@ -1,0 +1,44 @@
+# MaaS Operators - Production Environment
+# Environment-specific operator configuration for production
+
+operators:
+  openshiftAI:
+    enabled: true
+    channel: stable-3.x
+    namespace: redhat-ods-operator
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic  # Manual approval for production
+
+  connectivityLink:
+    enabled: true
+    channel: stable
+    namespace: kuadrant-system
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic  # Manual approval for production
+
+  certManager:
+    enabled: true
+    channel: stable-v1
+    namespace: cert-manager-operator
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic  # Manual approval for production
+
+  leaderWorkerSet:
+    enabled: true
+    channel: stable-v1.0
+    namespace: openshift-lws-operator
+    source: redhat-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic  # Manual approval for production
+
+  grafana:
+    enabled: true
+    channel: v5
+    namespace: grafana-operator
+    source: community-operators
+    sourceNamespace: openshift-marketplace
+    installPlanApproval: Automatic  # Manual approval for production
+

@@ -1,0 +1,30 @@
+{{- if .Values.maasModelRef.enabled }}
+---
+# MaaSModelRef
+# -----------------------------------------------------------------------
+# Registers the deployed LLMInferenceService with the MaaS controller so
+# that the full "Publish as MaaS" governance chain is activated:
+#   - MaaS controller creates a subscription-aware AuthPolicy (API key +
+#     group membership + subscription validation via maas-api)
+#   - MaaS controller creates a TokenRateLimitPolicy (per-subscription
+#     token quota enforced via Kuadrant)
+#   - Model becomes visible in the MaaS catalogue with GovernanceAttached
+#
+# Set maasModelRef.enabled: true in your environment values file to
+# activate this resource alongside the LLMInferenceService.
+# -----------------------------------------------------------------------
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSModelRef
+metadata:
+  name: {{ .Values.model.name }}
+  namespace: {{ include "maas-model-deploy.namespace" . }}
+  labels:
+    {{- include "maas-model-deploy.labels" . | nindent 4 }}
+  annotations:
+    {{- include "maas-model-deploy.annotations" . | nindent 4 }}
+    openshift.io/display-name: {{ include "maas-model-deploy.displayName" . | quote }}
+spec:
+  modelRef:
+    kind: LLMInferenceService
+    name: {{ .Values.model.name }}
+{{- end }}

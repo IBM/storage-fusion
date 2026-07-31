@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-maas-platform-dev
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    environment: dev
+spec:
+  description: MaaS Platform - Development Environment
+  
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+  
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  roles:
+    - name: admin
+      description: Admin role for MaaS dev environment
+      policies:
+        - p, proj:fusion-maas-platform-dev:admin, applications, *, fusion-maas-platform-dev/*, allow
+      groups:
+        - maas-admins
+        - maas-dev-admins
+    
+    - name: developer
+      description: Developer role for MaaS dev environment
+      policies:
+        - p, proj:fusion-maas-platform-dev:developer, applications, get, fusion-maas-platform-dev/*, allow
+        - p, proj:fusion-maas-platform-dev:developer, applications, sync, fusion-maas-platform-dev/*, allow
+        - p, proj:fusion-maas-platform-dev:developer, applications, update, fusion-maas-platform-dev/*, allow
+      groups:
+        - maas-developers
+    
+    - name: viewer
+      description: Read-only role for MaaS dev environment
+      policies:
+        - p, proj:fusion-maas-platform-dev:viewer, applications, get, fusion-maas-platform-dev/*, allow
+      groups:
+        - maas-viewers
+  
+  orphanedResources:
+    warn: true
+

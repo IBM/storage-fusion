@@ -1,0 +1,25 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: model-registry-internal-access
+  namespace: {{ .Values.modelRegistry.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: model-registry
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.namespace }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.modelRegistry.servicePort }}
+{{- end }}
+

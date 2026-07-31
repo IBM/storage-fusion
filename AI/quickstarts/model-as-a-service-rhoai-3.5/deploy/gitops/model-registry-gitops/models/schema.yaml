@@ -1,0 +1,278 @@
+# JSON Schema for Model Registry GitOps Model Definitions
+# Validates the structure of ModelVersion YAML files under models/
+
+$schema: http://json-schema.org/draft-07/schema#
+title: ModelVersion
+description: Schema for OpenShift AI Model Registry GitOps model definitions
+type: object
+required:
+  - apiVersion
+  - kind
+  - metadata
+  - spec
+
+properties:
+  apiVersion:
+    type: string
+    enum:
+      - v1
+    description: API version for the model definition
+
+  kind:
+    type: string
+    enum:
+      - ModelVersion
+    description: Resource kind — always ModelVersion
+
+  metadata:
+    type: object
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+        description: Unique model identifier (DNS-1123 compliant, lowercase, hyphens only)
+      labels:
+        type: object
+        additionalProperties:
+          type: string
+        description: Optional labels for categorization and filtering
+        properties:
+          model-type:
+            type: string
+            enum: [public, private, fine-tuned, internal]
+          source:
+            type: string
+            enum: [huggingface, s3, http, local]
+          task:
+            type: string
+          governance-status:
+            type: string
+            enum: [approved, pending, rejected]
+          environment:
+            type: string
+            enum: [dev, staging, production, test]
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
+        description: Optional free-form annotations
+
+  spec:
+    type: object
+    required:
+      - modelName
+      - version
+      - description
+      - storage
+    properties:
+
+      modelName:
+        type: string
+        minLength: 1
+        description: Human-readable display name shown in the Model Registry UI
+
+      version:
+        type: string
+        pattern: ^[a-zA-Z0-9._-]+$
+        description: "Version string (e.g. 1.0.0, 2024-06-01)"
+
+      description:
+        type: string
+        minLength: 1
+        description: Human-readable description of the model and its purpose
+
+      author:
+        type: string
+        description: Individual or organisation that created the model
+
+      baseModel:
+        type: object
+        description: Upstream model this definition is based on
+        required:
+          - name
+          - source
+        properties:
+          name:
+            type: string
+            description: "Upstream model identifier (e.g. ibm-granite/granite-4.1-8b)"
+          source:
+            type: string
+            enum: [huggingface, s3, http, local]
+          sourceUrl:
+            type: string
+            format: uri
+          version:
+            type: string
+            description: Branch, tag, or commit (default main)
+          license:
+            type: string
+            description: "SPDX license identifier (e.g. Apache-2.0, MIT)"
+          licenseUrl:
+            type: string
+            format: uri
+
+      governance:
+        type: object
+        description: Compliance and approval metadata
+        properties:
+          approvedBy:
+            type: string
+          approvalDate:
+            type: string
+            format: date
+          approvalTicket:
+            type: string
+          licenseVerified:
+            type: boolean
+          securityScanned:
+            type: boolean
+          scanDate:
+            type: string
+            format: date
+          scanTool:
+            type: string
+          complianceStatus:
+            type: string
+            enum: [approved, pending, rejected]
+          restrictions:
+            type: array
+            items:
+              type: string
+
+      storage:
+        type: object
+        description: Where the model artifacts are stored
+        required:
+          - uri
+          - type
+        properties:
+          uri:
+            type: string
+            description: "Storage URI (e.g. hf://org/model, s3://bucket/path)"
+          type:
+            type: string
+            enum: [huggingface, s3, http, local, oci]
+            description: Storage backend type
+          size:
+            type: string
+            description: "Approximate artifact size (e.g. 16GB)"
+          format:
+            type: string
+            enum: [safetensors, pytorch, onnx, gguf, mlflow, other]
+            description: Model weight format
+
+      metadata:
+        type: object
+        description: Technical metadata about the model
+        properties:
+          framework:
+            type: string
+          frameworkVersion:
+            type: string
+          modelType:
+            type: string
+          architecture:
+            type: string
+          parameters:
+            type: string
+            description: "Parameter count (e.g. 8B, 70B)"
+          contextLength:
+            type: string
+            description: "Maximum context window in tokens (e.g. 8192)"
+          languages:
+            type: array
+            items:
+              type: string
+          tasks:
+            type: array
+            items:
+              type: string
+          metrics:
+            type: object
+            additionalProperties:
+              type: string
+          training:
+            type: object
+            properties:
+              dataset:
+                type: string
+              datasetSize:
+                type: string
+              trainingFramework:
+                type: string
+          requirements:
+            type: object
+            properties:
+              minMemory:
+                type: string
+              recommendedMemory:
+                type: string
+              gpu:
+                type: string
+                enum: [required, optional, not-required]
+              minCpu:
+                type: string
+              recommendedGpu:
+                type: string
+
+      useCases:
+        type: array
+        description: Approved use cases for this model
+        items:
+          type: object
+          required:
+            - name
+            - status
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            status:
+              type: string
+              enum: [approved, pending, rejected]
+
+      deployment:
+        type: object
+        description: Default deployment configuration hint for KServe
+        properties:
+          servingFramework:
+            type: string
+            enum: [kserve, triton, torchserve, ovms]
+          runtime:
+            type: string
+          replicas:
+            type: integer
+            minimum: 1
+          resources:
+            type: object
+            properties:
+              requests:
+                type: object
+                additionalProperties:
+                  type: string
+              limits:
+                type: object
+                additionalProperties:
+                  type: string
+          autoscaling:
+            type: object
+            properties:
+              enabled:
+                type: boolean
+              minReplicas:
+                type: integer
+              maxReplicas:
+                type: integer
+              targetCPU:
+                type: integer
+              targetMemory:
+                type: integer
+
+      tags:
+        type: array
+        description: Flat list of string tags for search and filtering
+        items:
+          type: string

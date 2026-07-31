@@ -1,0 +1,113 @@
+# =============================================================================
+# Environment override – Staging
+# =============================================================================
+# All keys from values.yaml are listed here for visibility.
+# Keys that differ from the base default are set explicitly.
+# Keys matching the base default are commented out — uncomment to override.
+#
+# Two modes — choose one:
+#
+#   Manual mode (s3.externalSecret.enabled: false):
+#     Supply s3.accessKeyId and s3.secretAccessKey via --set flags at deploy
+#     time. Never commit real credentials in this file.
+#
+#   ESO mode (s3.externalSecret.enabled: true):
+#     ALL five S3 fields are pulled from Vault. The s3.* credential fields
+#     below are ignored. Configure s3.externalSecret.remoteRef.key to point
+#     at the Vault path for this model.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  # name: tiny-llama-test
+  # displayName: "Tiny LLaMA Test"
+  namespace: deploy-models-staging
+
+# -----------------------------------------------------------------------------
+# Project / Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  # create: true
+  labels:
+    environment: staging
+  # annotations: {}
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage Configuration
+# -----------------------------------------------------------------------------
+s3:
+  # endpoint, region, bucket: set here for Manual mode.
+  # In ESO mode these are ignored — all five fields come from Vault.
+  # endpoint: "https://s3.openshift-storage.svc:443"
+  region: "us-east-1"
+  # bucket: ""
+  # modelPath: "tiny-llama-test/1.0.0"
+  accessKeyId: ""        # supply via --set or use ESO mode
+  secretAccessKey: ""    # supply via --set or use ESO mode
+  # verifySSL: "0"
+  connectionSecretName: ""
+  serviceAccountName: ""
+
+  # ── ESO mode ──────────────────────────────────────────────────────────────
+  # Uncomment and set enabled: true to activate ESO for this environment.
+  # externalSecret:
+  #   enabled: true
+  #   refreshInterval: 1h
+  #   secretStoreRef:
+  #     name: vault-backend
+  #     kind: ClusterSecretStore
+  #   remoteRef:
+  #     key: maas/model-deploy/<model-name>/s3
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# Resource Allocation
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+    nvidia.com/gpu: "1"
+  requests:
+    cpu: "2"
+    memory: 4Gi
+    nvidia.com/gpu: "1"
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling
+# -----------------------------------------------------------------------------
+scheduling:
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+
+# -----------------------------------------------------------------------------
+# Gateway Configuration
+# -----------------------------------------------------------------------------
+# staging: no external Route — gateway not exposed in staging.
+# The LLMInferenceService controller manages the HTTPRoute automatically.
+# Set exposeGateway: true to validate external access before promoting to prod.
+#
+# Internal URL for this model:
+#   http://openshift-ai-inference-openshift-ingress.svc.cluster.local/deploy-models-staging/<model.name>/v1/
+gateway:
+  name: openshift-ai-inference
+  namespace: openshift-ingress
+  wildcardDomain: "apps.cluster.example.com"   # TODO: replace with actual cluster domain
+  exposeGateway: false
+
+# -----------------------------------------------------------------------------
+# Additional Labels / Annotations
+# -----------------------------------------------------------------------------
+labels:
+  environment: staging
+
+annotations: {}

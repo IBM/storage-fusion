@@ -1,0 +1,57 @@
+{{- if .Values.dataScienceCluster.enabled }}
+---
+# DataScienceCluster is a cluster-scoped resource — no namespace field.
+# Must be applied AFTER:
+#   1. The Gateway and maas-db-config Secret exist
+#      (maas-setup.md: "Create Gateway before enabling modelsAsService")
+#   2. The Kuadrant CR (wave 2) has been applied AND Authorino has started,
+#      registering the AuthConfig CRD (authorino.kuadrant.io/v1beta3).
+#      The RHOAI DSC controller requires this CRD before it will mark
+#      ModelsAsServiceReady=True.  Wave 10 gives Authorino time to become
+#      healthy after the Kuadrant CR is created at wave 2.
+apiVersion: datasciencecluster.opendatahub.io/v2
+kind: DataScienceCluster
+metadata:
+  name: {{ .Values.dataScienceCluster.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  components:
+    dashboard:
+      managementState: {{ .Values.dataScienceCluster.components.dashboard.managementState }}
+    workbenches:
+      managementState: {{ .Values.dataScienceCluster.components.workbenches.managementState }}
+    kserve:
+      managementState: {{ .Values.dataScienceCluster.components.kserve.managementState }}
+      modelsAsService:
+        managementState: {{ .Values.dataScienceCluster.components.kserve.modelsAsService.managementState }}
+      rawDeploymentServiceConfig: {{ .Values.dataScienceCluster.components.kserve.rawDeploymentServiceConfig }}
+      nim:
+        managementState: {{ .Values.dataScienceCluster.components.kserve.nim.managementState }}
+    ogx:
+      managementState: {{ .Values.dataScienceCluster.components.ogx.managementState }}
+    modelregistry:
+      managementState: {{ .Values.dataScienceCluster.components.modelregistry.managementState }}
+      registriesNamespace: {{ .Values.platform.namespaces.modelRegistry }}
+    feastoperator:
+      managementState: {{ .Values.dataScienceCluster.components.feastoperator.managementState }}
+    trustyai:
+      managementState: {{ .Values.dataScienceCluster.components.trustyai.managementState }}
+    aipipelines:
+      managementState: {{ .Values.dataScienceCluster.components.aipipelines.managementState }}
+    ray:
+      managementState: {{ .Values.dataScienceCluster.components.ray.managementState }}
+    trainingoperator:
+      managementState: {{ .Values.dataScienceCluster.components.trainingoperator.managementState }}
+    trainer:
+      managementState: {{ .Values.dataScienceCluster.components.trainer.managementState }}
+    mlflowoperator:
+      managementState: {{ .Values.dataScienceCluster.components.mlflowoperator.managementState }}
+    llamastackoperator:
+      managementState: {{ .Values.dataScienceCluster.components.llamastackoperator.managementState }}
+    kueue:
+      managementState: {{ .Values.dataScienceCluster.components.kueue.managementState }}
+{{- end }}

@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-maas-platform
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: MaaS Platform - Complete Models as a Service deployment on OpenShift AI
+  
+  sourceRepos:
+    - '*'
+  
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  roles:
+    - name: admin
+      description: Admin role for MaaS platform - full access
+      policies:
+        - p, proj:fusion-maas-platform:admin, applications, *, fusion-maas-platform/*, allow
+      groups:
+        - maas-admins
+        - cluster-admins
+    
+    - name: developer
+      description: Developer role for MaaS platform - can sync and view
+      policies:
+        - p, proj:fusion-maas-platform:developer, applications, get, fusion-maas-platform/*, allow
+        - p, proj:fusion-maas-platform:developer, applications, sync, fusion-maas-platform/*, allow
+        - p, proj:fusion-maas-platform:developer, applications, update, fusion-maas-platform/*, allow
+      groups:
+        - maas-developers
+    
+    - name: viewer
+      description: Read-only role for MaaS platform
+      policies:
+        - p, proj:fusion-maas-platform:viewer, applications, get, fusion-maas-platform/*, allow
+      groups:
+        - maas-viewers
+  
+  orphanedResources:
+    warn: true

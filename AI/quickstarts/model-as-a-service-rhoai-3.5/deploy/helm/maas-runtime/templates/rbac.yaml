@@ -1,0 +1,53 @@
+{{- if .Values.rbac.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.rbac.modelServiceAccount.name }}
+  namespace: {{ include "maas-runtime.modelsNamespace" . }}
+  labels:
+    {{- include "maas-runtime.labels" . | nindent 4 }}
+  annotations:
+    {{- include "maas-runtime.annotations" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: maas-model-deployer
+  namespace: {{ include "maas-runtime.modelsNamespace" . }}
+  labels:
+    {{- include "maas-runtime.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["llm-d.ai"]
+    resources: ["llminferenceservices"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["kuadrant.io"]
+    resources: ["ratelimitpolicies", "telemetrypolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["servicemonitors"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: maas-model-deployer-binding
+  namespace: {{ include "maas-runtime.modelsNamespace" . }}
+  labels:
+    {{- include "maas-runtime.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: maas-model-deployer
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.rbac.modelServiceAccount.name }}
+    namespace: {{ include "maas-runtime.modelsNamespace" . }}
+{{- end }}
+

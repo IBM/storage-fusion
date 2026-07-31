@@ -1,0 +1,138 @@
+name: Validate Model Definitions
+
+on:
+  pull_request:
+    paths:
+      - 'models/**/*.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'models/**/*.yaml'
+
+jobs:
+  validate:
+    name: Validate Model YAMLs
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml jsonschema yamllint
+      
+      - name: Lint YAML files
+        run: |
+          echo "Linting YAML files..."
+          yamllint -c .yamllint models/
+      
+      - name: Validate against schema
+        run: |
+          echo "Validating model definitions against schema..."
+          python3 << 'EOF'
+          import yaml
+          import json
+          import jsonschema
+          from pathlib import Path
+          import sys
+          
+          # Load schema
+          with open('models/schema.yaml', 'r') as f:
+              schema = yaml.safe_load(f)
+          
+          # Find all model YAML files
+          model_files = list(Path('models').rglob('*.yaml'))
+          model_files = [f for f in model_files if f.name != 'schema.yaml' and 'examples' not in str(f)]
+          
+          errors = []
+          for model_file in model_files:
+              print(f"Validating {model_file}...")
+              try:
+                  with open(model_file, 'r') as f:
+                      model_def = yaml.safe_load(f)
+                  
+                  # Basic validation
+                  if not model_def:
+                      errors.append(f"{model_file}: Empty file")
+                      continue
+                  
+                  if model_def.get('apiVersion') != 'v1':
+                      errors.append(f"{model_file}: Invalid apiVersion (expected 'v1')")
+                  
+                  if model_def.get('kind') != 'ModelVersion':
+                      errors.append(f"{model_file}: Invalid kind (expected 'ModelVersion')")
+                  
+                  if 'metadata' not in model_def or 'name' not in model_def.get('metadata', {}):
+                      errors.append(f"{model_file}: Missing metadata.name")
+                  
+                  if 'spec' not in model_def:
+                      errors.append(f"{model_file}: Missing spec")
+                  
+                  print(f"  ✓ {model_file} is valid")
+              
+              except yaml.YAMLError as e:
+                  errors.append(f"{model_file}: YAML parsing error - {e}")
+              except Exception as e:
+                  errors.append(f"{model_file}: Validation error - {e}")
+          
+          if errors:
+              print("\n❌ Validation failed with errors:")
+              for error in errors:
+                  print(f"  - {error}")
+              sys.exit(1)
+          else:
+              print("\n✅ All model definitions are valid!")
+          EOF
+      
+      - name: Check for duplicate model names
+        run: |
+          echo "Checking for duplicate model names..."
+          python3 << 'EOF'
+          import yaml
+          from pathlib import Path
+          from collections import defaultdict
+          import sys
+          
+          model_names = defaultdict(list)
+          model_files = list(Path('models').rglob('*.yaml'))
+          model_files = [f for f in model_files if f.name != 'schema.yaml' and 'examples' not in str(f)]
+          
+          for model_file in model_files:
+              try:
+                  with open(model_file, 'r') as f:
+                      model_def = yaml.safe_load(f)
+                  
+                  if model_def and 'metadata' in model_def:
+                      name = model_def['metadata'].get('name')
+                      if name:
+                          model_names[name].append(str(model_file))
+              except:
+                  pass
+          
+          duplicates = {name: files for name, files in model_names.items() if len(files) > 1}
+          
+          if duplicates:
+              print("❌ Duplicate model names found:")
+              for name, files in duplicates.items():
+                  print(f"  Model '{name}' defined in:")
+                  for f in files:
+                      print(f"    - {f}")
+              sys.exit(1)
+          else:
+              print("✅ No duplicate model names found")
+          EOF
+      
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ All validations passed!"
+          echo ""
+          echo "Model definitions are ready to be merged."
+
