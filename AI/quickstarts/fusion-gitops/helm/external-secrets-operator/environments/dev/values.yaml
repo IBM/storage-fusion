@@ -1,4 +1,4 @@
-# Default values for external-secrets-operator
+# Development environment values for external-secrets-operator
 # This chart deploys External Secrets Operator on IBM Fusion HCI / OpenShift
 #
 # Configured for OpenShift Data Foundation (ODF) storage
@@ -37,16 +37,16 @@ operator:
     startingCSV: ""
   
   # Operator replicas
-  replicas: 2
+  replicas: 1
   
   # Resource limits and requests
   resources:
     requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
       memory: "128Mi"
       cpu: "100m"
-    limits:
-      memory: "256Mi"
-      cpu: "200m"
 
 # SecretStore configurations
 # These create ClusterSecretStore resources for different backends
@@ -69,7 +69,7 @@ secretStores:
     # - Kubernetes auth method
     # - External Secrets policy
     # - Kubernetes auth role
-    autoInitialize: false
+    autoInitialize: true
 
     # Vault seal type determines which secret contains the root token
     # Options: "shamir" or "awskms"
@@ -87,7 +87,7 @@ secretStores:
     rbac:
       # Create ClusterRoleBinding for Vault to perform TokenReview
       # Set to false when using default Kubernetes auth configuration
-      createTokenReviewBinding: false
+      createTokenReviewBinding: true
       # Vault service account details
       vaultServiceAccount: "vault"
       vaultNamespace: "vault"
@@ -337,7 +337,7 @@ examples:
 # Webhook configuration
 webhook:
   enabled: true
-  replicas: 2
+  replicas: 1
   resources:
     requests:
       memory: "64Mi"
@@ -368,8 +368,7 @@ securityContext:
 
 # Pod disruption budget
 podDisruptionBudget:
-  enabled: true
-  minAvailable: 1
+  enabled: false
 
 # Service account
 serviceAccount:
@@ -386,7 +385,7 @@ monitoring:
   enabled: true
   serviceMonitor:
     enabled: true
-    interval: 30s
+    interval: 60s
 
 # Additional labels
 labels: {}

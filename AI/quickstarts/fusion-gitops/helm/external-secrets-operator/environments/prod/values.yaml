@@ -1,4 +1,4 @@
-# Default values for external-secrets-operator
+# Production environment values for external-secrets-operator
 # This chart deploys External Secrets Operator on IBM Fusion HCI / OpenShift
 #
 # Configured for OpenShift Data Foundation (ODF) storage
@@ -32,7 +32,7 @@ operator:
     # Package name for Red Hat OpenShift operator
     name: openshift-external-secrets-operator
     # Install plan approval (Automatic or Manual)
-    installPlanApproval: Automatic
+    installPlanApproval: Manual
     # Starting CSV (leave empty for latest)
     startingCSV: ""
   
@@ -69,7 +69,7 @@ secretStores:
     # - Kubernetes auth method
     # - External Secrets policy
     # - Kubernetes auth role
-    autoInitialize: false
+    autoInitialize: true
 
     # Vault seal type determines which secret contains the root token
     # Options: "shamir" or "awskms"
@@ -87,7 +87,7 @@ secretStores:
     rbac:
       # Create ClusterRoleBinding for Vault to perform TokenReview
       # Set to false when using default Kubernetes auth configuration
-      createTokenReviewBinding: false
+      createTokenReviewBinding: true
       # Vault service account details
       vaultServiceAccount: "vault"
       vaultNamespace: "vault"
@@ -349,7 +349,7 @@ webhook:
 # Cert Controller configuration
 certController:
   enabled: true
-  replicas: 1
+  replicas: 2
   resources:
     requests:
       memory: "64Mi"

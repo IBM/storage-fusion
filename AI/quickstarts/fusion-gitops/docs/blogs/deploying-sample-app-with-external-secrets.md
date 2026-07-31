@@ -1,19 +1,27 @@
 # Using the Fusion GitOps Quickstart to Deploy an AI Application with Secure Secret Management
 
-A production-ready tutorial demonstrating GitOps continuous delivery, automated secret management, and zero-downtime secret rotation on Fusion HCI.
+A comprehensive tutorial demonstrating GitOps continuous delivery, automated secret management, and zero-downtime secret rotation on Fusion HCI.
 
 ## Introduction
 
-Deploying AI applications in production requires more than just running containers—it demands robust secret management, automated deployment workflows, and zero-downtime updates. This tutorial demonstrates how to deploy a complete AI chat application using the Fusion GitOps Quickstart, showcasing enterprise-grade patterns for secret management and continuous delivery.
+Deploying AI applications in production requires more than just running containers; it demands robust secret management, automated deployment workflows, and zero-downtime updates. This tutorial demonstrates how to deploy a complete AI chat application using the Fusion GitOps Quickstart, showcasing production patterns for secret management and continuous delivery.
 
-**What makes this different**: Instead of building a GitOps platform from scratch, you'll consume a pre-built platform layer (ArgoCD, Vault, External Secrets Operator) and focus on deploying your application. This separation of concerns mirrors real-world enterprise environments where platform teams provide infrastructure and application teams consume it.
+**What makes this different**: Instead of building a GitOps platform from scratch, you'll consume a pre-built platform layer (ArgoCD, Vault, External Secrets Operator) and focus on deploying your application. This platform versus application split mirrors real-world enterprise environments where platform teams provide infrastructure and application teams consume it.
+
+## Who This Is For
+
+This tutorial assumes working familiarity with OpenShift and the `oc` CLI, Kubernetes deployments and secrets, and basic GitOps concepts (Git as the source of truth, declarative sync). 
+
+Prior hands-on experience with Vault or ArgoCD specifically is **not required**; both are explained as you go. 
+
+**Time estimate**: Completing the three linked platform prerequisites first typically takes less than an hour; the application deployment steps in this tutorial take another 10–15 minutes.
 
 ## What You'll Build
 
 This tutorial has two distinct layers:
 
 ### Platform Layer (GitOps Quickstart)
-The foundation provided by the [Fusion GitOps Quickstart](gitops-quickstart.md):
+The foundation the [Fusion GitOps Quickstart](gitops-quickstart.md) provides:
 - **ArgoCD**: GitOps continuous delivery engine
 - **HashiCorp Vault**: Encrypted secret storage with Kubernetes authentication
 - **External Secrets Operator**: Automatic secret synchronization from Vault to Kubernetes
@@ -93,6 +101,8 @@ git clone https://github.com/<YOUR_USERNAME>/storage-fusion.git
 cd storage-fusion/AI
 ```
 
+> **Note**: The tutorial's deployment steps below operate from the fusion-gitops-sample-app subdirectory, located at storage-fusion/AI/fusion-gitops-sample-app within the cloned repository.
+
 ### Application Requirements
 
 - **Model Gateway**: Accessible endpoint with Bearer token authentication
@@ -101,7 +111,7 @@ cd storage-fusion/AI
 
 ## External Secrets Backend: HashiCorp Vault
 
-This tutorial uses **HashiCorp Vault** as the secret management backend. The Fusion GitOps Quickstart also supports AWS Secrets Manager and IBM Cloud Secrets Manager—see the [External Secrets Guide](../deploying-external-secrets-guide.md) for configuration details.
+This tutorial uses **HashiCorp Vault** as the secret management backend. The Fusion GitOps Quickstart also supports AWS Secrets Manager and IBM Cloud Secrets Manager. See the [External Secrets Guide](../deploying-external-secrets-guide.md) for configuration details.
 
 ### Vault Configuration
 
@@ -151,7 +161,7 @@ Update the following line with your image:
 image: your-registry.example.com/your-namespace/chat-app:latest
 ```
 
-**What this demonstrates**: GitOps principle—all configuration is declarative and version-controlled.
+**What this demonstrates**: GitOps principle: all configuration is declarative and version-controlled.
 
 ### Step 3: Configure Application Settings
 
@@ -199,7 +209,7 @@ vault kv put secret/llmops-platform/secrets \
 vault kv get secret/llmops-platform/secrets
 ```
 
-**What this demonstrates**: Centralized secret management—secrets are stored once in Vault and automatically synchronized to Kubernetes.
+**What this demonstrates**: Centralized secret management: secrets are stored once in Vault and automatically synchronized to Kubernetes.
 
 ### Step 5: Commit and Push Changes
 
@@ -220,7 +230,7 @@ git commit -m "Configure chat app for my environment"
 git push origin main
 ```
 
-**What this demonstrates**: GitOps workflow—Git is the single source of truth for all configuration.
+**What this demonstrates**: GitOps workflow: Git is the single source of truth for all configuration.
 
 ### Step 6: Update ArgoCD Application
 
@@ -254,7 +264,7 @@ oc get applications.argoproj.io -n openshift-gitops -w
 1. **Reloader**: Cluster-wide secret watcher
 2. **LLMOps Platform**: Your chat application with all dependencies
 
-**What this demonstrates**: Platform consumption—you're using ArgoCD (platform layer) to deploy your application (application layer).
+**What this demonstrates**: Platform consumption: you're using ArgoCD (platform layer) to deploy your application (application layer).
 
 ### Step 8: Monitor Sync Waves
 
@@ -274,7 +284,7 @@ oc get pods -n llmops-platform -w
 3. **Wave 2**: ExternalSecret resource
 4. **Wave 3**: Application deployment
 
-**What this demonstrates**: Dependency management—ArgoCD ensures prerequisites are ready before deploying dependent resources.
+**What this demonstrates**: Dependency management: ArgoCD ensures prerequisites are ready before deploying dependent resources.
 
 ## Verification
 
@@ -482,7 +492,7 @@ oc get pods -n llmops-platform -w
 
 ## Conclusion
 
-You've successfully deployed an AI chat application using enterprise-grade GitOps patterns on Fusion HCI. This tutorial demonstrated:
+You've successfully deployed an AI chat application using the GitOps patterns above on Fusion HCI. This tutorial demonstrated:
 
 **Platform Consumption**: Using pre-built GitOps infrastructure (ArgoCD, Vault, ESO)  
 **Automated Secret Management**: Vault integration with automatic Kubernetes synchronization  

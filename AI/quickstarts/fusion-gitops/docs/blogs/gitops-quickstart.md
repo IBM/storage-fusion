@@ -152,7 +152,7 @@ oc get secret openshift-gitops-cluster -n openshift-gitops \
 Choose the appropriate values file for your environment:
 
 ```bash
-# Development/Testing (minimal resources)
+# Development (minimal resources)
 ./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/dev/values.yaml
 
 # Staging (moderate resources for pre-production testing)
@@ -227,20 +227,33 @@ oc get secret vault-unseal-keys -n vault -o yaml > vault-keys-backup.yaml
 # oc delete secret vault-unseal-keys -n vault
 ```
 
-#### Custom Vault Configurations
+#### Environment-Specific Deployments
+
+Choose the appropriate values file for your environment:
 
 ```bash
-# Use specific storage class
-./scripts/deploy-secret-manager.sh --storage-class ocs-storagecluster-ceph-rbd
+# Development (single replica, minimal resources, monitoring off)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/dev/values.yaml
 
-# Production deployment with HA
-./scripts/deploy-secret-manager.sh --namespace vault-prod --replicas 5 --size 20Gi
+# Staging (3 replicas, moderate resources, monitoring on)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/stage/values.yaml
 
-# Custom namespace with specific storage
+# Production (3 replicas, full resources, required pod anti-affinity)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/prod/values.yaml
+```
+
+You can further override individual values on top of an environment file:
+
+```bash
+# Use a different storage class with the dev profile
 ./scripts/deploy-secret-manager.sh \
-  --namespace vault-staging \
-  --storage-class thin \
-  --size 15Gi
+  -f helm/vault-operator/environments/dev/values.yaml \
+  --storage-class ocs-storagecluster-ceph-rbd
+
+# Use a custom storage class with the prod profile
+./scripts/deploy-secret-manager.sh \
+  -f helm/vault-operator/environments/prod/values.yaml \
+  --storage-class ocs-storagecluster-ceph-rbd
 ```
 
 #### Validate Vault Deployment
@@ -284,6 +297,38 @@ After deploying the operator, configure Vault as the secret backend:
 ```bash
 # Configure Vault as secret backend (requires Vault deployed)
 ./scripts/deploy-external-secrets.sh --backend vault
+```
+
+#### Environment-Specific Deployments
+
+Choose the appropriate values file for your environment. The script auto-detects the active backend from the file, or use `-b` to force a backend regardless of what the file says:
+
+```bash
+# Development (1 replica, reduced resources, PDB disabled)
+./scripts/deploy-external-secrets.sh \
+  -f helm/external-secrets-operator/environments/dev/values.yaml
+
+# Staging (2 replicas, full resources, certController HA)
+./scripts/deploy-external-secrets.sh \
+  -f helm/external-secrets-operator/environments/stage/values.yaml
+
+# Production (2 replicas, Manual upgrade approval)
+./scripts/deploy-external-secrets.sh \
+  -f helm/external-secrets-operator/environments/prod/values.yaml
+```
+
+Force a specific backend on top of any environment file with `-b`:
+
+```bash
+# Vault backend with dev profile
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/dev/values.yaml
+
+# Vault backend with prod profile
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/prod/values.yaml
 ```
 
 #### Validate External Secrets Deployment

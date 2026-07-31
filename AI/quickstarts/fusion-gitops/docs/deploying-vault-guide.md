@@ -6,6 +6,7 @@ This guide provides comprehensive instructions for deploying and managing HashiC
 
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
+- [Configuration Profiles](#configuration-profiles)
 - [Deployment Guide](#deployment-guide)
 - [Validation](#validation)
 - [Accessing Vault](#accessing-vault)
@@ -63,6 +64,86 @@ To check available storage classes:
 kubectl get storageclass
 # or
 oc get storageclass
+```
+
+## Configuration Profiles
+
+Three environment-specific values files are provided under `helm/vault-operator/environments/`. Pass one with the `-f` flag to match your deployment tier.
+
+### Development
+
+**File**: `helm/vault-operator/environments/dev/values.yaml`
+
+Optimized for low resource consumption on shared or single-node development clusters.
+
+| Setting | Value |
+|---|---|
+| Replicas | 1 |
+| Storage per replica | 1Gi |
+| Vault memory (request/limit) | 128Mi / 256Mi |
+| Injector replicas | 1 |
+| Pod anti-affinity | Soft (preferred) |
+| PodDisruptionBudget | Disabled |
+| Monitoring | Disabled |
+
+```bash
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/dev/values.yaml
+```
+
+### Staging
+
+**File**: `helm/vault-operator/environments/stage/values.yaml`
+
+Mirrors production topology (3 replicas) to exercise HA behaviour and catch issues before they reach production, at reduced storage cost.
+
+| Setting | Value |
+|---|---|
+| Replicas | 3 |
+| Storage per replica | 5Gi |
+| Vault memory (request/limit) | 256Mi / 512Mi |
+| Injector replicas | 1 |
+| Pod anti-affinity | Soft (preferred) |
+| PodDisruptionBudget | Enabled, `minAvailable: 1` |
+| Monitoring | Enabled |
+
+```bash
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/stage/values.yaml
+```
+
+### Production
+
+**File**: `helm/vault-operator/environments/prod/values.yaml`
+
+Full resource allocation with hard scheduling constraints that guarantee Raft quorum is preserved under node failures.
+
+| Setting | Value |
+|---|---|
+| Replicas | 3 |
+| Storage per replica | 10Gi |
+| Vault memory (request/limit) | 512Mi / 1Gi |
+| Injector replicas | 2 |
+| Pod anti-affinity | **Hard (required)** — pods must land on separate nodes |
+| PodDisruptionBudget | Enabled, `minAvailable: 2` |
+| Monitoring | Enabled |
+
+```bash
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/prod/values.yaml
+```
+
+### Overriding individual values
+
+Any script flag applied after `-f` takes precedence over the values file. For example:
+
+```bash
+# Dev profile with a different storage class
+./scripts/deploy-secret-manager.sh \
+  -f helm/vault-operator/environments/dev/values.yaml \
+  --storage-class ocs-storagecluster-ceph-rbd
+
+# Prod profile with a different storage class
+./scripts/deploy-secret-manager.sh \
+  -f helm/vault-operator/environments/prod/values.yaml \
+  --storage-class ocs-storagecluster-ceph-rbd
 ```
 
 ## Deployment Guide

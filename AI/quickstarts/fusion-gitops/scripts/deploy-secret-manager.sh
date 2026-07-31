@@ -23,6 +23,16 @@ KMS_KEY_ID=""
 KMS_REGION=""
 KMS_ENDPOINT=""
 
+# Track which options were explicitly set via CLI flags (for values-file precedence)
+_NAMESPACE_SET=false
+_STORAGE_CLASS_SET=false
+_STORAGE_SIZE_SET=false
+_REPLICAS_SET=false
+_SEAL_TYPE_SET=false
+_KMS_KEY_ID_SET=false
+_KMS_REGION_SET=false
+_KMS_ENDPOINT_SET=false
+
 # Function to print colored output
 print_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -101,19 +111,19 @@ EOF
 while [[ $# -gt 0 ]]; do
     case $1 in
         -n|--namespace)
-            NAMESPACE="$2"
+            NAMESPACE="$2"; _NAMESPACE_SET=true
             shift 2
             ;;
         -s|--storage-class)
-            STORAGE_CLASS="$2"
+            STORAGE_CLASS="$2"; _STORAGE_CLASS_SET=true
             shift 2
             ;;
         -z|--size)
-            STORAGE_SIZE="$2"
+            STORAGE_SIZE="$2"; _STORAGE_SIZE_SET=true
             shift 2
             ;;
         -r|--replicas)
-            REPLICAS="$2"
+            REPLICAS="$2"; _REPLICAS_SET=true
             shift 2
             ;;
         -f|--values-file)
@@ -125,19 +135,19 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --seal-type)
-            SEAL_TYPE="$2"
+            SEAL_TYPE="$2"; _SEAL_TYPE_SET=true
             shift 2
             ;;
         --kms-key-id)
-            KMS_KEY_ID="$2"
+            KMS_KEY_ID="$2"; _KMS_KEY_ID_SET=true
             shift 2
             ;;
         --kms-region)
-            KMS_REGION="$2"
+            KMS_REGION="$2"; _KMS_REGION_SET=true
             shift 2
             ;;
         --kms-endpoint)
-            KMS_ENDPOINT="$2"
+            KMS_ENDPOINT="$2"; _KMS_ENDPOINT_SET=true
             shift 2
             ;;
         --dry-run)
@@ -153,6 +163,67 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Apply values from a custom values file (CLI flags take precedence)
+if [ -n "$VALUES_FILE" ]; then
+    if [ ! -f "$VALUES_FILE" ]; then
+        print_error "Values file not found: $VALUES_FILE"
+        exit 1
+    fi
+
+    # Ensure yq is available when a values file is provided
+    if ! command -v yq &> /dev/null; then
+        print_info "yq not found. Installing yq..."
+        YQ_VERSION="v4.44.3"
+        YQ_BINARY="yq_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+        YQ_URL="https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}"
+        if curl -fsSL "$YQ_URL" -o /tmp/yq 2>/dev/null && chmod +x /tmp/yq; then
+            export PATH="/tmp:$PATH"
+            print_info "yq installed to /tmp/yq"
+        else
+            print_error "Failed to download yq from $YQ_URL"
+            print_error "Please install yq manually: https://github.com/mikefarah/yq"
+            exit 1
+        fi
+    fi
+
+    print_info "Reading configuration from values file: $VALUES_FILE"
+
+    _yq_get() { yq e "$1 // \"\"" "$VALUES_FILE" 2>/dev/null || true; }
+
+    if [ "$_NAMESPACE_SET" = false ]; then
+        _val=$(_yq_get '.global.namespace')
+        [ -n "$_val" ] && NAMESPACE="$_val"
+    fi
+    if [ "$_STORAGE_CLASS_SET" = false ]; then
+        _val=$(_yq_get '.vault.storage.storageClassName')
+        [ -n "$_val" ] && STORAGE_CLASS="$_val"
+    fi
+    if [ "$_STORAGE_SIZE_SET" = false ]; then
+        _val=$(_yq_get '.vault.storage.size')
+        [ -n "$_val" ] && STORAGE_SIZE="$_val"
+    fi
+    if [ "$_REPLICAS_SET" = false ]; then
+        _val=$(_yq_get '.vault.replicas')
+        [ -n "$_val" ] && REPLICAS="$_val"
+    fi
+    if [ "$_SEAL_TYPE_SET" = false ]; then
+        _val=$(_yq_get '.vault.seal.type')
+        [ -n "$_val" ] && SEAL_TYPE="$_val"
+    fi
+    if [ "$_KMS_KEY_ID_SET" = false ]; then
+        _val=$(_yq_get '.vault.seal.awskms.kmsKeyId')
+        [ -n "$_val" ] && KMS_KEY_ID="$_val"
+    fi
+    if [ "$_KMS_REGION_SET" = false ]; then
+        _val=$(_yq_get '.vault.seal.awskms.region')
+        [ -n "$_val" ] && KMS_REGION="$_val"
+    fi
+    if [ "$_KMS_ENDPOINT_SET" = false ]; then
+        _val=$(_yq_get '.vault.seal.awskms.endpoint')
+        [ -n "$_val" ] && KMS_ENDPOINT="$_val"
+    fi
+fi
 
 # Check if we're on OpenShift or Kubernetes
 if command -v oc &> /dev/null; then
@@ -298,6 +369,13 @@ fi
 # Build Helm command
 HELM_CMD="helm install $RELEASE_NAME $CHART_DIR"
 HELM_CMD="$HELM_CMD --namespace $NAMESPACE"
+
+# Add custom values file before --set flags so that --set flags (script options) take precedence
+if [ -n "$VALUES_FILE" ]; then
+    HELM_CMD="$HELM_CMD -f $VALUES_FILE"
+    print_info "Using custom values file: $VALUES_FILE"
+fi
+
 HELM_CMD="$HELM_CMD --set global.namespace=$NAMESPACE"
 HELM_CMD="$HELM_CMD --set operator.namespace=$NAMESPACE"
 HELM_CMD="$HELM_CMD --set vault.storage.storageClassName=$STORAGE_CLASS"
@@ -314,16 +392,6 @@ if [ "$SEAL_TYPE" = "awskms" ]; then
     if [ -n "$KMS_ENDPOINT" ]; then
         HELM_CMD="$HELM_CMD --set vault.seal.awskms.endpoint=$KMS_ENDPOINT"
     fi
-fi
-
-# Add custom values file if provided
-if [ -n "$VALUES_FILE" ]; then
-    if [ ! -f "$VALUES_FILE" ]; then
-        print_error "Values file not found: $VALUES_FILE"
-        exit 1
-    fi
-    HELM_CMD="$HELM_CMD -f $VALUES_FILE"
-    print_info "Using custom values file: $VALUES_FILE"
 fi
 
 # Add dry-run flag if requested

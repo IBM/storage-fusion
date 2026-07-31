@@ -170,10 +170,14 @@ http://localhost:8501
 
 ### Using the Application Locally
 
-1. **Initialize Components** - In the sidebar, expand "Gateway & API Connections" and enter your endpoints and API keys, then click "Initialize Components"
-2. **Select Vector Store** - Choose a vector store from the dropdown or enter a store ID manually
-3. **Start Chatting** - Type your question in the chat input at the bottom of the page
-4. **View Results** - See the AI response with cited sources
+The application auto-connects on first load using the values in your `.env` file. No manual configuration is required once the environment is set up.
+
+1. **Open the app** — Navigate to `http://localhost:8501`. The sidebar shows **Connected** when all required endpoints and API keys are present
+2. **Select a Vector Store** — Use the **Vector Store** dropdown in the sidebar to choose which store to query
+3. **Select a Model** — Use the **Model** dropdown to pick the LLM to use for responses
+4. **Start Chatting** — Type your question in the chat input at the bottom; press **Enter** to submit
+5. **View Results** — See the AI response alongside cited sources
+6. **New Chat** — Click the **New Chat** button in the sidebar to clear the conversation
 
 ## Building and Deploying the Container Image
 
@@ -449,7 +453,17 @@ The deployment uses these critical annotations:
 ```yaml
 # Automatic restart on secret changes
 secret.reloader.stakater.com/reload: "llmops-secrets"
+
+# Automatic restart on ConfigMap changes
+configmap.reloader.stakater.com/reload: "llmops-config"
 ```
+
+Both annotations are watched by Stakater Reloader. Whenever either the `llmops-secrets`
+Secret **or** the `llmops-config` ConfigMap is updated in the cluster, Reloader triggers
+a rolling restart of the `llmops-chat-app` deployment automatically, no manual rollout
+required. This means committing a change to `configmap.yaml` and pushing it to Git is all that is needed:
+ArgoCD applies the updated ConfigMap, and Reloader immediately restarts the pod to pick
+up the new values.
 
 ## Secret Rotation Workflow
 
