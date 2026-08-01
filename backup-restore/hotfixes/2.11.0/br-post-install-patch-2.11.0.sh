@@ -25,7 +25,7 @@ else
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=11
+HOTFIX_NUMBER=12
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -339,6 +339,9 @@ if [ -n "$HUB" ]; then
     backupservice_img=cp.icr.io/cp/bnr/guardian-backup-service@sha256:6517b55c0c3ab8aa44f2e5cc4554ee3efb49211f7eb8840623c4160076485611
     set_deployment_image backup-service backup-service ${backupservice_img}
 
+    backuplocation_img=cp.icr.io/cp/bnr/guardian-backup-location@sha256:42e8fdc35807cc3edeb02f5ae5668197e6b45409c33b2d6176a230d6b72b7a4b
+    set_deployment_image backup-location-deployment backup-location-container "${backuplocation_img}"
+
     restart_deployments "$BR_NS" applicationsvc 
 
 fi
@@ -392,7 +395,7 @@ update_transaction_manager_clusterrole(){
 update_guardian_configmap
 update_transaction_manager_clusterrole
 update_tm_env
-transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:77a61e09b4197447f5cf25ab3beea1e42278a51fb42b7db7917ef6cd126008d1
+transactionmanager_img=cp.icr.io/cp/bnr/guardian-transaction-manager@sha256:bd06e33475805a76b5569beeb33678a0488e59b9e1fe64f954261ec393cd1266
 set_deployment_image transaction-manager transaction-manager ${transactionmanager_img}
 set_deployment_image dbr-controller dbr-controller ${transactionmanager_img}
 
