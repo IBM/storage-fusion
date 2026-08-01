@@ -6,6 +6,14 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
+## Hotfix hotfix-2.11.0.12 (Latest)
+
+**Release Date:** July 31, 2026
+
+### Issues Fixed
+1. Prevent BSL updates from persisting out of order
+2. Ensure restores update Velero's BSL with the proper region
+
 ## Hotfix hotfix-2.11.0.11 (Latest)
 
 **Release Date:** June 9, 2026
