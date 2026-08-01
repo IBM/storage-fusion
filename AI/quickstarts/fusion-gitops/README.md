@@ -169,6 +169,7 @@ All components are designed to work together seamlessly while remaining independ
 - **Ansible**: Version 2.15+ (or ansible-core 2.15+) for playbook-based automation
 - **Git**: For GitOps repository management
 - **jq**: For JSON parsing in scripts (auto-installed if missing)
+- **yq**: For YAML parsing in scripts (auto-installed if missing)
 
 ### Verification
 
@@ -319,20 +320,33 @@ oc get secret vault-unseal-keys -n vault \
 oc get secret vault-unseal-keys -n vault -o yaml
 ```
 
-#### Custom Configurations
+#### Environment-Specific Deployments
+
+Choose the appropriate values file for your environment:
 
 ```bash
-# Use specific storage class
-./scripts/deploy-secret-manager.sh --storage-class ocs-storagecluster-ceph-rbd
+# Development (single replica, minimal resources, monitoring off)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/dev/values.yaml
 
-# Production deployment with HA
-./scripts/deploy-secret-manager.sh --namespace vault-prod --replicas 5 --size 20Gi
+# Staging (3 replicas, moderate resources, monitoring on)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/stage/values.yaml
 
-# Custom namespace with specific storage
+# Production (3 replicas, full resources, required pod anti-affinity)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/prod/values.yaml
+```
+
+You can further override individual values on top of an environment file:
+
+```bash
+# Use a different storage class with the dev profile
 ./scripts/deploy-secret-manager.sh \
-  --namespace vault-staging \
-  --storage-class thin \
-  --size 15Gi
+  -f helm/vault-operator/environments/dev/values.yaml \
+  --storage-class ocs-storagecluster-ceph-rbd
+
+# Use a custom storage class with the prod profile
+./scripts/deploy-secret-manager.sh \
+  -f helm/vault-operator/environments/prod/values.yaml \
+  --storage-class ocs-storagecluster-ceph-rbd
 ```
 
 #### Validation
@@ -568,6 +582,35 @@ EOF
 # Verify secret synchronization
 oc get externalsecret my-app-secrets
 oc get secret my-app-secrets
+```
+
+#### Environment-Specific Deployments
+
+Choose the appropriate values file for your environment. When passing `-f`, the active backend is auto-detected from the file, or use `-b` to explicitly override:
+
+```bash
+# Development (1 replica, reduced resources, PDB disabled)
+./scripts/deploy-external-secrets.sh -f helm/external-secrets-operator/environments/dev/values.yaml
+
+# Staging (2 replicas, full resources, certController HA)
+./scripts/deploy-external-secrets.sh -f helm/external-secrets-operator/environments/stage/values.yaml
+
+# Production (2 replicas, full resources, Manual upgrade approval)
+./scripts/deploy-external-secrets.sh -f helm/external-secrets-operator/environments/prod/values.yaml
+```
+
+You can explicitly force a backend on top of any environment file with `-b`:
+
+```bash
+# Force Vault backend with dev profile (overrides enabled: false in file)
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/dev/values.yaml
+
+# Force Vault backend with prod profile
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/prod/values.yaml
 ```
 
 #### Validation

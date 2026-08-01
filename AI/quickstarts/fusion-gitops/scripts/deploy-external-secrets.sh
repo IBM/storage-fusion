@@ -40,7 +40,7 @@ Deploy External Secrets Operator on OpenShift/Kubernetes
 OPTIONS:
     -n, --namespace NAMESPACE       Operator namespace (default: external-secrets-operator)
     -b, --backend BACKEND           Secret backend: standalone, vault, aws, ibmcloud (optional)
-    -f, --values-file FILE           Custom values file (optional)
+    -f, --values-file FILE          Custom values file (optional)
     --release-name NAME             Helm release name (default: external-secrets-operator)
     --standalone                    Deploy operator only without any backend (for testing)
     --dry-run                       Show what would be deployed without deploying
@@ -52,21 +52,26 @@ BACKENDS:
     aws         AWS Secrets Manager
     ibmcloud    IBM Cloud Secrets Manager
 
+BACKEND SELECTION:
+    When -f is omitted, -b is required and selects the default example values file.
+    When -f is provided, -b is optional:
+      - Omit -b: the active backend is auto-detected from the values file
+        (whichever secretStores.<backend>.enabled is true).
+      - Pass -b: overrides the values file and forces secretStores.<backend>.enabled=true
+        at deploy time, even if the file has it set to false.
+
 EXAMPLES:
     # Deploy standalone (operator only, no vault)
     $0 --standalone
 
-    # Deploy with Vault backend
+    # Deploy with Vault backend (uses default example values file)
     $0 --backend vault
 
-    # Deploy with AWS backend
-    $0 --backend aws
+    # Deploy with custom values file — backend auto-detected from file
+    $0 -f environments/dev/values.yaml
 
-    # Deploy with IBM Cloud backend
-    $0 --backend ibmcloud
-
-    # Deploy with custom values
-    $0 --backend vault -f my-values.yaml
+    # Deploy with custom values file — force vault backend on regardless of file
+    $0 -b vault -f environments/dev/values.yaml
 
     # Dry run
     $0 --backend vault --dry-run
@@ -112,21 +117,29 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Validate backend is specified
-if [ -z "$BACKEND" ]; then
-    print_error "Backend is required. Use --backend standalone|vault|aws|ibmcloud or --standalone"
+# Validate backend: required only when no custom values file is provided
+if [ -z "$BACKEND" ] && [ -z "$VALUES_FILE" ]; then
+    print_error "Backend is required when not using a custom values file (-f). Use --backend standalone|vault|aws|ibmcloud or --standalone"
     usage
 fi
 
-# Validate backend value
-case $BACKEND in
-    standalone|vault|aws|ibmcloud)
-        ;;
-    *)
-        print_error "Invalid backend: $BACKEND. Must be standalone, vault, aws, or ibmcloud"
-        exit 1
-        ;;
-esac
+# Validate backend value if explicitly provided
+if [ -n "$BACKEND" ]; then
+    case $BACKEND in
+        standalone|vault|aws|ibmcloud)
+            ;;
+        *)
+            print_error "Invalid backend: $BACKEND. Must be standalone, vault, aws, or ibmcloud"
+            exit 1
+            ;;
+    esac
+fi
+
+# Track whether -b was explicitly passed alongside -f (drives Phase 2b enabled injection)
+BACKEND_FLAG_EXPLICIT=false
+if [ -n "$BACKEND" ] && [ -n "$VALUES_FILE" ]; then
+    BACKEND_FLAG_EXPLICIT=true
+fi
 
 # Detect CLI (oc or kubectl)
 if command -v oc &> /dev/null; then
@@ -156,6 +169,22 @@ if [ ! -d "$CHART_DIR" ]; then
     exit 1
 fi
 
+# Ensure yq is available — used for backend detection from custom values files
+if ! command -v yq &> /dev/null; then
+    print_info "yq not found. Installing yq..."
+    YQ_VERSION="v4.44.3"
+    YQ_BINARY="yq_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+    YQ_URL="https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}"
+    if curl -fsSL "$YQ_URL" -o /tmp/yq 2>/dev/null && chmod +x /tmp/yq; then
+        export PATH="/tmp:$PATH"
+        print_info "yq installed to /tmp/yq"
+    else
+        print_error "Failed to download yq from $YQ_URL"
+        print_error "Please install yq manually: https://github.com/mikefarah/yq"
+        exit 1
+    fi
+fi
+
 # Set default values file if not provided
 if [ -z "$VALUES_FILE" ]; then
     if [ "$BACKEND" = "standalone" ]; then
@@ -163,12 +192,36 @@ if [ -z "$VALUES_FILE" ]; then
     else
         VALUES_FILE="$CHART_DIR/examples/values-${BACKEND}.yaml"
     fi
-    
+
     if [ ! -f "$VALUES_FILE" ]; then
         print_error "Default values file not found: $VALUES_FILE"
         exit 1
     fi
     print_info "Using default values file for $BACKEND backend"
+else
+    # Custom values file provided — detect active backend if -b was not passed
+    if [ -z "$BACKEND" ]; then
+        DETECTED_BACKEND=""
+        for b in vault aws ibmCloud; do
+            if [ "$(yq e ".secretStores.${b}.enabled // \"false\"" "$VALUES_FILE" 2>/dev/null)" = "true" ]; then
+                DETECTED_BACKEND="$b"
+                break
+            fi
+        done
+
+        if [ -n "$DETECTED_BACKEND" ]; then
+            # Normalise ibmCloud -> ibmcloud for internal $BACKEND use
+            BACKEND=$(echo "$DETECTED_BACKEND" | tr '[:upper:]' '[:lower:]')
+            print_info "Detected active backend in values file: $BACKEND"
+        else
+            BACKEND="standalone"
+            print_info "No active backend detected in values file — running in standalone mode"
+            print_info "(Set secretStores.<backend>.enabled: true in the values file to activate a backend)"
+        fi
+    else
+        print_info "Using custom values file: $VALUES_FILE"
+        print_info "Backend flag '-b $BACKEND' will inject secretStores.${BACKEND}.enabled=true at deploy time"
+    fi
 fi
 
 # Verify values file exists
@@ -476,8 +529,24 @@ if [ "$DRY_RUN" = false ]; then
                                     RETRY_COUNT=0
                                     PHASE2B_SUCCESS=false
                                     
-                                    # Enable both ExternalSecretsConfig and SecretStores
+                                    # Enable ExternalSecretsConfig.
+                                    # When -b was explicitly passed alongside -f, inject
+                                    # enabled=true for that backend so the ClusterSecretStore
+                                    # is created regardless of what the values file says.
                                     HELM_CMD_PHASE2B="$HELM_CMD --set operator.createExternalSecretsConfig=true"
+                                    if [ "$BACKEND_FLAG_EXPLICIT" = true ]; then
+                                        case $BACKEND in
+                                            vault)
+                                                HELM_CMD_PHASE2B="$HELM_CMD_PHASE2B --set secretStores.vault.enabled=true"
+                                                ;;
+                                            aws)
+                                                HELM_CMD_PHASE2B="$HELM_CMD_PHASE2B --set secretStores.aws.enabled=true"
+                                                ;;
+                                            ibmcloud)
+                                                HELM_CMD_PHASE2B="$HELM_CMD_PHASE2B --set secretStores.ibmCloud.enabled=true"
+                                                ;;
+                                        esac
+                                    fi
                                     
                                     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
                                         if eval $HELM_CMD_PHASE2B; then

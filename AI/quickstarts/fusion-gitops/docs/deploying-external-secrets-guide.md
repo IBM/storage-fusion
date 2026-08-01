@@ -7,6 +7,7 @@ This guide provides comprehensive instructions for deploying and managing Extern
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
 - [Deployment Guide](#deployment-guide)
+- [Configuration Profiles](#configuration-profiles)
 - [Validation](#validation)
 - [Cleanup Guide](#cleanup-guide)
 - [Troubleshooting](#troubleshooting)
@@ -108,6 +109,72 @@ quickstarts/fusion-gitops/scripts/deploy-external-secrets.sh
 | **vault** | HashiCorp Vault integration | On-premises enterprise secret management |
 | **aws** | AWS Secrets Manager integration | AWS cloud-native deployments |
 | **ibmcloud** | IBM Cloud Secrets Manager integration | IBM Cloud deployments |
+
+### Configuration Profiles
+
+Pre-built environment values files are provided under `helm/external-secrets-operator/environments/`. Each is a full standalone values file tuned for its environment. Pass them with `-f`; the script auto-detects the active backend from the file, or use `-b` to force a backend on.
+
+#### Development Profile
+
+Minimal footprint for fast iteration and testing:
+
+```bash
+# Auto-detect backend from file (use enabled: true in file for a backend)
+./scripts/deploy-external-secrets.sh \
+  -f helm/external-secrets-operator/environments/dev/values.yaml
+
+# Force Vault backend regardless of file
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/dev/values.yaml
+```
+
+**Characteristics**:
+- Single replica for all components — lower resource footprint
+- Reduced CPU/memory requests and limits
+- PDB disabled — pods can be freely evicted during node drain
+- `Automatic` upgrade approval — operator updates without intervention
+
+#### Staging Profile
+
+Production-equivalent configuration for pre-production validation:
+
+```bash
+./scripts/deploy-external-secrets.sh \
+  -f helm/external-secrets-operator/environments/stage/values.yaml
+
+# With explicit Vault backend
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/stage/values.yaml
+```
+
+**Characteristics**:
+- 2 replicas for operator and webhook — mirrors production HA
+- 2 certController replicas — prevents cert expiry during node failures
+- Full resource requests/limits — catches resource issues before prod
+- PDB enabled — validates disruption budget behaviour
+- `Automatic` upgrade approval — catches breaking upgrade issues early
+
+#### Production Profile
+
+Full HA with controlled upgrades:
+
+```bash
+./scripts/deploy-external-secrets.sh \
+  -f helm/external-secrets-operator/environments/prod/values.yaml
+
+# With explicit Vault backend
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/prod/values.yaml
+```
+
+**Characteristics**:
+- 2 replicas for all components — no single point of failure
+- **`installPlanApproval: Manual`** — operator upgrades require explicit approval via OLM `InstallPlan`
+- PDB enabled with `minAvailable: 1` — safe node drain without ESO downtime
+- Full resource limits — predictable scheduling on production nodes
 
 ### Deployment Examples
 

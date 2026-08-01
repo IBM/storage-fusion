@@ -10,3 +10,10 @@ serverAddress = "0.0.0.0"
 
 [client]
 showErrorDetails = true
+
+[theme]
+primaryColor = "#4F8EF7"
+backgroundColor = "#0D1117"
+secondaryBackgroundColor = "#161B26"
+textColor = "#E2E8F0"
+font = "sans serif"

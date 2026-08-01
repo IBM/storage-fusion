@@ -7,8 +7,7 @@ Implements SOLID design principles with comprehensive error handling
 import os
 import sys
 from pathlib import Path
-from typing import Tuple, Optional
-import time
+from typing import Tuple
 
 # Set Streamlit home to avoid permission issues in containers
 try:
@@ -34,13 +33,13 @@ sys.path.insert(0, str(project_root))
 load_dotenv()
 
 # Import enhanced RAG flow and CAS client
-from src.rag_flow import RAGFlowEnhanced, ProgressUpdate, ProcessingStage
+from src.rag_flow import RAGFlowEnhanced
 from src.cas_client import CASClient
 
 # Page configuration
 st.set_page_config(
     page_title="Agentic Chat Assistant",
-    page_icon="🤖",
+    page_icon="❇",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -77,13 +76,11 @@ def initialize_session_config():
     This ensures vault-managed values are never modified in os.environ.
     """
     if "config" not in st.session_state:
-        from datetime import datetime
-        
         # Load vault values from environment (immutable reference)
         vault_values = {}
         for config_key, env_key in CONFIG_ENV_MAPPING.items():
             env_value = os.getenv(env_key, "")
-            
+
             # Type conversion
             if config_key == "cas_use_mcp":
                 vault_values[config_key] = env_value.lower() == "true"
@@ -91,14 +88,11 @@ def initialize_session_config():
                 vault_values[config_key] = int(env_value) if env_value else CONFIG_DEFAULTS[config_key]
             else:
                 vault_values[config_key] = env_value if env_value else CONFIG_DEFAULTS[config_key]
-        
+
         # Initialize session config
         st.session_state.config = {
             "vault_values": vault_values.copy(),  # Immutable reference
             "active_values": vault_values.copy(),  # Mutable working copy
-            "modified_keys": set(),
-            "last_reset_time": None,
-            "initialization_time": datetime.now(),
         }
 
 
@@ -106,160 +100,374 @@ def get_config_value(key: str, default=""):
     """
     Get configuration value with proper fallback hierarchy.
     Precedence: active_values → vault_values → defaults → provided default
-    
-    Args:
-        key: Configuration key to retrieve
-        default: Default value if key not found
-        
-    Returns:
-        Configuration value
     """
     if "config" not in st.session_state:
         initialize_session_config()
-    
-    # Try active values first
+
     if key in st.session_state.config["active_values"]:
         return st.session_state.config["active_values"][key]
-    
-    # Fallback to vault values
+
     if key in st.session_state.config["vault_values"]:
         return st.session_state.config["vault_values"][key]
-    
-    # Final fallback to defaults
+
     return CONFIG_DEFAULTS.get(key, default)
 
 
 def set_config_value(key: str, value):
     """
     Set configuration value in active session.
-    Tracks modifications and never touches os.environ.
-    
-    Args:
-        key: Configuration key to set
-        value: Value to set
     """
     if "config" not in st.session_state:
         initialize_session_config()
-    
-    # Update active value
+
     st.session_state.config["active_values"][key] = value
-    
-    # Track if different from vault value
-    vault_value = st.session_state.config["vault_values"].get(key)
-    if value != vault_value:
-        st.session_state.config["modified_keys"].add(key)
-    else:
-        st.session_state.config["modified_keys"].discard(key)
 
 
-def is_config_modified(key: str = None) -> bool:
-    """
-    Check if configuration has been modified from vault values.
-    
-    Args:
-        key: Specific key to check, or None to check if any config is modified
-        
-    Returns:
-        True if modified, False otherwise
-    """
-    if "config" not in st.session_state:
-        return False
-    
-    if key is None:
-        return len(st.session_state.config["modified_keys"]) > 0
-    
-    return key in st.session_state.config["modified_keys"]
-
-
-def reset_config_to_vault():
-    """
-    Reset all configuration values to vault-managed values.
-    Preserves vault_values reference and updates active_values.
-    """
-    from datetime import datetime
-    
-    if "config" not in st.session_state:
-        initialize_session_config()
-        return
-    
-    # Copy vault values to active values
-    st.session_state.config["active_values"] = st.session_state.config["vault_values"].copy()
-    
-    # Clear modification tracking
-    st.session_state.config["modified_keys"].clear()
-    st.session_state.config["last_reset_time"] = datetime.now()
-    
-    # Invalidate RAG flow to force reinitialization with vault values
-    if "rag_flow" in st.session_state:
-        st.session_state.rag_flow = None
-    
-    # Clear vector stores to force refresh
-    if "vector_stores" in st.session_state:
-        st.session_state.vector_stores = []
-
-
-def get_modified_config_summary():
-    """
-    Get list of modified configuration keys with their values.
-    
-    Returns:
-        List of tuples (key, vault_value, active_value)
-    """
-    if "config" not in st.session_state or not is_config_modified():
-        return []
-    
-    summary = []
-    for key in st.session_state.config["modified_keys"]:
-        vault_val = st.session_state.config["vault_values"].get(key, "")
-        active_val = st.session_state.config["active_values"].get(key, "")
-        summary.append((key, vault_val, active_val))
-    
-    return summary
-
-
-# Custom CSS for better UI
+# ── Modern Design System ──────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .source-card {
-        background-color: #f0f2f6;
-        border-left: 4px solid #4CAF50;
-        padding: 15px;
-        margin: 10px 0;
-        border-radius: 5px;
-    }
-    .progress-item {
-        padding: 8px;
-        margin: 5px 0;
-        border-radius: 4px;
-        font-size: 0.85em;
-        line-height: 1.3;
-    }
-    .progress-completed {
-        background-color: #d4edda;
-        border-left: 3px solid #28a745;
-        color: #155724;
-    }
-    .progress-in-progress {
-        background-color: #fff3cd;
-        border-left: 3px solid #ffc107;
-        color: #856404;
-    }
-    .progress-failed {
-        background-color: #f8d7da;
-        border-left: 3px solid #dc3545;
-        color: #721c24;
-    }
-    .metric-card {
-        background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #e9ecef;
-        margin: 5px 0;
-    }
-    /* Fixed bottom container space padding for clean scrolling */
-    .main .block-container {
-        padding-bottom: 140px;
-    }
+  /* ── Global resets & typography ── */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  html, body, [class*="css"] {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  /* ── App background ── */
+  .stApp {
+      background: #0D1117;
+  }
+
+  /* ── Sidebar ── */
+  [data-testid="stSidebar"] {
+      background: #111620 !important;
+      border-right: 1px solid rgba(255,255,255,0.07) !important;
+  }
+  [data-testid="stSidebar"] .stMarkdown h3,
+  [data-testid="stSidebar"] .stMarkdown h4 {
+      font-size: 0.70rem;
+      font-weight: 600;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: #4F8EF7;
+      margin: 0 0 8px 0;
+  }
+
+  /* ── Sidebar brand header ── */
+  .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0 18px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 20px;
+  }
+  .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #2D6BE4 0%, #4F8EF7 100%);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+  }
+  .brand-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #E2E8F0;
+      line-height: 1.2;
+  }
+  .brand-sub {
+      font-size: 0.72rem;
+      color: #64748B;
+      font-weight: 400;
+  }
+
+  /* ── Status text ── */
+  .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      font-weight: 400;
+  }
+  .status-ready {
+      color: #34D399;
+  }
+  .status-idle {
+      color: #FBBF24;
+  }
+  .status-store {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.73rem;
+      color: #64748B;
+      margin-left: 2px;
+  }
+
+  /* ── Section divider ── */
+  .section-divider {
+      border: none;
+      border-top: 1px solid rgb(34 38 48);
+      margin: 14px 0;
+  }
+
+  /* ── Input labels ── */
+  [data-testid="stSidebar"] label {
+      font-size: 0.78rem !important;
+      font-weight: 500 !important;
+      color: #94A3B8 !important;
+      letter-spacing: 0.01em;
+  }
+
+  /* ── Text inputs ── */
+  [data-testid="stSidebar"] input:not([class*="st-"]),
+  [data-testid="stSidebar"] .stSelectbox select {
+      background: #1C2333 !important;
+      border: 1px solid rgba(255,255,255,0.08) !important;
+      color: #E2E8F0 !important;
+      font-size: 0.83rem !important;
+  }
+  [data-testid="stSidebar"] input:not([class*="st-"]):focus {
+      border-color: rgba(79, 142, 247, 0.55) !important;
+      box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.10) !important;
+  }
+  /* Remove extra border on selectbox internal search input */
+  [data-testid="stSidebar"] [data-testid="stSelectbox"] input {
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+  }
+
+  /* ── Primary button ── */
+  [data-testid="stSidebar"] .stButton > button[kind="primary"] {
+      background: linear-gradient(135deg, #2D6BE4 0%, #4F8EF7 100%) !important;
+      border: none !important;
+      border-radius: 9px !important;
+      color: #fff !important;
+      font-weight: 600 !important;
+      font-size: 0.83rem !important;
+      padding: 10px 16px !important;
+      transition: opacity 0.18s ease, transform 0.12s ease !important;
+  }
+  [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+      opacity: 0.88 !important;
+      transform: translateY(-1px) !important;
+  }
+
+  /* ── Secondary / outline buttons ── */
+  [data-testid="stSidebar"] .stButton > button:not([kind="primary"]) {
+      background: rgba(255,255,255,0.04) !important;
+      border: 1px solid rgba(255,255,255,0.09) !important;
+      border-radius: 9px !important;
+      color: #CBD5E1 !important;
+      font-size: 0.82rem !important;
+      transition: background 0.15s ease !important;
+  }
+  [data-testid="stSidebar"] .stButton > button:not([kind="primary"]):not(:disabled):hover {
+      background: rgba(79, 142, 247, 0.10) !important;
+      border-color: rgba(79, 142, 247, 0.35) !important;
+      color: #E2E8F0 !important;
+  }
+  [data-testid="stSidebar"] .stButton > button:disabled {
+      background: rgba(255,255,255,0.02) !important;
+      border-color: rgba(255,255,255,0.05) !important;
+      color: rgba(255,255,255,0.20) !important;
+      cursor: not-allowed !important;
+  }
+
+  /* ── Expander ── */
+  [data-testid="stSidebar"] [data-testid="stExpander"] {
+      background: #161B26 !important;
+      border: 1px solid rgba(255,255,255,0.07) !important;
+      border-radius: 10px !important;
+  }
+  [data-testid="stSidebar"] [data-testid="stExpander"] summary {
+      font-size: 0.83rem !important;
+      font-weight: 600 !important;
+      color: #CBD5E1 !important;
+      padding: 10px 14px !important;
+  }
+
+  /* ── Main area bottom padding ── */
+  .main .block-container {
+      padding-bottom: 150px;
+      padding-top: 2rem;
+  }
+
+  /* ── Welcome screen ── */
+  .welcome-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 62vh;
+      text-align: center;
+      padding: 40px 20px;
+      pointer-events: none;
+      user-select: none;
+  }
+  .welcome-orb {
+      width: 80px;
+      height: 80px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #2D6BE4 0%, #4F8EF7 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      margin: 0 auto 28px;
+      box-shadow: 0 16px 40px rgba(45, 107, 228, 0.28);
+  }
+  .welcome-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #E2E8F0;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.02em;
+  }
+  .welcome-sub {
+      font-size: 1rem;
+      color: #64748B;
+      max-width: 460px;
+      margin: 0 auto 32px;
+      line-height: 1.65;
+  }
+  .welcome-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      max-width: 560px;
+  }
+  .chip {
+      background: #161B26;
+      border: 1px solid rgba(79, 142, 247, 0.20);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      color: #7EB3FA;
+      cursor: default;
+  }
+
+  /* ── Source / attribution card ── */
+  .source-card {
+      background: #161B26;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-left: 3px solid #4F8EF7;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 10px 0;
+  }
+  .source-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #E2E8F0;
+      margin-bottom: 4px;
+  }
+  .source-meta {
+      font-size: 0.75rem;
+      color: #64748B;
+  }
+
+  /* ── Metric cards ── */
+  .metric-row {
+      display: flex;
+      gap: 10px;
+      margin: 8px 0 14px 0;
+  }
+  .metric-card {
+      flex: 1;
+      background: #161B26;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: center;
+  }
+  .metric-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #7EB3FA;
+      line-height: 1.2;
+  }
+  .metric-label {
+      font-size: 0.70rem;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 2px;
+  }
+
+  /* ── Chat input ── */
+  [data-testid="stChatInput"] textarea {
+      background: #161B26 !important;
+      border-radius: 12px !important;
+      color: #E2E8F0 !important;
+      font-size: 0.92rem !important;
+  }
+  [data-testid="stChatInput"] textarea:focus {
+      border-color: rgba(79, 142, 247, 0.60) !important;
+  }
+
+  /* ── Chat messages — hide all avatars ── */
+  [data-testid="stChatMessage"] {
+      background: transparent !important;
+  }
+  [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarUser"],
+  [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarAssistant"],
+  [data-testid="stChatMessage"] .stChatMessageAvatar {
+      display: none !important;
+  }
+
+  /* ── User bubble (right-aligned) ── */
+  .user-bubble-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin: 6px 0 14px 0;
+  }
+  .user-bubble {
+      background: linear-gradient(135deg, #2D6BE4 0%, #4F8EF7 100%);
+      color: #fff;
+      border-radius: 18px 18px 4px 18px;
+      padding: 10px 16px;
+      max-width: 72%;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      word-break: break-word;
+  }
+
+  /* ── Assistant response (left-aligned, no bubble) ── */
+  .assistant-wrap {
+      margin: 4px 0 18px 0;
+      max-width: 88%;
+  }
+  .assistant-wrap p,
+  .assistant-wrap li,
+  .assistant-wrap td {
+      font-size: 0.93rem;
+      line-height: 1.65;
+      color: #E2E8F0;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(79, 142, 247, 0.25); border-radius: 10px; }
+
+  /* ── Info / warning / error tweaks ── */
+  [data-testid="stAlert"] {
+      border-radius: 10px !important;
+      font-size: 0.83rem !important;
+  }
+
+  /* ── Caption ── */
+  .stCaption, .st-caption {
+      color: #64748B !important;
+      font-size: 0.75rem !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -276,10 +484,14 @@ if "vector_stores" not in st.session_state:
     st.session_state.vector_stores = []
 if "selected_vector_store" not in st.session_state:
     st.session_state.selected_vector_store = None
-if "progress_updates" not in st.session_state:
-    st.session_state.progress_updates = []
 if "is_processing" not in st.session_state:
     st.session_state.is_processing = False
+if "auto_connected" not in st.session_state:
+    st.session_state.auto_connected = False
+if "available_models" not in st.session_state:
+    st.session_state.available_models = []
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = None
 
 # Default prompt template
 DEFAULT_PROMPT_TEMPLATE = """You are an enterprise knowledge assistant. Use the following context to answer the user's question accurately and cite your sources.
@@ -307,18 +519,15 @@ def validate_endpoint(endpoint: str, endpoint_type: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def progress_callback(update: ProgressUpdate):
-    st.session_state.progress_updates.append(update)
-    # Check if we have an active placeholder reference to write real-time status UI updates
-    if "progress_placeholder" in st.session_state and st.session_state.progress_placeholder:
-        with st.session_state.progress_placeholder.container():
-            render_progress_tracker(from_callback=True)
-
-
 def on_vector_store_change():
-    """Callback function to instantly update and sync selected store status text"""
+    """Sync selected store and rebuild rag_flow so the new store is used immediately."""
     if "vector_store_selector" in st.session_state:
-        st.session_state.selected_vector_store = st.session_state.vector_store_selector
+        new_store = st.session_state.vector_store_selector
+        st.session_state.selected_vector_store = new_store
+        if st.session_state.selected_agent:
+            st.session_state.rag_flow = initialize_rag_flow(
+                vector_store_id=new_store,
+            )
 
 
 def initialize_rag_flow(
@@ -330,13 +539,13 @@ def initialize_rag_flow(
     cas_use_mcp = get_config_value("cas_use_mcp", "false")
     if isinstance(cas_use_mcp, str):
         cas_use_mcp = cas_use_mcp.lower() == "true"
-    
+
     model_gateway_endpoint = (model_gateway_endpoint or get_config_value("model_gateway_endpoint", "")).rstrip("/")
     model_gateway_api_key = model_gateway_api_key or get_config_value("model_gateway_api_key", "")
     model_name = model_name or get_config_value("model_name", "qwen2-5-72b-instruct")
-    
+
     if not model_gateway_api_key:
-        st.error("❌ Model Gateway API Key is required")
+        st.toast("Model Gateway API Key is required.", icon=":material/error:")
         return None
 
     if not vector_store_id:
@@ -346,16 +555,16 @@ def initialize_rag_flow(
 
     cas_valid, cas_error = validate_endpoint(cas_endpoint, "CAS")
     gateway_valid, gateway_error = validate_endpoint(model_gateway_endpoint, "Model Gateway")
-    
+
     if not cas_valid:
-        st.error(f"❌ {cas_error}")
+        st.toast(cas_error, icon=":material/error:")
         return None
     if not gateway_valid:
-        st.error(f"❌ {gateway_error}")
+        st.toast(gateway_error, icon=":material/error:")
         return None
 
     if not cas_use_mcp and not vector_store_id:
-        st.warning("⚠️ Vector Store ID is recommended for REST API mode.")
+        st.toast("Vector Store ID is recommended for REST API mode.", icon=":material/warning:")
 
     try:
         rag_flow = RAGFlowEnhanced(
@@ -366,7 +575,6 @@ def initialize_rag_flow(
             use_mcp=cas_use_mcp,
             cas_api_key=cas_api_key,
             vector_store_id=vector_store_id,
-            progress_callback=progress_callback,
             enable_detailed_attribution=True,
             max_retries=3,
             timeout=60,
@@ -376,12 +584,32 @@ def initialize_rag_flow(
         )
         return rag_flow
     except Exception as e:
-        st.error(f"❌ Failed to initialize RAG flow: {str(e)}")
+        st.toast(f"Failed to initialise RAG flow: {str(e)}", icon=":material/error:")
         return None
 
 
-def fetch_vector_stores(endpoint, api_key):
-    """Helper method to fetch vector stores into session state"""
+def fetch_models(gateway_endpoint, api_key) -> bool:
+    """Fetch available models from the Model Gateway /v1/models endpoint.
+    Returns True if at least one model was retrieved, False otherwise."""
+    try:
+        import requests as _requests
+        url = gateway_endpoint.rstrip("/") + "/v1/models"
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        resp = _requests.get(url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        model_ids = [m["id"] for m in data.get("data", []) if "id" in m]
+        st.session_state.available_models = model_ids
+        return bool(model_ids)
+    except Exception as e:
+        st.session_state.available_models = []
+        st.toast(f"Could not load models: {str(e)}", icon=":material/error:")
+        return False
+
+
+def fetch_vector_stores(endpoint, api_key) -> bool:
+    """Fetch vector stores into session state.
+    Returns True if at least one store was retrieved, False otherwise."""
     try:
         use_mcp = get_config_value("cas_use_mcp", "false")
         if isinstance(use_mcp, str):
@@ -393,314 +621,313 @@ def fetch_vector_stores(endpoint, api_key):
         )
         stores = cas_client.list_vector_stores(limit=50)
         st.session_state.vector_stores = stores
+        return bool(stores)
     except Exception as e:
-        st.sidebar.error(f"❌ Auto-load stores failed: {str(e)}")
-
-
-def render_progress_tracker(from_callback=False):
-    if st.session_state.progress_updates:
-        # Avoid rewriting header nesting inside the container refresh loop
-        if not from_callback:
-            st.markdown("### 🔄 Processing Status")
-        
-        # Showing slightly fewer items in the sidebar to prevent extreme scrolling
-        recent_updates = st.session_state.progress_updates
-        
-        for update in reversed(recent_updates):
-            if update.stage == ProcessingStage.COMPLETED:
-                css_class = "progress-completed"
-                icon = "✅"
-            elif update.stage == ProcessingStage.FAILED:
-                css_class = "progress-failed"
-                icon = "❌"
-            else:
-                css_class = "progress-in-progress"
-                icon = "⏳"
-            
-            time_str = update.timestamp.strftime("%H:%M:%S")
-            st.markdown(f"""
-            <div class="progress-item {css_class}">
-                <strong>{icon} {update.stage.value.replace('_', ' ').title()}</strong><br>
-                <small style="color: gray;">{time_str}</small> - {update.message}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if update.error:
-                st.error(f"Error: {update.error}")
-    else:
-        # Placeholder view when list is blank
-        st.caption("No processing pipelines currently running.")
+        st.session_state.vector_stores = []
+        st.toast(f"Could not load vector stores: {str(e)}", icon=":material/error:")
+        return False
 
 
 def render_response_metrics_and_sources(msg_index, metrics, sources):
     if not metrics and not sources:
         return
 
-    # Dynamic metrics per response frame
+    # Metric cards via custom HTML (avoids Streamlit's default metric styling)
     if metrics:
-        m_col1, m_col2, m_col3 = st.columns(3)
-        with m_col1:
-            st.metric("Processing Time", f"{metrics.get('processing_time', 0):.2f}s")
-        with m_col2:
-            st.metric("Sources Used", metrics.get('sources_count', 0))
-        with m_col3:
-            st.metric("CAS Passes", metrics.get('cas_search_count', 0))
-            
-    # Sources configuration container per response frame
-    if sources:
-        with st.expander("📚 View Cited Sources for this Response", expanded=False):
-            for i, source in enumerate(sources, 1):
-                # Normalized safely to dictionary layout syntax for clean history lookups
-                s_file = source.get('source_file', 'Unknown')
-                s_rel = source.get('relevance_score', 0.0)
-                s_start = source.get('line_start', None)
-                s_end = source.get('line_end', None)
-                s_id = source.get('document_id', 'Unknown')
-                s_snippet = source.get('content_snippet', '')
-                s_meta = source.get('metadata', {})
+        proc_time = f"{metrics.get('processing_time', 0):.2f}s"
+        src_count = metrics.get("sources_count", 0)
+        cas_passes = metrics.get("cas_search_count", 0)
+        st.markdown(
+            f'<div class="metric-row">'
+            f'<div class="metric-card"><div class="metric-value">{proc_time}</div>'
+            f'<div class="metric-label">Processing Time</div></div>'
+            f'<div class="metric-card"><div class="metric-value">{src_count}</div>'
+            f'<div class="metric-label">Sources Used</div></div>'
+            f'<div class="metric-card"><div class="metric-value">{cas_passes}</div>'
+            f'<div class="metric-label">CAS Passes</div></div>'
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
-                st.markdown(f"**📄 Source {i}: {s_file}** (Relevance: `{s_rel:.4f}`)")
-                
-                c1, c2 = st.columns([2, 1])
-                with c1:
-                    if s_start and s_end:
-                        st.markdown(f"**📍 Line Numbers:** `{s_start}` - `{s_end}`")
-                with c2:
-                    st.markdown(f"**Document ID:** `{s_id}`")
-                
-                st.text_area(
-                    "Content Snippet",
-                    value=s_snippet,
-                    height=100,
-                    key=f"msg_{msg_index}_source_snippet_{i}",
-                    disabled=True
+    # Sources expander
+    if sources:
+        with st.expander(f"View {len(sources)} cited source{'s' if len(sources) != 1 else ''}", expanded=False):
+            for i, source in enumerate(sources, 1):
+                s_file = source.get("source_file", "Unknown")
+                s_rel = source.get("relevance_score", 0.0)
+                s_start = source.get("line_start", None)
+                s_end = source.get("line_end", None)
+                s_id = source.get("document_id", "Unknown")
+                s_snippet = source.get("content_snippet", "")
+                s_meta = source.get("metadata", {})
+
+                lines_str = f"Lines {s_start}–{s_end} · " if s_start and s_end else ""
+                st.markdown(
+                    f'<div class="source-card">'
+                    f'<div class="source-title">Source {i} — {s_file}</div>'
+                    f'<div class="source-meta">{lines_str}Relevance: {s_rel:.4f} · ID: <code style="font-size:0.72rem">{s_id}</code></div>'
+                    f"</div>",
+                    unsafe_allow_html=True,
                 )
+
+                if s_snippet:
+                    st.text_area(
+                        "Content snippet",
+                        value=s_snippet,
+                        height=90,
+                        key=f"msg_{msg_index}_source_snippet_{i}",
+                        disabled=True,
+                        label_visibility="collapsed",
+                    )
                 if s_meta:
                     st.json(s_meta)
-                st.divider()
     else:
-        st.info("ℹ️ No sources found in CAS for this query. Response is based on LLM's general knowledge.")
+        st.info("No sources found in CAS for this query. Response is based on general LLM knowledge.")
 
 
-# --- SIDEBAR PANEL (COMPACT & ORDERED TOP LAYOUT) ---
-with st.sidebar:
-    # Initialize session configuration
+# ── AUTO-CONNECT on first load using env/vault values ─────────────────────────
+if not st.session_state.auto_connected:
+    st.session_state.auto_connected = True
     initialize_session_config()
-    
-    st.title("🤖 Agentic Chat Assistant")
-    
-    # 1. Single-line Status Block
-    status_text = "🟢 Ready" if st.session_state.rag_flow else "🟡 Not initialized"
-    store_text = f"Store: {st.session_state.selected_vector_store}" if st.session_state.selected_vector_store else ""
-    st.markdown(f"**Status:** {status_text}")
-    st.markdown(store_text)
-    st.divider()
-    
-    # 2. Compact CAS Search Panel
-    st.markdown("### 🔍 CAS Search Panel")
-    if st.session_state.selected_agent:
-        st.caption(f"Active Agent: **{st.session_state.selected_agent['name']}**")
-        if st.button("🗑️ Clear Chat History", use_container_width=True):
-            st.session_state.messages = []
-            st.session_state.progress_updates = []
-            st.session_state.is_processing = False
-            # Cleanly purge the placeholder element
-            if "progress_placeholder" in st.session_state and st.session_state.progress_placeholder:
-                st.session_state.progress_placeholder.empty()
-            st.rerun()
-    else:
-        st.caption("⚠️ No agent configured. Connect endpoints below.")
-
-    st.divider()
-
-    # 3. Vector Store Section
-    st.markdown("### 🗄️ Vector Store")
-    if st.session_state.selected_agent:
-        if st.session_state.vector_stores:
-            store_options = {
-                store.get("id", store.get("vector_store_id", "")): store.get("name", store.get("id", "Unknown"))
-                for store in st.session_state.vector_stores
-            }
-            
-            current_store_id = st.session_state.selected_vector_store
-            store_keys = list(store_options.keys())
-            default_index = store_keys.index(current_store_id) if current_store_id in store_keys else 0
-            
-            selected_store_id = st.selectbox(
-                "Select Store",
-                options=store_keys,
-                index=default_index,
-                format_func=lambda x: f"{store_options[x]}",
-                key="vector_store_selector",
-                on_change=on_vector_store_change,
-                label_visibility="collapsed"
-            )
-            st.session_state.selected_vector_store = selected_store_id
-        else:
-            manual_store_id = st.text_input(
-                "Vector Store ID",
-                value=get_config_value("cas_vector_store_id", ""),
-                key="manual_vector_store_input",
-            )
-            if manual_store_id:
-                st.session_state.selected_vector_store = manual_store_id
-                
-        if st.button("🔄 Refresh Stores", use_container_width=True):
-            fetch_vector_stores(st.session_state.selected_agent["endpoint"], st.session_state.selected_agent["api_key"])
-            st.rerun()
-    else:
-        st.info("💡 Complete configuration below to load stores.")
-
-    st.divider()
-    
-    # 4. Connection Setup Configurations
-    with st.expander("🔌 Gateway & API Connections", expanded=not bool(st.session_state.rag_flow)):
-        cas_endpoint = st.text_input(
-            "CAS Endpoint",
-            value=get_config_value("cas_endpoint", ""),
-            placeholder="https://cas-endpoint.com",
-            key="config_cas_endpoint",
-        )
-        cas_api_key = st.text_input(
-            "CAS API Key",
-            value=get_config_value("cas_api_key", ""),
-            type="password",
-            key="config_cas_api_key",
-        )
-        model_gateway_endpoint = st.text_input(
-            "Model Gateway Endpoint",
-            value=get_config_value("model_gateway_endpoint", ""),
-            key="config_model_gateway_endpoint",
-        )
-        model_gateway_api_key = st.text_input(
-            "Model Gateway API Key",
-            value=get_config_value("model_gateway_api_key", ""),
-            type="password",
-            key="config_model_gateway_api_key",
-        )
-        model_name = st.text_input(
-            "Model Name",
-            value=get_config_value("model_name", "qwen2-5-72b-instruct"),
-            key="config_model_name",
-        )
-
-        if st.button("🔌 Initialize Components", type="primary", use_container_width=True):
-            if not cas_endpoint or not model_gateway_endpoint:
-                st.error("Please provide CAS Endpoint and Model Gateway Endpoint")
-            elif not model_gateway_api_key:
-                st.error("Please provide Model Gateway API Key")
+    _cas_ep = get_config_value("cas_endpoint", "")
+    _gw_ep = get_config_value("model_gateway_endpoint", "")
+    _gw_key = get_config_value("model_gateway_api_key", "")
+    if _cas_ep and _gw_ep and _gw_key:
+        _cas_key = get_config_value("cas_api_key", "")
+        _pref_model = get_config_value("model_name", "")
+        _default_agent = {"name": "CAS Agent", "endpoint": _cas_ep, "api_key": _cas_key}
+        st.session_state.cas_agents = [_default_agent]
+        st.session_state.selected_agent = _default_agent
+        _stores_ok = fetch_vector_stores(_cas_ep, _cas_key)
+        _models_ok = fetch_models(_gw_ep, _gw_key)
+        if _stores_ok and _models_ok:
+            # Resolve default vector store: prefer env value if present in list, else first
+            _pref_store = get_config_value("cas_vector_store_id", "").strip()
+            _store_ids = [
+                s.get("id", s.get("vector_store_id", ""))
+                for s in st.session_state.vector_stores
+            ]
+            if _pref_store and _pref_store in _store_ids:
+                _store = _pref_store
+            elif _store_ids:
+                _store = _store_ids[0]
             else:
-                # Update session config instead of os.environ
-                set_config_value("cas_endpoint", cas_endpoint)
-                set_config_value("cas_api_key", cas_api_key)
-                set_config_value("model_gateway_endpoint", model_gateway_endpoint)
-                set_config_value("model_gateway_api_key", model_gateway_api_key)
-                set_config_value("model_name", model_name)
+                _store = None
+            st.session_state.selected_vector_store = _store
 
-                default_agent = {
-                    "name": "CAS Agent",
-                    "endpoint": cas_endpoint,
-                    "api_key": cas_api_key,
-                }
-                st.session_state.cas_agents = [default_agent]
-                st.session_state.selected_agent = default_agent
+            # Resolve default model: prefer env value if present in list, else first available
+            _models = st.session_state.available_models
+            if _pref_model and _pref_model in _models:
+                _model = _pref_model
+            elif _models:
+                _model = _models[0]
+            else:
+                _model = _pref_model or "qwen2-5-72b-instruct"
+            st.session_state.selected_model = _model
+            st.session_state.rag_flow = initialize_rag_flow(
+                vector_store_id=_store,
+                cas_endpoint=_cas_ep,
+                cas_api_key=_cas_key,
+                model_gateway_endpoint=_gw_ep,
+                model_gateway_api_key=_gw_key,
+                model_name=_model,
+            )
 
-                # Automatically trigger loading vector stores right when initializing
-                fetch_vector_stores(cas_endpoint, cas_api_key)
 
+# ── SIDEBAR ───────────────────────────────────────────────────────────────────
+with st.sidebar:
+    initialize_session_config()
+
+    # Brand header
+    is_ready = bool(st.session_state.rag_flow)
+    status_class = "status-ready" if is_ready else "status-idle"
+    status_dot = "●" if is_ready else "○"
+    status_label = "Connected" if is_ready else "Not connected"
+
+    st.markdown(
+        f'<div class="brand-header">'
+        f'<div class="brand-icon">❇</div>'
+        f'<div>'
+        f'<div class="brand-name">Agentic Chat Assistant</div>'
+        f'<div class="brand-sub"><span class="status-pill {status_class}">{status_dot} {status_label}</span></div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Grouped: Agent · Vector Store · Model ──
+    # Vector Store
+    st.markdown(
+        '<p style="font-size:0.78rem;font-weight:500;color:#94A3B8;letter-spacing:0.01em;margin:0 0 4px;">Vector Store</p>',
+        unsafe_allow_html=True,
+    )
+    if st.session_state.vector_stores:
+        store_options = {
+            store.get("id", store.get("vector_store_id", "")): store.get("name", store.get("id", "Unknown"))
+            for store in st.session_state.vector_stores
+        }
+        store_keys = list(store_options.keys())
+
+        current_store_id = st.session_state.selected_vector_store
+        default_index = store_keys.index(current_store_id) if current_store_id in store_keys else 0
+        selected_store_id = st.selectbox(
+            "Vector Store",
+            options=store_keys,
+            index=default_index,
+            format_func=lambda x: store_options[x],
+            key="vector_store_selector",
+            on_change=on_vector_store_change,
+            label_visibility="collapsed",
+        )
+        st.session_state.selected_vector_store = selected_store_id
+    else:
+        st.markdown(
+            '<p style="font-size:0.78rem;color:#4B5563;margin:0 0 4px;">Connect to load available vector stores.</p>',
+            unsafe_allow_html=True,
+        )
+
+    # Model
+    st.markdown(
+        '<p style="font-size:0.78rem;font-weight:500;color:#94A3B8;letter-spacing:0.01em;margin:8px 0 4px;">Model</p>',
+        unsafe_allow_html=True,
+    )
+    if st.session_state.available_models:
+        _cur_model = st.session_state.selected_model
+        _model_keys = st.session_state.available_models
+        _model_idx = _model_keys.index(_cur_model) if _cur_model in _model_keys else 0
+
+        def _on_model_change():
+            new_model = st.session_state.model_selector
+            st.session_state.selected_model = new_model
+            set_config_value("model_name", new_model)
+            if st.session_state.selected_agent:
                 st.session_state.rag_flow = initialize_rag_flow(
                     vector_store_id=st.session_state.selected_vector_store,
-                    cas_endpoint=cas_endpoint,
-                    cas_api_key=cas_api_key,
-                    model_gateway_endpoint=model_gateway_endpoint,
-                    model_gateway_api_key=model_gateway_api_key,
-                    model_name=model_name
+                    model_name=new_model,
                 )
-                st.rerun()
 
-    # 5. DOCKED TELEMETRY TRACKER IN SIDEBAR (Using an explicit empty container)
-    st.divider()
-    st.markdown("### 🔄 Processing Status")
-    st.session_state.progress_placeholder = st.empty()
-    with st.session_state.progress_placeholder.container():
-        render_progress_tracker(from_callback=True)
+        _chosen_model = st.selectbox(
+            "Model",
+            options=_model_keys,
+            index=_model_idx,
+            key="model_selector",
+            on_change=_on_model_change,
+            label_visibility="collapsed",
+        )
+        st.session_state.selected_model = _chosen_model
+    else:
+        st.markdown(
+            '<p style="font-size:0.78rem;color:#4B5563;margin:0 0 4px;">Connect to load available models.</p>',
+            unsafe_allow_html=True,
+        )
+
+    # Clear chat (bottom of group)
+    if st.session_state.selected_agent:
+        st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
+        has_messages = bool(st.session_state.messages)
+        if st.button("New Chat", use_container_width=True, disabled=not has_messages):
+            st.session_state.messages = []
+            st.session_state.is_processing = False
+            st.rerun()
 
 
-# --- MAIN SCREEN VIEWPORT FRAME (Full Width Chat View) ---
-# If history is blank AND a message isn't processing, show greeting layout
+# ── MAIN CHAT AREA ────────────────────────────────────────────────────────────
+_greeting_placeholder = st.empty()
+
 if not st.session_state.messages and not st.session_state.is_processing:
-    st.markdown("""
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; color: #6c757d;">
-        <div style="font-size: 4rem; margin-bottom: 10px;">🤖</div>
-        <h2 style="font-weight: 600; margin-bottom: 5px; color: inherit;">How can I help you today?</h2>
-        <p style="font-size: 1.1rem; max-width: 450px; margin: 0 auto;">
-            Ask a question about your enterprise documents or connect your data stores in the sidebar to begin.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    with _greeting_placeholder.container():
+        st.markdown(
+            """
+            <div class="welcome-wrap">
+                <div class="welcome-orb">❇</div>
+                <h2 class="welcome-title">How can I help you today?</h2>
+                <p class="welcome-sub">
+                    Ask questions about your enterprise documents. Connect your data stores
+                    in the sidebar to unlock RAG-powered responses.
+                </p>
+                <div class="welcome-chips">
+                    <span class="chip">Summarise a document</span>
+                    <span class="chip">Find specific information</span>
+                    <span class="chip">Extract key points</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 else:
     for idx, message in enumerate(st.session_state.messages):
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            if message["role"] == "assistant":
+        if message["role"] == "user":
+            st.markdown(
+                f'<div class="user-bubble-wrap">'
+                f'<div class="user-bubble">{message["content"]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            with st.container():
+                st.markdown(
+                    f'<div class="assistant-wrap">',
+                    unsafe_allow_html=True,
+                )
+                st.markdown(message["content"])
+                st.markdown('</div>', unsafe_allow_html=True)
                 render_response_metrics_and_sources(
-                    msg_index=idx, 
-                    metrics=message.get("metrics"), 
-                    sources=message.get("sources")
+                    msg_index=idx,
+                    metrics=message.get("metrics"),
+                    sources=message.get("sources"),
                 )
 
 
-# --- ANCHORED STICKY ROOT LEVEL CHAT INPUT CONTAINER ---
-if prompt := st.chat_input("Ask a question about your enterprise documents..."):
-    # Toggle processing flag to immediately drop greeting screen elements
+# ── CHAT INPUT ────────────────────────────────────────────────────────────────
+if prompt := st.chat_input("Ask a question about your enterprise documents…"):
     st.session_state.is_processing = True
-    
-    # 1. Immediately render user prompt 
-    st.chat_message("user").markdown(prompt)
+    _greeting_placeholder.empty()
+
+    st.markdown(
+        f'<div class="user-bubble-wrap">'
+        f'<div class="user-bubble">{prompt}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
     st.session_state.messages.append({"role": "user", "content": prompt})
-    
+
     if not st.session_state.selected_agent:
-        st.session_state.messages.append({"role": "assistant", "content": "⚠️ Please initialize components first"})
+        st.session_state.messages.append({"role": "assistant", "content": "Please initialise components first via the sidebar."})
         st.session_state.is_processing = False
         st.rerun()
     elif not st.session_state.selected_vector_store:
-        st.session_state.messages.append({"role": "assistant", "content": "⚠️ Please select a vector store"})
+        st.session_state.messages.append({"role": "assistant", "content": "Please select a vector store from the sidebar."})
         st.session_state.is_processing = False
         st.rerun()
     elif not st.session_state.rag_flow:
-        st.session_state.messages.append({"role": "assistant", "content": "⚠️ RAG flow not initialized"})
+        st.session_state.messages.append({"role": "assistant", "content": "RAG flow is not initialised yet."})
         st.session_state.is_processing = False
         st.rerun()
     else:
         try:
-            st.session_state.progress_updates = []
-            
-            # 2. Render assistant context container framework containing processing indicators
-            with st.chat_message("assistant"):
-                with st.spinner("Processing your request..."):
-                    result = st.session_state.rag_flow.run(prompt)
-                        
+            with st.spinner("Thinking…"):
+                result = st.session_state.rag_flow.run(prompt)
+
             metrics_payload = {
-                'processing_time': result.processing_time,
-                'sources_count': len(result.sources),
-                'cas_search_count': result.cas_search_count
+                "processing_time": result.processing_time,
+                "sources_count": len(result.sources),
+                "cas_search_count": result.cas_search_count,
             }
-            
-            # Explicitly serialize SourceAttribution objects using list comprehensions (.to_dict())
-            # to maintain clean session states and avoid runtime serialization errors.
+
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": result.response,
                 "sources": [s.to_dict() for s in result.sources] if result.sources else [],
-                "metrics": metrics_payload
+                "metrics": metrics_payload,
             })
             st.session_state.is_processing = False
             st.rerun()
 
         except Exception as e:
+            st.toast(f"Query failed: {str(e)}", icon=":material/error:")
             st.session_state.messages.append({
-                "role": "assistant", 
-                "content": f"Error: {str(e)}"
+                "role": "assistant",
+                "content": "Something went wrong processing your request. Please try again.",
             })
             st.session_state.is_processing = False
             st.rerun()

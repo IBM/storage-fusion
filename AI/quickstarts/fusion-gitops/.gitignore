@@ -1,0 +1,78 @@
+# Ansible
+*.retry
+ansible/inventory/production.ini
+ansible/inventory/staging.ini
+ansible/group_vars/vault.yml
+
+# Helm
+*.tgz
+helm/*/charts/
+helm/*/Chart.lock
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.crt
+*.p12
+
+# Terraform (if used)
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Test results
+test-results/
+coverage/
+*.xml
+*.html
+
+# Build artifacts
+dist/
+build/
+*.tar.gz
+*.zip
+
+# Made with Bob

@@ -9,6 +9,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "3"
     secret.reloader.stakater.com/reload: "llmops-secrets"
+    configmap.reloader.stakater.com/reload: "llmops-config"
 spec:
   replicas: 1
   selector:
