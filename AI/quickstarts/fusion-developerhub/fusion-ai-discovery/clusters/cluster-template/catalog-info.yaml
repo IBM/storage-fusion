@@ -1,0 +1,361 @@
+# =============================================================================
+# clusters/<cluster-id>/catalog-info.yaml — Fusion Cluster Template
+#
+# Copy this directory, rename it to your cluster ID, fill in all
+# occurrences of <cluster-id>, endpoint URLs, and cluster-type.
+#
+# CLUSTER TYPES:
+#   self-hosted → Kubernetes plugin enabled. Add backstage.io/kubernetes-*
+#                 annotations AND a kubernetes: entry in app-config-fusion-services.yaml.
+#                 Run sa-rbac.yaml on the target cluster and store SA token as Secret.
+#   proxy-only  → No Kubernetes plugin. No SA token. No kubernetes annotations.
+#                 Access via RHDH proxy endpoints only (DCS + CAS MCP, Swagger, health).
+#                 Clusters registered via template are always proxy-only.
+#
+# Proxy naming convention (must match app-config-fusion-services.yaml):
+#   /fusion-<cluster-id>-dcs      → DCS console route
+#   /fusion-<cluster-id>-dcs-mcp  → DCS MCP route (dedicated Route in ibm-data-cataloging)
+#   /fusion-<cluster-id>-cas      → CAS console route (all CAS subpaths)
+# =============================================================================
+
+# ── System ────────────────────────────────────────────────────────────────────
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: fusion-<cluster-id>
+  title: "IBM Fusion HCI — <cluster-id>"
+  description: IBM Fusion HCI on <cluster-id>. Replace with actual cluster details.
+  tags: [fusion, openshift, "<cluster-id>"]
+  annotations:
+    fusion.ibm.com/cluster-id: "<cluster-id>"
+    backstage.io/source-location: "url:https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com"
+  links:
+    - url: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com
+      title: Fusion HCI Console
+      icon: dashboard
+spec:
+  owner: group:default/fusion-team
+  domain: fusion-ai-services
+
+---
+# ── DCS Component ─────────────────────────────────────────────────────────────
+# Include this block only if DCS is deployed on this cluster.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fusion-dcs-<cluster-id>
+  title: "IBM Fusion DCS — <cluster-id>"
+  links:
+    # ── Live endpoints ──────────────────────────────────────────────────────
+    - url: https://console-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com
+      title: "DCS Console"
+      icon: dashboard
+    - url: https://dcs-mcp-route-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com/mcp/http
+      title: "DCS MCP — HTTP Endpoint (POST, JSON-RPC 2.0)"
+      icon: cloud
+    - url: https://dcs-mcp-route-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com/mcp
+      title: "DCS MCP — SSE Endpoint (streaming)"
+      icon: cloud
+    # ── IBM Official Documentation ──────────────────────────────────────────
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+      title: "IBM Docs — Data Cataloging Service"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=capabilities-data-cataloging-mcp-server
+      title: "IBM Docs — DCS MCP Server"
+      icon: article
+    # ── Community & Blog Resources ──────────────────────────────────────────
+    - url: https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/exploring-your-fusion-data-catalog-with-nlp
+      title: "Blog — Exploring Your Catalog with NLP"
+      icon: chat
+    - url: https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/create-your-ai-agents-on-wx-orch-for-data-catalog
+      title: "Blog — AI Agents on watsonx Orchestrate"
+      icon: chat
+    - url: https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/is-your-mcp-server-healthy-to-explore-your-catalog
+      title: "Blog — MCP Health Check Guide"
+      icon: chat
+    - url: https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/content-aware-ai-autotagging-fusion-data-catalog
+      title: "Blog — Content-Aware AI Autotagging"
+      icon: chat
+  description: >
+    IBM Fusion Data Cataloging Service on <cluster-id>.
+    MCP Server active — natural language queries enabled.
+    Connect via RHDH proxy at /api/proxy/fusion-<cluster-id>-dcs-mcp/mcp/http (no VPN required).
+    Direct endpoint: https://dcs-mcp-route-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com/mcp/http
+  tags: [fusion, dcs, "<cluster-id>", data-cataloging, mcp, ai, ibm-fusion]
+  annotations:
+    fusion.ibm.com/cluster-id: "<cluster-id>"
+    # Set to "self-hosted" or "proxy-only"
+    fusion.ibm.com/cluster-type: "<self-hosted|proxy-only>"
+    fusion.ibm.com/service-type: "dcs"
+    fusion.ibm.com/service-namespace: "ibm-data-cataloging"
+    fusion.ibm.com/service-version: "2.5.x"
+    fusion.ibm.com/console-url: "https://console-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com"
+    fusion.ibm.com/mcp-endpoint: "https://dcs-mcp-route-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com/mcp/http"
+    fusion.ibm.com/mcp-sse-endpoint: "https://dcs-mcp-route-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com/mcp"
+    fusion.ibm.com/mcp-proxy: "/api/proxy/fusion-<cluster-id>-dcs-mcp/mcp/http"
+    fusion.ibm.com/mcp-sse-proxy: "/api/proxy/fusion-<cluster-id>-dcs-mcp/mcp"
+    fusion.ibm.com/console-proxy: "/api/proxy/fusion-<cluster-id>-dcs"
+    fusion.ibm.com/mcp-available: "true"
+    fusion.ibm.com/catalog-visible: "true"
+    backstage.io/techdocs-ref: "dir:./techdocs/dcs"
+    backstage.io/source-location: "dir:."
+    # ── Kubernetes plugin — SELF-HOSTED ONLY ──────────────────────────────────
+    # Remove these 4 lines entirely if cluster-type is proxy-only.
+    # Matches kubernetes.clusters[].name in app-config-fusion-services.yaml.
+    backstage.io/kubernetes-id: fusion-dcs-<cluster-id>
+    backstage.io/kubernetes-cluster: fusion-<cluster-id>-dcs
+    backstage.io/kubernetes-namespace: ibm-data-cataloging
+    backstage.io/kubernetes-label-selector: "app.kubernetes.io/instance=data-cataloging-service-instance"
+spec:
+  type: fusion-service
+  lifecycle: production
+  owner: group:default/fusion-team
+  system: fusion-<cluster-id>
+  providesApis:
+    - fusion-dcs-mcp-api-<cluster-id>
+
+---
+# ── DCS MCP API ───────────────────────────────────────────────────────────────
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: fusion-dcs-mcp-api-<cluster-id>
+  title: "IBM Fusion DCS MCP Server — <cluster-id>"
+  description: >
+    DCS MCP Server on <cluster-id>. JSON-RPC 2.0 over HTTP and SSE streaming.
+    Via RHDH proxy: /api/proxy/fusion-<cluster-id>-dcs-mcp/mcp/http
+  tags: [fusion, dcs, mcp, "<cluster-id>", ai, watsonx]
+  annotations:
+    fusion.ibm.com/cluster-id: "<cluster-id>"
+    fusion.ibm.com/service-type: "dcs"
+    fusion.ibm.com/mcp-endpoint: "https://dcs-mcp-route-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com/mcp/http"
+    fusion.ibm.com/mcp-proxy: "/api/proxy/fusion-<cluster-id>-dcs-mcp/mcp/http"
+    backstage.io/source-location: "url:https://console-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com"
+  links:
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=capabilities-data-cataloging-mcp-server
+      title: IBM Docs — DCS MCP Server
+      icon: article
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:default/fusion-team
+  system: fusion-<cluster-id>
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: IBM Fusion DCS MCP Server (<cluster-id>)
+      version: "2.5.x"
+    servers:
+      - url: /api/proxy/fusion-<cluster-id>-dcs-mcp
+        description: Via RHDH Proxy (no cluster access needed)
+      - url: https://dcs-mcp-route-ibm-data-cataloging.apps.<cluster-id>.fusion.example.com
+        description: Direct
+    paths:
+      /mcp/http:
+        post:
+          summary: DCS MCP — HTTP Endpoint (JSON-RPC 2.0)
+          tags: [MCP-HTTP]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  required: [jsonrpc, id, method]
+                  properties:
+                    jsonrpc: {type: string, enum: ["2.0"]}
+                    id: {type: integer}
+                    method: {type: string, enum: [initialize, "tools/list", "tools/call"]}
+                    params: {type: object}
+                examples:
+                  initialize:
+                    value: {jsonrpc: "2.0", id: 1, method: initialize, params: {protocolVersion: "2024-11-05", capabilities: {}, clientInfo: {name: rhdh, version: "1.0"}}}
+                  list_tools:
+                    value: {jsonrpc: "2.0", id: 2, method: "tools/list", params: {}}
+          responses:
+            "200": {description: JSON-RPC 2.0 response}
+      /mcp:
+        get:
+          summary: DCS MCP — SSE Endpoint (streaming)
+          tags: [MCP-SSE]
+          responses:
+            "200": {description: SSE event stream}
+
+---
+# ── CAS Component ─────────────────────────────────────────────────────────────
+# Include this block only if CAS is deployed on this cluster.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fusion-cas-<cluster-id>
+  title: "IBM Fusion CAS — <cluster-id>"
+  links:
+    # ── Live endpoints ──────────────────────────────────────────────────────
+    - url: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/overview
+      title: "CAS Console"
+      icon: dashboard
+    - url: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/docs
+      title: "CAS Swagger UI — REST API Explorer"
+      icon: code
+    - url: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/mcp
+      title: "CAS MCP — Standard Endpoint (POST, JSON-RPC 2.0)"
+      icon: cloud
+    - url: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/mcp-streamable/
+      title: "CAS MCP — Streamable Endpoint (SSE, trailing slash required)"
+      icon: cloud
+    - url: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/health
+      title: "CAS Health Check"
+      icon: heart
+    # ── IBM Official Documentation ──────────────────────────────────────────
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+      title: "IBM Docs — CAS Overview"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-integrating-model-context-protocol-mcp
+      title: "IBM Docs — CAS MCP Integration"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-content-aware-storage-apis
+      title: "IBM Docs — CAS REST APIs (Swagger)"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-integrating-watsonx-orchestrate-by-using-mcp
+      title: "IBM Docs — CAS + watsonx Orchestrate"
+      icon: article
+    # ── Community & Blog Resources ──────────────────────────────────────────
+    - url: https://research.ibm.com/blog/cas-100-billion-vector-storage-ai
+      title: "IBM Research — 100B Vector Storage for AI"
+      icon: chat
+    - url: https://community.ibm.com/community/user/blogs/jose-ortiz1/2026/01/29/accelerating-content-aware-storage-deployments
+      title: "Community — Accelerating CAS Deployments"
+      icon: chat
+    - url: https://medium.com/@mukherjeetiyasa1998/ibm-content-aware-storage-cas-rethinking-enterprise-data-for-the-generative-ai-era-635d959d2f0b
+      title: "Medium — CAS: Rethinking Enterprise Data for GenAI"
+      icon: chat
+  description: >
+    IBM Fusion Content Aware Storage on <cluster-id>.
+    Vector storage, semantic search, AI classification, MCP Server.
+    Connect via RHDH proxy at /api/proxy/fusion-<cluster-id>-cas/cas/api/v1/mcp (no VPN required).
+    Direct endpoint: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/mcp
+  tags: [fusion, cas, "<cluster-id>", content-aware-storage, mcp, vector-storage, ai]
+  annotations:
+    fusion.ibm.com/cluster-id: "<cluster-id>"
+    # Set to "self-hosted" or "proxy-only"
+    fusion.ibm.com/cluster-type: "<self-hosted|proxy-only>"
+    fusion.ibm.com/service-type: "cas"
+    fusion.ibm.com/service-namespace: "ibm-cas"
+    fusion.ibm.com/service-version: "2.13.x"
+    fusion.ibm.com/console-url: "https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com"
+    fusion.ibm.com/swagger-url: "https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/docs"
+    fusion.ibm.com/mcp-endpoint: "https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/mcp"
+    fusion.ibm.com/mcp-streamable-endpoint: "https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/mcp-streamable/"
+    fusion.ibm.com/health-endpoint: "https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/health"
+    fusion.ibm.com/mcp-proxy: "/api/proxy/fusion-<cluster-id>-cas/cas/api/v1/mcp"
+    fusion.ibm.com/mcp-streamable-proxy: "/api/proxy/fusion-<cluster-id>-cas/cas/api/v1/mcp-streamable/"
+    fusion.ibm.com/swagger-proxy: "/api/proxy/fusion-<cluster-id>-cas/cas/api/v1/docs"
+    fusion.ibm.com/console-proxy: "/api/proxy/fusion-<cluster-id>-cas/cas/overview"
+    fusion.ibm.com/mcp-available: "true"
+    fusion.ibm.com/catalog-visible: "true"
+    backstage.io/techdocs-ref: "dir:./techdocs/cas"
+    backstage.io/source-location: "dir:."
+    # ── Kubernetes plugin — SELF-HOSTED ONLY ──────────────────────────────────
+    # Remove these 4 lines entirely if cluster-type is proxy-only.
+    # Matches kubernetes.clusters[].name in app-config-fusion-services.yaml.
+    backstage.io/kubernetes-id: fusion-cas-<cluster-id>
+    backstage.io/kubernetes-cluster: fusion-<cluster-id>-cas
+    backstage.io/kubernetes-namespace: ibm-cas
+    backstage.io/kubernetes-label-selector: "app.kubernetes.io/name=ibm-cas"
+spec:
+  type: fusion-service
+  lifecycle: production
+  owner: group:default/fusion-team
+  system: fusion-<cluster-id>
+  providesApis:
+    - fusion-cas-mcp-api-<cluster-id>
+
+---
+# ── CAS MCP API ───────────────────────────────────────────────────────────────
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: fusion-cas-mcp-api-<cluster-id>
+  title: "IBM Fusion CAS MCP Server — <cluster-id>"
+  description: >
+    CAS MCP Server on <cluster-id>. JSON-RPC 2.0 over HTTP and SSE streamable transport.
+    Standard endpoint (POST): /api/proxy/fusion-<cluster-id>-cas/cas/api/v1/mcp
+    Streamable SSE (trailing slash required): /api/proxy/fusion-<cluster-id>-cas/cas/api/v1/mcp-streamable/
+    Tools: list_vector_stores, search_vector_stores, get_vector_store_file_content
+  tags: [fusion, cas, mcp, "<cluster-id>", ai, vector-storage, watsonx]
+  annotations:
+    fusion.ibm.com/cluster-id: "<cluster-id>"
+    fusion.ibm.com/service-type: "cas"
+    fusion.ibm.com/mcp-endpoint: "https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/mcp"
+    fusion.ibm.com/mcp-proxy: "/api/proxy/fusion-<cluster-id>-cas/cas/api/v1/mcp"
+    backstage.io/source-location: "url:https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/overview"
+  links:
+    - url: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com/cas/api/v1/docs
+      title: "CAS Swagger UI"
+      icon: code
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-content-aware-storage-apis
+      title: "IBM Docs — CAS REST APIs"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-integrating-model-context-protocol-mcp
+      title: "IBM Docs — CAS MCP Integration"
+      icon: article
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:default/fusion-team
+  system: fusion-<cluster-id>
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: IBM Fusion CAS MCP Server (<cluster-id>)
+      version: "2.13.x"
+    servers:
+      - url: /api/proxy/fusion-<cluster-id>-cas
+        description: Via RHDH Proxy (no cluster access needed)
+      - url: https://console-ibm-spectrum-fusion-ns.apps.<cluster-id>.fusion.example.com
+        description: Direct (self-hosted)
+    paths:
+      /cas/api/v1/mcp:
+        post:
+          summary: CAS MCP — Standard (POST, JSON-RPC 2.0)
+          tags: [MCP-Standard]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  required: [jsonrpc, id, method]
+                  properties:
+                    jsonrpc: {type: string, enum: ["2.0"]}
+                    id: {type: integer}
+                    method: {type: string, enum: [initialize, "tools/list", "tools/call"]}
+                    params: {type: object}
+                examples:
+                  list_tools:
+                    value: {jsonrpc: "2.0", id: 1, method: "tools/list", params: {}}
+          responses:
+            "200": {description: JSON-RPC 2.0 response}
+      /cas/api/v1/mcp-streamable/:
+        post:
+          summary: CAS MCP — Streamable SSE (trailing slash required)
+          tags: [MCP-Streamable]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema: {type: object}
+          responses:
+            "200": {description: SSE event stream}
+      /cas/api/v1/docs:
+        get:
+          summary: CAS Swagger UI — Interactive REST API Explorer
+          tags: [Swagger]
+          responses:
+            "200": {description: Swagger UI HTML page}
+      /cas/api/v1/health:
+        get:
+          summary: CAS Health Check
+          tags: [Health]
+          responses:
+            "200": {description: Service healthy}

@@ -52,18 +52,37 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Get the wildcard domain
+Get the wildcard domain.
+Single source of truth: global.wildcardDomain in values.yaml.
+Run:  oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
 */}}
 {{- define "fusion-developer-hub.wildcardDomain" -}}
 {{- .Values.global.wildcardDomain }}
 {{- end }}
 
 {{/*
-Get the namespace for Developer Hub resources
-Uses .Release.Namespace by default, but can be overridden with developerHub.namespace
+Get the namespace for Developer Hub resources.
+Uses .Release.Namespace by default, overridable via developerHub.namespace.
 */}}
 {{- define "fusion-developer-hub.namespace" -}}
 {{- default .Release.Namespace .Values.developerHub.namespace }}
+{{- end }}
+
+{{/*
+Auto-derive the RHDH base URL.
+Pattern: https://backstage-<instanceName>-<namespace>.<wildcardDomain>
+Respects developerHub.config.hostname if explicitly set (custom FQDN case).
+Never hardcode this value — it is always computed from wildcardDomain + instanceName + namespace.
+*/}}
+{{- define "fusion-developer-hub.rhdhBaseUrl" -}}
+{{- if .Values.developerHub.config.hostname }}
+{{- printf "https://%s" .Values.developerHub.config.hostname }}
+{{- else }}
+{{- printf "https://backstage-%s-%s.%s"
+      (.Values.developerHub.instanceName | default "developer-hub")
+      (include "fusion-developer-hub.namespace" .)
+      (include "fusion-developer-hub.wildcardDomain" .) }}
+{{- end }}
 {{- end }}
 
 {{/*

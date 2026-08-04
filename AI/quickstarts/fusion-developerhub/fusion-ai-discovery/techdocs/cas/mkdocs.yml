@@ -1,0 +1,17 @@
+site_name: IBM Fusion Content Aware Storage (CAS)
+site_description: Technical documentation for IBM Fusion CAS — MCP Server, REST API, vector storage, and AI integration
+docs_dir: docs
+
+nav:
+  - Overview: index.md
+  - MCP Server:
+      - Health Check: mcp-health.md
+      - Bob meets CAS MCP: mcp-bob.md
+      - watsonx Orchestrate: mcp-watsonx.md
+  - REST API: api.md
+  - Architecture: architecture.md
+  - Onboarding Guide: onboarding.md
+  - Troubleshooting: troubleshooting.md
+
+plugins:
+  - techdocs-core

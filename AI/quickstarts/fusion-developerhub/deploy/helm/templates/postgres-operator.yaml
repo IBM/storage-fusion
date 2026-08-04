@@ -1,7 +1,9 @@
 {{- if .Values.operators.enabled }}
 {{- if .Values.operators.postgres.enabled }}
+{{- $existingCSV := lookup "operators.coreos.com/v1alpha1" "ClusterServiceVersion" .Values.operators.postgres.namespace "postgresoperator.v5.8.8" }}
+{{- $existingCSVAny := lookup "operators.coreos.com/v1alpha1" "ClusterServiceVersion" .Values.operators.postgres.namespace "" }}
 {{- $existingSubscription := lookup "operators.coreos.com/v1alpha1" "Subscription" .Values.operators.postgres.namespace "crunchy-postgres-operator" }}
-{{- $skipInstall := and .Values.operators.skipIfExists $existingSubscription }}
+{{- $skipInstall := and .Values.operators.skipIfExists (or $existingCSV $existingCSVAny $existingSubscription) }}
 {{- if not $skipInstall }}
 ---
 # Namespace for PostgreSQL Operator
@@ -34,6 +36,9 @@ metadata:
     helm.sh/hook-weight: "-9"
     {{- end }}
     argocd.argoproj.io/sync-wave: "20"
+    # OLM populates .status after creation; skip dry-run to avoid CRD-missing errors
+    # on clusters where the operators.coreos.com/v1 webhook is unavailable.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   {{- if .Values.operators.postgres.watchAllNamespaces }}
   # Watch all namespaces
@@ -57,6 +62,7 @@ metadata:
     helm.sh/hook-weight: "-8"
     {{- end }}
     argocd.argoproj.io/sync-wave: "30"
+    argocd.argoproj.io/sync-options: Replace=true,SkipDryRunOnMissingResource=true
 spec:
   channel: {{ .Values.operators.postgres.channel }}
   name: crunchy-postgres-operator
@@ -83,7 +89,9 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
     {{- end }}
     argocd.argoproj.io/sync-wave: "40"
-    argocd.argoproj.io/sync-options: Force=true,Replace=true
+    argocd.argoproj.io/sync-options: Force=true,Replace=true,SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   template:
     metadata:

@@ -1,6 +1,7 @@
 # Development configuration for IBM Fusion Developer Hub
 global:
-  # IMPORTANT: Change this to match your OpenShift cluster domain
+  # ── REQUIRED: Set this to your OCP cluster wildcard domain ───────────────
+  # Run:  oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
   wildcardDomain: apps.<cluster-domain>.com
   # Name of the certificate secret for ingress (leave empty for self-signed)
   wildcardCertName: ""
@@ -11,10 +12,11 @@ global:
 
 # Operators Configuration
 operators:
-  # Enable operator installation (disable if operators already exist)
-  enabled: true
-  # Skip operator installation if they already exist in the cluster
-  # Set to true to use existing operators instead of installing new ones
+  # operators.enabled=false: RHDH and Crunchy Postgres operators are installed
+  # cluster-wide (AllNamespaces, CSV Succeeded). ArgoCD Helm lookup() has no
+  # cluster access so skipIfExists has no effect — rendering Subscriptions causes
+  # hookPhase=Failed on every sync. Set to true only for operator upgrades.
+  enabled: false
   skipIfExists: true
   # Red Hat Developer Hub Operator
   developerHub:
@@ -105,6 +107,10 @@ developerHub:
   createInstance: true
   # Developer Hub instance name
   instanceName: fusion-dev-hub
+  # rhdhBaseUrl is AUTO-DERIVED — do NOT set it here.
+  # Formula: https://backstage-<instanceName>-<namespace>.<wildcardDomain>
+  # Helm helper: {{ include "fusion-developer-hub.rhdhBaseUrl" . }}
+  # Only override via config.hostname for a custom FQDN.
   # Namespace for Developer Hub instance
   # IMPORTANT: This should match the --namespace flag used with helm install/upgrade
   # Leave empty to use .Release.Namespace automatically
@@ -659,3 +665,10 @@ autoscaling:
   # maxReplicas: 10
   # targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
+
+# IBM Fusion CAS/DCS Services — explicitly disabled for the dev environment.
+# To enable CAS/DCS catalog entities and self-service templates, set to true
+# and configure the clusters list (see deploy/helm/values.yaml for reference).
+developerHub:
+  fusionServices:
+    enabled: false

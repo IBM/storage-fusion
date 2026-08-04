@@ -2,6 +2,68 @@
 
 All notable changes to the Fusion Developer Hub environment configurations will be documented in this file.
 
+---
+
+## v2 (July 2026) - CAS/DCS Integration — CURRENT
+**Date:** 2026-07-01
+
+### Added
+- IBM Fusion CAS (Content Aware Storage) and DCS (Data Cataloging Service) self-service Backstage templates
+- TechDocs for CAS and DCS covering API, architecture, MCP server, onboarding, and troubleshooting
+- Multi-cluster catalog support — cluster entities generated from `fusionServices.clusters[]` values
+- Platform Domain / System / Group entities (`fusion-ai-platform-entities` ConfigMap)
+- GitHub Enterprise integration: `catalog.github.enterpriseHost`, `auth.github.enterpriseInstanceUrl`
+- New homepage icon set: `ai-models-icon.png`, `ibm-blue.svg`, `redhat-red.svg`, `nvidia-green.svg`
+- `fusionServices.enabled` guard — all CAS/DCS content off by default (`false`) in dev and staging
+
+### Changed
+- Welcome card grid height: h:2 → h:4/h:5 (taller layout)
+- Default `welcomeTitle` changed to "Streamline Development with Fusion Developer Hub"
+- `auth.environment` string key added; falls back to legacy `auth.guest.enabled` path if not set
+
+### Migration from v1 to v2
+
+> **IMPORTANT — read before upgrading an existing cluster**
+
+#### 1. Helm chart path changed
+The Helm chart was reorganised from `helm-charts/fusion-developer-hub/` to `deploy/helm/`.
+Any ArgoCD Application pointing to the old path **must be updated** before syncing:
+
+```yaml
+# Old path
+spec:
+  source:
+    path: quickstarts/fusion-developerhub/helm-charts/fusion-developer-hub
+
+# New path
+spec:
+  source:
+    path: quickstarts/fusion-developerhub/deploy/helm
+```
+
+#### 2. Homepage icon ConfigMap schema changed
+`community-icon.png` was removed and replaced by four new icon files.
+The `home-quick-access` ConfigMap now carries `helm.sh/resource-policy: replace` to
+ensure Helm replaces it on upgrade instead of patching in-place (which would leave stale keys).
+
+For **GitOps (ArgoCD)** deployments, `Replace=true` is set in the syncOptions of the
+Application CR — no manual action required.
+
+For **manual Helm upgrades** on existing clusters, run once before upgrading:
+```bash
+oc delete cm <instance-name>-home-quick-access -n <namespace> --ignore-not-found
+helm upgrade fusion-developer-hub ./deploy/helm \
+  -n <namespace> \
+  -f deploy/helm/environments/prod/values.yaml
+```
+
+#### 3. CAS/DCS features are off by default
+`fusionServices.enabled` defaults to `false` in the base `values.yaml` and is explicitly
+set to `false` in `dev/` and `staging/` environment values.
+Existing deployments that do not set `fusionServices.enabled: true` are unaffected.
+
+---
+
 ## Configuration Structure
 
 ```

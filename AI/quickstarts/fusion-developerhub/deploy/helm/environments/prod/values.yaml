@@ -1,8 +1,9 @@
 # Production Configuration for IBM Fusion Developer Hub
 # This file provides production-ready settings with HA, security, and monitoring
 global:
-  # IMPORTANT: Change this to match your OpenShift cluster domain
-  wildcardDomain: apps.<cluster-domain>.com
+  # REQUIRED: Set to your OCP cluster wildcard domain.
+  # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+  wildcardDomain: apps.f80l034.fusion.tadn.ibm.com
   # Name of the certificate secret for ingress (leave empty for self-signed)
   wildcardCertName: ""
   # Default namespace for model deployments
@@ -11,6 +12,10 @@ global:
   toolsImage: quay.io/openshift/origin-cli:latest
 
 # Operators Configuration
+# Both rhdh-operator and crunchy-postgres-operator are already installed
+# cluster-wide (AllNamespaces) in ai-control-plane on this cluster.
+# Setting enabled: false skips Subscription/OperatorGroup creation entirely,
+# which prevents OLM from flagging duplicate Subscriptions as Degraded.
 operators:
   # Enable operator installation (disable if operators already exist)
   enabled: true
@@ -105,6 +110,12 @@ developerHub:
   createInstance: true
   # Developer Hub instance name
   instanceName: developer-hub
+  # rhdhBaseUrl is AUTO-DERIVED — do NOT set it here.
+  # Formula: https://backstage-<instanceName>-<namespace>.<wildcardDomain>
+  # Helm helper: {{ include "fusion-developer-hub.rhdhBaseUrl" . }}
+  # Only override if you use a custom FQDN:
+  #   config:
+  #     hostname: "my-rhdh.example.com"
   # Namespace for Developer Hub instance
   # IMPORTANT: This should match the --namespace flag used with helm install/upgrade
   # Leave empty to use .Release.Namespace automatically
@@ -123,14 +134,10 @@ developerHub:
     annotations: {}
   # Storage configuration for dynamic plugins
   storage:
-    # Storage class for dynamic plugins PVC (ReadWriteMany access mode required)
-    # Leave empty to use cluster default storage class
-    #
-    # IMPORTANT: Must support ReadWriteMany (RWX) access mode
-    # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
-    # - If using NFS: use "nfs-client" or your NFS storage class
-    # - Other filesystem storage classes that support RWX
-    storageClassName: "" # Uses cluster default
+    # Storage class for dynamic plugins PVC (ReadWriteMany access mode required).
+    # Must support ReadWriteMany (RWX):
+    #   ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
+    storageClassName: "ocs-storagecluster-cephfs" # Uses cluster default
     # Storage size for dynamic plugins
     size: 5Gi
   # High Availability - 3 replicas
@@ -402,8 +409,9 @@ developerHub:
   #   secrets:
   #     - name: custom-secrets
   extraEnvs:
-    secrets: []
-    # - name: github-auth-secret
+    secrets:
+      - name: fusion-cluster-tokens   # FUSION_<CLUSTER_ID>_SA_TOKEN + FUSION_<CLUSTER_ID>_CAS_SA_TOKEN
+      - name: github-auth-secret      # GITHUB_TOKEN — read access to github.ibm.com/ProjectAbell/Fusion-AI
   # Production resources
   resources:
     limits:
@@ -417,7 +425,7 @@ developerHub:
     enabled: true
     tls:
       enabled: true
-      secretName: "" # Leave empty for auto-generated cert
+      secretName: "" # Leave empty for auto-generated cert (operator manages TLS termination)
   # IBM Fusion AI Configuration
   fusion:
     enabled: true # Enable IBM Fusion features including templates
@@ -501,6 +509,62 @@ developerHub:
         drop:
           - ALL
       readOnlyRootFilesystem: false # Developer Hub needs to write temp files
+  # ── IBM Fusion CAS / DCS Services ─────────────────────────────────────────
+  # To add a cluster: append one entry to clusters[] with name + ocpApiUrl.
+  # All other fields are optional — DCS and CAS are enabled by default.
+  # See deploy/helm/values.yaml for the full reference schema.
+  fusionServices:
+    enabled: true
+
+    # Git repository that hosts the TechDocs source and catalog-info files.
+    # REQUIRED for private repos — must match the repo where this branch lives.
+    gitRepo: "https://github.ibm.com/ProjectAbell/Fusion-AI"
+    gitBranch: "cas-dcs-rhdh"
+
+    # GitHub token for private repo catalog imports.
+    # Set to true once github-auth-secret exists in the RHDH namespace.
+    # Create the secret in your terminal (NEVER paste the token here or in Git):
+    #   oc create secret generic github-auth-secret \
+    #     --from-literal=GITHUB_TOKEN=<your-pat> \
+    #     -n <rhdh-namespace>
+    # Token requires: repo (read) scope.
+    githubToken: true
+
+    # Clusters — one entry per IBM Fusion HCI cluster.
+    # Add:    append a block below, git push → ArgoCD syncs → entities appear.
+    # Remove: delete the block,     git push → ArgoCD syncs → entities gone.
+    # No pod restart. No oc apply. No other file changes needed.
+    clusters:
+      - name: f80l034
+        ocpApiUrl: https://api.f80l034.fusion.tadn.ibm.com:6443
+        clusterType: self-hosted
+        services:
+          dcs:
+            enabled: true
+            version: "2.5.3"
+            namespace: ibm-data-cataloging
+            k8s:
+              tokenEnvVar: FUSION_F80L034_SA_TOKEN
+              labelSelector: "app=isd,component=discover"
+          cas:
+            enabled: true
+            version: "1.1.5"
+            namespace: ibm-cas
+            k8s:
+              tokenEnvVar: FUSION_F80L034_CAS_SA_TOKEN
+              labelSelector: "app.kubernetes.io/name=cas.isf.ibm.com"
+      - name: f73l056
+        ocpApiUrl: https://api.f73l056.fusion.tadn.ibm.com:6443
+        clusterType: proxy-only
+        services:
+          dcs:
+            enabled: true
+            version: "2.5.3"
+            namespace: ibm-data-cataloging
+          cas:
+            enabled: true
+            version: "1.1.5"
+            namespace: ibm-cas
 
 # OpenShift Console QuickStart Configuration
 quickstart:

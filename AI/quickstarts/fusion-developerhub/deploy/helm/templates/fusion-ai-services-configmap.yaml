@@ -1,0 +1,804 @@
+{{- if and .Values.developerHub.enabled .Values.developerHub.fusionServices.enabled }}
+---
+# =============================================================================
+# app-config-fusion-services ConfigMap
+#
+# Backstage app-config overlay for IBM Fusion AI Services (CAS + DCS).
+#
+# All catalog entries use  type: file  paths under /opt/app-root/src/ — the
+# Backstage operator mounts every ConfigMap key as a file at that path.
+# No GitHub URL is fetched at runtime; no branch name is ever hardcoded.
+# This means the same Helm chart works identically across branches
+# without any changes to this file.
+#
+# What this config adds:
+#   catalog.locations  — type:file refs for platform entities, cluster entities,
+#                        and self-service scaffold templates
+#   catalog.rules      — allows Domain, Group, Template in addition to defaults
+#   backend.reading    — *.apps.* wildcard so catalog:write round-trip works
+#
+# Optional blocks (rendered only when the sub-flag is true):
+#   kubernetes:        — SA-token cluster entries for the K8s tab
+#   proxy:             — proxy endpoints for browser/AI-client direct access
+#
+# Toggle:  developerHub.fusionServices.enabled  (default: false)
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-fusion-services
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fusion-services
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  app-config-fusion-services.yaml: |
+    backend:
+      reading:
+        allow:
+          # OCP cluster routes — catalog:write round-trip
+          - host: '*.apps.*'
+          # GitHub Enterprise — allows "Import an existing Git repository" UI
+          # and catalog:register from scaffolder templates
+          - host: 'github.ibm.com'
+          # Public GitHub — allows catalog imports from github.com
+          - host: 'github.com'
+          - host: 'raw.githubusercontent.com'
+          # Wildcard fallback — permits any host not listed above.
+          # Tighten this in air-gapped environments by removing it and
+          # listing only the hosts you need.
+          - host: '*'
+
+    integrations:
+      github:
+        # ── GitHub Enterprise (github.ibm.com) ────────────────────────────
+        # Enables the "Import an existing Git repository" dialog to read
+        # catalog-info.yaml files from github.ibm.com without a
+        # NotAllowedError.  Token injected from github-auth-secret.
+        - host: github.ibm.com
+          apiBaseUrl: https://github.ibm.com/api/v3
+          rawBaseUrl: https://raw.github.ibm.com
+          {{- if .Values.developerHub.fusionServices.githubToken }}
+          token: ${GITHUB_TOKEN}
+          {{- end }}
+        # ── Public GitHub (github.com) ─────────────────────────────────────
+        - host: github.com
+          {{- if .Values.developerHub.fusionServices.githubToken }}
+          token: ${GITHUB_TOKEN}
+          {{- end }}
+
+    catalog:
+      locations:
+        # ── Platform entities: Domain, System, Groups ──────────────────────
+        # type:file — ConfigMap key mounted at /opt/app-root/src/ by the operator.
+        # No branch name — branch-agnostic, works on any branch.
+        - type: file
+          target: /opt/app-root/src/fusion-ai-platform-entities.yaml
+          rules:
+            - allow: [Domain, System, Group]
+        # ── Cluster catalog entities ─────────────────────────────────────
+        # The fusion-ai-clusters ConfigMap is volume-mounted as a directory.
+        # Each cluster produces one key (fusion-<name>-catalog-info.yaml).
+        # The glob pattern lets Backstage enumerate every file in the dir
+        # without a per-cluster location entry — add/remove by editing
+        # values.yaml and pushing; no pod restart, no operator reconcile.
+        {{- range .Values.developerHub.fusionServices.clusters }}
+        - type: file
+          target: /opt/app-root/src/fusion-clusters/fusion-{{ .name }}-catalog-info.yaml
+          rules:
+            - allow: [Component, System, API, Resource]
+        {{- end }}
+        # ── Self-service scaffold templates ────────────────────────────────
+        - type: file
+          target: /opt/app-root/src/add-cas-cluster-template.yaml
+          rules:
+            - allow: [Template]
+        - type: file
+          target: /opt/app-root/src/add-dcs-cluster-template.yaml
+          rules:
+            - allow: [Template]
+      rules:
+        - allow:
+            - Component
+            - System
+            - API
+            - Resource
+            - Location
+            - Template
+            - Domain
+            - Group
+      # ── GitHub integration (used by catalog:register in scaffolder templates) ─
+      # When a developer runs "Add Fusion CAS/DCS Cluster" template, the generated
+      # catalog-info.yaml is registered here via catalog:register action.
+      # The backend.reading.allow wildcard above ensures RHDH can read it back.
+      # Branch for catalog URL registration comes from fusionServices.gitBranch.
+      # On merge to main: set developerHub.fusionServices.gitBranch: "main"
+      # that is the only change required across the entire chart.
+
+    # ── Kubernetes plugin ─────────────────────────────────────────────────
+    # Cluster entries are auto-generated from developerHub.fusionServices.clusters[].
+    # Only self-hosted clusters with services.<type>.k8s defined get an entry.
+    # Each service (DCS, CAS) gets its own cluster entry scoped to its namespace.
+    # multiTenant queries all listed clusters; the backstage.io/kubernetes-cluster
+    # annotation on each entity selects the correct one.
+    kubernetes:
+      serviceLocatorMethod:
+        type: multiTenant
+      clusterLocatorMethods:
+        - type: config
+          clusters:
+            {{- range .Values.developerHub.fusionServices.clusters }}
+            {{- $dcsEnabled := not (and .services .services.dcs (eq (toString .services.dcs.enabled) "false")) }}
+            {{- $casEnabled := not (and .services .services.cas (eq (toString .services.cas.enabled) "false")) }}
+            {{- if eq (.clusterType | default "proxy-only") "self-hosted" }}
+            {{- $name := .name }}
+            {{- $url  := .ocpApiUrl }}
+            {{- if and $dcsEnabled .services .services.dcs .services.dcs.k8s }}
+            # DCS cluster entry for {{ $name }}
+            - name: fusion-{{ $name }}-dcs
+              url: {{ $url }}
+              authProvider: serviceAccount
+              serviceAccountToken: ${{ printf "{%s}" .services.dcs.k8s.tokenEnvVar }}
+              skipTLSVerify: true
+              customResources:
+                - group: "spectrum-discover.ibm.com"
+                  apiVersion: "v1alpha1"
+                  plural: "spectrumdiscovers"
+                - group: "service.isf.ibm.com"
+                  apiVersion: "v1"
+                  plural: "fusionserviceinstances"
+                - group: "prereq.isf.ibm.com"
+                  apiVersion: "v1"
+                  plural: "spectrumfusions"
+            {{- end }}
+            {{- if and $casEnabled .services .services.cas .services.cas.k8s }}
+            # CAS cluster entry for {{ $name }}
+            - name: fusion-{{ $name }}-cas
+              url: {{ $url }}
+              authProvider: serviceAccount
+              serviceAccountToken: ${{ printf "{%s}" .services.cas.k8s.tokenEnvVar }}
+              skipTLSVerify: true
+              customResources:
+                - group: "cas.storage.ibm.com"
+                  apiVersion: "v1"
+                  plural: "contentstorages"
+                - group: "service.isf.ibm.com"
+                  apiVersion: "v1"
+                  plural: "fusionserviceinstances"
+            {{- end }}
+            {{- end }}
+            {{- end }}
+
+    # ── RHDH proxy endpoints ──────────────────────────────────────────────
+    # Auto-generated from clusters[].
+    # DCS: two entries per cluster (console + MCP — separate Routes).
+    # CAS: one entry per cluster (console Route covers all /cas/* subpaths).
+    # Target URLs are derived from ocpApiUrl unless overridden via urlOverrides.
+    # URL env var override format: ${ FUSION_<NAME>_DCS_URL } etc.
+    {{- if .Values.developerHub.fusionServices.proxy.enabled }}
+    proxy:
+      endpoints:
+        {{- range .Values.developerHub.fusionServices.clusters }}
+        {{- $name   := .name }}
+        {{- $domain := .ocpApiUrl | trimPrefix "https://api." | trimSuffix ":6443" }}
+        {{- $overrides := dict }}
+        {{- if and $.Values.developerHub.fusionServices.proxy.urlOverrides (index $.Values.developerHub.fusionServices.proxy.urlOverrides $name) }}
+        {{- $overrides = index $.Values.developerHub.fusionServices.proxy.urlOverrides $name }}
+        {{- end }}
+        {{- $dcsE := not (and .services .services.dcs (eq (toString .services.dcs.enabled) "false")) }}
+        {{- $casE := not (and .services .services.cas (eq (toString .services.cas.enabled) "false")) }}
+        {{- if $dcsE }}
+        /fusion-{{ $name }}-dcs:
+          {{- if $overrides.dcsConsoleEnvVar }}
+          target: ${{ printf "{%s}" $overrides.dcsConsoleEnvVar }}
+          {{- else }}
+          target: https://console-ibm-data-cataloging.apps.{{ $domain }}
+          {{- end }}
+          changeOrigin: true
+          secure: false
+          allowedHeaders: [Authorization, Content-Type, Accept, x-auth-token]
+          pathRewrite:
+            '^/api/proxy/fusion-{{ $name }}-dcs': ''
+        /fusion-{{ $name }}-dcs-mcp:
+          {{- if $overrides.dcsMcpEnvVar }}
+          target: ${{ printf "{%s}" $overrides.dcsMcpEnvVar }}
+          {{- else }}
+          target: https://dcs-mcp-route-ibm-data-cataloging.apps.{{ $domain }}
+          {{- end }}
+          changeOrigin: true
+          secure: false
+          allowedHeaders: [Content-Type, Accept, Mcp-Session-Id]
+          pathRewrite:
+            '^/api/proxy/fusion-{{ $name }}-dcs-mcp': ''
+        {{- end }}
+        {{- if $casE }}
+        /fusion-{{ $name }}-cas:
+          {{- if $overrides.casConsoleEnvVar }}
+          target: ${{ printf "{%s}" $overrides.casConsoleEnvVar }}
+          {{- else }}
+          target: https://console-ibm-spectrum-fusion-ns.apps.{{ $domain }}
+          {{- end }}
+          changeOrigin: true
+          secure: false
+          allowedHeaders: [Authorization, Content-Type, Accept]
+          pathRewrite:
+            '^/api/proxy/fusion-{{ $name }}-cas': ''
+        {{- end }}
+        {{- end }}
+    {{- end }}
+---
+# =============================================================================
+# fusion-ai-platform-entities ConfigMap
+#
+# Embeds the IBM Fusion AI Services catalog platform entities:
+#   • Domain: fusion-ai-services
+#   • System: fusion-ai-services
+#   • Group:  fusion-platform-team
+#   • Group:  fusion-team
+#
+# These are the shared structural entities.  Every Component written by the
+# self-service templates (add-cas-cluster / add-dcs-cluster) carries
+#   spec.system: fusion-ai-services
+# and will automatically appear under this System — no restart needed.
+#
+# Source of truth: quickstarts/fusion-developerhub/fusion-ai-discovery/catalog/platform-entities.yaml
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-ai-platform-entities
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fusion-services-entities
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  fusion-ai-platform-entities.yaml: |
+    apiVersion: backstage.io/v1alpha1
+    kind: Domain
+    metadata:
+      name: fusion-ai-services
+      title: IBM Fusion AI Services
+      description: |
+        All IBM Fusion AI Services — Data Catalog (DCS), Content Aware Storage
+        (CAS), and future services — discoverable from Developer Hub without
+        requiring access to any OpenShift cluster.
+      tags: [fusion, ibm, ai, mcp, dcs, cas, multi-cluster]
+      links:
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+          title: IBM Docs — Data Cataloging (DCS)
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+          title: IBM Docs — Content Aware Storage (CAS)
+          icon: article
+    spec:
+      owner: group:default/fusion-platform-team
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: System
+    metadata:
+      name: fusion-ai-services
+      title: "IBM Fusion AI Services"
+      description: |
+        Shared system grouping all self-service registered IBM Fusion CAS and DCS
+        instances across every cluster. Use "Add IBM Fusion CAS Cluster" or
+        "Add IBM Fusion DCS Cluster" templates to onboard a new cluster — it
+        will appear here automatically.
+      tags: [fusion, ibm, ai, mcp, dcs, cas, multi-cluster, self-service]
+      links:
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+          title: "IBM Docs — Content Aware Storage (CAS)"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+          title: "IBM Docs — Data Cataloging Service (DCS)"
+          icon: article
+    spec:
+      owner: group:default/fusion-platform-team
+      domain: fusion-ai-services
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Group
+    metadata:
+      name: fusion-platform-team
+      title: IBM Fusion Platform Team
+      description: Platform administrators for Fusion HCI clusters and Developer Hub.
+      tags: [fusion, platform-admin]
+    spec:
+      type: team
+      children: [fusion-team]
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Group
+    metadata:
+      name: fusion-team
+      title: IBM Fusion Developer Team
+      description: Developers building AI applications on IBM Fusion DCS and CAS via MCP.
+      tags: [fusion, developers, mcp]
+    spec:
+      type: team
+      parent: fusion-platform-team
+      children: []
+---
+# =============================================================================
+# fusion-ai-services-templates ConfigMap
+#
+# Embeds the two Fusion AI Service self-service Backstage Software Templates:
+#   1. add-cas-cluster — onboard a Content Aware Storage (CAS) cluster
+#   2. add-dcs-cluster — onboard a Data Cataloging Service (DCS) cluster
+#
+# Both templates use catalog:write — no GitHub push, no token, no restart.
+# Files are mounted by the RHDH operator at /opt/app-root/src/ and referenced
+# as type: file in app-config-fusion-services above.
+#
+# Source of truth:
+#   quickstarts/fusion-developerhub/templates/dcs-mcp-configure-multicluster/template.yaml
+#   quickstarts/fusion-developerhub/templates/cas-mcp-configure-multicluster/template.yaml (if present)
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-ai-services-templates
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fusion-services-templates
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  # ── Add IBM Fusion CAS Cluster ────────────────────────────────────────────
+  add-cas-cluster-template.yaml: |
+    apiVersion: scaffolder.backstage.io/v1beta3
+    kind: Template
+    metadata:
+      name: add-cas-cluster
+      title: "Add IBM Fusion CAS Cluster"
+      description: |
+        Register an IBM Fusion Content Aware Storage (CAS) cluster in Developer Hub.
+        Enter a name and the OCP API URL — every endpoint is auto-derived. No token needed.
+      tags: [fusion, cas, mcp, content-aware-storage, vector-storage, ai, ibm-fusion, self-service, bob, watsonx]
+      links:
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+          title: "IBM Docs — CAS Overview"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-integrating-model-context-protocol-mcp
+          title: "IBM Docs — CAS MCP Integration"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-content-aware-storage-apis
+          title: "IBM Docs — CAS REST APIs (Swagger)"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-integrating-watsonx-orchestrate-by-using-mcp
+          title: "IBM Docs — CAS + watsonx Orchestrate"
+          icon: article
+        - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/03/24/bob-meets-ibm-cas-mcp
+          title: "Blog — Bob meets IBM CAS MCP (IBM Community)"
+          icon: chat
+        - url: https://medium.com/@singrohanamita/ibm-bob-meets-cas-mcp-everything-you-need-to-get-started-95d7e01b7f20
+          title: "Blog — IBM Bob meets CAS MCP: Get Started (Medium)"
+          icon: chat
+        - url: https://research.ibm.com/blog/cas-100-billion-vector-storage-ai
+          title: "IBM Research — 100B Vector Storage for AI"
+          icon: chat
+        - url: https://community.ibm.com/community/user/blogs/jose-ortiz1/2026/01/29/accelerating-content-aware-storage-deployments
+          title: "Community — Accelerating CAS Deployments"
+          icon: chat
+        - url: https://medium.com/@mukherjeetiyasa1998/ibm-content-aware-storage-cas-rethinking-enterprise-data-for-the-generative-ai-era-635d959d2f0b
+          title: "Medium — CAS: Rethinking Enterprise Data for GenAI"
+          icon: chat
+    spec:
+      owner: group:default/fusion-platform-team
+      type: infrastructure
+      parameters:
+        - title: "CAS Cluster Details"
+          description: >
+            All CAS endpoints are derived automatically from the OCP API URL.
+            No token. No OCP login.
+          required: [clusterName, ocpApiUrl]
+          properties:
+            clusterName:
+              title: "Cluster Name"
+              type: string
+              description: >
+                Short identifier — lowercase letters, numbers, hyphens.
+                Used as the catalog entity name.
+                Examples: prod-east, mycluster, lab-gpu
+              pattern: "^[a-z][a-z0-9-]*$"
+              ui:autofocus: true
+              ui:placeholder: "mycluster"
+            ocpApiUrl:
+              title: "OCP API URL"
+              type: string
+              description: |
+                Paste the API server URL exactly as shown in your oc login command.
+
+                Example:
+                  https://api.mycluster.example.com:6443
+
+                All CAS endpoints are derived automatically:
+                  • CAS Console    → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/overview
+                  • Swagger UI     → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/docs
+                  • MCP standard   → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/mcp
+                  • MCP streamable → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/mcp-streamable/
+                  • Health         → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/health
+                  • OCP Console    → https://console-openshift-console.apps.<domain>
+              pattern: "^https://api\\."
+              ui:placeholder: "https://api.mycluster.example.com:6443"
+            serviceVersion:
+              title: "CAS Installed Version"
+              type: string
+              description: >
+                The installed CAS version from your cluster.
+                Run: oc get casinstall -n ibm-cas -o jsonpath='{.items[0].status.installedVersion}'
+              ui:placeholder: "1.1.5"
+      steps:
+        - id: register
+          name: "Add to Catalog"
+          action: catalog:write
+          input:
+            entity:
+              apiVersion: backstage.io/v1alpha1
+              kind: Component
+              metadata:
+                name: ${{`{{ 'fusion-cas-' ~ parameters.clusterName }}`}}
+                title: ${{`{{ 'IBM Fusion CAS — ' ~ parameters.clusterName }}`}}
+                description: ${{`{{ 'IBM Fusion Content Aware Storage on ' ~ parameters.clusterName ~ '. Vector storage, MCP Server.' }}`}}
+                tags:
+                  - fusion
+                  - cas
+                  - content-aware-storage
+                  - mcp
+                  - vector-storage
+                  - ai
+                  - ibm-fusion
+                annotations:
+                  fusion.ibm.com/cluster-id: ${{`{{ parameters.clusterName }}`}}
+                  fusion.ibm.com/service-type: cas
+                  fusion.ibm.com/service-version: ${{`{{ parameters.serviceVersion }}`}}
+                  fusion.ibm.com/ocp-api-url: ${{`{{ parameters.ocpApiUrl }}`}}
+                  fusion.ibm.com/ocp-console-url: ${{`{{ 'https://console-openshift-console.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) }}`}}
+                  fusion.ibm.com/console-url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) }}`}}
+                  fusion.ibm.com/swagger-url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/docs' }}`}}
+                  fusion.ibm.com/mcp-endpoint: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/mcp' }}`}}
+                  fusion.ibm.com/mcp-streamable-endpoint: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/mcp-streamable/' }}`}}
+                  fusion.ibm.com/health-endpoint: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/health' }}`}}
+                links:
+                  - url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/overview' }}`}}
+                    title: CAS Console
+                    icon: dashboard
+                  - url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/mcp-streamable/' }}`}}
+                    title: "MCP — Streamable (SSE)"
+                    icon: cloud
+                  - url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/mcp' }}`}}
+                    title: "MCP — Standard (JSON-RPC 2.0)"
+                    icon: cloud
+                  - url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/docs' }}`}}
+                    title: Swagger UI
+                    icon: code
+                  - url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/health' }}`}}
+                    title: Health Check
+                    icon: heart
+                  - url: ${{`{{ 'https://console-openshift-console.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) }}`}}
+                    title: OCP Console
+                    icon: web
+              spec:
+                type: fusion-service
+                lifecycle: production
+                owner: group:default/fusion-team
+                system: fusion-ai-services
+      output:
+        text:
+          - title: "CAS Cluster Added ✅"
+            content: |
+              ## IBM Fusion CAS — `${{`{{ parameters.clusterName }}`}}`
+
+              Your cluster is now visible in the Developer Hub catalog.
+
+              ---
+
+              ## Endpoints
+
+              | Resource | URL |
+              |---|---|
+              | CAS Console | ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/cas/overview' }}`}} |
+              | MCP Streamable (SSE) | ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/cas/api/v1/mcp-streamable/' }}`}} |
+              | MCP Standard (JSON-RPC 2.0) | ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/cas/api/v1/mcp' }}`}} |
+              | Swagger UI | ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/cas/api/v1/docs' }}`}} |
+              | Health | ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/cas/api/v1/health' }}`}} |
+              | OCP Console | ${{`{{ 'https://console-openshift-console.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) }}`}} |
+
+              ---
+
+              ## Use the MCP Endpoint
+
+              **VS Code `.vscode/mcp.json`:**
+              ```json
+              {
+                "mcpServers": {
+                  "${{`{{ 'fusion-cas-' ~ parameters.clusterName }}`}}": {
+                    "url": "${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/cas/api/v1/mcp-streamable/' }}`}}",
+                    "transport": "http"
+                  }
+                }
+              }
+              ```
+
+              **watsonx Orchestrate:**
+              ```yaml
+              mcp_servers:
+                - name: ${{`{{ 'fusion-cas-' ~ parameters.clusterName }}`}}
+                  connection_type: http
+                  url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/cas/api/v1/mcp' }}`}}
+              ```
+
+              ---
+
+              ## MCP Tools
+
+              | Tool | Description |
+              |---|---|
+              | `list_vector_stores` | List all vector stores |
+              | `search_vector_stores` | Semantic search across vector store content |
+              | `get_vector_store_file_content` | Retrieve file content from a vector store |
+
+              ---
+
+              ## Resources
+
+              - [Bob meets IBM CAS MCP — IBM Community Blog](https://community.ibm.com/community/user/blogs/namita-singroha/2026/03/24/bob-meets-ibm-cas-mcp)
+              - [IBM Bob meets CAS MCP — Everything You Need to Get Started (Medium)](https://medium.com/@singrohanamita/ibm-bob-meets-cas-mcp-everything-you-need-to-get-started-95d7e01b7f20)
+              - [CAS + watsonx Orchestrate via MCP — IBM Docs](https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-integrating-watsonx-orchestrate-by-using-mcp)
+
+              > To remove: open the component in the catalog → three-dot menu (**⋮**) → **Unregister entity**.
+        links:
+          - title: "View in Catalog"
+            url: ${{`{{ '/catalog/default/component/fusion-cas-' ~ parameters.clusterName }}`}}
+            icon: catalog
+          - title: "CAS Console"
+            url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/overview' }}`}}
+            icon: dashboard
+          - title: "MCP — Streamable (SSE)"
+            url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/mcp-streamable/' }}`}}
+            icon: cloud
+          - title: "MCP — Standard (JSON-RPC 2.0)"
+            url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/mcp' }}`}}
+            icon: cloud
+          - title: "Swagger UI"
+            url: ${{`{{ 'https://console-ibm-spectrum-fusion-ns.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/cas/api/v1/docs' }}`}}
+            icon: code
+          - title: "Bob meets CAS MCP"
+            url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/03/24/bob-meets-ibm-cas-mcp
+            icon: chat
+          - title: "IBM Bob meets CAS MCP (Medium)"
+            url: https://medium.com/@singrohanamita/ibm-bob-meets-cas-mcp-everything-you-need-to-get-started-95d7e01b7f20
+            icon: chat
+
+  # ── Add IBM Fusion DCS Cluster ────────────────────────────────────────────
+  add-dcs-cluster-template.yaml: |
+    apiVersion: scaffolder.backstage.io/v1beta3
+    kind: Template
+    metadata:
+      name: add-dcs-cluster
+      title: "Add IBM Fusion DCS Cluster"
+      description: |
+        Register an IBM Fusion Data Cataloging Service (DCS) cluster in Developer Hub.
+        Enter a name and the OCP API URL — every endpoint is auto-derived. No token needed.
+      tags: [fusion, dcs, mcp, data-cataloging, ai, ibm-fusion, self-service]
+      links:
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+          title: "IBM Docs — Data Cataloging Service"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=capabilities-data-cataloging-mcp-server
+          title: "IBM Docs — DCS MCP Server"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-hci-systems/2.13.0?topic=capabilities-data-cataloging-mcp-server
+          title: "IBM Docs — DCS MCP Server (HCI Systems)"
+          icon: article
+        - url: https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/exploring-your-fusion-data-catalog-with-nlp
+          title: "Blog — Exploring Your Catalog with NLP"
+          icon: chat
+        - url: https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/create-your-ai-agents-on-wx-orch-for-data-catalog
+          title: "Blog — AI Agents on watsonx Orchestrate"
+          icon: chat
+        - url: https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/is-your-mcp-server-healthy-to-explore-your-catalog
+          title: "Blog — MCP Health Check Guide"
+          icon: chat
+        - url: https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/content-aware-ai-autotagging-fusion-data-catalog
+          title: "Blog — Content-Aware AI Autotagging"
+          icon: chat
+    spec:
+      owner: group:default/fusion-platform-team
+      type: infrastructure
+      parameters:
+        - title: "DCS Cluster Details"
+          description: >
+            All DCS endpoints are derived automatically from the OCP API URL.
+            No token. No OCP login.
+          required: [clusterName, ocpApiUrl]
+          properties:
+            clusterName:
+              title: "Cluster Name"
+              type: string
+              description: >
+                Short identifier — lowercase letters, numbers, hyphens.
+                Used as the catalog entity name.
+                Examples: prod-east, mycluster, lab-gpu
+              pattern: "^[a-z][a-z0-9-]*$"
+              ui:autofocus: true
+              ui:placeholder: "mycluster"
+            ocpApiUrl:
+              title: "OCP API URL"
+              type: string
+              description: |
+                Paste the API server URL exactly as shown in your oc login command.
+
+                Example:
+                  https://api.mycluster.example.com:6443
+
+                All DCS endpoints are derived automatically:
+                  • DCS Console → https://console-ibm-data-cataloging.apps.<domain>
+                  • MCP HTTP    → https://dcs-mcp-route-ibm-data-cataloging.apps.<domain>/mcp/http
+                  • MCP SSE     → https://dcs-mcp-route-ibm-data-cataloging.apps.<domain>/mcp
+                  • OCP Console → https://console-openshift-console.apps.<domain>
+              pattern: "^https://api\\."
+              ui:placeholder: "https://api.mycluster.example.com:6443"
+            serviceVersion:
+              title: "DCS Installed Version"
+              type: string
+              description: >
+                The installed DCS (Spectrum Discover) version from your cluster.
+                Run: oc get spectrumDiscover -n ibm-data-cataloging -o jsonpath='{.items[0].status.installedVersion}'
+              ui:placeholder: "2.5.3"
+      steps:
+        - id: register
+          name: "Add to Catalog"
+          action: catalog:write
+          input:
+            entity:
+              apiVersion: backstage.io/v1alpha1
+              kind: Component
+              metadata:
+                name: ${{`{{ 'fusion-dcs-' ~ parameters.clusterName }}`}}
+                title: ${{`{{ 'IBM Fusion DCS — ' ~ parameters.clusterName }}`}}
+                description: ${{`{{ 'IBM Fusion Data Cataloging Service on ' ~ parameters.clusterName ~ '. MCP Server enabled.' }}`}}
+                tags:
+                  - fusion
+                  - dcs
+                  - data-cataloging
+                  - mcp
+                  - ai
+                  - ibm-fusion
+                annotations:
+                  fusion.ibm.com/cluster-id: ${{`{{ parameters.clusterName }}`}}
+                  fusion.ibm.com/service-type: dcs
+                  fusion.ibm.com/service-version: ${{`{{ parameters.serviceVersion }}`}}
+                  fusion.ibm.com/ocp-api-url: ${{`{{ parameters.ocpApiUrl }}`}}
+                  fusion.ibm.com/ocp-console-url: ${{`{{ 'https://console-openshift-console.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) }}`}}
+                  fusion.ibm.com/console-url: ${{`{{ 'https://console-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) }}`}}
+                  fusion.ibm.com/mcp-endpoint: ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/mcp/http' }}`}}
+                  fusion.ibm.com/mcp-sse-endpoint: ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/mcp' }}`}}
+                  backstage.io/techdocs-ref: "url:https://github.com/IBM/storage-fusion/tree/main/quickstarts/fusion-developerhub/fusion-ai-discovery/techdocs/dcs"
+                links:
+                  - url: ${{`{{ 'https://console-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) }}`}}
+                    title: DCS Console
+                    icon: dashboard
+                  - url: ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/mcp/http' }}`}}
+                    title: "MCP — HTTP (JSON-RPC 2.0)"
+                    icon: cloud
+                  - url: ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/mcp' }}`}}
+                    title: "MCP — SSE (streaming)"
+                    icon: cloud
+                  - url: ${{`{{ 'https://console-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/api' }}`}}
+                    title: "Swagger / API Explorer"
+                    icon: code
+                  - url: ${{`{{ 'https://console-openshift-console.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) }}`}}
+                    title: OCP Console
+                    icon: web
+                  - url: "https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging"
+                    title: "IBM Docs — Data Cataloging Service"
+                    icon: article
+                  - url: "https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=capabilities-data-cataloging-mcp-server"
+                    title: "IBM Docs — DCS MCP Server"
+                    icon: article
+                  - url: "https://www.ibm.com/docs/en/fusion-hci-systems/2.13.0?topic=capabilities-data-cataloging-mcp-server"
+                    title: "IBM Docs — DCS MCP Server (HCI Systems)"
+                    icon: article
+                  - url: "https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/exploring-your-fusion-data-catalog-with-nlp"
+                    title: "Blog — Exploring Your Catalog with NLP"
+                    icon: chat
+                  - url: "https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/create-your-ai-agents-on-wx-orch-for-data-catalog"
+                    title: "Blog — AI Agents on watsonx Orchestrate"
+                    icon: chat
+                  - url: "https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/is-your-mcp-server-healthy-to-explore-your-catalog"
+                    title: "Blog — MCP Health Check Guide"
+                    icon: chat
+                  - url: "https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/content-aware-ai-autotagging-fusion-data-catalog"
+                    title: "Blog — Content-Aware AI Autotagging"
+                    icon: chat
+              spec:
+                type: fusion-service
+                lifecycle: production
+                owner: group:default/fusion-team
+                system: fusion-ai-services
+      output:
+        text:
+          - title: "DCS Cluster Added ✅"
+            content: |
+              ## IBM Fusion DCS — `${{`{{ parameters.clusterName }}`}}`
+
+              Your cluster is now visible in the Developer Hub catalog.
+
+              ---
+
+              ## Endpoints
+
+              | Resource | URL |
+              |---|---|
+              | DCS Console | ${{`{{ 'https://console-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) }}`}} |
+              | MCP HTTP (JSON-RPC 2.0) | ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/mcp/http' }}`}} |
+              | MCP SSE (streaming) | ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/mcp' }}`}} |
+              | Swagger / API Explorer | ${{`{{ 'https://console-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/api' }}`}} |
+              | OCP Console | ${{`{{ 'https://console-openshift-console.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) }}`}} |
+
+              ---
+
+              ## Use the MCP Endpoint
+
+              **VS Code `.vscode/mcp.json`:**
+              ```json
+              {
+                "mcpServers": {
+                  "${{`{{ 'fusion-dcs-' ~ parameters.clusterName }}`}}": {
+                    "url": "${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/mcp/http' }}`}}",
+                    "transport": "http"
+                  }
+                }
+              }
+              ```
+
+              **watsonx Orchestrate:**
+              ```yaml
+              mcp_servers:
+                - name: ${{`{{ 'fusion-dcs-' ~ parameters.clusterName }}`}}
+                  connection_type: http
+                  url: ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "")) ~ '/mcp/http' }}`}}
+              ```
+
+              ---
+
+              ## MCP Tools
+
+              | Tool | Description |
+              |---|---|
+              | `dcs_file_search` | Search files in the data catalog |
+              | `dcs_get_registered_tags` | List all registered tags |
+              | `dcs_get_recommend_tags` | AI-recommended tags for a dataset |
+              | `dcs_create_tag` | Create a metadata tag |
+              | `dcs_create_policy` | Create a data policy |
+              | `dcs_get_policies` | List all policies |
+              | `dcs_set_credentials` | Configure data source credentials |
+
+              > To remove: open the component in the catalog → three-dot menu (**⋮**) → **Unregister entity**.
+        links:
+          - title: "View in Catalog"
+            url: ${{`{{ '/catalog/default/component/fusion-dcs-' ~ parameters.clusterName }}`}}
+            icon: catalog
+          - title: "TechDocs"
+            url: ${{`{{ '/docs/default/component/fusion-dcs-' ~ parameters.clusterName }}`}}
+            icon: docs
+          - title: "IBM Docs — DCS"
+            url: "https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging"
+            icon: article
+          - title: "DCS Console"
+            url: ${{`{{ 'https://console-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) }}`}}
+            icon: dashboard
+          - title: "MCP — HTTP Endpoint"
+            url: ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/mcp/http' }}`}}
+            icon: cloud
+          - title: "MCP — SSE Endpoint"
+            url: ${{`{{ 'https://dcs-mcp-route-ibm-data-cataloging.apps.' ~ (parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '')) ~ '/mcp' }}`}}
+            icon: cloud
+{{- end }}
+
+# Made with Bob

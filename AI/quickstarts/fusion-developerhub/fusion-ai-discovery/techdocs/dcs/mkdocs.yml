@@ -1,0 +1,16 @@
+site_name: IBM Fusion Data Catalog Service (DCS)
+site_description: Technical documentation for IBM Fusion DCS — MCP Server, REST API, and AI integration
+docs_dir: docs
+
+nav:
+  - Overview: index.md
+  - MCP Server:
+      - Health Check: mcp-health.md
+      - AI Agents on watsonx: mcp-watsonx.md
+  - REST API: api.md
+  - Architecture: architecture.md
+  - Onboarding Guide: onboarding.md
+  - Troubleshooting: troubleshooting.md
+
+plugins:
+  - techdocs-core

@@ -1,0 +1,139 @@
+# =============================================================================
+# sa-rbac.yaml — ServiceAccount + RBAC for Kubernetes plugin tab
+#
+# The Kubernetes plugin tab is ENABLED for self-hosted clusters.
+# RHDH stores one SA token per namespace: one for DCS, one for CAS.
+# Proxy-only clusters (template-registered) do NOT use this file.
+#
+# Apply order for each new cluster:
+#
+#   DCS namespace (ibm-data-cataloging):
+#     oc login --server=https://api.<cluster>.<domain>:6443
+#     oc apply -n ibm-data-cataloging -f k8s/sa-rbac.yaml
+#     oc apply -f k8s/sa-rbac.yaml          # ClusterRole + DCS binding
+#     TOKEN=$(oc create token rhdh-fusion-reader \
+#               -n ibm-data-cataloging --duration=8760h)
+#     oc create secret generic fusion-<cluster>-sa-token \
+#       --from-literal=FUSION_<CLUSTER>_SA_TOKEN="${TOKEN}" \
+#       -n <rhdh-namespace>
+#
+#   CAS namespace (ibm-cas):
+#     oc apply -n ibm-cas -f k8s/sa-rbac.yaml   # creates SA
+#     oc apply -f k8s/sa-rbac.yaml              # CAS binding
+#     TOKEN=$(oc create token rhdh-fusion-reader \
+#               -n ibm-cas --duration=8760h)
+#     oc create secret generic fusion-<cluster>-cas-sa-token \
+#       --from-literal=FUSION_<CLUSTER>_CAS_SA_TOKEN="${TOKEN}" \
+#       -n <rhdh-namespace>
+#
+# Then ensure backstage-cr.yaml extraEnvs.secrets references both secret keys.
+# =============================================================================
+
+# ── ServiceAccount ─────────────────────────────────────────────────────────────
+# Apply this in the target namespace on the target cluster.
+# The namespace is set by `-n <namespace>` at apply time — not hardcoded here.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rhdh-fusion-reader
+  labels:
+    app.kubernetes.io/name: rhdh-fusion-reader
+    app.kubernetes.io/part-of: fusion-ai-discovery
+
+---
+# ── ClusterRole — read-only access to workload + service resources ────────────
+# Grants the minimum set of resources the Kubernetes plugin needs to populate
+# Pods, Deployments, ReplicaSets, StatefulSets, Services, ConfigMaps, Events,
+# HPA, and OpenShift Routes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rhdh-fusion-reader
+  labels:
+    app.kubernetes.io/name: rhdh-fusion-reader
+    app.kubernetes.io/part-of: fusion-ai-discovery
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - services
+      - endpoints
+      - configmaps
+      - events
+      - replicationcontrollers
+      - namespaces
+      - nodes
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources:
+      - deployments
+      - replicasets
+      - statefulsets
+      - daemonsets
+    verbs: [get, list, watch]
+  - apiGroups: [autoscaling]
+    resources:
+      - horizontalpodautoscalers
+    verbs: [get, list, watch]
+  - apiGroups: [batch]
+    resources:
+      - jobs
+      - cronjobs
+    verbs: [get, list, watch]
+  # OpenShift Routes
+  - apiGroups: [route.openshift.io]
+    resources:
+      - routes
+    verbs: [get, list, watch]
+  # OpenShift DeploymentConfigs
+  - apiGroups: [apps.openshift.io]
+    resources:
+      - deploymentconfigs
+    verbs: [get, list, watch]
+  # Metrics (optional — used by resource usage overlay)
+  - apiGroups: [metrics.k8s.io]
+    resources:
+      - pods
+      - nodes
+    verbs: [get, list]
+
+---
+# ── ClusterRoleBinding — DCS (ibm-data-cataloging) ───────────────────────────
+# Grants the rhdh-fusion-reader SA in the DCS namespace cluster-level read.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhdh-fusion-reader-dcs
+  labels:
+    app.kubernetes.io/name: rhdh-fusion-reader
+    app.kubernetes.io/part-of: fusion-ai-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rhdh-fusion-reader
+subjects:
+  - kind: ServiceAccount
+    name: rhdh-fusion-reader
+    namespace: ibm-data-cataloging
+
+---
+# ── ClusterRoleBinding — CAS (ibm-cas) ───────────────────────────────────────
+# Grants the rhdh-fusion-reader SA in the CAS namespace cluster-level read.
+# This is a separate binding so the DCS binding is not disturbed when applying
+# only for CAS, and vice versa.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhdh-fusion-reader-cas
+  labels:
+    app.kubernetes.io/name: rhdh-fusion-reader
+    app.kubernetes.io/part-of: fusion-ai-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rhdh-fusion-reader
+subjects:
+  - kind: ServiceAccount
+    name: rhdh-fusion-reader
+    namespace: ibm-cas

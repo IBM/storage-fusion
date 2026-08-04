@@ -49,6 +49,9 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
+      # Replace (not patch) the home-quick-access ConfigMap so stale
+      # icon keys from a previous install are fully removed on upgrade.
+      - Replace=true
     
     retry:
       limit: 5

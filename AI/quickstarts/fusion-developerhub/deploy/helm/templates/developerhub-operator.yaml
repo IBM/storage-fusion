@@ -1,7 +1,9 @@
 {{- if .Values.operators.enabled }}
 {{- if .Values.operators.developerHub.enabled }}
+{{- $existingCSV := lookup "operators.coreos.com/v1alpha1" "ClusterServiceVersion" .Values.operators.developerHub.namespace "rhdh-operator.v1.10.2" }}
+{{- $existingCSVAny := lookup "operators.coreos.com/v1alpha1" "ClusterServiceVersion" .Values.operators.developerHub.namespace "" }}
 {{- $existingSubscription := lookup "operators.coreos.com/v1alpha1" "Subscription" .Values.operators.developerHub.namespace "rhdh-operator" }}
-{{- $skipInstall := and .Values.operators.skipIfExists $existingSubscription }}
+{{- $skipInstall := and .Values.operators.skipIfExists (or $existingCSV $existingCSVAny $existingSubscription) }}
 {{- if not $skipInstall }}
 ---
 # Namespace for Red Hat Developer Hub Operator
@@ -34,6 +36,9 @@ metadata:
     helm.sh/hook-weight: "-9"
     {{- end }}
     argocd.argoproj.io/sync-wave: "20"
+    # OLM populates .status after creation; skip dry-run to avoid CRD-missing errors
+    # on clusters where the operators.coreos.com/v1 webhook is unavailable.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec: {}
   # RHDH operator requires AllNamespaces install mode
   # Leave spec empty to watch all namespaces
@@ -53,6 +58,10 @@ metadata:
     helm.sh/hook-weight: "-8"
     {{- end }}
     argocd.argoproj.io/sync-wave: "30"
+    # Replace=true + SkipDryRunOnMissingResource: prevents ArgoCD from failing
+    # the sync when OLM has not yet resolved .status.state (ResolutionFailed is
+    # a transient OLM condition — operators are already Succeeded).
+    argocd.argoproj.io/sync-options: Replace=true,SkipDryRunOnMissingResource=true
 spec:
   channel: {{ .Values.operators.developerHub.channel }}
   name: rhdh

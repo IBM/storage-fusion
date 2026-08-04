@@ -1,0 +1,82 @@
+# =============================================================================
+# platform-entities.yaml — IBM Fusion AI Services
+# Domain, System, and Groups — loaded once at startup, shared across all
+# clusters. Any component written by the self-service templates with
+# spec.system: fusion-ai-services will automatically appear here.
+# =============================================================================
+
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: fusion-ai-services
+  title: IBM Fusion AI Services
+  description: |
+    All IBM Fusion AI Services — Data Catalog (DCS), Content Aware Storage
+    (CAS), and future services — discoverable from Developer Hub without
+    requiring access to any OpenShift cluster.
+  tags: [fusion, ibm, ai, mcp, dcs, cas, multi-cluster]
+  links:
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+      title: IBM Docs — Data Cataloging (DCS)
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+      title: IBM Docs — Content Aware Storage (CAS)
+      icon: article
+spec:
+  owner: group:default/fusion-platform-team
+
+---
+# =============================================================================
+# System: fusion-ai-services
+# Shared system that ALL self-service template components belong to.
+# Every cluster registered via "Add IBM Fusion CAS/DCS Cluster" writes
+#   spec.system: fusion-ai-services
+# and will automatically appear in this system's catalog view — no manual
+# steps needed, no restart required.
+# =============================================================================
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: fusion-ai-services
+  title: "IBM Fusion AI Services"
+  description: |
+    Shared system grouping all self-service registered IBM Fusion CAS and DCS
+    instances across every cluster. Use "Add IBM Fusion CAS Cluster" or
+    "Add IBM Fusion DCS Cluster" templates to onboard a new cluster — it
+    will appear here automatically.
+  tags: [fusion, ibm, ai, mcp, dcs, cas, multi-cluster, self-service]
+  links:
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+      title: "IBM Docs — Content Aware Storage (CAS)"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+      title: "IBM Docs — Data Cataloging Service (DCS)"
+      icon: article
+spec:
+  owner: group:default/fusion-platform-team
+  domain: fusion-ai-services
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: fusion-platform-team
+  title: IBM Fusion Platform Team
+  description: Platform administrators for Fusion HCI clusters and Developer Hub.
+  tags: [fusion, platform-admin]
+spec:
+  type: team
+  children: [fusion-team]
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: fusion-team
+  title: IBM Fusion Developer Team
+  description: Developers building AI applications on IBM Fusion DCS and CAS via MCP.
+  tags: [fusion, developers, mcp]
+spec:
+  type: team
+  parent: fusion-platform-team
+  children: []

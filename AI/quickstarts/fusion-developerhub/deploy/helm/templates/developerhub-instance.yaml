@@ -118,6 +118,8 @@ metadata:
 spec:
   # Allow multiple retries with exponential backoff
   backoffLimit: 20
+  # Auto-cleanup completed job pods after 30 minutes (parity with helm-charts/ era)
+  ttlSecondsAfterFinished: 1800
   template:
     metadata:
       labels:
@@ -294,6 +296,8 @@ metadata:
     argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
   backoffLimit: 10
+  # Auto-cleanup completed job pods after 30 minutes (parity with helm-charts/ era)
+  ttlSecondsAfterFinished: 1800
   template:
     metadata:
       labels:
@@ -453,7 +457,7 @@ data:
       github:
         - host: {{ .Values.developerHub.catalog.github.enterpriseHost }}
           apiBaseUrl: https://{{ .Values.developerHub.catalog.github.enterpriseHost }}/api/v3
-          rawBaseUrl: https://{{ .Values.developerHub.catalog.github.enterpriseHost }}/raw
+          rawBaseUrl: https://raw.{{ .Values.developerHub.catalog.github.enterpriseHost }}
           {{- if .Values.developerHub.catalog.github.enableToken }}
           token: ${GITHUB_TOKEN}
           {{- end }}
@@ -573,7 +577,7 @@ data:
       locations:
         {{- if .Values.developerHub.fusion.enabled }}
         - type: url
-          target: https://github.com/ProjectAbell/Fusion-AI/blob/main/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/main/catalog-info.yaml
         {{- end }}
         {{- if and .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
         # RHOAI Model Catalog Location - reads from location provider sidecar
@@ -781,11 +785,20 @@ spec:
         {{- if .Values.developerHub.enabled }}
         - name: app-config-fusion-blueprints
         {{- end }}
+        {{- if and .Values.developerHub.enabled .Values.developerHub.fusionServices.enabled }}
+        {{- /* Fusion AI Services — app-config ONLY (catalog locations, rules, k8s, proxy) */}}
+        {{- /* NOTE: catalog entity files (multi-doc YAML) must NOT be in appConfig.configMaps */}}
+        {{- /* They go into extraFiles.configMaps below — mounted as files, not loaded as config */}}
+        - name: app-config-fusion-services
+        {{- end }}
     
     # Dynamic plugins ConfigMap
     {{- $homepageEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
     {{- $rhoaiEnabled := and .Values.developerHub.fusion .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
-    {{- if or $homepageEnabled $rhoaiEnabled }}
+    {{- $fusionDynPlugins := and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled .Values.developerHub.fusionServices.dynamicPlugins .Values.developerHub.fusionServices.dynamicPlugins.enabled }}
+    {{- if $fusionDynPlugins }}
+    dynamicPluginsConfigMapName: fusion-ai-dynamic-plugins
+    {{- else if or $homepageEnabled $rhoaiEnabled }}
     dynamicPluginsConfigMapName: fusion-dynamic-plugins
     {{- end }}
     
@@ -812,7 +825,7 @@ spec:
         {{- end }}
         {{- end }}
     {{- end }}
-    
+
     {{- if .Values.developerHub.route.enabled }}
     route:
       enabled: true
@@ -828,7 +841,7 @@ spec:
     patch:
       spec:
         replicas: {{ .Values.developerHub.replicas }}
-        {{- if $rhoaiEnabled }}
+        {{- if or $rhoaiEnabled (and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled) }}
         template:
           spec:
             automountServiceAccountToken: true
@@ -840,7 +853,25 @@ spec:
               - name: homepage-data
                 configMap:
                   name: {{ .Values.developerHub.instanceName }}-home-quick-access
+              {{- if and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled }}
+              # ── Fusion AI Services entity ConfigMaps ─────────────────────────
+              # Mounted as directories (no subPath) so Kubernetes auto-refreshes
+              # file content when the ConfigMap changes — no pod restart needed.
+              # Adding or removing a cluster only requires a values.yaml edit + push.
+              - name: fusion-ai-platform-entities
+                configMap:
+                  name: fusion-ai-platform-entities
+              - name: fusion-ai-clusters
+                configMap:
+                  name: fusion-ai-clusters
+                  # optional: make files readable
+                  defaultMode: 0444
+              - name: fusion-ai-services-templates
+                configMap:
+                  name: fusion-ai-services-templates
+              {{- end }}
             containers:
+              {{- if $rhoaiEnabled }}
               - name: location
                 image: quay.io/redhat-ai-dev/model-catalog-location-service@sha256:c4471e07be6e0dbe821613053e6264a552cacda7f8604dbf306e6ac9e81e8ab9
                 imagePullPolicy: Always
@@ -914,11 +945,13 @@ spec:
                 workingDir: /opt/app-root/src
                 args:
                   - "--metrics-address=:8081"
+              {{- end }}{{- /* end if $rhoaiEnabled containers */}}
               - name: backstage-backend
                 volumeMounts:
                   - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/data.json
                     subPath: data.json
+                  # Homepage icon set
                   - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/ai-models-icon.png
                     subPath: ai-models-icon.png
@@ -931,6 +964,30 @@ spec:
                   - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/nvidia-green.svg
                     subPath: nvidia-green.svg
+                  # Backward-compat mount: community-icon.png path resolves to ai-models-icon.png
+                  # to avoid 404s from any existing iconUrl references.
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/community-icon.png
+                    subPath: ai-models-icon.png
+                  {{- if and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled }}
+                  # ── Fusion AI entity files ────────────────────────────────────
+                  # Platform entities: single file, subPath is fine (static key).
+                  - name: fusion-ai-platform-entities
+                    mountPath: /opt/app-root/src/fusion-ai-platform-entities.yaml
+                    subPath: fusion-ai-platform-entities.yaml
+                  # Cluster entities: mounted as a DIRECTORY — no per-cluster subPath.
+                  # Kubernetes refreshes directory mounts automatically when the
+                  # ConfigMap changes. Add/remove clusters with no pod restart.
+                  - name: fusion-ai-clusters
+                    mountPath: /opt/app-root/src/fusion-clusters
+                  # Scaffold templates: static keys, subPath is fine.
+                  - name: fusion-ai-services-templates
+                    mountPath: /opt/app-root/src/add-cas-cluster-template.yaml
+                    subPath: add-cas-cluster-template.yaml
+                  - name: fusion-ai-services-templates
+                    mountPath: /opt/app-root/src/add-dcs-cluster-template.yaml
+                    subPath: add-dcs-cluster-template.yaml
+                  {{- end }}
         {{- end }}
   
   {{- if .Values.developerHub.database.useOperator }}
@@ -1042,7 +1099,14 @@ metadata:
   labels:
     {{- include "fusion-developer-hub.labels" . | nindent 4 }}
   annotations:
-    argocd.argoproj.io/sync-wave: "70"
+    # Wave 65 — must be strictly before the Backstage CR (wave 70) so the PVC
+    # is Bound before the RHDH operator creates pods that reference it.
+    # Previously at wave 70 (same as Backstage), ArgoCD could apply the CR first
+    # causing pods to go Pending with "dynamic-plugins-root PVC not found".
+    argocd.argoproj.io/sync-wave: "65"
+    # Once bound, a PVC spec is immutable. Tell ArgoCD to skip replacement
+    # so it never errors with "spec is immutable after creation".
+    argocd.argoproj.io/sync-options: Replace=false
 spec:
   {{- if .Values.developerHub.storage.storageClassName }}
   storageClassName: {{ .Values.developerHub.storage.storageClassName }}
