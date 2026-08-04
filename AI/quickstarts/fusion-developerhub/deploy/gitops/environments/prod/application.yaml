@@ -27,11 +27,11 @@ spec:
         global:
           # REQUIRED: OCP wildcard domain
           # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
-          wildcardDomain: apps.f80l034.fusion.tadn.ibm.com
+          wildcardDomain: apps.<cluster-domain>.com
         developerHub:
           storage:
             # REQUIRED: RWX StorageClass — leave empty to use cluster default
-            storageClassName: "ocs-storagecluster-cephfs"
+            storageClassName: ""
         argocd:
           enabled: true
           rbac:
