@@ -11,11 +11,16 @@ global:
   toolsImage: quay.io/openshift/origin-cli:latest
 
 # Operators Configuration
+# operators.enabled=false: In the dev environment the RHDH and Crunchy Postgres operators
+# are expected to be pre-installed cluster-wide (AllNamespaces, CSV Succeeded) before
+# deploying this chart. Setting enabled: false skips Subscription/OperatorGroup rendering
+# entirely. This is required in ArgoCD-managed deployments because Helm's lookup() has no
+# cluster access, so skipIfExists has no effect — rendering Subscription resources causes
+# hookPhase=Failed on every sync. Set enabled: true only when you need to install or upgrade
+# operators from scratch (direct helm install/upgrade, not via ArgoCD).
 operators:
-  # operators.enabled=false: RHDH and Crunchy Postgres operators are installed
-  # cluster-wide (AllNamespaces, CSV Succeeded). ArgoCD Helm lookup() has no
-  # cluster access so skipIfExists has no effect — rendering Subscriptions causes
-  # hookPhase=Failed on every sync. Set to true only for operator upgrades.
+  # Set to false when operators are pre-installed cluster-wide.
+  # Set to true only for fresh installs or operator upgrades via direct helm CLI.
   enabled: false
   skipIfExists: true
   # Red Hat Developer Hub Operator
@@ -667,8 +672,11 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 # IBM Fusion CAS/DCS Services — explicitly disabled for the dev environment.
-# To enable CAS/DCS catalog entities and self-service templates, set to true
-# and configure the clusters list (see deploy/helm/values.yaml for reference).
+# fusionServices controls only the CAS/DCS catalog entities and self-service scaffolder
+# templates that are injected into the Developer Hub catalog. Disabling it does NOT affect
+# any other RHDH functionality (homepage, RHOAI connector, existing catalog entries, auth,
+# TechDocs, etc.). All other developerHub settings remain fully active.
+# To enable, set to true and configure the clusters list (see deploy/helm/values.yaml).
 developerHub:
   fusionServices:
     enabled: false

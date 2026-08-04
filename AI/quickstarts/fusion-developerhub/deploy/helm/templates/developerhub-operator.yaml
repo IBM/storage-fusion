@@ -17,9 +17,13 @@ metadata:
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
     {{- if not .Values.argocd.enabled }}
+    # helm hooks are used only in plain Helm installs to enforce creation order.
+    # When argocd.enabled=true these are omitted; ArgoCD uses sync-wave instead.
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
     {{- end }}
+    # sync-wave ensures the Namespace exists before the OperatorGroup and Subscription
+    # that reference it (waves 20 and 30). ArgoCD applies resources in ascending wave order.
     argocd.argoproj.io/sync-wave: "0"
 ---
 # OperatorGroup for Red Hat Developer Hub
@@ -36,8 +40,10 @@ metadata:
     helm.sh/hook-weight: "-9"
     {{- end }}
     argocd.argoproj.io/sync-wave: "20"
-    # OLM populates .status after creation; skip dry-run to avoid CRD-missing errors
-    # on clusters where the operators.coreos.com/v1 webhook is unavailable.
+    # SkipDryRunOnMissingResource: OLM populates .status after the OperatorGroup is
+    # created; ArgoCD's dry-run (server-side apply validation) fails when the
+    # operators.coreos.com/v1 webhook is absent on the cluster. This option makes
+    # ArgoCD skip the dry-run for this resource, preventing spurious sync failures.
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec: {}
   # RHDH operator requires AllNamespaces install mode
@@ -58,9 +64,11 @@ metadata:
     helm.sh/hook-weight: "-8"
     {{- end }}
     argocd.argoproj.io/sync-wave: "30"
-    # Replace=true + SkipDryRunOnMissingResource: prevents ArgoCD from failing
-    # the sync when OLM has not yet resolved .status.state (ResolutionFailed is
-    # a transient OLM condition — operators are already Succeeded).
+    # Replace=true: OLM Subscriptions are immutable once the installPlan is created;
+    # ArgoCD's default patch strategy causes "field is immutable" errors on re-sync.
+    # Replace=true forces a delete+recreate instead of a patch, which is safe here
+    # because OLM re-evaluates the Subscription and continues from its current state.
+    # SkipDryRunOnMissingResource: avoids dry-run failures before OLM CRDs are ready.
     argocd.argoproj.io/sync-options: Replace=true,SkipDryRunOnMissingResource=true
 spec:
   channel: {{ .Values.operators.developerHub.channel }}
@@ -83,11 +91,15 @@ metadata:
     app.kubernetes.io/component: rhdh-operator-setup
   annotations:
     {{- if not .Values.argocd.enabled }}
+    # In plain Helm: runs after install/upgrade completes, deleted before re-creation.
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "1"
     helm.sh/hook-delete-policy: before-hook-creation
     {{- end }}
     argocd.argoproj.io/sync-wave: "40"
+    # Force=true,Replace=true: Jobs are immutable after creation. On re-sync ArgoCD cannot
+    # patch a completed Job, so Force+Replace ensures the old Job is deleted and a fresh
+    # one is created to re-validate operator readiness after upgrades.
     argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
   template:

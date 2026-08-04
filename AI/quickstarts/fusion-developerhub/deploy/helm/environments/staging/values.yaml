@@ -664,8 +664,11 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 # IBM Fusion CAS/DCS Services — explicitly disabled for the staging environment.
-# To enable CAS/DCS catalog entities and self-service templates, set to true
-# and configure the clusters list (see deploy/helm/values.yaml for reference).
+# fusionServices controls only the CAS/DCS catalog entities and self-service scaffolder
+# templates that are injected into the Developer Hub catalog. Disabling it does NOT affect
+# any other RHDH functionality (homepage, RHOAI connector, existing catalog entries, auth,
+# TechDocs, etc.). All other developerHub settings remain fully active.
+# To enable, set to true and configure the clusters list (see deploy/helm/values.yaml).
 developerHub:
   fusionServices:
     enabled: false

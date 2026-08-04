@@ -1,9 +1,9 @@
 # Production Configuration for IBM Fusion Developer Hub
 # This file provides production-ready settings with HA, security, and monitoring
 global:
-  # REQUIRED: Set to your OCP cluster wildcard domain.
-  # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
-  wildcardDomain: apps.f80l034.fusion.tadn.ibm.com
+  # ── REQUIRED: Set this to your OCP cluster wildcard domain ───────────────
+  # Run:  oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+  wildcardDomain: apps.<cluster-domain>.com
   # Name of the certificate secret for ingress (leave empty for self-signed)
   wildcardCertName: ""
   # Default namespace for model deployments
@@ -12,15 +12,19 @@ global:
   toolsImage: quay.io/openshift/origin-cli:latest
 
 # Operators Configuration
-# Both rhdh-operator and crunchy-postgres-operator are already installed
-# cluster-wide (AllNamespaces) in ai-control-plane on this cluster.
-# Setting enabled: false skips Subscription/OperatorGroup creation entirely,
-# which prevents OLM from flagging duplicate Subscriptions as Degraded.
+# operators.enabled=true + skipIfExists=true: Helm looks up whether a CSV or Subscription
+# already exists in the operator namespace. If found, the Subscription/OperatorGroup
+# resources are skipped entirely, preventing OLM from flagging duplicate Subscriptions as
+# Degraded. Enable operator installation only if you need to install or upgrade operators.
+# Set enabled: false only if the operators are already installed cluster-wide and you want
+# to skip the lookup logic entirely (e.g. in restricted ArgoCD environments — see dev values).
 operators:
-  # Enable operator installation (disable if operators already exist)
+  # Set to true to install operators if they are not already present.
+  # Set to false if operators are already installed cluster-wide and you want to skip all
+  # Subscription/OperatorGroup rendering (required in ArgoCD where lookup() has no cluster access).
   enabled: true
-  # Skip operator installation if they already exist in the cluster
-  # Set to true to use existing operators instead of installing new ones
+  # Skip operator installation if they already exist in the cluster.
+  # Requires operators.enabled: true — performs a live lookup; no-ops if operator is found.
   skipIfExists: true
   # Red Hat Developer Hub Operator
   developerHub:
@@ -137,7 +141,9 @@ developerHub:
     # Storage class for dynamic plugins PVC (ReadWriteMany access mode required).
     # Must support ReadWriteMany (RWX):
     #   ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
-    storageClassName: "ocs-storagecluster-cephfs" # Uses cluster default
+    # Leave empty ("") to rely on the cluster's default StorageClass.
+    # Override only if your cluster does not set a default or you need a specific class.
+    storageClassName: "" # Uses cluster default; override if needed (e.g. ocs-storagecluster-cephfs for ODF)
     # Storage size for dynamic plugins
     size: 5Gi
   # High Availability - 3 replicas

@@ -52,7 +52,14 @@ metadata:
     app.kubernetes.io/component: developerhub-homepage
   annotations:
     argocd.argoproj.io/sync-wave: "50"
-    # Replace (not patch) on upgrade so stale icon keys from previous installs are removed.
+    # helm.sh/resource-policy: replace — replaces (not patches) the ConfigMap on every
+    # upgrade so that stale icon keys or link entries from older installs are fully removed.
+    # Without this, Helm's 3-way strategic merge retains deleted keys from previous releases.
+    # Verified safe during upgrades: ArgoCD deletes and recreates the resource atomically
+    # within the same sync wave. No functional disruption occurs because RHDH mounts this
+    # ConfigMap at startup and the pod rolls after the ConfigMap is refreshed.
+    # During ArgoCD cleanup (app deletion) this annotation is intentionally absent from the
+    # Subscription/Job resources, so it does not interfere with operator teardown.
     helm.sh/resource-policy: replace
 data:
   data.json: |
