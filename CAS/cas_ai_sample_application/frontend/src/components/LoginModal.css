@@ -1,0 +1,288 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h2 {
+  font-size: 1.5rem;
+  color: #161616;
+  font-weight: 600;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #525252;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: #f4f4f4;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #161616;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding: 0.75rem;
+  padding-right: 3rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.password-input-wrapper input:focus {
+  outline: none;
+  border-color: #8A3FFC;
+  box-shadow: 0 0 0 3px rgba(138, 63, 252, 0.1);
+}
+
+.toggle-password {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #525252;
+  transition: color 0.2s ease;
+  border-radius: 4px;
+}
+
+.toggle-password:hover {
+  color: #161616;
+  background-color: #f4f4f4;
+}
+
+.toggle-password:focus {
+  outline: 2px solid #8A3FFC;
+  outline-offset: 2px;
+}
+
+.form-group input {
+  padding: 0.75rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #8A3FFC;
+  box-shadow: 0 0 0 3px rgba(138, 63, 252, 0.1);
+}
+
+.form-group input::placeholder {
+  color: #a8a8a8;
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: #6f6f6f;
+  margin-top: -0.25rem;
+  font-style: italic;
+}
+
+.submit-button {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background-color: #8A3FFC;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.submit-button:hover {
+  background-color: #7028e4;
+}
+
+.submit-button:active {
+  transform: scale(0.98);
+}
+
+/* ── Vector store picker (step 2) ─────────────────────────────────────── */
+
+.modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #525252;
+  border-radius: 4px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #f4f4f4;
+  color: #161616;
+}
+
+.vs-step-hint {
+  font-size: 0.875rem;
+  color: #525252;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.vs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-bottom: 1.5rem;
+}
+
+.vs-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  user-select: none;
+}
+
+.vs-option:hover {
+  border-color: #8A3FFC;
+  background-color: #faf7ff;
+}
+
+.vs-option--selected {
+  border-color: #8A3FFC;
+  background-color: #f5f0ff;
+}
+
+.vs-option input[type="radio"] {
+  display: none;
+}
+
+.vs-option-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.125rem;
+}
+
+.vs-option-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+.vs-option-id {
+  font-size: 0.78rem;
+  color: #6f6f6f;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.vs-check {
+  color: #8A3FFC;
+  flex-shrink: 0;
+}
+
+/* Error message displayed when authentication fails. */
+.error-message {
+  color: #da1e28;
+  background-color: #fff1f1;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid #da1e28;
+}

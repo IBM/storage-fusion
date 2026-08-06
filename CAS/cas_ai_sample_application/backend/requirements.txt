@@ -1,0 +1,16 @@
+# Core dependencies
+python-dotenv==1.2.2
+requests==2.33.0
+
+# FastAPI and server
+fastapi==0.141.0
+uvicorn[standard]==0.34.0
+pydantic==2.10.5
+
+# Security
+python-multipart==0.0.31
+
+# Testing (optional)
+pytest==9.0.3
+pytest-asyncio==1.4.0
+httpx==0.28.1

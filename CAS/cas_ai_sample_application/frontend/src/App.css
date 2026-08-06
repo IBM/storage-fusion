@@ -1,0 +1,224 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.App {
+  min-height: 100vh;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Styles */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e5e5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ibm-logo {
+  height: 32px;
+  width: auto;
+}
+
+.app-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.login-button {
+  padding: 0.5rem 1.5rem;
+  background-color: #8A3FFC;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.login-button:hover {
+  background-color: #7028e4;
+}
+
+/* ── Vector store pill + dropdown ─────────────────────────────────────── */
+
+.vs-menu-wrapper {
+  position: relative;
+}
+
+.vs-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.875rem;
+  background-color: #f4f0ff;
+  color: #5a1fc9;
+  border: 1.5px solid #c8aaff;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+.vs-pill:hover {
+  background-color: #ede4ff;
+  border-color: #8A3FFC;
+}
+
+.vs-pill-icon {
+  color: #8A3FFC;
+  flex-shrink: 0;
+}
+
+.vs-pill-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.vs-pill-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: #8A3FFC;
+}
+
+.vs-pill-chevron--open {
+  transform: rotate(180deg);
+}
+
+.vs-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 200px;
+  overflow: hidden;
+  z-index: 500;
+  animation: dropdownIn 0.12s ease;
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.vs-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #161616;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+.vs-dropdown-item:hover {
+  background-color: #f4f4f4;
+}
+
+.vs-dropdown-item--danger {
+  color: #da1e28;
+}
+
+.vs-dropdown-item--danger:hover {
+  background-color: #fff1f1;
+}
+
+.vs-dropdown-divider {
+  height: 1px;
+  background-color: #e5e5e5;
+  margin: 2px 0;
+}
+
+/* Main Content */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Welcome Screen */
+.welcome-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.welcome-screen h2 {
+  font-size: 2rem;
+  color: #161616;
+  margin-bottom: 1rem;
+}
+
+.welcome-screen p {
+  font-size: 1.1rem;
+  color: #525252;
+  margin-bottom: 2rem;
+  max-width: 500px;
+}
+
+.welcome-login-button {
+  padding: 0.75rem 2rem;
+  background-color: #8A3FFC;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.welcome-login-button:hover {
+  background-color: #7028e4;
+}
+
+ 
