@@ -1,0 +1,123 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  labels:
+    dp.isf.ibm.com/parent-recipe: maximo-parent-recipe
+    dp.isf.ibm.com/parent-recipe-namespace: ibm-spectrum-fusion-ns
+  name: maximo-vi-recipe
+spec:
+  appType: maximo-vi
+  groups:
+  - name: maximo-vi-volumes
+    type: volume
+    includedNamespaces:
+      - ${VISUALINSPECTION_NAMESPACE}
+  - name: maximo-vi-resources
+    type: resource
+    includedResourceTypes:
+      - visualinspectionapps.apps.mas.ibm.com
+      - visualinspectionappworkspaces.apps.mas.ibm.com
+      - secrets 
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+      - configmaps
+    labelSelector: for-backup=true 
+    includedNamespaces:
+      - ${VISUALINSPECTION_NAMESPACE}
+  - name: restore-maximo-vi-secrets
+    backupRef: maximo-vi-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+  - name: restore-maximo-vi-configmaps
+    backupRef: maximo-vi-resources
+    type: resource
+    includedResourceTypes:
+      - configmaps
+    labelSelector: "custom-configmap-exclude notin (true)"
+  - name: restore-maximo-vi-operatorgroups
+    backupRef: maximo-vi-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  #IfGrafanaUncomment- name: maximo-vi-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedNamespaces:
+      #IfGrafanaUncomment- ${VISUALINSPECTION_NAMESPACE}
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  - name: restore-maximo-vi-subscriptions
+    backupRef: maximo-vi-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: restore-maximo-viapps-viappworkspaces
+    backupRef: maximo-vi-resources
+    type: resource
+    includedResourceTypes:
+      - visualinspectionapps.apps.mas.ibm.com
+      - visualinspectionappworkspaces.apps.mas.ibm.com
+  hooks:
+  - name: maximo-vi-ibm-mas-operator-check
+    type: check
+    namespace: ${VISUALINSPECTION_NAMESPACE}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas-visualinspection.mas-${MAS_INSTANCE_ID}-visualinspection=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: maximo-vi-viapps-check
+    type: check
+    namespace: ${VISUALINSPECTION_NAMESPACE}
+    selectResource: apps.mas.ibm.com/v1/visualinspectionapps
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  - name: maximo-vi-viappworkspaces-check
+    type: check
+    namespace: ${VISUALINSPECTION_NAMESPACE}
+    selectResource: apps.mas.ibm.com/v1/visualinspectionappworkspaces
+    labelSelector: for-backup=true 
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  workflows:
+  - failOn: any-error
+    name: maximo-backup-resources
+    priority: 0
+    sequence:
+    - group: maximo-vi-resources
+    #IfGrafanaUncomment- group: maximo-vi-dashboards
+  - failOn: any-error
+    name: maximo-volume-backup
+    priority: 0
+    sequence:
+    - group: maximo-vi-volumes
+  - failOn: any-error
+    name: maximo-restore-vi
+    priority: 0
+    sequence:
+    - group: maximo-vi-volumes
+    - group: restore-maximo-vi-secrets
+    - group: restore-maximo-vi-configmaps
+    - group: restore-maximo-vi-operatorgroups
+    - group: restore-maximo-vi-subscriptions
+    #IfGrafanaUncomment- group: maximo-vi-dashboards
+    - hook: maximo-vi-ibm-mas-operator-check/replicasReady
+    - group: restore-maximo-viapps-viappworkspaces
+    - hook: maximo-vi-viapps-check/statusReady
+    - hook: maximo-vi-viappworkspaces-check/statusReady

@@ -1,0 +1,127 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-facilities-recipe
+  labels:
+    dp.isf.ibm.com/parent-recipe: maximo-parent-recipe
+    dp.isf.ibm.com/parent-recipe-namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-facilities
+
+  groups:
+  - name: maximo-facilities-volumes
+    type: volume
+    includedNamespaces:
+      - ${FACILITIES_NAMESPACE}
+
+  - name: maximo-facilities-resources
+    type: resource
+    includedNamespaces:
+      - ${FACILITIES_NAMESPACE}
+    includedResourceTypes:
+      - facilitiesapps.apps.mas.ibm.com
+      - facilitiesworkspaces.apps.mas.ibm.com
+      - secrets
+      - operatorgroups.operators.coreos.com
+      - subscriptions.operators.coreos.com
+    labelSelector: for-backup=true
+
+  - name: restore-maximo-facilities-secrets
+    backupRef: maximo-facilities-resources
+    type: resource
+    includedResourceTypes:
+      - secrets
+
+  - name: restore-maximo-facilities-operatorgroups
+    backupRef: maximo-facilities-resources
+    type: resource
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+
+  - name: restore-maximo-facilities-subscriptions
+    backupRef: maximo-facilities-resources
+    type: resource
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+
+  - name: restore-maximo-facilities-apps-workspaces
+    backupRef: maximo-facilities-resources
+    type: resource
+    includedResourceTypes:
+      - facilitiesapps.apps.mas.ibm.com
+      - facilitiesworkspaces.apps.mas.ibm.com
+
+  hooks:
+  - name: maximo-facilities-ibm-mas-operator-check
+    type: check
+    namespace: ${FACILITIES_NAMESPACE}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-mas-facilities.${FACILITIES_NAMESPACE}=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+
+  - name: maximo-facilities-ibm-truststore-mgr-controller-manager-check
+    type: check
+    namespace: ${FACILITIES_NAMESPACE}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/ibm-truststore-mgr.${FACILITIES_NAMESPACE}=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+
+  - name: maximo-facilities-app-check
+    type: check
+    namespace: ${FACILITIES_NAMESPACE}
+    selectResource: apps.mas.ibm.com/v1/facilitiesapps
+    labelSelector: for-backup=true
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+
+  - name: maximo-facilities-workspace-check
+    type: check
+    namespace: ${FACILITIES_NAMESPACE}
+    selectResource: apps.mas.ibm.com/v1/facilitiesworkspaces
+    labelSelector: for-backup=true
+    timeout: 7200
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 7200
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+
+  workflows:
+  - failOn: any-error
+    name: maximo-backup-resources
+    priority: 0
+    sequence:
+    - group: maximo-facilities-resources
+    - group: maximo-facilities-volumes
+
+  - failOn: any-error
+    name: maximo-restore-facilities
+    priority: 0
+    sequence:
+    - group: maximo-facilities-volumes
+    - group: restore-maximo-facilities-secrets
+    - group: restore-maximo-facilities-operatorgroups
+    - group: restore-maximo-facilities-subscriptions
+    - hook: maximo-facilities-ibm-mas-operator-check/replicasReady
+    - hook: maximo-facilities-ibm-truststore-mgr-controller-manager-check/replicasReady
+    - group: restore-maximo-facilities-apps-workspaces
+    - hook: maximo-facilities-app-check/statusReady
+    - hook: maximo-facilities-workspace-check/statusReady

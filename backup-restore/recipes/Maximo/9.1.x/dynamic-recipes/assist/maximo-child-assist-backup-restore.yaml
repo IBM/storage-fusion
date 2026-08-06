@@ -1,0 +1,139 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-assist-recipe
+  labels:
+    dp.isf.ibm.com/parent-recipe: maximo-parent-recipe
+    dp.isf.ibm.com/parent-recipe-namespace: ibm-spectrum-fusion-ns
+spec:
+  appType: maximo-assist
+  groups:
+    - name: maximo-assist-redisvolumes
+      type: volume
+      labelSelector: redis=true
+      includedNamespaces:
+        - ${ASSIST_NAMESPACE}
+    - name: maximo-assist-resources
+      type: resource
+      includedNamespaces:
+        - ${ASSIST_NAMESPACE}
+      includedResourceTypes:
+        - assistapps.apps.mas.ibm.com
+        - assistworkspaces.apps.mas.ibm.com
+        - secrets
+        - configmaps
+        - statefulsets
+        - serviceaccounts
+        - operatorgroups.operators.coreos.com
+        - subscriptions.operators.coreos.com
+    - name: restore-assist-secrets
+      backupRef: maximo-assist-resources
+      type: resource
+      includedResourceTypes:
+        - secrets
+      labelSelector: for-backup=true
+    - name: restore-assist-configmaps
+      backupRef: maximo-assist-resources
+      type: resource
+      includedResourceTypes:
+        - configmaps
+      labelSelector: for-backup=true
+    - backupRef: maximo-assist-resources
+      includedResourceTypes:
+        - serviceaccounts
+      labelSelector: for-backup=true
+      name: restore-assist-serviceaccounts
+      type: resource
+    - name: restore-assist-statefulsets
+      backupRef: maximo-assist-resources
+      type: resource
+      includedResourceTypes:
+        - statefulsets
+      labelSelector: app=ema-redis
+    - name: restore-assist-operatorgroups
+      backupRef: maximo-assist-resources
+      type: resource
+      includedResourceTypes:
+        - operatorgroups.operators.coreos.com
+      labelSelector: for-backup=true
+    - name: restore-assist-subscriptions
+      backupRef: maximo-assist-resources
+      type: resource
+      includedResourceTypes:
+        - subscriptions.operators.coreos.com
+      labelSelector: for-backup=true
+    - name: restore-assist-apps-workspaces
+      backupRef: maximo-assist-resources
+      type: resource
+      includedResourceTypes:
+        - assistapps.apps.mas.ibm.com
+        - assistworkspaces.apps.mas.ibm.com
+      labelSelector: for-backup=true
+  hooks:
+    - name: assist-operator-check
+      type: check
+      namespace: ${ASSIST_NAMESPACE}
+      selectResource: deployment
+      labelSelector: operators.coreos.com/ibm-mas-assist.mas-${MAS_INSTANCE_ID}-assist=
+      timeout: 120
+      onError: fail
+      chks:
+        - name: replicasReady
+          timeout: 600
+          onError: fail
+          condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+    - name: assist-redis-check
+      type: check
+      namespace: ${ASSIST_NAMESPACE}
+      selectResource: statefulset
+      labelSelector: app=ema-redis
+      timeout: 120
+      onError: fail
+      chks:
+        - name: replicasReady
+          timeout: 600
+          onError: fail
+          condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+    - name: assist-apps-check
+      type: check
+      namespace: ${ASSIST_NAMESPACE}
+      selectResource: apps.mas.ibm.com/v1/assistapps
+      labelSelector: for-backup=true
+      timeout: 7200
+      onError: fail
+      chks:
+        - name: statusReady
+          timeout: 7200
+          onError: fail
+          condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+    - name: assist-workspaces-check
+      type: check
+      namespace: ${ASSIST_NAMESPACE}
+      selectResource: apps.mas.ibm.com/v1/assistworkspaces
+      labelSelector: for-backup=true
+      timeout: 7200
+      onError: fail
+      chks:
+        - name: statusReady
+          timeout: 7200
+          onError: fail
+          condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  workflows:
+    - name: maximo-backup-resources
+      sequence:
+        - group: maximo-assist-resources
+        - group: maximo-assist-redisvolumes
+    - name: maximo-restore-assist
+      sequence:
+        - group: maximo-assist-redisvolumes
+        - group: restore-assist-secrets
+        - group: restore-assist-configmaps
+        - group: restore-assist-serviceaccounts
+        - group: restore-assist-operatorgroups
+        - group: restore-assist-subscriptions
+        - hook: assist-operator-check/replicasReady
+        - group: restore-assist-statefulsets
+        - group: restore-assist-apps-workspaces
+        - hook: assist-apps-check/statusReady
+        - hook: assist-redis-check/replicasReady
+        - hook: assist-workspaces-check/statusReady

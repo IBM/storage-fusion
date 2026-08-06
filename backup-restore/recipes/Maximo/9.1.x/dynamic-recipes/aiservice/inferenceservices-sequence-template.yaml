@@ -1,0 +1,1 @@
+        - hook: ${TENANT_NS}-inferenceservices-check/statusReady

@@ -1,0 +1,5 @@
+        - hook: ibm-aiservice-operator-exec/clear-${TENANT_NS}-sls-data
+        - hook: ibm-aiservice-operator-exec/patch-${TENANT_NS}-sls-reg-key
+        - hook: ibm-aiservice-operator-exec/patch-${TENANT_NS}-sls-crt-url
+        - hook: ibm-aiservice-operator-exec/patch-${TENANT_NS}-dro-url
+        - hook: ibm-aiservice-operator-exec/patch-${TENANT_NS}-dro-token

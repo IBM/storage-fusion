@@ -1,0 +1,13 @@
+    - chks:
+      - condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+        name: statusReady
+        onError: fail
+        timeout: 900
+      labelSelector: for-backup=true
+      name: ${TENANT_NS}-inferenceservices-check
+      namespace: ${TENANT_NS}
+      onError: fail
+      selectResource: serving.kserve.io/v1beta1/inferenceservices
+      timeout: 900
+      type: check
+

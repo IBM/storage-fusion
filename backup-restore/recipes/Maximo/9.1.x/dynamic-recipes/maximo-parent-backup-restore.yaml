@@ -1,0 +1,121 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  name: maximo-parent-recipe
+spec:
+  appType: maximo-apps
+  groups: []
+  workflows:
+  - failOn: any-error
+    name: backup
+    sequence:
+    - workflow: maximo-application-maintenance
+    - workflow: maximo-backup-resources
+    - workflow: maximo-application-consistency-hooks
+    - workflow: maximo-volume-backup
+    - workflow: maximo-application-consistency-hook-undo
+    - workflow: maximo-application-maintenance-undo
+  - failOn: any-error
+    name: restore
+    priority: 0
+    sequence:
+    - workflow: maximo-restore-volumes
+    - workflow: maximo-restore-kafka
+    - workflow: maximo-restore-database
+    - workflow: maximo-restore-sls
+    - workflow: maximo-restore-operator-resources
+    - workflow: maximo-validate-operator
+    - workflow: maximo-restore-core
+    - workflow: maximo-restore-manage
+    - workflow: maximo-restore-iot
+    - workflow: maximo-restore-monitor
+    - workflow: maximo-restore-assist
+    - workflow: maximo-restore-predict
+    - workflow: maximo-restore-vi
+    - workflow: maximo-restore-optimizer
+    - workflow: maximo-restore-aiservice
+    - workflow: maximo-restore-facilities
+  - failOn: any-error
+    name: maximo-restore-predict
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-optimizer
+    sequence: []
+  - failOn: any-error
+    name: maximo-application-maintenance
+    sequence: []
+  - failOn: any-error
+    name: maximo-backup-resources
+    sequence: []
+  - failOn: any-error
+    name: maximo-application-consistency-hooks
+    sequence: []
+  - failOn: any-error
+    name: maximo-volume-backup
+    sequence: []
+  - failOn: any-error
+    name: maximo-application-consistency-hook-undo
+    sequence: []
+  - failOn: any-error
+    name: maximo-application-maintenance-undo
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-application-maintenance
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-volumes
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-kafka
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-sls
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-database
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-operator-resources
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-validate-operator
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-core
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-manage
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-iot
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-monitor
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-assist
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-vi
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-aiservice
+    priority: 0
+    sequence: []
+  - failOn: any-error
+    name: maximo-restore-facilities
+    priority: 0
+    sequence: []
