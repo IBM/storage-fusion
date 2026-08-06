@@ -1,0 +1,263 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  labels:
+    dp.isf.ibm.com/parent-recipe: maximo-parent-recipe
+    dp.isf.ibm.com/parent-recipe-namespace: ibm-spectrum-fusion-ns
+  name: maximo-aiservice-recipe
+spec:
+  appType: maximo-aiservice
+  groups:
+    - name: maximo-aiservice-operatorgroup
+      includedNamespaces:
+      - ${AISERVICE_NAMESPACE}
+      includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+      labelSelector: for-backup=true
+      type: resource
+    - name: maximo-aiservice-subscription
+      includedNamespaces:
+      - ${AISERVICE_NAMESPACE}
+      includedResourceTypes:
+      - subscriptions.operators.coreos.com
+      labelSelector: operators.coreos.com/ibm-aiservice.${AISERVICE_NAMESPACE}=
+      type: resource
+    - name: maximo-aiservice-resources
+      includedNamespaces:
+      - ${AISERVICE_NAMESPACE}
+      includedResourceTypes:
+      - aiserviceapps.aiservice.ibm.com
+      - aiservicetenants.aiservice.ibm.com
+      - secrets
+      - configmaps
+      type: resource
+    - name: maximo-aiservice-tenant-resources
+      type: resource
+      includedNamespaces: []
+      includedResourceTypes:
+        - secrets
+        - configmaps
+        - serviceaccounts
+        - inferenceservices.serving.kserve.io
+    - name: restore-maximo-aiservice-secrets
+      backupRef: maximo-aiservice-resources
+      type: resource
+      includedNamespaces:
+        - ${AISERVICE_NAMESPACE}
+      includedResourceTypes:
+        - secrets
+      labelSelector: for-backup=true
+    - name: restore-maximo-aiservice-operatorgroups
+      backupRef: maximo-aiservice-operatorgroup
+      type: resource
+      includedNamespaces:
+        - ${AISERVICE_NAMESPACE}
+      includedResourceTypes:
+        - operatorgroups.operators.coreos.com
+    - name: restore-maximo-aiservice-subscriptions
+      backupRef: maximo-aiservice-subscription
+      type: resource
+      includedNamespaces:
+        - ${AISERVICE_NAMESPACE}
+      includedResourceTypes:
+        - subscriptions.operators.coreos.com
+      labelSelector: operators.coreos.com/ibm-aiservice.${AISERVICE_NAMESPACE}=
+    - name: restore-maximo-aiservice-crs
+      backupRef: maximo-aiservice-resources
+      type: resource
+      includedNamespaces:
+        - ${AISERVICE_NAMESPACE}
+      includedResourceTypes:
+        - aiserviceapps.aiservice.ibm.com
+        - aiservicetenants.aiservice.ibm.com
+    - name: restore-maximo-aiservice-tenant-resources
+      backupRef: maximo-aiservice-tenant-resources
+      includedNamespaces: []
+      includedResourceTypes:
+      - secrets
+      - configmaps
+      - serviceaccounts
+      - inferenceservices.serving.kserve.io
+      type: resource
+    - name: maximo-aiservice-minio-resources
+      type: resource
+      includedNamespaces:
+        - ${MINIO_NAMESPACE}
+    - name: maximo-aiservice-minio-volumes
+      type: volume
+      includedNamespaces:
+        - ${MINIO_NAMESPACE}
+
+  hooks:
+    - name: db2u-aiservice-exec
+      labelSelector: name=dashmpp-head-0,app=${AISERVICE_NAMESPACE}
+      namespace: ${DB2_NAMESPACE}
+      onError: fail
+      ops:
+      - command: |
+          ["/bin/bash", "-c", "curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/openshift-config-managed/configmaps/console-public | jq '.data.consoleURL' | tr -d '\"' | python3 -c \"print('.'.join(input().split('.')[1:]))\" >/tmp/domain"]
+        container: db2u
+        name: retrieve-domain
+        overwrite: false
+        timeout: 180
+      - command: '["/bin/bash", "-c", "su - db2inst1 -c \"db2 CONNECT TO BLUDB && db2
+          ''UPDATE \\\"${AISERVICE_NS_UPPER}\\\".AIBROKER_TENANT SET DRO_URL = ''\\''''https://ibm-data-reporter-redhat-marketplace.$(cat
+          /tmp/domain)''\\''''''
+          && db2 TERMINATE\""]'
+        container: db2u
+        name: update-dro-url
+        overwrite: false
+        timeout: 120
+      selectResource: pod
+      timeout: 120
+      type: exec
+    - name: maximo-minio-deployment-check
+      type: check
+      namespace: ${MINIO_NAMESPACE}
+      selectResource: deployment
+      nameSelector: minio
+      timeout: 120
+      onError: fail
+      chks:
+      - name: replicasReady
+        timeout: 600
+        onError: fail
+        condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+    - name: maximo-minio-scale-deployment
+      type: scale
+      namespace: ${MINIO_NAMESPACE}
+      selectResource: deployment
+      nameSelector: minio
+    - name: maximo-aiservice-ibm-mas-operator-check
+      type: check
+      namespace: ${AISERVICE_NAMESPACE}
+      selectResource: deployment
+      labelSelector: operators.coreos.com/ibm-aiservice.${AISERVICE_NAMESPACE}=
+      timeout: 120
+      onError: fail
+      chks:
+        - name: replicasReady
+          timeout: 600
+          onError: fail
+          condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+    - name: maximo-aiservice-ibm-truststore-mgr-controller-manager-check
+      type: check
+      namespace: ${AISERVICE_NAMESPACE}
+      selectResource: deployment
+      labelSelector: operators.coreos.com/ibm-truststore-mgr.${AISERVICE_NAMESPACE}=
+      timeout: 120
+      onError: fail
+      chks:
+        - name: replicasReady
+          timeout: 600
+          onError: fail
+          condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+
+    - name: maximo-aiservice-aiserviceapps-check
+      type: check
+      namespace: ${AISERVICE_NAMESPACE}
+      selectResource: aiservice.ibm.com/v1/aiserviceapps
+      labelSelector: for-backup=true
+      timeout: 900
+      onError: fail
+      chks:
+        - name: statusReady
+          timeout: 900
+          onError: fail
+          condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+
+    - name: maximo-aiservice-aiservicetenants-check
+      type: check
+      namespace: ${AISERVICE_NAMESPACE}
+      selectResource: aiservice.ibm.com/v1/aiservicetenants
+      labelSelector: for-backup=true
+      timeout: 900
+      onError: fail
+      chks:
+        - name: statusReady
+          timeout: 900
+          onError: fail
+          condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+
+    - labelSelector: app.kubernetes.io/instance=ibm-aiservice
+      name: ibm-aiservice-operator-exec
+      namespace: ${AISERVICE_NAMESPACE}
+      onError: fail
+      ops:
+      - command: |
+          ["/bin/bash", "-c", "curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/openshift-config-managed/configmaps/console-public | jq '.data.consoleURL' | tr -d '\"' | python3 -c \"print('.'.join(input().split('.')[1:]))\" >/tmp/domain"]
+        container: manager
+        name: retrieve-domain
+        overwrite: false
+        timeout: 180
+      - command: |
+          ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"settings\\\":{\\\"domain\\\":\\\"$(cat /tmp/domain)\\\",\\\"dro\\\":{\\\"url\\\":\\\"https://ibm-data-reporter-redhat-marketplace.$(cat /tmp/domain)\\\"}}}}'; eval \"data=$data\"; echo \"$data\" >/tmp/arftai-datafile; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/aiservice.ibm.com/v1/namespaces/${AISERVICE_NAMESPACE}/aiserviceapps/arftai?fieldManager=kubectl-patch -d $data"]
+        container: manager
+        name: patch-aiservice-dro-domain-url
+        overwrite: false
+        timeout: 600
+      - command: |
+          ["/bin/bash", "-c", "apiToken=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/${REPORTING_OPERATOR_NAMESPACE}/secrets/ibm-data-reporter-operator-api-token | jq -r '.data.token'); data='{\\\"data\\\":{\\\"DRO_TOKEN\\\":\\\"$apiToken\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/${AISERVICE_NAMESPACE}/secrets/dro-token?fieldManager=kubectl-patch -d $data"]
+        container: manager
+        name: patch-aiservice-dro-token
+        overwrite: false
+        timeout: 600
+
+      #AddTenantPatchExecHookCommands
+
+      selectResource: pod
+      timeout: 180
+      type: exec
+
+      #AddTenantInferenceServicesCheckHooks
+
+  workflows:
+    - name: maximo-backup-resources
+      sequence:
+        - group: maximo-aiservice-minio-resources
+        - group: maximo-aiservice-operatorgroup
+        - group: maximo-aiservice-subscription
+        - group: maximo-aiservice-resources
+        - group: maximo-aiservice-tenant-resources
+
+    - name: maximo-application-consistency-hooks
+      sequence:
+        - hook: maximo-minio-scale-deployment/down
+        - hook: maximo-minio-scale-deployment/sync
+
+    - name: maximo-volume-backup
+      sequence:
+        - group: maximo-aiservice-minio-volumes
+ 
+    - name: maximo-application-consistency-hook-undo
+      sequence:
+        - hook: maximo-minio-scale-deployment/up
+        - hook: maximo-minio-scale-deployment/sync
+
+    - name: maximo-restore-aiservice
+      sequence:
+        - group: restore-maximo-aiservice-secrets
+        - group: restore-maximo-aiservice-operatorgroups
+        - group: restore-maximo-aiservice-subscriptions
+        - hook: maximo-aiservice-ibm-mas-operator-check/replicasReady
+        - hook: maximo-aiservice-ibm-truststore-mgr-controller-manager-check/replicasReady
+
+        - group: maximo-aiservice-minio-volumes
+        - group: maximo-aiservice-minio-resources
+        - hook: maximo-minio-deployment-check/replicasReady
+
+        - hook: ibm-aiservice-operator-exec/retrieve-domain
+        - group: restore-maximo-aiservice-crs
+        - hook: ibm-aiservice-operator-exec/patch-aiservice-dro-domain-url
+        - hook: ibm-aiservice-operator-exec/patch-aiservice-dro-token
+
+        #AddTenantPatchSequences
+
+        - hook: maximo-aiservice-aiserviceapps-check/statusReady
+        - hook: maximo-aiservice-aiservicetenants-check/statusReady
+        - group: restore-maximo-aiservice-tenant-resources
+
+        #AddTenantInferenceServicesChecks
+
+        - hook: db2u-aiservice-exec/retrieve-domain
+        - hook: db2u-aiservice-exec/update-dro-url

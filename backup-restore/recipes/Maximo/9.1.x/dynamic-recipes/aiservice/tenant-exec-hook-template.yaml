@@ -1,0 +1,30 @@
+      - command: |
+          ["/bin/bash", "-c", "data='{\\\"data\\\":null}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/${AISERVICE_NAMESPACE}/secrets/${TENANT_NS}----sls-secret?fieldManager=kubectl-patch -d $data"]
+        container: manager
+        name: clear-${TENANT_NS}-sls-data
+        overwrite: false
+        timeout: 600
+      - command: |
+          ["/bin/bash", "-c", "registrationKey=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/ibm-sls/configmaps/sls-suite-registration | jq -r '.data.registrationKey' | echo -n `xargs -n 1` | base64); data='{\\\"data\\\":{\\\"SLS_REGISTRATION_KEY\\\":\\\"$registrationKey\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/${AISERVICE_NAMESPACE}/secrets/${TENANT_NS}----sls-secret?fieldManager=kubectl-patch -d $data"]
+        container: manager
+        name: patch-${TENANT_NS}-sls-reg-key
+        overwrite: false
+        timeout: 600
+      - command: |
+          ["/bin/bash", "-c", "curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/ibm-sls/configmaps/sls-suite-registration | jq '.data.ca' | tr -d '\"' > /tmp/sls-ca.txt; data='{\\\"spec\\\":{\\\"settings\\\":{\\\"sls\\\":{\\\"ca\\\":\\\"$(echo -e $(cat /tmp/sls-ca.txt) | base64 -w0)\\\"}}}}'; eval \"data=$data\"; echo \"$data\" >/tmp/datafile; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/aiservice.ibm.com/v1/namespaces/${AISERVICE_NAMESPACE}/aiservicetenants/${TENANT_NS}?fieldManager=kubectl-patch -d $data"]
+        container: manager
+        name: patch-${TENANT_NS}-sls-crt-url
+        overwrite: false
+        timeout: 600
+      - command: |
+          ["/bin/bash", "-c", "data='{\\\"spec\\\":{\\\"settings\\\":{\\\"dro\\\":{\\\"url\\\":\\\"https://ibm-data-reporter-redhat-marketplace.$(cat /tmp/domain)\\\"}}}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/aiservice.ibm.com/v1/namespaces/${AISERVICE_NAMESPACE}/aiservicetenants/${TENANT_NS}?fieldManager=kubectl-patch -d $data"]
+        container: manager
+        name: patch-${TENANT_NS}-dro-url
+        overwrite: false
+        timeout: 600
+      - command: |
+          ["/bin/bash", "-c", "apiToken=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/redhat-marketplace/secrets/ibm-data-reporter-operator-api-token | jq -r '.data.token'); data='{\\\"data\\\":{\\\"DRO_TOKEN\\\":\\\"$apiToken\\\"}}'; eval \"data=$data\"; curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/api/v1/namespaces/${AISERVICE_NAMESPACE}/secrets/${TENANT_NS}----dro-secret?fieldManager=kubectl-patch -d $data"]
+        container: manager
+        name: patch-${TENANT_NS}-dro-token
+        overwrite: false
+        timeout: 600
