@@ -1,51 +1,67 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: fusion-developer-hub
+  # ArgoCD namespace: OpenShift GitOps default is openshift-gitops
   namespace: openshift-gitops
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
     environment: production
+    app.kubernetes.io/managed-by: argocd
+
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-org/your-repo.git #IMPORTANT: Replace with your repo URL
-    path: AI/quickstarts/fusion-developerhub/deploy/helm
-    targetRevision: master # Replace with your target branch or tag
+    # REQUIRED: Replace with your Git repository URL
+    repoURL: https://github.ibm.com/ProjectAbell/Fusion-AI
+    path: quickstarts/fusion-developerhub/deploy/helm
+    # REQUIRED: Replace with your target branch
+    targetRevision: cas-dcs-rhdh
     helm:
       valueFiles:
         - values.yaml
         - environments/prod/values.yaml
       valuesObject:
         global:
-          # IMPORTANT: Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+          # REQUIRED: OCP wildcard domain
+          # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
           wildcardDomain: apps.<cluster-domain>.com
         developerHub:
           storage:
-            # IMPORTANT: Must support ReadWriteMany (RWX)
-            # ODF: ocs-storagecluster-cephfs | NFS: nfs-client
+            # REQUIRED: RWX StorageClass — leave empty to use cluster default
             storageClassName: ""
         argocd:
           enabled: true
           rbac:
             enabled: true
-  
+
   destination:
     server: https://kubernetes.default.svc
     namespace: fusion-developer-hub
+
   revisionHistoryLimit: 10
+
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
+      # Replace=true intentionally removed — global Replace overrides per-resource
+      # argocd.argoproj.io/sync-options: Replace=false on the dynamic-plugins-root PVC.
+      # Removing this allows the PVC annotation to take effect and prevents the
+      # "spec is immutable after creation" failure on every ArgoCD sync.
     retry:
       limit: 5
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
+
   ignoreDifferences:
     - group: operators.coreos.com
       kind: Subscription
@@ -61,6 +77,14 @@ spec:
       jsonPointers:
         - /status
         - /metadata/annotations
+    - group: rhdh.redhat.com
+      kind: Backstage
+      jsonPointers:
+        - /status
+    - group: postgres-operator.crunchydata.com
+      kind: PostgresCluster
+      jsonPointers:
+        - /status
 
   info:
     - name: 'Deployment Order'
@@ -74,3 +98,12 @@ spec:
         Wave 50: Configuration (15 resources - ConfigMaps, RHOAI RBAC, Secrets, Policies)
         Wave 60: Database (3 resources - PostgresCluster, CREATEDB Job, Backup setup)
         Wave 70: Application (2 resources - Backstage CR, PVC)
+    - name: 'Add a CAS/DCS Cluster'
+      value: |
+        Wave 50: Configuration — add cluster to environments/prod/values.yaml:
+          developerHub.fusionServices.clusters:
+            - name: <cluster-id>
+              ocpApiUrl: https://api.<cluster-domain>:6443
+              clusterType: self-hosted   # or proxy-only
+        Wave 50: ArgoCD syncs → Helm rerenders ConfigMaps (no restart needed)
+        Wave 70: RHDH catalog processor picks up new entities (~30 s)

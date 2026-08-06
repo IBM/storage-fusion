@@ -38,9 +38,10 @@ data:
         disabled: false
       {{- end }}
 ---
-# QuickAccess ConfigMap for the homepage QuickAccessCard
-# This ConfigMap provides the data for the Quick Access card on the homepage.
+# QuickAccess ConfigMap for the homepage QuickAccessCard.
 # The ConfigMap name follows the RHDH convention: <backstage-instance-name>-home-quick-access
+# helm.sh/resource-policy: replace ensures Helm replaces (not patches) the ConfigMap on
+# upgrade so that stale icon keys from older installs are fully removed.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -51,6 +52,15 @@ metadata:
     app.kubernetes.io/component: developerhub-homepage
   annotations:
     argocd.argoproj.io/sync-wave: "50"
+    # helm.sh/resource-policy: replace — replaces (not patches) the ConfigMap on every
+    # upgrade so that stale icon keys or link entries from older installs are fully removed.
+    # Without this, Helm's 3-way strategic merge retains deleted keys from previous releases.
+    # Verified safe during upgrades: ArgoCD deletes and recreates the resource atomically
+    # within the same sync wave. No functional disruption occurs because RHDH mounts this
+    # ConfigMap at startup and the pod rolls after the ConfigMap is refreshed.
+    # During ArgoCD cleanup (app deletion) this annotation is intentionally absent from the
+    # Subscription/Job resources, so it does not interfere with operator teardown.
+    helm.sh/resource-policy: replace
 data:
   data.json: |
     [

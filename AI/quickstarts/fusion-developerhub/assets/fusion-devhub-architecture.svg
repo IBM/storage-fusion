@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="-apple-system, Segoe UI, system-ui, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#57606a"></polygon>
+    </marker>
+    <marker id="arr-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#3b82d4"></polygon>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="470" fill="#ffffff"></rect>
+
+  <!-- Portal box -->
+  <rect x="20" y="14" width="860" height="182" rx="8" fill="#f7f8fa" stroke="#d0d7de" stroke-width="1.5"></rect>
+  <text x="450" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="#1f2328">IBM Fusion Developer Hub</text>
+  <text x="450" y="53" text-anchor="middle" font-size="11" fill="#57606a">Red Hat Developer Hub (Backstage) on OpenShift</text>
+
+  <rect x="40" y="66" width="190" height="56" rx="5" fill="#e8f0fb" stroke="#3b82d4" stroke-width="1"></rect>
+  <text x="135" y="90" text-anchor="middle" font-size="12" font-weight="700" fill="#3b82d4">Catalog</text>
+  <text x="135" y="107" text-anchor="middle" font-size="10" fill="#57606a">(Backstage entities)</text>
+
+  <rect x="248" y="66" width="190" height="56" rx="5" fill="#e8f0fb" stroke="#3b82d4" stroke-width="1"></rect>
+  <text x="343" y="90" text-anchor="middle" font-size="12" font-weight="700" fill="#3b82d4">Self-Service Templates</text>
+  <text x="343" y="107" text-anchor="middle" font-size="10" fill="#57606a">(Create → two fields)</text>
+
+  <rect x="456" y="66" width="190" height="56" rx="5" fill="#e8f0fb" stroke="#3b82d4" stroke-width="1"></rect>
+  <text x="551" y="90" text-anchor="middle" font-size="12" font-weight="700" fill="#3b82d4">TechDocs</text>
+  <text x="551" y="107" text-anchor="middle" font-size="10" fill="#57606a">(MkDocs, per entity)</text>
+
+  <rect x="664" y="66" width="196" height="56" rx="5" fill="#e8f0fb" stroke="#3b82d4" stroke-width="1"></rect>
+  <text x="762" y="90" text-anchor="middle" font-size="12" font-weight="700" fill="#3b82d4">Bob (AI assistant)</text>
+  <text x="762" y="107" text-anchor="middle" font-size="10" fill="#57606a">(pre-wired to CAS MCP)</text>
+
+  <line x1="135" y1="122" x2="135" y2="144" stroke="#57606a" stroke-width="1.2" marker-end="url(#arr)"></line>
+  <line x1="343" y1="122" x2="343" y2="144" stroke="#57606a" stroke-width="1.2" marker-end="url(#arr)"></line>
+  <line x1="551" y1="122" x2="551" y2="144" stroke="#57606a" stroke-width="1.2" marker-end="url(#arr)"></line>
+  <line x1="762" y1="122" x2="762" y2="144" stroke="#57606a" stroke-width="1.2" marker-end="url(#arr)"></line>
+
+  <rect x="40" y="144" width="820" height="40" rx="5" fill="#fff9e6" stroke="#9a6700" stroke-width="1"></rect>
+  <text x="450" y="163" text-anchor="middle" font-size="11.5" font-weight="700" fill="#9a6700">fusion-ai-clusters ConfigMap (Helm-rendered)</text>
+  <text x="450" y="178" text-anchor="middle" font-size="9.5" fill="#57606a">5 catalog entities per registered cluster · refreshed every 30s · no pod restart needed</text>
+
+  <text x="450" y="208" text-anchor="middle" font-size="11" font-weight="700" fill="#57606a">↓ Portal Proxy (no VPN, no direct network access needed)</text>
+  <line x1="450" y1="198" x2="450" y2="236" stroke="#3b82d4" stroke-width="1.6" marker-end="url(#arr-blue)"></line>
+
+  <!-- Three clusters -->
+  <rect x="20" y="246" width="270" height="130" rx="8" fill="#f0faf0" stroke="#2da44e" stroke-width="1.5"></rect>
+  <text x="155" y="270" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2da44e">Fusion Cluster A</text>
+  <text x="155" y="286" text-anchor="middle" font-size="10" fill="#57606a">self-hosted (SA token)</text>
+  <rect x="42" y="298" width="108" height="30" rx="4" fill="#e8f5e9" stroke="#2da44e" stroke-width="1"></rect>
+  <text x="96" y="317" text-anchor="middle" font-size="11" font-weight="700" fill="#2da44e">CAS MCP</text>
+  <rect x="160" y="298" width="108" height="30" rx="4" fill="#e8f5e9" stroke="#2da44e" stroke-width="1"></rect>
+  <text x="214" y="317" text-anchor="middle" font-size="11" font-weight="700" fill="#2da44e">DCS MCP</text>
+  <text x="155" y="348" text-anchor="middle" font-size="9.5" fill="#57606a">Live K8s tab · pods, routes, CRs visible</text>
+  <text x="155" y="362" text-anchor="middle" font-size="9.5" fill="#57606a">Registered via GitOps / ArgoCD</text>
+
+  <rect x="315" y="246" width="270" height="130" rx="8" fill="#f3f0ff" stroke="#7c5cd8" stroke-width="1.5"></rect>
+  <text x="450" y="270" text-anchor="middle" font-size="12.5" font-weight="700" fill="#7c5cd8">Fusion Cluster B</text>
+  <text x="450" y="286" text-anchor="middle" font-size="10" fill="#57606a">proxy-only (no token)</text>
+  <rect x="337" y="298" width="108" height="30" rx="4" fill="#ede9ff" stroke="#7c5cd8" stroke-width="1"></rect>
+  <text x="391" y="317" text-anchor="middle" font-size="11" font-weight="700" fill="#7c5cd8">CAS MCP</text>
+  <rect x="455" y="298" width="108" height="30" rx="4" fill="#ede9ff" stroke="#7c5cd8" stroke-width="1"></rect>
+  <text x="509" y="317" text-anchor="middle" font-size="11" font-weight="700" fill="#7c5cd8">DCS MCP</text>
+  <text x="450" y="348" text-anchor="middle" font-size="9.5" fill="#57606a">All access via portal proxy</text>
+  <text x="450" y="362" text-anchor="middle" font-size="9.5" fill="#57606a">Registered via GUI Import (catalog-info.yaml)</text>
+
+  <rect x="610" y="246" width="270" height="130" rx="8" fill="#fff5f5" stroke="#cf222e" stroke-width="1.5"></rect>
+  <text x="745" y="270" text-anchor="middle" font-size="12.5" font-weight="700" fill="#cf222e">Fusion Cluster C</text>
+  <text x="745" y="286" text-anchor="middle" font-size="10" fill="#57606a">template-registered</text>
+  <rect x="632" y="298" width="108" height="30" rx="4" fill="#ffe7e7" stroke="#cf222e" stroke-width="1"></rect>
+  <text x="686" y="317" text-anchor="middle" font-size="11" font-weight="700" fill="#cf222e">CAS MCP</text>
+  <rect x="750" y="298" width="108" height="30" rx="4" fill="#ffe7e7" stroke="#cf222e" stroke-width="1"></rect>
+  <text x="804" y="317" text-anchor="middle" font-size="11" font-weight="700" fill="#cf222e">DCS MCP</text>
+  <text x="745" y="348" text-anchor="middle" font-size="9.5" fill="#57606a">Instant · DB-only · no Git needed</text>
+  <text x="745" y="362" text-anchor="middle" font-size="9.5" fill="#57606a">Registered via Self-Service Template</text>
+
+  <line x1="345" y1="236" x2="155" y2="246" stroke="#3b82d4" stroke-width="1.2" marker-end="url(#arr-blue)"></line>
+  <line x1="450" y1="236" x2="450" y2="246" stroke="#3b82d4" stroke-width="1.2" marker-end="url(#arr-blue)"></line>
+  <line x1="555" y1="236" x2="745" y2="246" stroke="#3b82d4" stroke-width="1.2" marker-end="url(#arr-blue)"></line>
+
+  <text x="155" y="398" text-anchor="middle" font-size="10.5" font-weight="700" fill="#2da44e">PATH 1 — GitOps</text>
+  <text x="450" y="398" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7c5cd8">PATH 2 — GUI Import</text>
+  <text x="745" y="398" text-anchor="middle" font-size="10.5" font-weight="700" fill="#cf222e">PATH 3 — Template</text>
+
+  <rect x="20" y="416" width="270" height="30" rx="5" fill="#f7f8fa" stroke="#e5e7eb" stroke-width="1"></rect>
+  <text x="155" y="435" text-anchor="middle" font-size="9.5" fill="#57606a">values.yaml → ArgoCD → Helm</text>
+  <rect x="315" y="416" width="270" height="30" rx="5" fill="#f7f8fa" stroke="#e5e7eb" stroke-width="1"></rect>
+  <text x="450" y="435" text-anchor="middle" font-size="9.5" fill="#57606a">catalog-info.yaml → raw Git URL</text>
+  <rect x="610" y="416" width="270" height="30" rx="5" fill="#f7f8fa" stroke="#e5e7eb" stroke-width="1"></rect>
+  <text x="745" y="435" text-anchor="middle" font-size="9.5" fill="#57606a">two fields → catalog:write (instant)</text>
+</svg>

@@ -13,8 +13,8 @@ spec:
   project: default
   source:
     repoURL: https://github.com/your-org/your-repo.git #IMPORTANT: Replace with your repo URL
-    path: AI/quickstarts/fusion-developerhub/deploy/helm
-    targetRevision: master # Replace with your target branch or tag
+    path: quickstarts/fusion-developerhub/deploy/helm
+    targetRevision: main # Replace with your target branch or tag
     helm:
       valueFiles:
         - values.yaml
@@ -50,6 +50,9 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
+      # Replace (not patch) the home-quick-access ConfigMap so stale
+      # icon keys from a previous install are fully removed on upgrade.
+      - Replace=true
     
     retry:
       limit: 5

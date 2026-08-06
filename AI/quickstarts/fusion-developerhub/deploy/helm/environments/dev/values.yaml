@@ -1,6 +1,7 @@
 # Development configuration for IBM Fusion Developer Hub
 global:
-  # IMPORTANT: Change this to match your OpenShift cluster domain
+  # ── REQUIRED: Set this to your OCP cluster wildcard domain ───────────────
+  # Run:  oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
   wildcardDomain: apps.<cluster-domain>.com
   # Name of the certificate secret for ingress (leave empty for self-signed)
   wildcardCertName: ""
@@ -10,11 +11,17 @@ global:
   toolsImage: quay.io/openshift/origin-cli:latest
 
 # Operators Configuration
+# operators.enabled=false: In the dev environment the RHDH and Crunchy Postgres operators
+# are expected to be pre-installed cluster-wide (AllNamespaces, CSV Succeeded) before
+# deploying this chart. Setting enabled: false skips Subscription/OperatorGroup rendering
+# entirely. This is required in ArgoCD-managed deployments because Helm's lookup() has no
+# cluster access, so skipIfExists has no effect — rendering Subscription resources causes
+# hookPhase=Failed on every sync. Set enabled: true only when you need to install or upgrade
+# operators from scratch (direct helm install/upgrade, not via ArgoCD).
 operators:
-  # Enable operator installation (disable if operators already exist)
-  enabled: true
-  # Skip operator installation if they already exist in the cluster
-  # Set to true to use existing operators instead of installing new ones
+  # Set to false when operators are pre-installed cluster-wide.
+  # Set to true only for fresh installs or operator upgrades via direct helm CLI.
+  enabled: false
   skipIfExists: true
   # Red Hat Developer Hub Operator
   developerHub:
@@ -105,6 +112,10 @@ developerHub:
   createInstance: true
   # Developer Hub instance name
   instanceName: fusion-dev-hub
+  # rhdhBaseUrl is AUTO-DERIVED — do NOT set it here.
+  # Formula: https://backstage-<instanceName>-<namespace>.<wildcardDomain>
+  # Helm helper: {{ include "fusion-developer-hub.rhdhBaseUrl" . }}
+  # Only override via config.hostname for a custom FQDN.
   # Namespace for Developer Hub instance
   # IMPORTANT: This should match the --namespace flag used with helm install/upgrade
   # Leave empty to use .Release.Namespace automatically
@@ -659,3 +670,13 @@ autoscaling:
   # maxReplicas: 10
   # targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
+
+# IBM Fusion CAS/DCS Services — explicitly disabled for the dev environment.
+# fusionServices controls only the CAS/DCS catalog entities and self-service scaffolder
+# templates that are injected into the Developer Hub catalog. Disabling it does NOT affect
+# any other RHDH functionality (homepage, RHOAI connector, existing catalog entries, auth,
+# TechDocs, etc.). All other developerHub settings remain fully active.
+# To enable, set to true and configure the clusters list (see deploy/helm/values.yaml).
+developerHub:
+  fusionServices:
+    enabled: false

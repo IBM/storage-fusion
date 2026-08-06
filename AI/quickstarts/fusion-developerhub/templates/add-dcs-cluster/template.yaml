@@ -1,0 +1,232 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: add-dcs-cluster
+  title: "Add IBM Fusion DCS Cluster"
+  description: |
+    Register an IBM Fusion Data Cataloging Service (DCS) cluster in Developer Hub.
+    Enter a name and the OCP API URL — every endpoint is auto-derived. No token needed.
+  tags: [fusion, dcs, mcp, data-cataloging, ai, ibm-fusion, self-service]
+  links:
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+      title: "IBM Docs — Data Cataloging Service"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=capabilities-data-cataloging-mcp-server
+      title: "IBM Docs — DCS MCP Server"
+      icon: article
+
+spec:
+  owner: group:default/fusion-platform-team
+  type: infrastructure
+
+  parameters:
+    - title: "DCS Cluster Details"
+      description: >
+        All DCS endpoints are derived automatically from the OCP API URL.
+        No token. No OCP login.
+      required: [clusterName, ocpApiUrl]
+      properties:
+
+        clusterName:
+          title: "Cluster Name"
+          type: string
+          description: >
+            Short identifier — lowercase letters, numbers, hyphens.
+            Used as the catalog entity name.
+            Examples: prod-east, mycluster, lab-gpu
+          pattern: "^[a-z][a-z0-9-]*$"
+          ui:autofocus: true
+          ui:placeholder: "mycluster"
+
+        ocpApiUrl:
+          title: "OCP API URL"
+          type: string
+          description: |
+            Paste the API server URL exactly as shown in your oc login command.
+
+            Example:
+              https://api.mycluster.example.com:6443
+
+            All DCS endpoints are derived automatically:
+              • DCS Console   → https://console-ibm-data-cataloging.apps.<domain>
+              • MCP HTTP      → https://dcs-mcp-route-ibm-data-cataloging.apps.<domain>/mcp/http
+              • MCP SSE       → https://dcs-mcp-route-ibm-data-cataloging.apps.<domain>/mcp
+              • Swagger       → https://console-ibm-data-cataloging.apps.<domain>/api
+              • OCP Console   → https://console-openshift-console.apps.<domain>
+          pattern: "^https://api\\."
+          ui:placeholder: "https://api.mycluster.example.com:6443"
+
+        serviceVersion:
+          title: "DCS Installed Version"
+          type: string
+          description: >
+            The installed DCS (Spectrum Discover) version from your cluster.
+            Run: oc get spectrumDiscover -n ibm-data-cataloging -o jsonpath='{.items[0].status.installedVersion}'
+            Used as the service-version annotation in the catalog entity.
+            Leave blank if unknown — can be updated later by re-running this template.
+          ui:placeholder: "2.5.3"
+
+  steps:
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Single step: catalog:write
+    #
+    # Writes the entity object directly into the Backstage catalog.
+    # No file. No proxy. No token. No external server.
+    #
+    # Domain derivation (Nunjucks):
+    #   "https://api.mycluster.example.com:6443"
+    #   → replace 'https://api.' with ''  → "mycluster.example.com:6443"
+    #   → replace ':6443' with ''         → "mycluster.example.com"
+    # ─────────────────────────────────────────────────────────────────────────
+    - id: register
+      name: "Add to Catalog"
+      action: catalog:write
+      input:
+        entity:
+          apiVersion: backstage.io/v1alpha1
+          kind: Component
+          metadata:
+            name: fusion-dcs-${{ parameters.clusterName }}
+            title: "IBM Fusion DCS — ${{ parameters.clusterName }}"
+            description: "IBM Fusion Data Cataloging Service on ${{ parameters.clusterName }}. MCP Server enabled."
+            tags:
+              - fusion
+              - dcs
+              - data-cataloging
+              - mcp
+              - ai
+              - ibm-fusion
+              - ${{ parameters.clusterName }}
+            annotations:
+              fusion.ibm.com/cluster-id: "${{ parameters.clusterName }}"
+              fusion.ibm.com/service-type: dcs
+              fusion.ibm.com/service-version: "${{ parameters.serviceVersion }}"
+              fusion.ibm.com/ocp-api-url: "${{ parameters.ocpApiUrl }}"
+              fusion.ibm.com/ocp-console-url: "https://console-openshift-console.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}"
+              fusion.ibm.com/console-url: "https://console-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}"
+              fusion.ibm.com/mcp-endpoint: "https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/mcp/http"
+              fusion.ibm.com/mcp-sse-endpoint: "https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/mcp"
+              backstage.io/techdocs-ref: "url:https://github.com/IBM/storage-fusion/tree/main/quickstarts/fusion-developerhub/fusion-ai-discovery/techdocs/dcs"
+            links:
+              - url: "https://console-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}"
+                title: DCS Console
+                icon: dashboard
+              - url: "https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/mcp/http"
+                title: "MCP — HTTP (JSON-RPC 2.0)"
+                icon: cloud
+              - url: "https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/mcp"
+                title: "MCP — SSE (streaming)"
+                icon: cloud
+              - url: "https://console-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/api"
+                title: "Swagger / API Explorer"
+                icon: code
+              - url: "https://console-openshift-console.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}"
+                title: OCP Console
+                icon: web
+              - url: "https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging"
+                title: "IBM Docs — Data Cataloging Service"
+                icon: article
+              - url: "https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=capabilities-data-cataloging-mcp-server"
+                title: "IBM Docs — DCS MCP Server"
+                icon: article
+              - url: "https://www.ibm.com/docs/en/fusion-hci-systems/2.13.0?topic=capabilities-data-cataloging-mcp-server"
+                title: "IBM Docs — DCS MCP Server (HCI Systems)"
+                icon: article
+              - url: "https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/exploring-your-fusion-data-catalog-with-nlp"
+                title: "Blog — Exploring Your Catalog with NLP"
+                icon: chat
+              - url: "https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/create-your-ai-agents-on-wx-orch-for-data-catalog"
+                title: "Blog — AI Agents on watsonx Orchestrate"
+                icon: chat
+              - url: "https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/is-your-mcp-server-healthy-to-explore-your-catalog"
+                title: "Blog — MCP Health Check Guide"
+                icon: chat
+              - url: "https://community.ibm.com/community/user/blogs/paul-llamas-virgen/2026/03/06/content-aware-ai-autotagging-fusion-data-catalog"
+                title: "Blog — Content-Aware AI Autotagging"
+                icon: chat
+          spec:
+            type: fusion-service
+            lifecycle: production
+            owner: group:default/fusion-team
+            system: fusion-ai-services
+
+  output:
+    text:
+      - title: "DCS Cluster Added ✅"
+        content: |
+          ## IBM Fusion DCS — `${{ parameters.clusterName }}`
+
+          Your cluster is now visible in the Developer Hub catalog.
+
+          ---
+
+          ## Endpoints
+
+          | Resource | URL |
+          |---|---|
+          | DCS Console | https://console-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }} |
+          | MCP HTTP (JSON-RPC 2.0) | https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/mcp/http |
+          | MCP SSE (streaming) | https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/mcp |
+          | Swagger / API Explorer | https://console-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/api |
+          | OCP Console | https://console-openshift-console.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }} |
+
+          ---
+
+          ## Use the MCP Endpoint
+
+          **VS Code `.vscode/mcp.json`:**
+          ```json
+          {
+            "mcpServers": {
+              "fusion-dcs-${{ parameters.clusterName }}": {
+                "url": "https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/mcp/http",
+                "transport": "http"
+              }
+            }
+          }
+          ```
+
+          **watsonx Orchestrate:**
+          ```yaml
+          mcp_servers:
+            - name: fusion-dcs-${{ parameters.clusterName }}
+              connection_type: http
+              url: https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/mcp/http
+          ```
+
+          ---
+
+          ## MCP Tools
+
+          | Tool | Description |
+          |---|---|
+          | `dcs_file_search` | Search files in the data catalog |
+          | `dcs_get_registered_tags` | List all registered tags |
+          | `dcs_get_recommend_tags` | AI-recommended tags for a dataset |
+          | `dcs_create_tag` | Create a metadata tag |
+          | `dcs_create_policy` | Create a data policy |
+          | `dcs_get_policies` | List all policies |
+          | `dcs_set_credentials` | Configure data source credentials |
+
+          > To remove: open the component in the catalog → three-dot menu (**⋮**) → **Unregister entity**.
+
+    links:
+      - title: "View in Catalog"
+        url: "/catalog/default/component/fusion-dcs-${{ parameters.clusterName }}"
+        icon: catalog
+      - title: "TechDocs"
+        url: "/docs/default/component/fusion-dcs-${{ parameters.clusterName }}"
+        icon: docs
+      - title: "IBM Docs — DCS"
+        url: "https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging"
+        icon: article
+      - title: "DCS Console"
+        url: "https://console-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}"
+        icon: dashboard
+      - title: "MCP — HTTP Endpoint"
+        url: "https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/mcp/http"
+        icon: cloud
+      - title: "MCP — SSE Endpoint"
+        url: "https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/mcp"
+        icon: cloud

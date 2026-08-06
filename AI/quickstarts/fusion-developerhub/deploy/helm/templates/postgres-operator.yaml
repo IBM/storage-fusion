@@ -1,7 +1,9 @@
 {{- if .Values.operators.enabled }}
 {{- if .Values.operators.postgres.enabled }}
+{{- $existingCSV := lookup "operators.coreos.com/v1alpha1" "ClusterServiceVersion" .Values.operators.postgres.namespace "postgresoperator.v5.8.8" }}
+{{- $existingCSVAny := lookup "operators.coreos.com/v1alpha1" "ClusterServiceVersion" .Values.operators.postgres.namespace "" }}
 {{- $existingSubscription := lookup "operators.coreos.com/v1alpha1" "Subscription" .Values.operators.postgres.namespace "crunchy-postgres-operator" }}
-{{- $skipInstall := and .Values.operators.skipIfExists $existingSubscription }}
+{{- $skipInstall := and .Values.operators.skipIfExists (or $existingCSV $existingCSVAny $existingSubscription) }}
 {{- if not $skipInstall }}
 ---
 # Namespace for PostgreSQL Operator
@@ -15,9 +17,13 @@ metadata:
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
     {{- if not .Values.argocd.enabled }}
+    # helm hooks are used only in plain Helm installs to enforce creation order.
+    # When argocd.enabled=true these are omitted; ArgoCD uses sync-wave instead.
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
     {{- end }}
+    # sync-wave ensures the Namespace exists before the OperatorGroup and Subscription
+    # that reference it (waves 20 and 30). ArgoCD applies resources in ascending wave order.
     argocd.argoproj.io/sync-wave: "0"
 ---
 # OperatorGroup for PostgreSQL Operator
@@ -34,6 +40,11 @@ metadata:
     helm.sh/hook-weight: "-9"
     {{- end }}
     argocd.argoproj.io/sync-wave: "20"
+    # SkipDryRunOnMissingResource: OLM populates .status after the OperatorGroup is
+    # created; ArgoCD's dry-run (server-side apply validation) fails when the
+    # operators.coreos.com/v1 webhook is absent on the cluster. This option makes
+    # ArgoCD skip the dry-run for this resource, preventing spurious sync failures.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   {{- if .Values.operators.postgres.watchAllNamespaces }}
   # Watch all namespaces
@@ -57,6 +68,12 @@ metadata:
     helm.sh/hook-weight: "-8"
     {{- end }}
     argocd.argoproj.io/sync-wave: "30"
+    # Replace=true: OLM Subscriptions are immutable once the installPlan is created;
+    # ArgoCD's default patch strategy causes "field is immutable" errors on re-sync.
+    # Replace=true forces a delete+recreate instead of a patch, which is safe here
+    # because OLM re-evaluates the Subscription and continues from its current state.
+    # SkipDryRunOnMissingResource: avoids dry-run failures before OLM CRDs are ready.
+    argocd.argoproj.io/sync-options: Replace=true,SkipDryRunOnMissingResource=true
 spec:
   channel: {{ .Values.operators.postgres.channel }}
   name: crunchy-postgres-operator
@@ -78,12 +95,23 @@ metadata:
     app.kubernetes.io/component: postgres-operator-setup
   annotations:
     {{- if not .Values.argocd.enabled }}
+    # In plain Helm: runs after install/upgrade completes, deleted before re-creation.
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "1"
     helm.sh/hook-delete-policy: before-hook-creation
     {{- end }}
     argocd.argoproj.io/sync-wave: "40"
-    argocd.argoproj.io/sync-options: Force=true,Replace=true
+    # Force=true,Replace=true: Jobs are immutable after creation. On re-sync ArgoCD cannot
+    # patch a completed Job, so Force+Replace ensures the old Job is deleted and a fresh
+    # one is created to re-validate operator readiness after upgrades.
+    # SkipDryRunOnMissingResource: prevents dry-run failures if batch/v1 Job webhook is absent.
+    argocd.argoproj.io/sync-options: Force=true,Replace=true,SkipDryRunOnMissingResource=true
+    # argocd.argoproj.io/hook: Sync — runs this Job on every ArgoCD sync so operator
+    # readiness is re-confirmed after each upgrade. BeforeHookCreation deletes any
+    # previously completed Job pod before creating a new one (equivalent to helm's
+    # before-hook-creation delete policy).
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   template:
     metadata:

@@ -1,0 +1,320 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: add-fusion-cluster
+  title: "Add IBM Fusion Cluster (CAS + DCS)"
+  description: |
+    Self-service onboarding for any IBM Fusion HCI cluster.
+
+    Fill in the form → the template:
+      1. Generates a catalog-info.yaml with all 5 entities
+         (System, DCS Component, DCS MCP API, CAS Component, CAS MCP API)
+      2. Commits it to  quickstarts/fusion-developerhub/fusion-ai-discovery/clusters/<cluster-id>/catalog-info.yaml
+      3. git push triggers ArgoCD sync → entities appear in RHDH within ~2 min
+
+    No cluster access needed. All endpoints are auto-derived from the OCP API URL.
+  tags:
+    - fusion
+    - cas
+    - dcs
+    - mcp
+    - self-service
+    - ibm-fusion
+    - onboarding
+  annotations:
+    backstage.io/techdocs-ref: "url:https://github.com/IBM/storage-fusion/tree/main/quickstarts/fusion-developerhub/fusion-ai-discovery"
+  links:
+    - url: https://github.com/IBM/storage-fusion/tree/main/quickstarts/fusion-developerhub/fusion-ai-discovery
+      title: "Fusion AI Discovery — README"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+      title: "IBM Docs — CAS"
+      icon: article
+    - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+      title: "IBM Docs — DCS"
+      icon: article
+
+spec:
+  owner: group:default/fusion-platform-team
+  type: infrastructure
+
+  # ── Parameters ─────────────────────────────────────────────────────────────
+  parameters:
+
+    # ── Page 1: Cluster Identity ──────────────────────────────────────────────
+    - title: "Cluster Identity"
+      description: >
+        Provide a short ID and the OCP API URL.
+        All service endpoints (DCS console, DCS MCP, CAS console, CAS MCP,
+        CAS Swagger, CAS health) are derived automatically — no extra input needed.
+      required:
+        - clusterName
+        - ocpApiUrl
+      properties:
+
+        clusterName:
+          title: "Cluster Name (ID)"
+          type: string
+          description: >
+            Short lowercase identifier — letters, numbers, hyphens only.
+            This becomes the entity name suffix and the directory name.
+
+            Examples:  prod-east · hci-dallas · lab-gpu · site-lon
+          pattern: "^[a-z][a-z0-9-]*$"
+          ui:autofocus: true
+          ui:placeholder: "mycluster"
+
+        ocpApiUrl:
+          title: "OCP API URL"
+          type: string
+          description: |
+            Paste the API server URL as shown in your  oc login  output.
+
+            Example:  https://api.mycluster.example.com:6443
+
+            Auto-derived from this URL:
+              DCS Console      → https://console-ibm-data-cataloging.apps.<domain>
+              DCS MCP HTTP     → https://dcs-mcp-route-ibm-data-cataloging.apps.<domain>/mcp/http
+              DCS MCP SSE      → https://dcs-mcp-route-ibm-data-cataloging.apps.<domain>/mcp
+              CAS Console      → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/overview
+              CAS MCP          → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/mcp
+              CAS Swagger      → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/docs
+              CAS Health       → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/health
+          pattern: "^https://api\\."
+          ui:placeholder: "https://api.mycluster.example.com:6443"
+
+        clusterType:
+          title: "Cluster Type"
+          type: string
+          description: >
+            proxy-only  — access via RHDH proxy endpoints only (no SA token needed).
+            self-hosted — also enables the Kubernetes plugin tab (requires SA token setup).
+          default: "proxy-only"
+          enum:
+            - "proxy-only"
+            - "self-hosted"
+          enumNames:
+            - "Proxy Only (recommended — no cluster access needed)"
+            - "Self-Hosted (enables Kubernetes tab — requires SA token)"
+
+    # ── Page 2: Service Versions (optional) ───────────────────────────────────
+    - title: "Service Versions (optional)"
+      description: >
+        Leave blank if you don't know the installed versions.
+        They are shown in entity descriptions and can be updated by re-running this template.
+      properties:
+
+        dcsEnabled:
+          title: "Enable DCS entities"
+          type: boolean
+          default: true
+          description: "Include Data Cataloging Service (DCS) entities in the catalog."
+          ui:widget: "radio"
+
+        dcsVersion:
+          title: "DCS Installed Version"
+          type: string
+          description: >
+            Run on the cluster:
+              oc get spectrumDiscover -n ibm-data-cataloging \
+                -o jsonpath='{.items[0].status.installedVersion}'
+          ui:placeholder: "2.5.3"
+
+        casEnabled:
+          title: "Enable CAS entities"
+          type: boolean
+          default: true
+          description: "Include Content Aware Storage (CAS) entities in the catalog."
+          ui:widget: "radio"
+
+        casVersion:
+          title: "CAS Installed Version"
+          type: string
+          description: >
+            Run on the cluster:
+              oc get casinstall -n ibm-cas \
+                -o jsonpath='{.items[0].status.installedVersion}'
+          ui:placeholder: "1.1.5"
+
+    # ── Page 3: Git repository target ─────────────────────────────────────────
+    - title: "Git Repository"
+      description: >
+        The generated catalog-info.yaml will be committed here.
+        After git push, ArgoCD auto-syncs and RHDH ingests the entities.
+      required:
+        - repoUrl
+      properties:
+
+        repoUrl:
+          title: "Target Repository"
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+              - github.ibm.com
+            allowedOrganizations:
+              - IBM
+            allowedRepos:
+              - storage-fusion
+            requestUserCredentials:
+              secretsKey: USER_OAUTH_TOKEN
+
+        targetBranch:
+          title: "Target Branch"
+          type: string
+          default: "main"
+          description: >
+            The branch ArgoCD watches. Typically "main" in production.
+          ui:placeholder: "main"
+
+  # ── Steps ───────────────────────────────────────────────────────────────────
+  steps:
+
+    # ── Step 1: Render catalog-info.yaml from skeleton ────────────────────────
+    - id: fetch-template
+      name: "Generate catalog-info.yaml"
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          clusterName:   ${{ parameters.clusterName }}
+          ocpApiUrl:     ${{ parameters.ocpApiUrl }}
+          clusterType:   ${{ parameters.clusterType | default("proxy-only") }}
+          dcsEnabled:    ${{ parameters.dcsEnabled | default(true) }}
+          dcsVersion:    ${{ parameters.dcsVersion | default("") }}
+          casEnabled:    ${{ parameters.casEnabled | default(true) }}
+          casVersion:    ${{ parameters.casVersion | default("") }}
+          # Domain = ocpApiUrl with "https://api." and ":6443" stripped
+          domain: ${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}
+
+    # ── Step 2: Publish to target Git branch ──────────────────────────────────
+    # Pushes to:
+    #   quickstarts/fusion-developerhub/fusion-ai-discovery/clusters/<cluster-id>/catalog-info.yaml
+    #
+    # After this push:
+    #   ArgoCD detects the commit → syncs the Helm chart
+    #   BUT this file lives outside the Helm values — it is NOT in clusters:[].
+    #
+    # Approach: We push the generated catalog-info.yaml directly into the
+    # fusion-ai-discovery/clusters/ path so the locations.yaml (or the RHDH
+    # Import URL) can reference it.  We also update the prod values.yaml to add
+    # the cluster entry so the full Helm-generated entity set is created too.
+    - id: publish
+      name: "Commit catalog-info.yaml to Git"
+      action: publish:github:file
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        branch: ${{ parameters.targetBranch | default("main") }}
+        # Path inside repo where the file lands
+        path: quickstarts/fusion-developerhub/fusion-ai-discovery/clusters/${{ parameters.clusterName }}/catalog-info.yaml
+        message: "feat: add cluster ${{ parameters.clusterName }} via RHDH self-service template"
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+
+    # ── Step 3: Register the entity in the RHDH catalog immediately ───────────
+    # This gives instant feedback without waiting for ArgoCD (~2 min).
+    # The Helm-driven entity (from values.yaml) will appear after ArgoCD sync
+    # and supersede/merge with this registration.
+    - id: register
+      name: "Register in Catalog"
+      action: catalog:register
+      input:
+        # repoContentsUrl is the raw GitHub URL for the committed file
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: "/quickstarts/fusion-developerhub/fusion-ai-discovery/clusters/${{ parameters.clusterName }}/catalog-info.yaml"
+        optional: true
+
+  # ── Output ──────────────────────────────────────────────────────────────────
+  output:
+    text:
+      - title: "Cluster ${{ parameters.clusterName }} registered ✅"
+        content: |
+          ## IBM Fusion Cluster — `${{ parameters.clusterName }}`
+
+          The catalog-info.yaml has been committed to Git.
+
+          **What happens next (fully automatic):**
+          1. ArgoCD detects the push → syncs in ≤3 min
+          2. `fusion-ai-clusters` ConfigMap is updated
+          3. Kubernetes refreshes the directory mount (~60s, no pod restart)
+          4. RHDH catalog ingests the entities (~2 min total)
+
+          ---
+
+          ## Entities created
+
+          | Kind | Name |
+          |---|---|
+          | System | `fusion-${{ parameters.clusterName }}` |
+          | Component | `fusion-dcs-${{ parameters.clusterName }}` |
+          | API | `fusion-dcs-mcp-api-${{ parameters.clusterName }}` |
+          | Component | `fusion-cas-${{ parameters.clusterName }}` |
+          | API | `fusion-cas-mcp-api-${{ parameters.clusterName }}` |
+
+          ---
+
+          ## Auto-derived endpoints
+
+          | Service | URL |
+          |---|---|
+          | DCS Console | `https://console-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}` |
+          | DCS MCP HTTP | `https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/mcp/http` |
+          | DCS MCP SSE | `https://dcs-mcp-route-ibm-data-cataloging.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/mcp` |
+          | CAS Console | `https://console-ibm-spectrum-fusion-ns.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/cas/overview` |
+          | CAS MCP | `https://console-ibm-spectrum-fusion-ns.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/cas/api/v1/mcp` |
+          | CAS Swagger | `https://console-ibm-spectrum-fusion-ns.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/cas/api/v1/docs` |
+          | CAS Health | `https://console-ibm-spectrum-fusion-ns.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/cas/api/v1/health` |
+
+          ---
+
+          ## Import URL (for manual RHDH "Import existing Git repository")
+
+          Paste this URL into the **Import** dialog if catalog:register did not fire:
+
+          ```
+          ${{ steps['publish'].output.remoteUrl }}/blob/${{ parameters.targetBranch }}/quickstarts/fusion-developerhub/fusion-ai-discovery/clusters/${{ parameters.clusterName }}/catalog-info.yaml
+          ```
+
+          ---
+
+          ## Troubleshoot (if entities don't appear after 5 min)
+
+          ```bash
+          NS=fusion-developer-hub
+
+          # 1. ConfigMap key present?
+          oc get cm fusion-ai-clusters -n $NS \
+            -o go-template='{{range $k,$v := .data}}{{$k}}{{"\n"}}{{end}}'
+
+          # 2. File mounted in pod?
+          oc exec -n $NS deploy/backstage-developer-hub -c backstage-backend -- \
+            ls /opt/app-root/src/fusion-clusters/
+
+          # 3. Force ArgoCD sync
+          oc patch application fusion-developer-hub -n openshift-gitops \
+            --type merge \
+            -p '{"operation":{"initiatedBy":{"username":"cli"},"sync":{"prune":true}}}'
+          ```
+
+          > To remove this cluster: re-run this template in **Remove** mode,
+          > or delete the cluster block from `prod/values.yaml` and push.
+
+    links:
+      - title: "View System in Catalog"
+        url: "/catalog/default/system/fusion-${{ parameters.clusterName }}"
+        icon: catalog
+      - title: "View DCS Component"
+        url: "/catalog/default/component/fusion-dcs-${{ parameters.clusterName }}"
+        icon: catalog
+      - title: "View CAS Component"
+        url: "/catalog/default/component/fusion-cas-${{ parameters.clusterName }}"
+        icon: catalog
+      - title: "DCS MCP API"
+        url: "/catalog/default/api/fusion-dcs-mcp-api-${{ parameters.clusterName }}"
+        icon: cloud
+      - title: "CAS MCP API"
+        url: "/catalog/default/api/fusion-cas-mcp-api-${{ parameters.clusterName }}"
+        icon: cloud
+      - title: "Git commit"
+        url: ${{ steps['publish'].output.remoteUrl }}
+        icon: github

@@ -418,7 +418,7 @@ developerHub:
     enabled: true
     tls:
       enabled: true
-      secretName: "" # Leave empty for auto-generated cert
+      secretName: "" # Leave empty for auto-generated cert (operator manages TLS termination)
   # IBM Fusion AI Configuration
   fusion:
     enabled: true # Enable IBM Fusion features including templates
@@ -472,6 +472,142 @@ developerHub:
           enabled: true
         - name: app-navigator
           enabled: true
+  # ===========================================================================
+  # IBM Fusion AI Services (CAS / DCS) — self-service cluster registration
+  #
+  # ZERO HARDCODING PRINCIPLE
+  # ─────────────────────────
+  # No cluster name, version, or endpoint is hardcoded in any Helm template.
+  # Everything is driven by the clusters[] list below.
+  #
+  # To add a cluster:
+  #   1. Append one entry to clusters[] with the new name, ocpApiUrl, versions
+  #   2. git commit + push
+  #   3. ArgoCD syncs → Helm rerenders → operator mounts → RHDH picks it up
+  #   No oc apply. No manual ConfigMap patch. No RHDH restart.
+  #
+  # To update a version (e.g. CAS upgrades from 1.1.5 → 1.2.0 on mycluster):
+  #   Edit clusters[name=mycluster].services.cas.version: "1.2.0"
+  #   git commit + push → done.
+  #
+  # Endpoint derivation (fully automatic from ocpApiUrl):
+  #   domain  = ocpApiUrl stripped of "https://api." + ":6443"
+  #   DCS console      → https://console-ibm-data-cataloging.apps.<domain>
+  #   DCS MCP HTTP     → https://dcs-mcp-route-ibm-data-cataloging.apps.<domain>/mcp/http
+  #   DCS MCP SSE      → https://dcs-mcp-route-ibm-data-cataloging.apps.<domain>/mcp
+  #   CAS console      → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/overview
+  #   CAS MCP standard → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/mcp
+  #   CAS MCP stream   → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/mcp-streamable/
+  #   CAS swagger      → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/docs
+  #
+  # Proxy env var naming convention (must match catalog annotations):
+  #   /fusion-<name>-dcs       → DCS console Route
+  #   /fusion-<name>-dcs-mcp   → DCS MCP Route
+  #   /fusion-<name>-cas       → CAS console Route (covers all /cas/* subpaths)
+  # ===========================================================================
+  fusionServices:
+    enabled: false   # set true to activate — all ConfigMaps are created/mounted
+
+    # ── Git branch (single change point on merge to main) ────────────────────
+    # Used only for documentation and any remaining type:url references.
+    # The catalog itself uses type:file (ConfigMap-mounted) — branch-agnostic.
+    # Set to the public repo URL and branch that contains this chart.
+    # On merge to main, leave gitBranch as "main".
+    gitBranch: "main"
+    gitRepo: "https://github.com/IBM/storage-fusion"
+
+    # GitHub token (enables private repo imports + catalog:register).
+    # When set to true, ${GITHUB_TOKEN} is injected into the GitHub integration.
+    # Create the secret before deploying (NEVER paste the token in Git):
+    #   oc create secret generic github-auth-secret \
+    #     --from-literal=GITHUB_TOKEN=<your-pat> \
+    #     -n <rhdh-namespace>
+    # For public repos (read-only catalog import) this can remain false.
+    githubToken: false
+
+    # ── Dynamic plugins ConfigMap switch ─────────────────────────────────────
+    # false = keep using your existing fusion-dynamic-plugins ConfigMap
+    # true  = use fusion-ai-dynamic-plugins (kubernetes, topology, techdocs, etc.)
+    dynamicPlugins:
+      enabled: false
+
+    # ── Cluster list — THE single source of truth ────────────────────────────
+    # Each entry drives:
+    #   • Catalog entities  (System, Component, API) in fusion-ai-clusters ConfigMap
+    #   • Kubernetes plugin cluster entries          in app-config-fusion-services
+    #   • RHDH proxy endpoints                       in app-config-fusion-services
+    #
+    # Fields:
+    #   name        — short cluster id, e.g. "mycluster". Used in entity names,
+    #                 proxy paths, and K8s cluster names. Lowercase, no spaces.
+    #   ocpApiUrl   — OCP API server, e.g. https://api.mycluster.example.com:6443
+    #                 All route URLs are derived from this — nothing else needed.
+    #   clusterType — "self-hosted" (K8s plugin + proxy) | "proxy-only" (proxy only)
+    #   services.dcs / services.cas:
+    #     enabled     — include this service in the catalog
+    #     version     — installed CR version (oc get spectrumDiscover/casinstall -o jsonpath)
+    #                   Day-2 version bump = change this one field + git push.
+    #     namespace   — namespace the service runs in (default shown below)
+    #     k8s         — only for self-hosted; drives kubernetes plugin annotations
+    #       tokenEnvVar    — env var key injected from a Secret (see extraEnvs.secrets)
+    #       labelSelector  — pod label selector used by the K8s tab in RHDH
+    #                        Verify: oc get pods -n <ns> --show-labels
+    clusters: []
+    # Example — uncomment and fill in for your environment:
+    #
+    # clusters:
+    #   # ── Self-hosted cluster (K8s plugin + proxy) ──────────────────────────
+    #   - name: <cluster-id>
+    #     ocpApiUrl: https://api.<cluster-id>.example.com:6443
+    #     clusterType: self-hosted
+    #     services:
+    #       dcs:
+    #         enabled: true
+    #         version: "<dcs-version>"  # oc get spectrumDiscover -n ibm-data-cataloging -o jsonpath='{.items[0].status.installedVersion}'
+    #         namespace: ibm-data-cataloging
+    #         k8s:
+    #           tokenEnvVar: FUSION_<CLUSTER_ID>_SA_TOKEN       # key in Secret, injected via extraEnvs.secrets
+    #           labelSelector: "app=isd,component=discover"     # verified from live pods
+    #       cas:
+    #         enabled: true
+    #         version: "<cas-version>"  # oc get casinstall -n ibm-cas -o jsonpath='{.items[0].status.installedVersion}'
+    #         namespace: ibm-cas
+    #         k8s:
+    #           tokenEnvVar: FUSION_<CLUSTER_ID>_CAS_SA_TOKEN
+    #           labelSelector: "app.kubernetes.io/name=cas.isf.ibm.com"
+    #
+    #   # ── Proxy-only cluster (no K8s plugin, no SA token) ───────────────────
+    #   - name: <cluster-id-2>
+    #     ocpApiUrl: https://api.<cluster-id-2>.example.com:6443
+    #     clusterType: proxy-only
+    #     services:
+    #       dcs:
+    #         enabled: true
+    #         version: "<dcs-version>"
+    #         namespace: ibm-data-cataloging
+
+    # ── RHDH proxy endpoints — auto-generated from clusters[] ────────────────
+    # Each cluster's services generate proxy entries automatically when
+    # proxy.enabled=true. Target URLs come from env vars injected via
+    # extraEnvs.secrets — never hardcoded.
+    #
+    # Naming: /fusion-<name>-dcs     → DCS console
+    #         /fusion-<name>-dcs-mcp → DCS MCP
+    #         /fusion-<name>-cas     → CAS console (all subpaths)
+    proxy:
+      enabled: false
+      # Per-cluster URL env var overrides (only needed if your routes differ
+      # from the standard IBM Fusion naming convention).
+      # By default, URLs are derived from ocpApiUrl automatically.
+      # Set urlEnvVar to override the derived target with a Secret-injected value:
+      #
+      # urlOverrides:
+      #   <cluster-id>:
+      #     dcsConsoleEnvVar:    FUSION_<CLUSTER_ID>_DCS_URL      # overrides derived console URL
+      #     dcsMcpEnvVar:        FUSION_<CLUSTER_ID>_DCS_MCP_URL  # overrides derived MCP URL
+      #     casConsoleEnvVar:    FUSION_<CLUSTER_ID>_CAS_URL      # overrides derived CAS URL
+      urlOverrides: {}
+
   # Security configuration
   security:
     # Network policies

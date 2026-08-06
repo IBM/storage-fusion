@@ -1,0 +1,26 @@
+# =============================================================================
+# locations.yaml — IBM Fusion AI Service Discovery — Catalog Root Index
+#
+# Registered in app-config-fusion-services as a catalog.locations entry.
+# Backstage resolves all relative targets against this file's own fetched URL —
+# no branch name is hardcoded here.
+#
+# Cluster registration is NOT done here.
+# Add clusters to: deploy/helm/environments/prod/values.yaml → fusionServices.clusters[]
+# =============================================================================
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: fusion-ai-catalog-root
+  description: Root index for all IBM Fusion AI Service catalog entities
+spec:
+  type: url
+  targets:
+    # Platform entities (Domain, System, Groups)
+    - ./platform-entities.yaml
+
+    # Self-service scaffold templates
+    - ../../templates/add-fusion-cluster/template.yaml
+    # Legacy per-service templates (kept for backward compatibility)
+    - ../../templates/add-dcs-cluster/template.yaml
+    - ../../templates/add-cas-cluster/template.yaml

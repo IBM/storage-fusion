@@ -1,7 +1,8 @@
 # Production Configuration for IBM Fusion Developer Hub
 # This file provides production-ready settings with HA, security, and monitoring
 global:
-  # IMPORTANT: Change this to match your OpenShift cluster domain
+  # ── REQUIRED: Set this to your OCP cluster wildcard domain ───────────────
+  # Run:  oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
   wildcardDomain: apps.<cluster-domain>.com
   # Name of the certificate secret for ingress (leave empty for self-signed)
   wildcardCertName: ""
@@ -105,6 +106,10 @@ developerHub:
   createInstance: true
   # Developer Hub instance name
   instanceName: developer-hub
+  # rhdhBaseUrl is AUTO-DERIVED — do NOT set it here.
+  # Formula: https://backstage-<instanceName>-<namespace>.<wildcardDomain>
+  # Helm helper: {{ include "fusion-developer-hub.rhdhBaseUrl" . }}
+  # Only override via config.hostname for a custom FQDN.
   # Namespace for Developer Hub instance
   # IMPORTANT: This should match the --namespace flag used with helm install/upgrade
   # Leave empty to use .Release.Namespace automatically
@@ -657,3 +662,13 @@ autoscaling:
   # maxReplicas: 10
   # targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
+
+# IBM Fusion CAS/DCS Services — explicitly disabled for the staging environment.
+# fusionServices controls only the CAS/DCS catalog entities and self-service scaffolder
+# templates that are injected into the Developer Hub catalog. Disabling it does NOT affect
+# any other RHDH functionality (homepage, RHOAI connector, existing catalog entries, auth,
+# TechDocs, etc.). All other developerHub settings remain fully active.
+# To enable, set to true and configure the clusters list (see deploy/helm/values.yaml).
+developerHub:
+  fusionServices:
+    enabled: false

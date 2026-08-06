@@ -1,0 +1,96 @@
+{{- if and .Values.developerHub.enabled .Values.developerHub.fusionServices.enabled .Values.developerHub.fusionServices.dynamicPlugins.enabled }}
+---
+# fusion-ai-dynamic-plugins ConfigMap
+#
+# RHDH built-in plugins for IBM Fusion AI Service discovery.
+# All plugins ship with Red Hat Developer Hub; no custom plugins required.
+#
+# Toggle: developerHub.fusionServices.dynamicPlugins.enabled: true
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-ai-dynamic-plugins
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fusion-ai-dynamic-plugins
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  dynamic-plugins.yaml: |
+    plugins:
+
+      # ── TECHDOCS ───────────────────────────────────────────────────────────
+      # Renders MkDocs documentation inside Developer Hub.
+      # Serves DCS and CAS architecture, MCP integration, API, and onboarding docs.
+      - package: "./dynamic-plugins/dist/backstage-plugin-techdocs"
+        disabled: false
+        pluginConfig: {}
+
+      - package: "./dynamic-plugins/dist/backstage-plugin-techdocs-backend-dynamic"
+        disabled: false
+        pluginConfig: {}
+
+      # ── SCAFFOLDER / SOFTWARE TEMPLATES ───────────────────────────────────
+      # Powers Software Templates:
+      #   1. Add IBM Fusion CAS Cluster
+      #   2. Add IBM Fusion DCS Cluster
+      - package: "./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-dynamic"
+        disabled: false
+        pluginConfig: {}
+
+      - package: "./dynamic-plugins/dist/backstage-plugin-scaffolder"
+        disabled: false
+        pluginConfig:
+          dynamicRoutes:
+            - path: /create
+              importName: ScaffolderPage
+
+      # ── API DOCS / SWAGGER UI ─────────────────────────────────────────────
+      # Renders OpenAPI / Swagger specs inline in the API tab.
+      # CAS: /cas/api/v1/docs via RHDH proxy
+      # DCS: /api/v1/... via RHDH proxy
+      - package: "./dynamic-plugins/dist/backstage-plugin-api-docs"
+        disabled: false
+        pluginConfig:
+          dynamicRoutes:
+            - path: /api-docs
+              importName: ApiExplorerPage
+
+      # ── CATALOG BACKEND ───────────────────────────────────────────────────
+      # Registers and reconciles all Fusion AI Service catalog entities.
+      - package: "./dynamic-plugins/dist/backstage-plugin-catalog-backend-dynamic"
+        disabled: false
+        pluginConfig: {}
+
+      # ── SEARCH ────────────────────────────────────────────────────────────
+      # Full-text search across catalog entities, TechDocs, and template content.
+      - package: "./dynamic-plugins/dist/backstage-plugin-search"
+        disabled: false
+        pluginConfig:
+          dynamicRoutes:
+            - path: /search
+              importName: SearchPage
+
+      - package: "./dynamic-plugins/dist/backstage-plugin-search-backend-dynamic"
+        disabled: false
+        pluginConfig: {}
+
+      - package: "./dynamic-plugins/dist/backstage-plugin-search-backend-module-catalog-dynamic"
+        disabled: false
+        pluginConfig: {}
+
+      - package: "./dynamic-plugins/dist/backstage-plugin-search-backend-module-techdocs-dynamic"
+        disabled: false
+        pluginConfig: {}
+
+      # ── HOME PAGE ─────────────────────────────────────────────────────────
+      - package: "./dynamic-plugins/dist/backstage-plugin-home"
+        disabled: false
+        pluginConfig:
+          dynamicRoutes:
+            - path: /
+              importName: HomePage
+{{- end }}
+
+# Made with Bob
