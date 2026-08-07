@@ -7,7 +7,7 @@ High level description of Maximo application suite backup and restore procedure
 ----
 
 ## Limitations
-Fusion Backup and Restore operator requieres AMQ-Streams operator for configuring Kafka cluster, if planning to configure Kafka with Maximo, it is not advised to install open source Strimzi operator as this could lead to potential issues between both operators. It is also recommended that you match the version of Fusion B/R AMQ-Streams operator to the one you are planning to use for Maximo, based on RedHat own recommendations https://access.redhat.com/solutions/7028595. 
+Fusion Backup and Restore operator requires AMQ-Streams operator for configuring Kafka cluster, if planning to configure Kafka with Maximo, it is not advised to install open source Strimzi operator as this could lead to potential issues between both operators. It is also recommended that you match the version of Fusion B/R AMQ-Streams operator to the one you are planning to use for Maximo, based on RedHat own recommendations https://access.redhat.com/solutions/7028595. 
 
 ## Backup Prerequisites
 1. Some recipes relies on variables that needs to be set before apply the recipe, run the `maximo_env.sh` script to set this variables, make the necessary modifications according to your configuration. 
