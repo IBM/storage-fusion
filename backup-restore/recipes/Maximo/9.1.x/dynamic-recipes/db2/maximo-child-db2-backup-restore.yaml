@@ -1,0 +1,150 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  labels:
+    dp.isf.ibm.com/parent-recipe: maximo-parent-recipe
+    dp.isf.ibm.com/parent-recipe-namespace: ibm-spectrum-fusion-ns
+  name: maximo-db2-recipe
+spec:
+  appType: db2ucluster
+  groups:
+    - name: db2u-volumes
+      type: volume
+      includedNamespaces:
+        - ${DB2_NAMESPACE}
+    - name: db2u-cluster-resources
+      type: resource
+      includeClusterResources: true
+      includedResourceTypes:
+        - customresourcedefinitions
+        - clusterroles
+        - clusterrolebindings
+      labelSelector: operators.coreos.com/db2u-operator.${DB2_NAMESPACE}=
+    - name: db2u-scc-resources
+      type: resource
+      includeClusterResources: true
+      includedResourceTypes:
+        - securitycontextconstraints.security.openshift.io
+      labelSelector: type=db2u
+    - name: db2u-resources
+      type: resource
+      includedNamespaces:
+        - ${DB2_NAMESPACE}
+      excludedResourceTypes:
+        - clusterserviceversions
+        - pods 
+    - name: restore-overwrite-db2u-scc
+      backupRef: db2u-scc-resources
+      includedResourceTypes:
+        - securitycontextconstraints.security.openshift.io
+      restoreOverwriteResources: true
+      type: resource
+  hooks:
+  - name: db2u-operator-check
+    type: check
+    namespace: ${DB2_NAMESPACE}
+    selectResource: deployment
+    labelSelector: operators.coreos.com/db2u-operator.${DB2_NAMESPACE}=
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  - name: db2ucluster-check
+    type: check
+    namespace: ${DB2_NAMESPACE}
+    selectResource: db2u.databases.ibm.com/v1/db2uclusters
+    labelSelector: for-backup=true
+    timeout: 1200
+    onError: fail
+    chks:
+    - name: stateReady
+      timeout: 1200
+      onError: fail
+      condition: "{$.status.state} == {\"Ready\"}"
+  - chks:
+    - condition: '{$.spec.replicas} == {$.status.readyReplicas}'
+      name: replicasReady
+      onError: fail
+      timeout: 600
+    labelSelector: component=db2wh
+    name: db2u-pod-check
+    namespace: ${DB2_NAMESPACE}
+    onError: fail
+    selectResource: statefulset
+    timeout: 120
+    type: check
+  - name: db2uclusters-pod-exec
+    type: exec
+    namespace: ${DB2_NAMESPACE}
+    labelSelector: name=dashmpp-head-0
+    timeout: 300
+    onError: fail
+    ops:
+    - name: "suspend"
+      command: >
+        ["manage_snapshots --action suspend --retry 3"]
+      container: db2u
+    - name: "resume"
+      command: >
+        ["manage_snapshots --action resume --retry 3"]
+      container: db2u
+    - name: "restore"
+      command: >
+        ["manage_snapshots --action restore --retry 3"]
+      container: db2u
+      timeout: 300
+  - name: db2u-operator-manager-exec
+    type: exec
+    namespace: ${DB2_NAMESPACE}
+    labelSelector: control-plane=db2u-operator-manager
+    timeout: 120
+    onError: fail
+    ops:
+    - name: "maintenance-mode-on"
+      command: |
+        ["/bin/bash", "-c", "db2uclusters=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Accept: application/yaml' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${DB2_NAMESPACE}/db2uclusters | grep '^    name: ' | tr -d ' ' | cut -c 6-); for db2ucluster in $db2uclusters; do curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${DB2_NAMESPACE}/db2uclusters/$db2ucluster?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":\"true\"}}}'; done"]
+      container: manager
+    - name: "maintenance-mode-off"
+      command: |
+        ["/bin/bash", "-c", "db2uclusters=$(curl -X GET --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Accept: application/yaml' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${DB2_NAMESPACE}/db2uclusters | grep '^    name: ' | tr -d ' ' | cut -c 6-); for db2ucluster in $db2uclusters; do curl -X PATCH --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer `cat /var/run/secrets/kubernetes.io/serviceaccount/token`\" -H 'Content-Type: application/merge-patch+json' -H 'Accept: application/json' -k https://kubernetes.default.svc/apis/db2u.databases.ibm.com/v1/namespaces/${DB2_NAMESPACE}/db2uclusters/$db2ucluster?fieldManager=kubectl-annotate -d '{\"metadata\":{\"annotations\":{\"db2u.databases.ibm.com/maintenance-pause-reconcile\":null}}}'; done"]
+      container: manager
+  workflows:
+  - name: maximo-application-maintenance
+    sequence:
+    - hook: db2u-operator-manager-exec/maintenance-mode-on
+  - name: maximo-backup-resources
+    sequence:
+    - group: db2u-cluster-resources
+    - group: db2u-scc-resources
+    - group: db2u-resources
+  - name: maximo-application-consistency-hooks
+    sequence:
+    - hook: db2uclusters-pod-exec/suspend
+  - name: maximo-volume-backup
+    sequence:
+    - group: db2u-volumes
+  - name: maximo-application-consistency-hook-undo
+    sequence:
+    - hook: db2uclusters-pod-exec/resume
+  - name: maximo-application-maintenance-undo
+    sequence:
+    - hook: db2u-operator-manager-exec/maintenance-mode-off
+  - name: maximo-restore-volumes
+    priority: 0
+    sequence:
+    - group: db2u-volumes
+  - name: maximo-restore-database
+    priority: 2
+    sequence:
+    - group: db2u-cluster-resources
+    - group: db2u-scc-resources
+    - group: db2u-resources
+    - group: restore-overwrite-db2u-scc
+    - hook: db2u-operator-check/replicasReady
+    - hook: db2u-operator-manager-exec/maintenance-mode-off
+    - hook: db2ucluster-check/stateReady
+    - hook: db2u-pod-check/replicasReady
+    - hook: db2uclusters-pod-exec/restore

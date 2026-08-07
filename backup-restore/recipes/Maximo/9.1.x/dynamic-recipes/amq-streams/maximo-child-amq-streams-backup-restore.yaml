@@ -1,0 +1,110 @@
+apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
+kind: Recipe
+metadata:
+  labels:
+    dp.isf.ibm.com/parent-recipe: maximo-parent-recipe
+    dp.isf.ibm.com/parent-recipe-namespace: ibm-spectrum-fusion-ns
+  name: maximo-amq-streams-recipe
+spec:
+  appType: maximo-amq-streams
+  groups:
+  - name: maximo-amq-streams-volumes
+    type: volume
+    includedNamespaces:
+      - ${KAFKA_NAMESPACE}
+  - name: maximo-amq-streams-resources
+    type: resource
+    includedNamespaces:
+      - ${KAFKA_NAMESPACE}
+  - name: maximo-amq-streams-operatorgroups
+    type: resource
+    backupRef: maximo-amq-streams-resources
+    includedResourceTypes:
+      - operatorgroups.operators.coreos.com
+  - name: maximo-amq-streams-subscriptions
+    type: resource
+    backupRef: maximo-amq-streams-resources
+    includedResourceTypes:
+      - subscriptions.operators.coreos.com
+  - name: maximo-amq-streams-configmaps-secrets
+    type: resource
+    backupRef: maximo-amq-streams-resources
+    includedResourceTypes:
+      - configmaps
+      - secrets
+    labelSelector: for-backup=true 
+  - name: maximo-kafkas
+    type: resource
+    backupRef: maximo-amq-streams-resources
+    includedResourceTypes:
+      - kafkas.kafka.strimzi.io
+      - kafkausers.kafka.strimzi.io
+  #IfGrafanaUncomment- name: maximo-amqstreams-dashboards
+    #IfGrafanaUncommenttype: resource
+    #IfGrafanaUncommentincludedNamespaces:
+      #IfGrafanaUncomment- ${KAFKA_NAMESPACE}
+    #IfGrafanaUncommentincludedResourceTypes:
+      #IfGrafanav4Uncomment- grafanadashboards.integreatly.org
+      #IfGrafanav5Uncomment- grafanadashboards.grafana.integreatly.org
+  hooks:
+  - name: maximo-kafkas-check
+    type: check
+    namespace: ${KAFKA_NAMESPACE}
+    selectResource: kafka.strimzi.io/v1beta2/kafkas
+    labelSelector: for-backup=true 
+    timeout: 120
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 1000
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  - name: maximo-kafkausers-check
+    type: check
+    namespace: ${KAFKA_NAMESPACE}
+    selectResource: kafka.strimzi.io/v1beta2/kafkausers
+    labelSelector: for-backup=true
+    timeout: 120
+    onError: fail
+    chks:
+    - name: statusReady
+      timeout: 1000
+      onError: fail
+      condition: '{$.status.conditions[?(@.type=="Ready")].status} == {"True"}'
+  - name: maximo-amq-streams-cluster-operator-check
+    type: check
+    namespace: ${KAFKA_NAMESPACE}
+    selectResource: deployment
+    labelSelector: olm.owner.kind=ClusterServiceVersion
+    timeout: 120
+    onError: fail
+    chks:
+    - name: replicasReady
+      timeout: 600
+      onError: fail
+      condition: "{$.spec.replicas} == {$.status.readyReplicas}"
+  workflows:
+  - failOn: any-error
+    name: maximo-backup-resources
+    sequence:
+    - group: maximo-amq-streams-resources
+    #IfGrafanaUncomment- group: maximo-amqstreams-dashboards
+  - failOn: any-error
+    name: maximo-volume-backup
+    sequence:
+    - group: maximo-amq-streams-volumes
+  - name: maximo-restore-volumes
+    priority: 0
+    sequence:
+    - group: maximo-amq-streams-volumes
+  - failOn: any-error
+    name: maximo-restore-kafka
+    sequence:
+    - group: maximo-amq-streams-operatorgroups
+    - group: maximo-amq-streams-subscriptions
+    #IfGrafanaUncomment- group: maximo-amqstreams-dashboards
+    - hook: maximo-amq-streams-cluster-operator-check/replicasReady
+    - group: maximo-amq-streams-configmaps-secrets
+    - group: maximo-kafkas
+    - hook: maximo-kafkas-check/statusReady
+    - hook: maximo-kafkausers-check/statusReady
