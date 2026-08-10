@@ -59,7 +59,7 @@ Backing up and restoring Cloud Pak for Data deployed by Maximo is not supported.
 
 1. Clone this repository to your local computer.
 
-2. cd to `maximo/9.1.x/dynamic-recipes`
+2. cd to `maximo/9.1.x`
 
 3. Some recipes rely on variables that need to be set before appling the recipe. For these variables, edit the `maximo_env.sh` script to set these variables to make the necessary modifications according to your configuration. 
 
