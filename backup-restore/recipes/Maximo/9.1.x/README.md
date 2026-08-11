@@ -109,7 +109,7 @@ Backing up and restoring Cloud Pak for Data deployed by Maximo is not supported.
         manage/backup-pre-req-manage.sh
         ```
     
-    - **mas-iot***:
+    - **mas-iot**:
 
     
         ```
@@ -411,7 +411,7 @@ patch the policy assignment to point to the parent recipe:
         visual-inspection/restore-pre-req-visual-inspection.sh
         ```
 
-    - **mas-predict**\*\*:
+    - **mas-predict**\*:
 
         ```
         predict/restore-pre-req-predict.sh
