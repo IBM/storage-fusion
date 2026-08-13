@@ -395,9 +395,11 @@ update_transaction_manager_role
 # update transaction-manager
 tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
 set_deployment_image transaction-manager transaction-manager "${tm_image}"
+set_deployment_image dbr-controller dbr-controller "${tm_image}"
 
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
 
 echo "Please verify that the pods for the following deployment have successfully restarted:"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
