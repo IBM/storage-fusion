@@ -65,8 +65,6 @@ copy_images() {
 
 declare -a IMAGES=(
   $TRANSACTIONMANAGER
-  $OADP_VELERO_14
-  $OADP_VELERO_15
 )
 
 declare -a FUSIONIMAGES_HCI=(
