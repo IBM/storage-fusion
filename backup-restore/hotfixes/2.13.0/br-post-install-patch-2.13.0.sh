@@ -18,7 +18,6 @@ patch_usage() {
     echo "  -dryrun  Run without applying fixes. Proposed patches will be written to logdir."
     echo "  -logdir  Directory to log output, patches, and saved YAMLs. Defaults to /tmp/br-post-install-patch-${EXPECTED_VERSION}"
 }
-set -e
 
 PATCH=
 DRY_RUN=
@@ -99,9 +98,6 @@ update_hotfix_configmap() {
     fi
 }
 
-get_oadp_version() {
-    oc get csv  -l operators.coreos.com/redhat-oadp-operator.${BR_NS} -n "$BR_NS" -o json | jq .items[0].spec.version
-}
 
 set_deployment_image() {
     name=$1
@@ -114,27 +110,6 @@ set_deployment_image() {
         oc -n "$BR_NS" rollout status --timeout=65s deployment/"${name}"
     else
         echo "ERROR: Failed to save original deployment/${name}. Skipped updates."
-    fi
-}
-
-set_velero_image() {
-    OADP_VERSION=$(get_oadp_version)
-    if [[ $OADP_VERSION == *"1.4"* ]]; then
-        image=$1
-    else
-        # image=$2
-        # current hotfix 1 only patches OADP-1.4
-        return 0
-    fi
-
-    echo "Patching OADP $OADP_VERSION"
-
-    if (oc -n "$BR_NS" get dpa velero -o yaml >$DIR/velero.save.yaml); then
-        echo "Patching deployment/velero image..."
-        patch="[{\"op\": \"replace\", \"path\": \"/spec/unsupportedOverrides/veleroImageFqin\", \"value\":\"${image}\"}, {\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp14\", \"value\": \"${oadp_velero_14}\"},{\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp15\", \"value\": \"${oadp_velero_15}\"}]"
-        oc -n "$BR_NS" ${DRY_RUN:+"${DRY_RUN}"} patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" -o yaml >$DIR/velero.patch.yaml
-        echo "Velero Deployement is restarting with replacement image"
-        oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
     fi
 }
 
@@ -189,7 +164,7 @@ EOF
     echo "Patching role transaction-manager in ${BR_NS} ..."
     oc get role transaction-manager -n "${BR_NS}" -o yaml >"${DIR}/transaction-manager-role.save.yaml"
     [ -z "$DRY_RUN" ] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" | oc apply -n ${BR_NS} -f -
-    [ -z "$DRY_RUN"] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" >"${DIR}/transaction-manager-role.patch.yaml"
+    [ -z "$DRY_RUN" ] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" >"${DIR}/transaction-manager-role.patch.yaml"
 }
 
 check_for_required_dependencies() {
@@ -217,85 +192,6 @@ check_for_required_dependencies() {
     fi
 }
 
-# Updates operator CSVs
-update_operator_csv() {
-    name="$1"
-    deployment_name="$2"
-    image="$3"
-    csv_ns="$BR_NS"
-
-    if (oc get csv -n "$csv_ns" "$name" -o yaml > "$DIR/${name}.save.yaml"); then
-        echo "Scaling down deployment: $deployment_name ..."
-        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=0
-
-        echo "Patching clusterserviceversion/$name (deployment: $deployment_name, image: $image) ..."
-        dep_index=$(oc get csv -n "$csv_ns" "$name" -o json | jq "[.spec.install.spec.deployments[].name] | index(\"$deployment_name\")")
-
-        if [[ "$dep_index" == "null" ]]; then
-            echo "ERROR: Deployment '$deployment_name' not found in CSV $name"
-            return 1
-        fi
-        patches=()
-        container_index=0
-        for cname in $(oc get csv -n "$csv_ns" "$name" -o json \
-            | jq -r ".spec.install.spec.deployments[$dep_index].spec.template.spec.containers[].name"); do
-            if [[ "$cname" == "manager" ]]; then
-                patches+=("{\"op\":\"replace\",\"path\":\"/spec/install/spec/deployments/${dep_index}/spec/template/spec/containers/${container_index}/image\",\"value\":\"${image}\"}")
-            fi
-            ((container_index++)) || true
-        done
-
-        patch_json="[$(IFS=,; echo "${patches[*]}")]"
-        [ -z "$DRY_RUN" ] &&  oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json"
-        [ -n "$DRY_RUN" ] && oc patch csv -n "$csv_ns" "$name" --type='json' -p "$patch_json" --dry-run=client -o yaml > "$DIR/${name}.patch.yaml"
-
-        echo "Scaling up deployment: $deployment_name ..."
-        [ -z "$DRY_RUN" ] && oc scale deployment -n "$csv_ns" "$deployment_name" --replicas=1
-
-    else
-        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
-    fi
-}
-
-update_isf_operator_csv() {
-    name=$1
-    image=$2
-    if (oc get csv -n "$ISF_NS" "$name" -o yaml >$DIR/"$name".save.yaml); then
-        echo "Scaling down isf-data-protection-operator-controller-manager deployment..."
-        [ -z "$DRY_RUN" ] && oc scale deployment -n "$ISF_NS" isf-data-protection-operator-controller-manager --replicas=0
-
-        echo "Patching clusterserviceversion/$name..."
-        index=$(oc get csv -n "$ISF_NS" "$name" -o json | jq '[.spec.install.spec.deployments[].name] | index("isf-data-protection-operator-controller-manager")')
-        patch="[{\"op\":\"replace\", \"path\":\"/spec/install/spec/deployments/${index}/spec/template/spec/containers/0/image\", \"value\":\"${image}\"}]"
-
-        [ -z "$DRY_RUN" ] && oc patch csv -n "$ISF_NS" "$name" --type='json' -p "${patch}"
-        [ -n "$DRY_RUN" ] && oc patch csv -n "$ISF_NS" "$name" --type='json' -p "${patch}" --dry-run=client -o yaml >$DIR/"$name".patch.yaml
-
-        echo "Scaling up isf-data-protection-operator-controller-manager deployment..."
-        [ -z "$DRY_RUN" ] && oc scale deployment -n "$ISF_NS" isf-data-protection-operator-controller-manager --replicas=1
-    else
-        echo "ERROR: Failed to save original clusterserviceversion/$name. Skipped updates."
-    fi
-}
-
-set_velero_image() {
-    OADP_VERSION=$(get_oadp_version)
-    if [[ $OADP_VERSION == *"1.4"* ]]; then
-        image=$1
-    else
-        image=$2
-    fi
-
-    echo "Patching OADP $OADP_VERSION"
-
-    if (oc -n "$BR_NS" get dpa velero -o yaml >$DIR/velero.save.yaml); then
-        echo "Patching deployment/velero image..."
-        patch="[{\"op\": \"replace\", \"path\": \"/spec/unsupportedOverrides/veleroImageFqin\", \"value\":\"${image}\"}, {\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp14\", \"value\": \"${oadp_velero_14}\"},{\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp15\", \"value\": \"${oadp_velero_15}\"}]"
-        oc -n "$BR_NS" ${DRY_RUN:+"${DRY_RUN}"} patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" -o yaml >$DIR/velero.patch.yaml
-        echo "Velero Deployement is restarting with replacement image"
-        oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
-    fi
-}
 check_for_required_dependencies
 
 oc whoami > /dev/null || ( echo "Not logged in to your cluster" ; exit 1)
@@ -329,61 +225,6 @@ elif [[ $VERSION != $EXPECTED_VERSION* ]]; then
     echo "This patch applies to B&R version $EXPECTED_VERSION only, you have $VERSION. Skipped updates"
     exit 0
 fi
-
-patch_tm_clusterrole() {
-    TMCLUSTERROLE=transaction-manager-$BR_NS
-    echo "Patching $TMCLUSTERROLE clusterrole..."
-    
-    # Get the ClusterRole as JSON and backup
-    oc get clusterrole ${TMCLUSTERROLE} -o json > "$DIR/clusterrole-$TMCLUSTERROLE-backup.json"
-    
-    # Use jq to:
-    # 1. Remove "namespaces" from all resources arrays
-    # 2. Remove rules with empty resources arrays
-    # 3. Add standalone namespaces rule with correct verbs
-    jq '
-      # Remove "namespaces" from all resources arrays
-      .rules |= map(
-        if .resources then
-          .resources |= map(select(. != "namespaces"))
-        else . end
-      ) |
-      # Remove rules with empty resources arrays
-      .rules |= map(select(.resources and (.resources | length) > 0)) |
-      # Add standalone namespaces rule
-      .rules += [{
-        "apiGroups": [""],
-        "resources": ["namespaces"],
-        "verbs": ["get", "list", "update", "create", "patch", "watch"]
-      }]
-    ' "$DIR/clusterrole-$TMCLUSTERROLE-backup.json" > "$DIR/clusterrole-$TMCLUSTERROLE-filtered.json"
-    
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to process ClusterRole with jq"
-        return 1
-    fi
-    
-    # Replace the ClusterRole
-    oc replace -f "$DIR/clusterrole-$TMCLUSTERROLE-filtered.json"
-    
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to replace ClusterRole"
-        return 1
-    fi
-    
-    echo "Successfully patched $TMCLUSTERROLE clusterrole"
-    
-    # Validation: Check that namespaces doesn't appear with delete verb
-    echo "Validating namespaces permissions..."
-    if oc get clusterrole ${TMCLUSTERROLE} -o json | \
-       jq -e '.rules[] | select(.resources[]? == "namespaces") | select(.verbs[]? == "delete")' > /dev/null 2>&1; then
-        echo "ERROR: Delete verb found for namespaces resource!"
-        return 1
-    else
-        echo "SUCCESS: Namespaces rule configured correctly without delete verb"
-    fi
-}
-
 
 # make hub/cluster spoke connection settings to reconcile and resolve to the configmap
 resolve_hub_connection $HUB
