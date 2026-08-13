@@ -164,7 +164,7 @@ EOF
     echo "Patching role transaction-manager in ${BR_NS} ..."
     oc get role transaction-manager -n "${BR_NS}" -o yaml >"${DIR}/transaction-manager-role.save.yaml"
     [ -z "$DRY_RUN" ] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" | oc apply -n ${BR_NS} -f -
-    [ -z "$DRY_RUN"] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" >"${DIR}/transaction-manager-role.patch.yaml"
+    [ -z "$DRY_RUN" ] && echo -e "$(cat "${DIR}/transaction-manager-role.save.yaml")\n${TM_ROLES}" >"${DIR}/transaction-manager-role.patch.yaml"
 }
 
 check_for_required_dependencies() {
