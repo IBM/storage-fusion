@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   height: calc(100vh - 65px);
-  background-color: #ffffff;
+  background-color: var(--bg-page);
 }
 
 .messages-container {
@@ -21,7 +21,7 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  color: #525252;
+  color: var(--text-secondary);
 }
 
 .empty-state-icon {
@@ -32,13 +32,13 @@
 
 .empty-state h3 {
   font-size: 1.5rem;
-  color: #161616;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
 .empty-state p {
   font-size: 1rem;
-  color: #525252;
+  color: var(--text-secondary);
 }
 
 .messages-list {
@@ -54,6 +54,15 @@
   display: flex;
   gap: 1rem;
   animation: messageSlideIn 0.3s ease;
+}
+
+.message.user {
+  justify-content: flex-end;
+}
+
+.message.user .message-content {
+  flex: none;
+  max-width: 75%;
 }
 
 @keyframes messageSlideIn {
@@ -74,25 +83,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
   flex-shrink: 0;
-  background-color: #f4f4f4;
-}
-
-.message.user .message-avatar {
-  background-color: #8A3FFC;
-  color: white;
-}
-
-.message.assistant .message-avatar {
-  background-color: #e8daff;
-  padding: 4px;
+  background-color: var(--bg-surface);
+  overflow: hidden;
 }
 
 .bot-avatar-image {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+}
+
+.bot-avatar-image--dark {
+  mix-blend-mode: screen;
 }
 
 .message-content {
@@ -104,14 +107,16 @@
 .message-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 0.5rem;
   margin-bottom: 0.5rem;
 }
 
 .message-sender-name {
   font-weight: 600;
   font-size: 0.875rem;
-  color: #525252;
+  color: var(--text-secondary);
+  flex: 1;
 }
 
 .copy-button {
@@ -119,7 +124,7 @@
   border: none;
   padding: 0.375rem;
   cursor: pointer;
-  color: #525252;
+  color: var(--text-muted);
   opacity: 0;
   transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease;
   display: flex;
@@ -133,8 +138,8 @@
 }
 
 .copy-button:hover {
-  color: #161616;
-  background-color: #e0e0e0;
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
 }
 
 .copy-button:active {
@@ -142,23 +147,25 @@
 }
 
 .message-text {
-  background-color: #f4f4f4;
+  background-color: var(--bg-surface);
   padding: 1rem;
   border-radius: 12px;
   font-size: 0.95rem;
   line-height: 1.6;
-  color: #161616;
+  color: var(--text-primary);
   word-wrap: break-word;
 }
 
 .message.user .message-text {
-  background-color: #8A3FFC;
+  background-color: var(--accent);
   color: white;
 }
 
 .message.assistant .message-text {
-  background-color: #f4f4f4;
-  color: #161616;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: var(--text-primary);
 }
 
 /* Markdown body styles for assistant responses */
@@ -181,6 +188,7 @@
   margin: 1rem 0 0.5rem 0;
   font-weight: 600;
   line-height: 1.3;
+  color: var(--text-primary);
 }
 
 .markdown-body h1 { font-size: 1.25rem; }
@@ -199,12 +207,12 @@
 
 .markdown-body hr {
   border: none;
-  border-top: 1px solid #d0d0d0;
+  border-top: 1px solid var(--border);
   margin: 1.25rem 0;
 }
 
 .markdown-body code {
-  background-color: #e0e0e0;
+  background-color: var(--bg-code);
   padding: 0.15rem 0.4rem;
   border-radius: 4px;
   font-size: 0.85rem;
@@ -212,7 +220,8 @@
 }
 
 .markdown-body pre {
-  background-color: #e0e0e0;
+  background-color: var(--bg-code-block);
+  border: 1px solid var(--border);
   padding: 0.75rem 1rem;
   border-radius: 8px;
   overflow-x: auto;
@@ -225,15 +234,15 @@
 }
 
 .markdown-body blockquote {
-  border-left: 3px solid #8A3FFC;
+  border-left: 3px solid var(--accent);
   margin: 0.75rem 0;
   padding: 0.25rem 0.75rem;
-  color: #525252;
+  color: var(--text-secondary);
 }
 
 .source-line {
   font-size: 0.875rem;
-  color: #525252;
+  color: var(--text-muted);
   margin-top: 0.75rem;
   margin-bottom: 0;
 }
@@ -241,11 +250,11 @@
 .model-badge {
   display: inline-block;
   font-size: 0.75rem;
-  color: #8d8d8d;
+  color: var(--text-muted);
   margin-top: 0.5rem;
 }
 
-/* Generating Indicator — shown inline while LLM is still producing tokens */
+/* Generating Indicator */
 .generating-indicator {
   display: flex;
   align-items: center;
@@ -258,13 +267,13 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #8A3FFC;
+  background-color: var(--accent);
   animation: generatingPulse 1.2s infinite ease-in-out;
 }
 
 .generating-label {
   font-size: 0.8rem;
-  color: #8d8d8d;
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -278,7 +287,7 @@
   display: flex;
   gap: 4px;
   padding: 1rem;
-  background-color: #f4f4f4;
+  background-color: var(--bg-surface);
   border-radius: 12px;
   width: fit-content;
 }
@@ -287,7 +296,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #8A3FFC;
+  background-color: var(--accent);
   animation: typing 1.4s infinite;
 }
 
@@ -310,7 +319,7 @@
   }
 }
 
-/* LLM Warning Banner — sits inside .input-container, constrained to form width */
+/* LLM Warning Banner */
 .llm-warning-banner {
   display: flex;
   align-items: center;
@@ -319,10 +328,10 @@
   margin: 0 auto 0.6rem auto;
   padding: 0.35rem 0.6rem;
   border-radius: 6px;
-  border: 1px solid #e5e5e5;
-  background-color: #fafafa;
+  border: 1px solid var(--warn-border);
+  background-color: var(--warn-bg);
   font-size: 0.8rem;
-  color: #6f6f6f;
+  color: var(--warn-text);
   line-height: 1.4;
 }
 
@@ -332,11 +341,11 @@
 
 .llm-warning-text strong {
   font-weight: 600;
-  color: #525252;
+  color: var(--warn-strong);
 }
 
 .llm-warning-text code {
-  background-color: #e8e8e8;
+  background-color: var(--warn-code-bg);
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
   font-size: 0.78rem;
@@ -349,26 +358,37 @@
   border: none;
   font-size: 1rem;
   line-height: 1;
-  color: #a8a8a8;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0;
   transition: color 0.15s ease;
 }
 
 .llm-warning-dismiss:hover {
-  color: #525252;
+  color: var(--text-secondary);
 }
 
 /* Input Container */
 .input-container {
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid var(--border);
   padding: 1.5rem 2rem;
-  background-color: #ffffff;
+  background-color: var(--bg-page);
+}
+
+/* Wraps the + button and the chat form side-by-side.
+   The MCP panel is anchored to this row, not the outer container,
+   so it stays aligned with the + button even when the page is wide. */
+.input-row {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  position: relative;
 }
 
 .input-form {
-  max-width: 900px;
-  margin: 0 auto;
+  flex: 1;
   display: flex;
   gap: 0.75rem;
   align-items: flex-end;
@@ -377,7 +397,7 @@
 .message-input {
   flex: 1;
   padding: 0.875rem 1rem;
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   font-size: 0.95rem;
   font-family: inherit;
@@ -385,21 +405,23 @@
   max-height: 150px;
   min-height: 44px;
   line-height: 1.5;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .message-input:focus {
   outline: none;
-  border-color: #8A3FFC;
-  box-shadow: 0 0 0 3px rgba(138, 63, 252, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .message-input::placeholder {
-  color: #a8a8a8;
+  color: var(--text-faint);
 }
 
 .message-input:disabled {
-  background-color: #f4f4f4;
+  background-color: var(--bg-surface);
   cursor: not-allowed;
 }
 
@@ -418,12 +440,12 @@
 
 .send-button {
   border: none;
-  background-color: #8A3FFC;
+  background-color: var(--accent);
   color: white;
 }
 
 .send-button:hover:not(:disabled) {
-  background-color: #7028e4;
+  background-color: var(--accent-hover);
 }
 
 .send-button:active:not(:disabled) {
@@ -431,18 +453,18 @@
 }
 
 .send-button:disabled {
-  background-color: #d0d0d0;
+  background-color: var(--border);
   cursor: not-allowed;
 }
 
 .stop-button {
-  border: 2px solid #8A3FFC;
-  background-color: #f3eeff;
-  color: #8A3FFC;
+  border: 2px solid var(--accent);
+  background-color: var(--pill-bg);
+  color: var(--accent);
 }
 
 .stop-button:hover {
-  background-color: #8A3FFC;
+  background-color: var(--accent);
   color: white;
 }
 
@@ -460,12 +482,82 @@
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-  background: #d0d0d0;
+  background: var(--scroll-thumb);
   border-radius: 4px;
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--scroll-thumb-hover);
+}
+
+/* ── MCP + button ────────────────────────────────────────────────────── */
+
+.mcp-btn-wrapper {
+  position: relative;
+  align-self: flex-end;
+  flex-shrink: 0;
+}
+
+.mcp-connections-btn {
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 50%;
+  background-color: var(--bg-input);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+
+.mcp-connections-btn:hover {
+  background-color: var(--bg-surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: scale(1.06);
+}
+
+.mcp-connections-btn:active {
+  transform: scale(0.94);
+}
+
+/* Lit up when at least one connection is enabled */
+.mcp-connections-btn--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background-color: var(--accent-subtle);
+}
+
+/* Rotates to × when the panel is open */
+.mcp-connections-btn[aria-expanded="true"] svg {
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+.mcp-connections-btn[aria-expanded="false"] svg,
+.mcp-connections-btn:not([aria-expanded]) svg {
+  transition: transform 0.2s ease;
+}
+
+.mcp-connections-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  background-color: var(--accent);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--bg-input);
 }
 
 /* Responsive */
@@ -473,17 +565,12 @@
   .messages-container {
     padding: 1rem;
   }
-  
+
   .input-container {
     padding: 1rem;
   }
-  
+
   .messages-list {
     gap: 1rem;
-  }
-  
-  .message-avatar {
-    width: 32px;
-    height: 32px;
   }
 }

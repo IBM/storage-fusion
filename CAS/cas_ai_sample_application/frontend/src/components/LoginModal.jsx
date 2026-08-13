@@ -75,7 +75,6 @@ function LoginModal({ onClose, onLogin, initialStep = 'credentials', initialVect
 
         const stores = data.vector_stores || [];
         const creds = {
-          apiKey: formData.casToken,
           casToken: formData.casToken,
           endpoint: formData.endpoint,
           vectorStores: stores

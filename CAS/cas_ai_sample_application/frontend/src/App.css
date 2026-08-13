@@ -14,7 +14,7 @@ body {
 
 .App {
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--bg-page);
   display: flex;
   flex-direction: column;
 }
@@ -28,9 +28,9 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e5e5;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background-color: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .header-left {
@@ -44,20 +44,47 @@ body {
   width: auto;
 }
 
+.ibm-logo--dark {
+  mix-blend-mode: screen;
+}
+
 .app-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #161616;
+  color: var(--text-primary);
 }
 
 .header-right {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+}
+
+/* ── Theme toggle button ──────────────────────────────────────────────── */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--accent);
 }
 
 .login-button {
   padding: 0.5rem 1.5rem;
-  background-color: #8A3FFC;
+  background-color: var(--accent);
   color: white;
   border: none;
   border-radius: 6px;
@@ -68,7 +95,7 @@ body {
 }
 
 .login-button:hover {
-  background-color: #7028e4;
+  background-color: var(--accent-hover);
 }
 
 /* ── Vector store pill + dropdown ─────────────────────────────────────── */
@@ -82,9 +109,9 @@ body {
   align-items: center;
   gap: 0.45rem;
   padding: 0.45rem 0.875rem;
-  background-color: #f4f0ff;
-  color: #5a1fc9;
-  border: 1.5px solid #c8aaff;
+  background-color: var(--pill-bg);
+  color: var(--pill-text);
+  border: 1.5px solid var(--pill-border);
   border-radius: 20px;
   font-size: 0.875rem;
   font-weight: 600;
@@ -95,12 +122,12 @@ body {
 }
 
 .vs-pill:hover {
-  background-color: #ede4ff;
-  border-color: #8A3FFC;
+  background-color: var(--pill-bg-hover);
+  border-color: var(--accent);
 }
 
 .vs-pill-icon {
-  color: #8A3FFC;
+  color: var(--accent);
   flex-shrink: 0;
 }
 
@@ -113,7 +140,7 @@ body {
 .vs-pill-chevron {
   flex-shrink: 0;
   transition: transform 0.2s ease;
-  color: #8A3FFC;
+  color: var(--accent);
 }
 
 .vs-pill-chevron--open {
@@ -124,10 +151,10 @@ body {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  background: #ffffff;
-  border: 1px solid #e5e5e5;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px var(--dropdown-shadow);
   min-width: 200px;
   overflow: hidden;
   z-index: 500;
@@ -149,28 +176,70 @@ body {
   border: none;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #161616;
+  color: var(--text-primary);
   cursor: pointer;
   text-align: left;
   transition: background-color 0.12s ease;
 }
 
 .vs-dropdown-item:hover {
-  background-color: #f4f4f4;
+  background-color: var(--dropdown-item-hover);
 }
 
 .vs-dropdown-item--danger {
-  color: #da1e28;
+  color: var(--danger-text);
 }
 
 .vs-dropdown-item--danger:hover {
-  background-color: #fff1f1;
+  background-color: var(--danger-hover);
 }
 
 .vs-dropdown-divider {
   height: 1px;
-  background-color: #e5e5e5;
+  background-color: var(--border);
   margin: 2px 0;
+}
+
+/* ── Session toggle row inside dropdown ────────────────────────────────── */
+.vs-dropdown-item--toggle {
+  /* override: don't close on click — handled by JS already */
+  cursor: pointer;
+}
+
+.vs-dropdown-toggle-label {
+  flex: 1;
+}
+
+/* iOS-style pill toggle */
+.session-toggle {
+  display: inline-flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: var(--border);
+  flex-shrink: 0;
+  position: relative;
+  transition: background-color 0.22s ease;
+}
+
+.session-toggle--on {
+  background-color: var(--accent);
+}
+
+.session-toggle-thumb {
+  position: absolute;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.22s ease;
+}
+
+.session-toggle--on .session-toggle-thumb {
+  transform: translateX(16px);
 }
 
 /* Main Content */
@@ -194,20 +263,20 @@ body {
 
 .welcome-screen h2 {
   font-size: 2rem;
-  color: #161616;
+  color: var(--text-primary);
   margin-bottom: 1rem;
 }
 
 .welcome-screen p {
   font-size: 1.1rem;
-  color: #525252;
+  color: var(--text-secondary);
   margin-bottom: 2rem;
   max-width: 500px;
 }
 
 .welcome-login-button {
   padding: 0.75rem 2rem;
-  background-color: #8A3FFC;
+  background-color: var(--accent);
   color: white;
   border: none;
   border-radius: 6px;
@@ -218,7 +287,5 @@ body {
 }
 
 .welcome-login-button:hover {
-  background-color: #7028e4;
+  background-color: var(--accent-hover);
 }
-
- 

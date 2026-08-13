@@ -1,5 +1,5 @@
 # LLM Deployment & Local Access
-
+# Authors: Vitaliy Kornev & Priyas Ojha
 **Purpose:** Get an LLM accessible locally so the application can query it. There are two supported paths — choose whichever fits your setup:
 
 | Option | When to use |

@@ -1,5 +1,5 @@
 # CAS Cluster Setup & Vector Store Onboarding Guide
-
+#  Authors: Vitaliy Kornev & Priyas Ojha
 **Purpose:** Configure IBM Fusion Content Aware Storage (CAS) to ingest documents and expose a queryable vector store.
 
 By the end of this guide you will have a connected data source, a running vector store with completed ingestion, and a verified search API endpoint ready to use with this application.
