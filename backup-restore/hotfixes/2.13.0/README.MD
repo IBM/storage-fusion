@@ -12,7 +12,7 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 ### Issues Fixed
 
-1. Backup fails with the error message ‘BMYBR0009 PVC utilization exceeds the 95% threshold’ due to an incorrect     utilization calculation.
+1. Backup fails with the error message ‘BMYBR0009 PVC utilization exceeds the 95% threshold’ due to an incorrect utilization calculation.
 
 ## Installation
 
