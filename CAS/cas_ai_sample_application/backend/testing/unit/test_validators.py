@@ -287,3 +287,43 @@ class TestValidateEndpointUrl:
         result = InputValidator.validate_endpoint_url("  https://example.com  ")
 
         assert result == "https://example.com"
+
+
+# ---------------------------------------------------------------------------
+# validate_session_id
+# ---------------------------------------------------------------------------
+
+class TestValidateSessionId:
+    """Test UUID session-id format validation."""
+
+    @pytest.mark.unit
+    @pytest.mark.validators
+    def test_validate_session_id_accepts_valid_uuid(self) -> None:
+        """TC-VAL-027: A well-formed lower-case UUID string must be returned stripped."""
+        valid_uuid = "550e8400-e29b-41d4-a716-446655440000"
+        result = InputValidator.validate_session_id(valid_uuid)
+        assert result == valid_uuid
+
+    @pytest.mark.unit
+    @pytest.mark.validators
+    def test_validate_session_id_accepts_uuid_with_surrounding_whitespace(self) -> None:
+        """TC-VAL-028: Leading/trailing whitespace must be stripped before validation."""
+        valid_uuid = "  550e8400-e29b-41d4-a716-446655440000  "
+        result = InputValidator.validate_session_id(valid_uuid)
+        assert result == valid_uuid.strip()
+
+    @pytest.mark.unit
+    @pytest.mark.validators
+    def test_validate_session_id_raises_when_not_a_string(self) -> None:
+        """TC-VAL-029: Non-string input must raise ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            InputValidator.validate_session_id(cast(Any, 12345))
+        assert "must be a string" in str(exc_info.value)
+
+    @pytest.mark.unit
+    @pytest.mark.validators
+    def test_validate_session_id_raises_when_malformed(self) -> None:
+        """TC-VAL-030: A string that is not a valid UUID format must raise ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            InputValidator.validate_session_id("not-a-uuid")
+        assert "not a valid session id" in str(exc_info.value)

@@ -13,9 +13,9 @@ class TestSplitQuery:
         assert result == ["What is the weather today?"]
 
     @pytest.mark.unit
-    def test_two_questions_split_into_list(self) -> None:
+    def test_two_questions_with_question_marks_not_split(self) -> None:
         result = split_query("What is the weather? How cold is it?")
-        assert len(result) == 2
+        assert result == ["What is the weather? How cold is it?"]
 
     @pytest.mark.unit
     def test_no_question_mark_returned_unchanged(self) -> None:
@@ -26,6 +26,7 @@ class TestSplitQuery:
     def test_newline_separated_questions_split(self) -> None:
         result = split_query("What caused the flood?\nWhere did it occur?")
         assert len(result) == 2
+        assert result == ["What caused the flood?", "Where did it occur?"]
 
     @pytest.mark.unit
     def test_preamble_question_not_dropped(self) -> None:

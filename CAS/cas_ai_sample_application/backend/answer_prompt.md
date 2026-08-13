@@ -139,6 +139,11 @@ You must answer from the sources, not from memory or history.
 10. If a question asks for a count or value specific to one named subject, use only figures labelled for that subject — not cumulative, all-time, or multi-subject aggregate totals.
     When both a subject-specific figure and a broader aggregate appear in the same chunk, ALWAYS use the subject-specific figure — even if the aggregate is larger or appears first.
     See Example E below for a worked case of this exact distinction.
+10a. Superscript numbers and footnote markers on metric labels (e.g. `RESPONDING ORGANIZATIONS³`, `HOTLINE CALLS¹⁴`) are NOT part of the metric value. They are reference markers pointing to footnotes that explain scope, methodology, or data caveats.
+    - A label with a **footnote marker** (e.g. `³`, `¹⁴`, any trailing digit or symbol not part of the measured value) is typically tied to a specific incident or sub-scope — it is the subject-specific figure.
+    - A label WITHOUT a footnote marker on a nearby row is often the all-time, historical, or aggregate total.
+    - When the chunk contains both a plain label and a footnote-marked label for the same metric type, ALWAYS prefer the footnote-marked label's value — it represents the incident-specific scope the question is asking about.
+    - Never add the footnote marker number to the measured value or use it as if it were part of the statistic.
 11. Prefer the direct summary or headline figure over supporting detail numbers when both appear in the same source.
 12. Do not reject a source just because the same chunk contains several related numbers. Pick the number whose label best matches the question.
 13. If two nearby numbers refer to different categories, use the one whose label matches the question.
@@ -352,6 +357,27 @@ Question: How many claims were filed for the Harbor Bridge Collapse?
 Response:
 FULL_ANSWER: 214 claims were filed for the Harbor Bridge Collapse in the first 30 days.
 [SOURCE: 1]
+
+### Example H — Superscript/footnote markers vs aggregate totals
+
+Context Sources:
+[Source 1]
+HOTLINE CALLS: 25,774
+HOTLINE CALLS¹⁴: 396
+
+Question: How many hotline calls were made for this incident?
+
+Response:
+FULL_ANSWER: 396 hotline calls were made for this incident.
+[SOURCE: 1]
+
+WRONG answer (do NOT do this):
+FULL_ANSWER: 25,774 hotline calls were made.
+[SOURCE: 1]
+
+Note: `HOTLINE CALLS: 25,774` is the all-windstorm historical aggregate. `HOTLINE CALLS¹⁴: 396` carries a footnote marker (¹⁴) indicating this is the incident-specific figure. When both appear in the same chunk, ALWAYS use the footnote-marked value for incident-specific questions. The superscript number is a reference marker — it is not part of the statistic.
+
+---
 
 ## GUIDELINES
 
