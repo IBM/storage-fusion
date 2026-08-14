@@ -1,5 +1,5 @@
-# Customising the Application
-
+# Customizing the Application
+# Authors: Vitaliy Kornev & Priyas Ojha
 This guide is for developers who have the app running and want to adapt it for their own use case — different documents, different behaviour, or a different UI.
 
 ---
@@ -93,25 +93,73 @@ The frontend is plain React + CSS — no component library. Everything is in `fr
 
 | File | What it controls |
 |---|---|
-| [`src/App.css`](../frontend/src/App.css) | Header, layout, welcome screen, login button |
+| [`src/index.css`](../frontend/src/index.css) | CSS custom properties for light and dark themes |
+| [`src/App.css`](../frontend/src/App.css) | Header, layout, welcome screen, theme toggle, session toggle pill |
 | [`src/components/ChatInterface.css`](../frontend/src/components/ChatInterface.css) | Message bubbles, input bar, typing indicator |
 | [`src/components/LoginModal.css`](../frontend/src/components/LoginModal.css) | Login modal, vector store picker |
-| [`src/components/ChatInterface.jsx`](../frontend/src/components/ChatInterface.jsx) | Chat logic, streaming, message rendering |
+| [`src/components/ChatInterface.jsx`](../frontend/src/components/ChatInterface.jsx) | Chat logic, streaming, message rendering, New Chat, session id forwarding |
 | [`src/components/LoginModal.jsx`](../frontend/src/components/LoginModal.jsx) | Auth form, vector store selection |
-| [`src/App.jsx`](../frontend/src/App.jsx) | Top-level layout, header, auth state |
+| [`src/App.jsx`](../frontend/src/App.jsx) | Top-level layout, header, auth state, theme toggle, session toggle |
 
 **Common UI changes:**
 
 - **Branding / colours** — the primary accent colour is `#8A3FFC` (IBM purple). Search for it across the CSS files and replace with your brand colour.
-- **App title** — change `"IBM Fusion CAS Assistant"` in [`src/App.jsx`](../frontend/src/App.jsx) and the `<title>` in [`index.html`](../frontend/index.html).
-- **Logo** — replace [`src/assets/fusion-logo.png`](../frontend/src/assets/fusion-logo.png) and [`public/favicon.png`](../frontend/public/favicon.png) with your own image.
+- **App title** — change `"CAS AI Sample Application"` in [`src/App.jsx`](../frontend/src/App.jsx) and the `<title>` in [`index.html`](../frontend/index.html).
+- **Logo** — replace the logo files in `src/assets/` and [`public/favicon.png`](../frontend/public/favicon.png) with your own images. Two logo files are used: one for light mode and one for dark mode (the dark variant uses `mix-blend-mode: screen` so it renders correctly on a dark background).
 - **Placeholder text** — the chat input placeholder is set in `ChatInterface.jsx`; the login hints are in `LoginModal.jsx`.
+- **Dark/light theme colours** — all theme tokens live in [`src/index.css`](../frontend/src/index.css) under `:root` (light) and `[data-theme="dark"]`. Change any token there to update colours globally across both themes.
+- **Default theme** — the initial theme is read from `localStorage` key `theme` (values: `'light'` or `'dark'`). To change the fallback, edit the `useState` initialiser in [`src/App.jsx`](../frontend/src/App.jsx).
 
 Run `npm run dev` to see changes live with hot reload.
 
 ---
 
-## 5 — Add a new API endpoint
+## 5 — Session handling
+
+Session handling is the feature that lets users ask follow-up questions in natural language. The backend maintains a per-session conversation history (queries + answers + a rolling summary) and rewrites each new query against that history before hitting CAS.
+
+### How it works
+
+1. On the first query, the backend creates a new session and returns its `session_id` in the `[DONE]` payload.
+2. The frontend stores this id in a React ref (`sessionIdRef`) and forwards it on every subsequent request as `session_id` in the POST body.
+3. The backend looks up the session, builds a history block, and passes it to `LLMService._resolve_query_from_block()` to rewrite the user's query before retrieval.
+4. After each answer the backend appends a `Turn` (query + answer + source) to the session. When total history exceeds the budget, a compaction step folds old turns into a running summary.
+
+### Configuring session behaviour
+
+All session settings are in `backend/.env` (full reference in [`backend/.env.example`](../backend/.env.example)):
+
+```env
+# Master on/off switch (default: true)
+SESSION_ENABLED=true
+
+# Memory budget for stored history (tokens). Default calibrated for Llama 3.1 8B.
+SESSION_MAX_CONTEXT_TOKENS=25000
+
+# Compact when history reaches this fraction of the budget (default 80%)
+SESSION_COMPACT_THRESHOLD=0.80
+
+# Verbatim turns to keep after compaction (older turns fold into the summary)
+SESSION_KEEP_TURNS=5
+```
+
+### Disabling sessions (recommended for small local LLMs)
+
+Set `SESSION_ENABLED=false` in `backend/.env`. With this setting:
+- Every request is treated as a fresh conversation.
+- Nothing is stored and no background TTL sweep task starts.
+- The `DELETE /api/session/{id}` endpoint becomes a no-op.
+- The toggle in the UI still works at the frontend level but the backend never reads the `session_id` field.
+
+This is the recommended setting when running a small local model (< 7 B parameters) that may struggle with query rewriting.
+
+### Runtime toggle
+
+Users can toggle sessions on/off without a restart from the **Session History** switch in the header dropdown. This calls `POST /api/session/toggle` which flips `_session_state["enabled"]` in memory. The frontend persists the resulting state in `localStorage` so the UI reflects the correct toggle position after a page reload.
+
+---
+
+## 6 — Add a new API endpoint
 
 All endpoints live in [`backend/api_server.py`](../backend/api_server.py). To add one:
 
@@ -136,7 +184,7 @@ API docs are auto-generated at `http://localhost:8000/api/docs` (Swagger UI) —
 
 ---
 
-## 6 — Run the backend tests
+## 7 — Run the backend tests
 
 The backend has a unit test suite in `backend/testing/unit/`. After making changes:
 
@@ -155,4 +203,5 @@ make test-case K=TC-LLM-001        # one test by ID
 - [`backend/llm_service.py`](../backend/llm_service.py) — the RAG pipeline: retrieval, chunk filtering, prompt assembly, and LLM streaming
 - [`backend/chunk_processor.py`](../backend/chunk_processor.py) — post-retrieval filtering and ranking logic
 - [`backend/agents/cas_client.py`](../backend/agents/cas_client.py) — the CAS HTTP client (auth, search, vector store listing)
+- [`backend/session_store.py`](../backend/session_store.py) — the in-memory session store: `Turn`, `Session`, compaction, TTL sweep
 - [`backend/.env.example`](../backend/.env.example) — full reference of every available configuration variable

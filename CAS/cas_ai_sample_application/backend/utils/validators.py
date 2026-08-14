@@ -29,6 +29,8 @@ class InputValidator:
 
     _INVALID_TOKEN_CHARS: frozenset = frozenset({'<', '>', '"', "'", ';', '&', '|'})
 
+    _SESSION_ID_RE: re.Pattern = re.compile(r'^[a-f0-9-]{36}$')
+
     _URL_RE: re.Pattern = re.compile(
         r'^https?://'
         r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'
@@ -135,3 +137,13 @@ class InputValidator:
         if not InputValidator._URL_RE.match(url):
             raise ValidationError(f"{field_name} is not a valid http/https URL")
         return url
+
+    @staticmethod
+    def validate_session_id(session_id: Any, field_name: str = "session_id") -> str:
+        """Validate an optional session_id is a well-formed UUID string."""
+        if not isinstance(session_id, str):
+            raise ValidationError(f"{field_name} must be a string")
+        session_id = session_id.strip()
+        if not InputValidator._SESSION_ID_RE.match(session_id):
+            raise ValidationError(f"{field_name} is not a valid session id")
+        return session_id

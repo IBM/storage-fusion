@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import './ChatInterface.css';
 import { API_BASE_URL, DEFAULT_MAX_RESULTS, DEFAULT_MIN_SCORE } from '../config';
-import fusionLogo from '../assets/fusion-logo.png';
+import ibmLogo from '../assets/01_8-bar-positive.png';
+import ibmLogoDark from '../assets/download.png';
 
-function ChatInterface({ credentials, llmWarning }) {
+function ChatInterface({ credentials, llmWarning, theme, sessionEnabled, onRegisterNewChat }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -12,6 +13,11 @@ function ChatInterface({ credentials, llmWarning }) {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
+  // Session id returned by the backend in the [DONE] payload and forwarded on
+  // every subsequent request so the backend can rewrite follow-up questions
+  // against prior conversation history.  Null means no active session (first
+  // message of a new chat, or history has been disabled).
+  const sessionIdRef = useRef(null);
   // Tracks whether a stop is in-flight. Set to true the moment the stop button
   // is clicked and cleared only after the abort has fully settled and React has
   // re-rendered. This prevents the Enter key from firing a new submission in the
@@ -25,6 +31,25 @@ function ChatInterface({ credentials, llmWarning }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleNewChat = () => {
+    if (isLoading) return;
+    // Fire-and-forget: sweep the old session from the backend store immediately
+    // so it doesn't linger until the TTL background sweep picks it up.
+    if (sessionIdRef.current) {
+      fetch(`${API_BASE_URL}/api/session/${sessionIdRef.current}`, { method: 'DELETE' })
+        .catch(() => {/* best-effort — ignore network errors */});
+    }
+    sessionIdRef.current = null;
+    setMessages([]);
+    setInputValue('');
+  };
+
+  // Register handleNewChat with the parent (App.jsx) so it can be called
+  // from the header dropdown without threading state back up.
+  useEffect(() => {
+    onRegisterNewChat?.(handleNewChat);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,6 +94,7 @@ function ChatInterface({ credentials, llmWarning }) {
           max_results: DEFAULT_MAX_RESULTS,
           min_score: DEFAULT_MIN_SCORE,
           vector_store_id: credentials.selectedVectorStore || null,
+          ...(sessionEnabled && sessionIdRef.current ? { session_id: sessionIdRef.current } : {}),
         })
       });
 
@@ -89,6 +115,13 @@ function ChatInterface({ credentials, llmWarning }) {
         return;
       }
 
+      // Helper: extract url= and model= values from a sentinel string.
+      const parseSentinel = (s) => {
+        const url = (s.match(/url=([^\s\]]+)/) || [])[1] || 'unknown';
+        const model = (s.match(/model=([^\s\]]+)/) || [])[1] || 'unknown';
+        return { url, model };
+      };
+
       // Read the stream token by token and append to the bot message live
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -105,13 +138,6 @@ function ChatInterface({ credentials, llmWarning }) {
         // While it's present (and nothing else), keep showing the typing dots.
         const isThinking = accumulated === '[THINKING]';
         if (isThinking) continue;
-
-        // Helper: extract url= and model= values from a sentinel string.
-        const parseSentinel = (s) => {
-          const url = (s.match(/url=([^\s\]]+)/) || [])[1] || 'unknown';
-          const model = (s.match(/model=([^\s\]]+)/) || [])[1] || 'unknown';
-          return { url, model };
-        };
 
         // [LLM_UNAVAILABLE ...] — connection refused or timeout.
         if (accumulated.includes('[LLM_UNAVAILABLE')) {
@@ -167,6 +193,10 @@ function ChatInterface({ credentials, llmWarning }) {
           const metadataStr = withoutThinking.slice(doneIdx + 7);
           try {
             metadata = JSON.parse(metadataStr);
+            // Persist the session id for the next request in this conversation.
+            if (metadata.session_id) {
+              sessionIdRef.current = metadata.session_id;
+            }
           } catch {
             // Malformed metadata — continue with empty object
           }
@@ -195,10 +225,10 @@ function ChatInterface({ credentials, llmWarning }) {
           .replace(/\*{0,2}FULL_ANSWER:\*{0,2}\s*([\s\S]*?)(?=\n\*{0,2}[[(]SOURCE:|\n\*{0,2}\(SOURCE\s+\d|$)/gi, '$1')
           // Remove citation tags: [SOURCE: N], [SOURCE: N/A], (SOURCE N), **[SOURCE: N]**
           // Uses full bracket pairs so nothing leaks out. Preceded by optional whitespace/comma.
-          .replace(/[,\s]*\*{0,2}\[SOURCE:\s*(?:\d+|N\/A)\]\*{0,2}/gi, '')
+          .replace(/[,\s]*\*{0,2}\[SOURCE:\s*(?:\d+|N\/A|user-context)\]\*{0,2}/gi, '')
           .replace(/[,\s]*\*{0,2}\(SOURCE\s+(?:\d+|N\/A)\)\*{0,2}/gi, '')
-          // Bare "SOURCE: N" or "SOURCE: N/A" not inside brackets — only at line boundaries
-          .replace(/^\*{0,2}SOURCE:\s*(?:\d+|N\/A)\*{0,2}$/gim, '')
+          // Bare "SOURCE: N", "SOURCE: N/A", or "SOURCE: user-context" not inside brackets
+          .replace(/^\*{0,2}SOURCE:\s*(?:\d+|N\/A|user-context)\*{0,2}$/gim, '')
           // Collapse 3+ consecutive newlines into 2
           .replace(/\n{3,}/g, '\n\n')
           .trim();
@@ -247,9 +277,7 @@ function ChatInterface({ credentials, llmWarning }) {
   };
 
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      // Could add a toast notification here
-    }).catch(err => {
+    navigator.clipboard.writeText(text).catch(err => {
       console.error('Failed to copy:', err);
     });
   };
@@ -267,23 +295,19 @@ function ChatInterface({ credentials, llmWarning }) {
           <div className="messages-list">
             {messages.map((message) => (
               <div key={message.id} className={`message ${message.sender}`}>
-                <div className="message-avatar">
-                  {message.sender === 'user' ? (
-                    '👤'
-                  ) : (
+                {message.sender === 'assistant' && (
+                  <div className="message-avatar">
                     <img
-                      src={fusionLogo}
-                      alt="IBM Storage Fusion"
-                      className="bot-avatar-image"
+                      src={theme === 'dark' ? ibmLogoDark : ibmLogo}
+                      alt="IBM"
+                      className={`bot-avatar-image${theme === 'dark' ? ' bot-avatar-image--dark' : ''}`}
                     />
-                  )}
-                </div>
+                  </div>
+                )}
                 <div className="message-content">
-                  <div className="message-header">
-                    <span className="message-sender-name">
-                      {message.sender === 'user' ? 'You' : 'IBM Storage Fusion'}
-                    </span>
-                    {message.sender === 'assistant' && (
+                  {message.sender === 'assistant' && (
+                    <div className="message-header">
+                      <span className="message-sender-name">CAS AI Sample Application</span>
                       <button
                         className="copy-button"
                         onClick={() => copyToClipboard(message.text)}
@@ -294,8 +318,8 @@ function ChatInterface({ credentials, llmWarning }) {
                           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {message.sender === 'assistant' && message.id === activeMessageId && !message.text ? (
                     <div className="typing-indicator">
                       <span></span>
@@ -353,7 +377,8 @@ function ChatInterface({ credentials, llmWarning }) {
             >×</button>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="input-form">
+        <div className="input-row">
+          <form onSubmit={handleSubmit} className="input-form">
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -385,7 +410,8 @@ function ChatInterface({ credentials, llmWarning }) {
               </svg>
             </button>
           )}
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

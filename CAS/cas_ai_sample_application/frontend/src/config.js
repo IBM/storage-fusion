@@ -1,10 +1,6 @@
 /**
  * Shared application configuration constants.
  *
- * Centralising these values in one module mirrors the named-constants pattern
- * used throughout the reference IBM Python codebases (e.g. DEFAULT_LOG_MAX_BYTES,
- * DEFAULT_TOKEN_REFRESH_THRESHOLD in cas_cli_chatbot/chatbot/main.py).
- *
  * Any value that appears in more than one component, or that an operator might
  * need to tune without touching component logic, lives here.
  */

@@ -2,9 +2,8 @@
 Domain-specific exception types for the CAS Assistant backend.
 
 Defining named exception classes instead of raising bare built-ins (ValueError,
-EnvironmentError, Exception) gives callers precise except-clauses, produces
-self-documenting stack traces, and mirrors the pattern used across the
-reference IBM codebases (CAS/cas_cli_chatbot, AI/fusion-AgenticAssistanceSampleApp).
+EnvironmentError, Exception) gives callers precise except-clauses and produces
+self-documenting stack traces.
 
 Usage:
     from utils.exceptions import ConfigurationError, CASClientError

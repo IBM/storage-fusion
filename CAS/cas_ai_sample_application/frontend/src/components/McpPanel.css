@@ -1,0 +1,354 @@
+/* ── MCP Panel ─────────────────────────────────────────────────────────── */
+
+.mcp-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: 380px;
+  max-height: 540px;
+  display: flex;
+  flex-direction: column;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px var(--dropdown-shadow);
+  z-index: 400;
+  overflow: hidden;
+  animation: mcpPanelIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mcpPanelIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+
+.mcp-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.9rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mcp-panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.mcp-panel-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.mcp-panel-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.mcp-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 5px;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.mcp-panel-close:hover {
+  color: var(--text-primary);
+  background-color: var(--dropdown-item-hover);
+}
+
+/* ── Add-server form ─────────────────────────────────────────────────── */
+
+.mcp-add-form {
+  padding: 0.75rem 0.9rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mcp-add-heading {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.55rem;
+}
+
+.mcp-add-error {
+  font-size: 0.775rem;
+  color: var(--danger-text);
+  background-color: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: 5px;
+  padding: 0.3rem 0.55rem;
+  margin-bottom: 0.45rem;
+  line-height: 1.4;
+}
+
+.mcp-add-success {
+  font-size: 0.775rem;
+  color: #057a4e;
+  background-color: #edfaf4;
+  border: 1px solid #b7e9d1;
+  border-radius: 5px;
+  padding: 0.3rem 0.55rem;
+  margin-bottom: 0.45rem;
+}
+
+[data-theme="dark"] .mcp-add-success {
+  color: #5dcc9e;
+  background-color: #0d2c1f;
+  border-color: #1a5236;
+}
+
+.mcp-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.mcp-field-label {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mcp-field-input {
+  padding: 0.42rem 0.65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  font-size: 0.83rem;
+  font-family: inherit;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.mcp-field-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.mcp-field-input::placeholder {
+  color: var(--text-faint);
+}
+
+.mcp-add-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.mcp-cancel-btn {
+  padding: 0.38rem 0.75rem;
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.mcp-cancel-btn:hover {
+  background-color: var(--dropdown-item-hover);
+  color: var(--text-primary);
+}
+
+.mcp-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.85rem;
+  background-color: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.mcp-add-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+.mcp-add-btn:active {
+  transform: scale(0.97);
+}
+
+/* ── Section divider with label ──────────────────────────────────────── */
+
+.mcp-section-divider {
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 0.9rem 0.3rem;
+  flex-shrink: 0;
+}
+
+.mcp-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Connection list ─────────────────────────────────────────────────── */
+
+.mcp-connection-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.35rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.mcp-connection-list::-webkit-scrollbar { width: 5px; }
+.mcp-connection-list::-webkit-scrollbar-track { background: transparent; }
+.mcp-connection-list::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 3px;
+}
+
+.mcp-connection-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  transition: background-color 0.12s;
+}
+
+.mcp-connection-item:hover {
+  background-color: var(--dropdown-item-hover);
+}
+
+/* dim the info when disabled */
+.mcp-connection-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: opacity 0.2s;
+}
+
+.mcp-connection-item:not(.mcp-connection-item--on) .mcp-connection-info {
+  opacity: 0.45;
+}
+
+.mcp-connection-name {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcp-connection-url {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+}
+
+.mcp-connection-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+/* iOS-style toggle */
+.mcp-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.mcp-toggle {
+  display: inline-flex;
+  align-items: center;
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  background-color: var(--border);
+  position: relative;
+  transition: background-color 0.22s;
+  flex-shrink: 0;
+}
+
+.mcp-toggle--on {
+  background-color: var(--accent);
+}
+
+.mcp-toggle-thumb {
+  position: absolute;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.22s;
+}
+
+.mcp-toggle--on .mcp-toggle-thumb {
+  transform: translateX(14px);
+}
+
+/* Trash / delete button */
+.mcp-remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 5px;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.mcp-remove-btn:hover {
+  color: var(--danger-text);
+  background-color: var(--danger-hover);
+}
+
+/* ── Empty hint ──────────────────────────────────────────────────────── */
+
+.mcp-empty-hint {
+  font-size: 0.79rem;
+  color: var(--text-muted);
+  padding: 0.6rem 0.9rem 0.75rem;
+  line-height: 1.55;
+}

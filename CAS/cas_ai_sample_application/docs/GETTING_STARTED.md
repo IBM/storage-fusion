@@ -1,5 +1,5 @@
 # Getting Started
-
+# Authors: Vitaliy Kornev & Priyas Ojha
 This guide walks you through every prerequisite and runs you through starting the application for the first time. Follow the steps in order.
 
 ---
@@ -130,6 +130,34 @@ Open `http://localhost:3000` in your browser:
 2. Select a vector store from the list.
 3. Ask questions about your ingested documents in the chat interface.
 
+### Header controls
+
+After logging in, the header exposes several controls via the vector-store pill (top-right):
+
+| Control | How to access | What it does |
+|---|---|---|
+| **New Chat** | Vector-store pill → New Chat | Clears the chat and immediately removes the current session from the backend. |
+| **Session History toggle** | Vector-store pill → Session History | Flips conversation history on or off at runtime — no restart needed. |
+| **Change Vector Store** | Vector-store pill → Change Vector Store | Re-opens the vector-store picker without requiring a full logout. |
+| **Logout** | Vector-store pill → Logout | Clears credentials from the frontend. |
+| **Dark / light mode** | 🌙 / ☀️ button in the header | Switches the UI theme. Preference is persisted in `localStorage`. |
+
+### Session handling
+
+By default the app remembers your conversation so you can ask follow-up questions without repeating context. The backend rewrites each follow-up against the prior turns before querying CAS.
+
+**Turn it off when:**
+- You are running a small local LLM (e.g. Ollama on a laptop) and find that short follow-up questions are being rewritten incorrectly.
+- You want every request to be fully independent (stateless).
+
+To disable permanently, set `SESSION_ENABLED=false` in `backend/.env` — see the full option block in [`backend/.env.example`](../backend/.env.example).
+
+> **Note:** session history is stored in memory on a single backend process. It is lost on restart and is not shared across multiple replicas.
+
+### New chat
+
+Click **New Chat** in the dropdown at any time to wipe the visible conversation and tell the backend to discard the current session. This is equivalent to starting a completely fresh conversation — subsequent questions will have no prior context.
+
 ---
 
 ## Services at a glance
@@ -188,4 +216,4 @@ kill -9 <PID>
 
 ## Next steps
 
-Now that the app is running, see **[docs/03_customisation.md](03_customisation.md)** to learn how to adapt it for your own use case — changing the system prompt, tuning RAG parameters, adding endpoints, or replacing the frontend.
+Now that the app is running, see **[docs/03_customization.md](03_customization.md)** to learn how to adapt it for your own use case — changing the system prompt, tuning RAG parameters, adding endpoints, or replacing the frontend.

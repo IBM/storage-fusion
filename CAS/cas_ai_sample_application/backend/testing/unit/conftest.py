@@ -64,6 +64,9 @@ def mock_cas_client() -> MagicMock:
         "status": "success",
         "vector_stores": [{"id": "crisis-domain"}, {"id": "test-store"}],
     }
+    # Return an empty tool list so LLMService falls back to the hardcoded
+    # "cas" search tool during construction — no real MCP calls in unit tests.
+    agent.discover_tools.return_value = {"status": "success", "tools": []}
     return agent
 
 

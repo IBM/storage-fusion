@@ -3,18 +3,17 @@ Unit tests for LLMService
 
 Covers:
   - Constructor                — raises ConfigurationError when required env vars missing
-  - _split_questions()         — single vs multi-question detection
   - _build_prompt()            — context ordering and required sections
   - _build_chat_payload()      — OpenAI-compatible payload shape
   - _auth_headers()            — Bearer header present/absent based on LLM_API_KEY
-  - _call_llm_stream()         — SSE token extraction, connection errors, HTTP errors
+  - _call_llm()                — SSE token extraction, connection errors, HTTP errors
+  - _ask_llm()                 — collected string wrapper over _call_llm()
   - _parse_structured_answer() — FULL_ANSWER tag, SOURCE tag, plain-text fallback
   - _get_vector_store_id()     — CAS success/error delegation
   - check_model_compatibility() — format probe: pass, fail, unreachable LLM
 
 Naming convention:  test_<method>_<condition>_<expected_outcome>
-TC-ID convention:   TC-LLM-<NNN> — matches the project's test catalogue format
-                    used in cas_cli_chatbot and the IBM Fusion CAS Assistant codebase.
+TC-ID convention:   TC-LLM-<NNN>
 
 LLMService reads env vars in __init__, so every test that constructs one must
 set LLM_BASE_URL and LLM_MODEL via monkeypatch (or the `llm_env` fixture below)
@@ -105,7 +104,7 @@ class TestBuildPrompt:
         """TC-LLM-009: The user question must appear verbatim in the assembled prompt."""
         chunks = [{"index": 1, "content": "Some context.", "score": 0.9}]
 
-        prompt = svc._build_prompt("What is the backup policy?", chunks)
+        prompt = svc.prompt_builder.build_prompt("What is the backup policy?", chunks)
 
         assert "What is the backup policy?" in prompt
 
@@ -118,7 +117,7 @@ class TestBuildPrompt:
             {"index": 2, "content": "Second chunk.", "score": 0.8},
         ]
 
-        prompt = svc._build_prompt("Any question?", chunks)
+        prompt = svc.prompt_builder.build_prompt("Any question?", chunks)
 
         assert "[Source 1]" in prompt
         assert "[Source 2]" in prompt
@@ -132,7 +131,7 @@ class TestBuildPrompt:
             {"index": 2, "content": "High score chunk.", "score": 0.9},
         ]
 
-        prompt = svc._build_prompt("Any question?", chunks)
+        prompt = svc.prompt_builder.build_prompt("Any question?", chunks)
 
         # High score content must appear before low score content in the string.
         assert prompt.index("High score chunk.") < prompt.index("Low score chunk.")
@@ -143,7 +142,7 @@ class TestBuildPrompt:
         """TC-LLM-012: Prompt must end with a 'Response:' marker so the LLM knows where to write."""
         chunks = [{"index": 1, "content": "context", "score": 0.9}]
 
-        prompt = svc._build_prompt("question?", chunks)
+        prompt = svc.prompt_builder.build_prompt("question?", chunks)
 
         assert "Response:" in prompt
 
@@ -199,7 +198,7 @@ class TestBuildPrompt:
             },
         ]
 
-        prompt = svc._build_prompt("What does the weather forecast say?", chunks)
+        prompt = svc.prompt_builder.build_prompt("What does the weather forecast say?", chunks)
 
         assert "27 degrees" in prompt
         assert "NATIONAL WEATHER SERVICE" in prompt
@@ -278,15 +277,15 @@ class TestAuthHeaders:
 
 
 # ---------------------------------------------------------------------------
-# _call_llm_stream
+# _call_llm
 # ---------------------------------------------------------------------------
 
-class TestCallLLMStream:
-    """Test SSE streaming, token extraction, and error fallback."""
+class TestCallLLM:
+    """Test SSE streaming, token extraction, collect mode, and error fallback."""
 
     @pytest.mark.unit
     @pytest.mark.llm
-    def test_call_llm_stream_yields_tokens_from_sse_response(self, svc: LLMService) -> None:
+    def test_call_llm_yields_tokens_from_sse_response(self, svc: LLMService) -> None:
         """TC-LLM-020: Valid SSE lines must be decoded and content tokens yielded."""
         token_line = json.dumps({
             "choices": [{"delta": {"content": "Hello"}}]
@@ -302,39 +301,70 @@ class TestCallLLMStream:
         ]
 
         with patch("llm_service.requests.post", return_value=mock_response):
-            tokens = list(svc._call_llm_stream("test prompt"))
+            tokens = list(svc._call_llm("test prompt"))
 
         assert tokens == ["Hello"]
 
     @pytest.mark.unit
     @pytest.mark.llm
-    def test_call_llm_stream_yields_unavailable_on_connection_error(
+    def test_ask_llm_returns_joined_string(self, svc: LLMService) -> None:
+        """TC-LLM-020b: _ask_llm must return a single joined string from the stream."""
+        lines = [
+            json.dumps({"choices": [{"delta": {"content": t}}]}).encode()
+            for t in ["Hello", " ", "world"]
+        ]
+        mock_response = MagicMock()
+        mock_response.__enter__ = lambda s: s
+        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_response.raise_for_status = Mock()
+        mock_response.iter_lines.return_value = [b"data: " + l for l in lines] + [b"data: [DONE]"]
+
+        with patch("llm_service.requests.post", return_value=mock_response):
+            result = svc._ask_llm("test prompt", max_tokens=80)
+
+        assert result == "Hello world"
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_ask_llm_returns_sentinel_on_connection_error(self, svc: LLMService) -> None:
+        """TC-LLM-020c: _ask_llm must return the error sentinel string on ConnectionError."""
+        from requests.exceptions import ConnectionError as ReqConnError
+
+        with patch("llm_service.requests.post", side_effect=ReqConnError("refused")):
+            result = svc._ask_llm("test prompt", max_tokens=80)
+
+        assert isinstance(result, str)
+        assert result.startswith("[LLM_UNAVAILABLE")
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_call_llm_yields_unavailable_on_connection_error(
         self, svc: LLMService
     ) -> None:
         """TC-LLM-021: ConnectionError must yield [LLM_UNAVAILABLE ...] sentinel — not raise to the caller."""
         from requests.exceptions import ConnectionError as ReqConnError
 
         with patch("llm_service.requests.post", side_effect=ReqConnError("refused")):
-            tokens = list(svc._call_llm_stream("test prompt"))
+            tokens = list(svc._call_llm("test prompt"))
 
         assert len(tokens) == 1
         assert tokens[0].startswith("[LLM_UNAVAILABLE")
 
     @pytest.mark.unit
     @pytest.mark.llm
-    def test_call_llm_stream_yields_unavailable_on_timeout(self, svc: LLMService) -> None:
+    def test_call_llm_yields_unavailable_on_timeout(self, svc: LLMService) -> None:
         """TC-LLM-022: Timeout must yield [LLM_UNAVAILABLE ...] sentinel — not raise to the caller."""
         from requests.exceptions import Timeout
 
         with patch("llm_service.requests.post", side_effect=Timeout("timed out")):
-            tokens = list(svc._call_llm_stream("test prompt"))
+            tokens = list(svc._call_llm("test prompt"))
 
         assert len(tokens) == 1
         assert tokens[0].startswith("[LLM_UNAVAILABLE")
 
     @pytest.mark.unit
     @pytest.mark.llm
-    def test_call_llm_stream_skips_empty_lines(self, svc: LLMService) -> None:
+    def test_call_llm_skips_empty_lines(self, svc: LLMService) -> None:
         """TC-LLM-023: Empty SSE lines (keepalive pings) must be silently skipped."""
         token_line = json.dumps({
             "choices": [{"delta": {"content": "World"}}]
@@ -351,13 +381,13 @@ class TestCallLLMStream:
         ]
 
         with patch("llm_service.requests.post", return_value=mock_response):
-            tokens = list(svc._call_llm_stream("test prompt"))
+            tokens = list(svc._call_llm("test prompt"))
 
         assert tokens == ["World"]
 
     @pytest.mark.unit
     @pytest.mark.llm
-    def test_call_llm_stream_skips_malformed_json_lines(self, svc: LLMService) -> None:
+    def test_call_llm_skips_malformed_json_lines(self, svc: LLMService) -> None:
         """TC-LLM-024: Malformed JSON SSE lines must be skipped — not crash the generator."""
         mock_response = MagicMock()
         mock_response.__enter__ = lambda s: s
@@ -369,7 +399,7 @@ class TestCallLLMStream:
         ]
 
         with patch("llm_service.requests.post", return_value=mock_response):
-            tokens = list(svc._call_llm_stream("test prompt"))
+            tokens = list(svc._call_llm("test prompt"))
 
         # No tokens yielded (malformed skipped), no exception raised.
         assert tokens == []
@@ -520,10 +550,15 @@ class TestCheckModelCompatibility:
         self, svc: LLMService
     ) -> None:
         """TC-LLM-034: Model passes when response contains FULL_ANSWER: and [SOURCE: N]."""
+        token_line = json.dumps(
+            {"choices": [{"delta": {"content": "FULL_ANSWER: 4.2\n[SOURCE: 1]"}}]}
+        ).encode()
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "FULL_ANSWER: 4.2\n[SOURCE: 1]"}}]
-        }
+        mock_response.__enter__ = lambda s: s
+        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_response.raise_for_status = Mock()
+        mock_response.iter_lines.return_value = [b"data: " + token_line, b"data: [DONE]"]
+
         with patch("llm_service.requests.post", return_value=mock_response):
             result = svc.check_model_compatibility()
 
@@ -536,10 +571,15 @@ class TestCheckModelCompatibility:
         self, svc: LLMService
     ) -> None:
         """TC-LLM-035: Model fails when response does not contain FULL_ANSWER: or [SOURCE: N]."""
+        token_line = json.dumps(
+            {"choices": [{"delta": {"content": "The version is 4.2."}}]}
+        ).encode()
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "The version is 4.2."}}]
-        }
+        mock_response.__enter__ = lambda s: s
+        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_response.raise_for_status = Mock()
+        mock_response.iter_lines.return_value = [b"data: " + token_line, b"data: [DONE]"]
+
         with patch("llm_service.requests.post", return_value=mock_response):
             result = svc.check_model_compatibility()
 
@@ -556,3 +596,438 @@ class TestCheckModelCompatibility:
             result = svc.check_model_compatibility()
 
         assert result["compatible"] is True
+
+
+# ---------------------------------------------------------------------------
+# _resolve_query_from_block
+# ---------------------------------------------------------------------------
+
+class TestResolveQuery:
+    """Test the follow-up query rewriter."""
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_resolve_query_returns_original_when_no_session(
+        self, svc: LLMService
+    ) -> None:
+        """TC-LLM-041: With no history block, _resolve_query_from_block must return the query unchanged."""
+        assert svc._resolve_query_from_block("More about that", "") == "More about that"
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_resolve_query_returns_original_when_session_has_no_history(
+        self, svc: LLMService
+    ) -> None:
+        """TC-LLM-042: Empty history block must return query unchanged without calling LLM."""
+        from session_store import Session
+        empty_session = Session(session_id="test-id")
+        history_block = svc._build_history_block(empty_session)
+        with patch("llm_service.requests.post") as mock_post:
+            result = svc._resolve_query_from_block("More about that", history_block)
+        mock_post.assert_not_called()
+        assert result == "More about that"
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_resolve_query_calls_llm_when_history_exists(
+        self, svc: LLMService
+    ) -> None:
+        """TC-LLM-043: When history block is non-empty, _resolve_query_from_block must call _ask_llm."""
+        from session_store import Session, Turn
+        session = Session(session_id="test-id")
+        session.turns.append(Turn(query="What is Cyber Vault?", answer="Cyber Vault reduces recovery time.", sources=["doc.pdf"]))
+        history_block = svc._build_history_block(session)
+
+        with patch.object(svc, "_ask_llm", return_value="What is Cyber Vault designed for?") as mock_ask:
+            result = svc._resolve_query_from_block("What about it?", history_block)
+
+        mock_ask.assert_called_once()
+        assert result == "What is Cyber Vault designed for?"
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_resolve_query_falls_back_on_llm_sentinel(
+        self, svc: LLMService
+    ) -> None:
+        """TC-LLM-044: When _ask_llm returns a sentinel, _resolve_query_from_block must fall back to original."""
+        from session_store import Session, Turn
+        session = Session(session_id="test-id")
+        session.turns.append(Turn(query="What is OBAC?", answer="OBAC controls object access.", sources=["doc.pdf"]))
+        history_block = svc._build_history_block(session)
+
+        with patch.object(svc, "_ask_llm", return_value="[LLM_UNAVAILABLE url=http://x model=m]"):
+            result = svc._resolve_query_from_block("More about it", history_block)
+
+        assert result == "More about it"
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_resolve_query_passes_through_long_rewrite_unchanged(
+        self, svc: LLMService
+    ) -> None:
+        """TC-LLM-045: Any non-sentinel rewrite is returned as-is — no sentence-split check."""
+        from session_store import Session, Turn
+        session = Session(session_id="test-id")
+        session.turns.append(Turn(
+            query="How many PCIe ports does a FlashSystem 9500 have?",
+            answer="A FlashSystem 9500 has 48 PCIe ports.",
+            sources=["doc.pdf"],
+        ))
+        history_block = svc._build_history_block(session)
+
+        long_q = "What is the maximum number of PCIe ports in a FlashSystem 9500 with two enclosures?"
+        with patch.object(svc, "_ask_llm", return_value=long_q):
+            result = svc._resolve_query_from_block("How about with 2 enclosures?", history_block)
+
+        assert result == long_q
+
+
+# ---------------------------------------------------------------------------
+# _build_history_block
+# ---------------------------------------------------------------------------
+
+class TestBuildHistoryBlock:
+    """Test the unified conversation history block formatter."""
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_returns_empty_string_when_session_is_none(self, svc: LLMService) -> None:
+        """TC-LLM-046: None session must return empty string — no history available."""
+        assert svc._build_history_block(None) == ""
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_returns_empty_string_when_session_is_empty(self, svc: LLMService) -> None:
+        """TC-LLM-047: Session with no turns and no summary must return empty string."""
+        from session_store import Session
+        assert svc._build_history_block(Session(session_id="x")) == ""
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_includes_conversation_history_markers(self, svc: LLMService) -> None:
+        """TC-LLM-048: Block must open with [CONVERSATION HISTORY] and close with [END HISTORY]."""
+        from session_store import Session, Turn
+        session = Session(session_id="x")
+        session.turns.append(Turn(query="Q1", answer="A1", sources=[]))
+        block = svc._build_history_block(session)
+        assert block.startswith("[CONVERSATION HISTORY]")
+        assert block.endswith("[END HISTORY]")
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_doc_turns_appear_as_numbered_turns(self, svc: LLMService) -> None:
+        """TC-LLM-049: Document Q&A turns must appear as 'Turn N: Q: ... | A: ...' lines."""
+        from session_store import Session, Turn
+        session = Session(session_id="x")
+        session.turns.append(Turn(query="What is Cyber Vault?", answer="An air-gap solution.", sources=["doc.pdf"]))
+        block = svc._build_history_block(session)
+        assert "Turn 1: Q: What is Cyber Vault? | A: An air-gap solution." in block
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_meta_turns_appear_as_numbered_turns(self, svc: LLMService) -> None:
+        """TC-LLM-050: Meta turns ([meta] source) must appear as numbered turns, not be excluded."""
+        from session_store import Session, Turn
+        session = Session(session_id="x")
+        session.turns.append(Turn(query="What is OBAC?", answer="OBAC controls access.", sources=["doc.pdf"]))
+        session.turns.append(Turn(query="Summarise that", answer="OBAC is an access control feature.", sources=["[meta]"]))
+        block = svc._build_history_block(session)
+        assert "Turn 1:" in block
+        assert "Turn 2:" in block
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_user_context_turns_appear_as_personal_facts_not_turns(self, svc: LLMService) -> None:
+        """TC-LLM-051: [user-context] turns must appear under 'Personal facts:' and not as numbered turns."""
+        from session_store import Session, Turn
+        session = Session(session_id="x")
+        session.turns.append(Turn(query="My name is Priya", answer="Got it!", sources=["[user-context]"]))
+        block = svc._build_history_block(session)
+        assert "Personal facts:" in block
+        assert "My name is Priya" in block
+        assert "Turn 1:" not in block
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_running_summary_included_when_present(self, svc: LLMService) -> None:
+        """TC-LLM-052: A non-empty running_summary must appear as 'Summary: ...' in the block."""
+        from session_store import Session
+        session = Session(session_id="x")
+        session.running_summary = "User asked about Cyber Vault and OBAC."
+        block = svc._build_history_block(session)
+        assert "Summary: User asked about Cyber Vault and OBAC." in block
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_max_turns_limits_included_turns(self, svc: LLMService) -> None:
+        """TC-LLM-053: max_turns=2 must include only the 2 most recent turns."""
+        from session_store import Session, Turn
+        session = Session(session_id="x")
+        for i in range(5):
+            session.turns.append(Turn(query=f"Q{i}", answer=f"A{i}", sources=[]))
+        block = svc._build_history_block(session, max_turns=2)
+        assert "Q3" in block
+        assert "Q4" in block
+        assert "Q0" not in block
+        assert "Q1" not in block
+        assert "Q2" not in block
+
+
+# ---------------------------------------------------------------------------
+# _run_retrieval_loop
+# ---------------------------------------------------------------------------
+
+class TestRunRetrievalLoop:
+    """Test the agentic retrieval loop."""
+
+    def _make_cas_success(self, contents):
+        """Return a mock cas_client.search_vector_store result with the given text chunks."""
+        return {
+            "status": "success",
+            "data": [
+                {"file_id": str(i), "filename": f"doc{i}.pdf",
+                 "score": {"combined_probability_score": 0.9 - i * 0.1},
+                 "content": [{"type": "text", "text": c}]}
+                for i, c in enumerate(contents)
+            ],
+        }
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_loop_returns_answer_on_first_iteration(self, svc: LLMService) -> None:
+        """TC-LLM-054: When the LLM is satisfied on the first attempt, loop returns after 1 CAS fetch."""
+        svc.cas_client.search_vector_store = MagicMock(
+            return_value=self._make_cas_success(["PCIe is a high-speed bus."])
+        )
+        with patch.object(svc, "_ask_llm", return_value="FULL_ANSWER: PCIe is a high-speed bus.\n[SOURCE: 1]"):
+            result = svc._run_retrieval_loop(
+                query="What is PCIe?",
+                vector_store_id="vs1",
+                chunk_cap=5,
+                min_score=0.1,
+            )
+
+        assert svc.cas_client.search_vector_store.call_count == 1
+        assert result["iterations"] == 1
+        assert result["forced"] is False
+        assert "answer_text" in result
+        assert result["final_prompt"] is None
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_loop_refines_query_on_chunk_signal(self, svc: LLMService) -> None:
+        """TC-LLM-055: [CHUNK] response triggers a second CAS fetch with the refined query."""
+        call_count = {"n": 0}
+
+        def side_effect(*args, **kwargs):
+            call_count["n"] += 1
+            return self._make_cas_success([f"chunk from call {call_count['n']}"])
+
+        svc.cas_client.search_vector_store = MagicMock(side_effect=side_effect)
+
+        responses = iter([
+            # pre-loop tool router call — returns "cas" (the default)
+            "cas",
+            "[CHUNK] FlashSystem 9500 PCIe slots per enclosure",
+            "FULL_ANSWER: The answer is 48.\n[SOURCE: 1]",
+            # verification step — pass through unchanged
+            "FULL_ANSWER: The answer is 48.\n[SOURCE: 1]",
+        ])
+        with patch.object(svc, "_ask_llm", side_effect=lambda p, **kw: next(responses)):
+            result = svc._run_retrieval_loop(
+                query="How many PCIe ports?",
+                vector_store_id="vs1",
+                chunk_cap=5,
+                min_score=0.1,
+            )
+
+        assert svc.cas_client.search_vector_store.call_count == 2
+        assert result["iterations"] == 2
+        assert result["forced"] is False
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_loop_forces_answer_at_max_iter(self, svc: LLMService) -> None:
+        """TC-LLM-056: Loop never exceeds retrieval_loop_max_iter+1 CAS fetches regardless of [CHUNK] signals."""
+        svc.retrieval_loop_max_iter = 2
+        svc.cas_client.search_vector_store = MagicMock(
+            return_value=self._make_cas_success(["some content"])
+        )
+        # Always ask for more — loop must still terminate
+        with patch.object(svc, "_ask_llm", return_value="[CHUNK] more info please"):
+            result = svc._run_retrieval_loop(
+                query="Tell me everything",
+                vector_store_id="vs1",
+                chunk_cap=5,
+                min_score=0.1,
+            )
+
+        assert svc.cas_client.search_vector_store.call_count <= svc.retrieval_loop_max_iter + 1
+        assert result["forced"] is True
+        assert result["final_prompt"] is not None
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_loop_stops_on_duplicate_query(self, svc: LLMService) -> None:
+        """TC-LLM-057: If [CHUNK] returns the same query twice, the loop breaks to avoid infinite fetching."""
+        svc.cas_client.search_vector_store = MagicMock(
+            return_value=self._make_cas_success(["content"])
+        )
+        # Return the same query every time — should break after detecting the duplicate
+        with patch.object(svc, "_ask_llm", return_value="[CHUNK] What is PCIe?"):
+            result = svc._run_retrieval_loop(
+                query="What is PCIe?",
+                vector_store_id="vs1",
+                chunk_cap=5,
+                min_score=0.1,
+            )
+
+        # First call uses "What is PCIe?" — second [CHUNK] returns the same query — loop breaks
+        assert svc.cas_client.search_vector_store.call_count == 1
+        assert result["forced"] is True
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_loop_falls_back_on_cas_error(self, svc: LLMService) -> None:
+        """TC-LLM-058: CAS error on first fetch returns empty chunks and forced=True."""
+        svc.cas_client.search_vector_store = MagicMock(
+            return_value={"status": "error", "error": "connection refused"}
+        )
+        result = svc._run_retrieval_loop(
+            query="What is PCIe?",
+            vector_store_id="vs1",
+            chunk_cap=5,
+            min_score=0.1,
+        )
+
+        assert result["chunks"] == []
+        assert result["forced"] is True
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_loop_deduplicates_chunk_content(self, svc: LLMService) -> None:
+        """TC-LLM-059: Identical chunk content from two fetches must appear only once in the result."""
+        svc.cas_client.search_vector_store = MagicMock(
+            return_value=self._make_cas_success(["PCIe is a high-speed bus."])
+        )
+        responses = iter([
+            "[CHUNK] more about PCIe",
+            "FULL_ANSWER: PCIe is fast.\n[SOURCE: 1]",
+            # verification step — pass through unchanged
+            "FULL_ANSWER: PCIe is fast.\n[SOURCE: 1]",
+        ])
+        with patch.object(svc, "_ask_llm", side_effect=lambda p, **kw: next(responses)):
+            result = svc._run_retrieval_loop(
+                query="What is PCIe?",
+                vector_store_id="vs1",
+                chunk_cap=5,
+                min_score=0.1,
+            )
+
+        contents = [c["content"] for c in result["chunks"]]
+        assert len(contents) == len(set(contents)), "Duplicate chunk content found"
+
+
+# ---------------------------------------------------------------------------
+# estimate_tokens (module-level function)
+# ---------------------------------------------------------------------------
+
+class TestEstimateTokens:
+    """Test the rough token estimator used by the compaction trigger."""
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_estimate_tokens_returns_zero_for_empty_string(self) -> None:
+        """TC-LLM-060: Empty string must return 0 tokens."""
+        from llm_service import estimate_tokens
+        assert estimate_tokens("") == 0
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_estimate_tokens_divides_by_four(self) -> None:
+        """TC-LLM-061: 40-char string must estimate to 10 tokens (40 // 4)."""
+        from llm_service import estimate_tokens
+        assert estimate_tokens("a" * 40) == 10
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_estimate_tokens_floors_division(self) -> None:
+        """TC-LLM-062: 9-char string must estimate to 2 tokens (9 // 4 = 2, not 2.25)."""
+        from llm_service import estimate_tokens
+        assert estimate_tokens("123456789") == 2
+
+
+# ---------------------------------------------------------------------------
+# _compact_history
+# ---------------------------------------------------------------------------
+
+class TestCompactHistory:
+    """Test session history compaction — fold + keep, budget check, LLM failure fallback."""
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_compact_noop_when_session_is_none(self, svc: LLMService) -> None:
+        """TC-LLM-067: None session must not raise — compaction is a no-op."""
+        # Must not raise.
+        svc._compact_history(None)
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_compact_noop_when_under_budget(self, svc: LLMService) -> None:
+        """TC-LLM-068: Session under the token budget must not trigger any LLM call."""
+        from session_store import Session, Turn
+        svc.session_max_context_tokens = 25000
+        svc.session_compact_threshold = 0.80
+        session = Session(session_id="x")
+        session.turns.append(Turn(query="Q1", answer="A1", sources=[]))
+
+        with patch.object(svc, "_ask_llm") as mock_ask:
+            svc._compact_history(session)
+
+        mock_ask.assert_not_called()
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_compact_folds_old_turns_into_summary(self, svc: LLMService) -> None:
+        """TC-LLM-069: When over budget, _compact_history returns a plan with summary and kept turns."""
+        from session_store import Session, Turn
+        # Use a tiny budget so even small sessions trigger compaction.
+        svc.session_max_context_tokens = 10
+        svc.session_compact_threshold = 0.5
+        svc.session_keep_turns = 1
+
+        session = Session(session_id="x")
+        session.turns.append(Turn(query="Q1", answer="A1" * 20, sources=[]))
+        session.turns.append(Turn(query="Q2", answer="A2" * 20, sources=[]))
+
+        with patch.object(svc, "_ask_llm", return_value="Summary of Q1 and Q2."):
+            plan = svc._compact_history(session)
+
+        # _compact_history is side-effect-free — it returns a plan dict for the
+        # caller to apply via SessionStore.set_summary(), not mutate the session directly.
+        assert plan is not None
+        assert plan["summary"] == "Summary of Q1 and Q2."
+        # Only the most recent turn (Q2) is in the plan to keep.
+        assert len(plan["turns_to_keep"]) == 1
+        assert plan["turns_to_keep"][0].query == "Q2"
+
+    @pytest.mark.unit
+    @pytest.mark.llm
+    def test_compact_leaves_history_unchanged_on_llm_failure(self, svc: LLMService) -> None:
+        """TC-LLM-070: LLM sentinel from compaction call must leave history unmodified."""
+        from session_store import Session, Turn
+        svc.session_max_context_tokens = 10
+        svc.session_compact_threshold = 0.5
+        svc.session_keep_turns = 1
+
+        session = Session(session_id="x")
+        session.turns.append(Turn(query="Q1", answer="A1" * 20, sources=[]))
+        session.turns.append(Turn(query="Q2", answer="A2" * 20, sources=[]))
+        original_turn_count = len(session.turns)
+
+        with patch.object(svc, "_ask_llm", return_value="[LLM_UNAVAILABLE url=x model=m]"):
+            svc._compact_history(session)
+
+        # History must be left intact on compaction failure.
+        assert len(session.turns) == original_turn_count
+        assert session.running_summary == ""
