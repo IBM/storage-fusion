@@ -7,6 +7,14 @@ To help identify application resources that need to be considered for backup and
 It is important to note that there is another tool with a similar name, [getResources.sh](https://github.com/IBM/storage-fusion/blob/master/backup-restore/recipes/Fusion-recipe-tools/getResources.sh), which helps retrieve resources that were backed up or restored as part of a given backup or restore workflow, respectively.
 
 
+### Disclaimer
+
+Please note: All templates / modules / resources in this repo are released for use "AS IS" without any warranties of
+any kind, including, but not limited to their installation, use, or performance. We are not responsible for any damage,
+data loss or charges incurred with their use. You are responsible for reviewing and testing any scripts you run
+thoroughly before use in any production environment. This content is subject to change without notice.
+
+
 ## Blogs
 There are several resources available to help you better understand the challenges of backup and recovery in an OpenShift environment, and how IBM Fusion Backup & Restore can help address these challenges.
 
