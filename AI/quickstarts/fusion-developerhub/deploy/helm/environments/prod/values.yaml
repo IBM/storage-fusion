@@ -521,56 +521,31 @@ developerHub:
   # See deploy/helm/values.yaml for the full reference schema.
   fusionServices:
     enabled: true
-
-    # Git repository that hosts the TechDocs source and catalog-info files.
-    # REQUIRED for private repos — must match the repo where this branch lives.
-    gitRepo: "https://github.ibm.com/ProjectAbell/Fusion-AI"
-    gitBranch: "cas-dcs-rhdh"
-
-    # GitHub token for private repo catalog imports.
-    # Set to true once github-auth-secret exists in the RHDH namespace.
-    # Create the secret in your terminal (NEVER paste the token here or in Git):
-    #   oc create secret generic github-auth-secret \
-    #     --from-literal=GITHUB_TOKEN=<your-pat> \
-    #     -n <rhdh-namespace>
-    # Token requires: repo (read) scope.
-    githubToken: true
-
     # Clusters — one entry per IBM Fusion HCI cluster.
     # Add:    append a block below, git push → ArgoCD syncs → entities appear.
     # Remove: delete the block,     git push → ArgoCD syncs → entities gone.
     # No pod restart. No oc apply. No other file changes needed.
+
     clusters:
-      - name: f80l034
-        ocpApiUrl: https://api.f80l034.fusion.tadn.ibm.com:6443
+      - name: <CLUSTER_ID>
+        ocpApiUrl: https://api.<CLUSTER_DOMAIN>:6443
         clusterType: self-hosted
         services:
           dcs:
             enabled: true
-            version: "2.5.3"
-            namespace: ibm-data-cataloging
+            version: "<DCS_VERSION>"
+            namespace: <DCS_NAMESPACE>
             k8s:
-              tokenEnvVar: FUSION_F80L034_SA_TOKEN
+              tokenEnvVar: FUSION_<CLUSTER_ID_UPPER>_SA_TOKEN
               labelSelector: "app=isd,component=discover"
           cas:
             enabled: true
-            version: "1.1.5"
-            namespace: ibm-cas
+            version: "<CAS_VERSION>"
+            namespace: <CAS_NAMESPACE>
             k8s:
-              tokenEnvVar: FUSION_F80L034_CAS_SA_TOKEN
+              tokenEnvVar: FUSION_<CLUSTER_ID_UPPER>_CAS_SA_TOKEN
               labelSelector: "app.kubernetes.io/name=cas.isf.ibm.com"
-      - name: f73l056
-        ocpApiUrl: https://api.f73l056.fusion.tadn.ibm.com:6443
-        clusterType: proxy-only
-        services:
-          dcs:
-            enabled: true
-            version: "2.5.3"
-            namespace: ibm-data-cataloging
-          cas:
-            enabled: true
-            version: "1.1.5"
-            namespace: ibm-cas
+
 
 # OpenShift Console QuickStart Configuration
 quickstart:
