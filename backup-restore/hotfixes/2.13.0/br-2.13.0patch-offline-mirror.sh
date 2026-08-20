@@ -45,18 +45,21 @@ build_icr_path() {
 copy_images() {
   TARGET_PATH=${1}
   for IMAGE in "${IMAGES[@]}"; do
+    [[ -z "$IMAGE" ]] && continue
     DESTINATION=docker://$TARGET_PATH/cp/bnr/$IMAGE
     echo -e "Copying\n Image: $(build_icr_path ${BNR_PREFIX} ${IMAGE})\n Destination: docker://$TARGET_PATH/cp/bnr/$IMAGE\n"
     skopeo copy --insecure-policy --preserve-digests --all docker://"$BNR_PREFIX"/"$IMAGE" "$DESTINATION"
   done
 
   for FUSIONHCIIMAGE in "${FUSIONIMAGES_HCI[@]}"; do
+    [[ -z "$FUSIONHCIIMAGE" ]] && continue
     DESTINATION=docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE
     echo -e "Copying\n Image: $(build_icr_path ${HCI_PREFIX} ${FUSIONHCIIMAGE})\n Destination: docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE\n"
     skopeo copy --insecure-policy --preserve-digests --all docker://"$HCI_PREFIX"/"$FUSIONHCIIMAGE" "$DESTINATION"
   done
 
   for FUSIONSDSIMAGE in "${FUSIONIMAGES_SDS[@]}"; do
+    [[ -z "$FUSIONSDSIMAGE" ]] && continue
     DESTINATION=docker://$TARGET_PATH/cp/fusion-sds/$FUSIONSDSIMAGE
     echo -e "Copying\n Image: $(build_icr_path ${SDS_PREFIX} ${FUSIONSDSIMAGE})\n Destination: docker://$TARGET_PATH/cp/fusion-sds/$FUSIONSDSIMAGE\n"
     skopeo copy --insecure-policy --preserve-digests --all docker://"$SDS_PREFIX"/"$FUSIONSDSIMAGE" "$DESTINATION"
