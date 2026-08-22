@@ -10,6 +10,9 @@ Sample command :
 podman login testregistryhost.com:443 --authfile=/home/mirror/pull-secret.json
 ```
 
+
+
+
 if container tool is docker
 docker --config <absolute path of config.json directory> login <Your enterprise registry host:port>
 Sample command :
