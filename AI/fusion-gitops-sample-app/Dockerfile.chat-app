@@ -1,39 +1,51 @@
-FROM python:3.9-slim
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1 — Build the React UI
+#
+# Pinned to linux/arm64 (native Apple Silicon) so podman never routes this
+# stage through QEMU.  Node.js + V8 JIT crash under QEMU x86_64 emulation.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM --platform=linux/arm64 node:20-alpine AS ui-builder
+
+WORKDIR /build
+
+COPY frontend/package.json ./
+RUN npm install
+
+COPY frontend/ .
+RUN npm run build
+# Output: /build/dist/
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 — Python FastAPI backend
+#
+# --platform=linux/amd64 only here.  Python has no JIT engine, so QEMU handles
+# this stage without crashing.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 python:3.11-alpine
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# System deps — apk works correctly under QEMU (no GPG signature issues)
+RUN apk add --no-cache gcc musl-dev curl
 
-# Copy requirements
-COPY requirements.txt .
+# Python deps
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Application source
+COPY backend/ ./backend/
+COPY src/     ./src/
 
-# Copy application code
-COPY . .
+# Compiled React assets from Stage 1
+COPY --from=ui-builder /build/dist ./backend/static/
 
-# Create .streamlit directory and set permissions
-RUN mkdir -p /app/.streamlit && \
-    chmod -R 777 /app/.streamlit
-
-# Set environment variables for Streamlit
-ENV STREAMLIT_HOME=/app/.streamlit
-ENV STREAMLIT_SERVER_HEADLESS=true
-ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
-
-# Expose Streamlit port
-EXPOSE 8501
+# Expose FastAPI port
+EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8501/_stcore/health || exit 1
+  CMD curl -f http://localhost:8000/healthz || exit 1
 
-# Run Streamlit chat app
-CMD ["streamlit", "run", "chat_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
-
+# Run FastAPI with uvicorn
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

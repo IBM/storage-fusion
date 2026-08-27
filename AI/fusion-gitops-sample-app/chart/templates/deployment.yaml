@@ -1,0 +1,158 @@
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llmops-chat-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "llmops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ui
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.syncWaves.app | quote }}
+    {{- if .Values.reloader.enabled }}
+    secret.reloader.stakater.com/reload: "llmops-secrets,llmops-cpu-tokens"
+    configmap.reloader.stakater.com/reload: "llmops-config"
+    {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "llmops.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "llmops.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ui
+    spec:
+      containers:
+        - name: chat-app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+              name: http
+              protocol: TCP
+          env:
+            # ── CAS Configuration ───────────────────────────────────────────
+            - name: CAS_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: llmops-config
+                  key: cas-endpoint
+            - name: CAS_USE_MCP
+              valueFrom:
+                configMapKeyRef:
+                  name: llmops-config
+                  key: cas-use-mcp
+            - name: CAS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llmops-secrets
+                  key: cas_api_key
+
+            # ── Model Gateway Configuration ─────────────────────────────────
+            - name: MODEL_GATEWAY_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: llmops-config
+                  key: model-gateway-endpoint
+            - name: MODEL_GATEWAY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llmops-secrets
+                  key: model_gateway_api_key
+            - name: MODEL_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: llmops-config
+                  key: model-name
+
+            # ── Application Settings ────────────────────────────────────────
+            - name: DEFAULT_TOP_K
+              valueFrom:
+                configMapKeyRef:
+                  name: llmops-config
+                  key: default-top-k
+            - name: MODEL_GATEWAY_VERIFY_SSL
+              value: {{ .Values.modelGateway.verifySSL | quote }}
+            - name: INFERENCE_TIMEOUT_S
+              valueFrom:
+                configMapKeyRef:
+                  name: llmops-config
+                  key: inference-timeout-s
+
+            # ── CPU multi-model — per-task env vars ─────────────────────────
+            # MODEL_URL_<TASK> / MODEL_ID_<TASK> / MODEL_TOKEN_<TASK>
+            # Token is read from the external-access-token Secret created by
+            # the InferenceService in namespace deploy-models-cpu.
+            {{- range $task, $model := .Values.cpu.models }}
+            {{- include "llmops.cpuModelEnv" (dict "task" $task "model" $model) | nindent 12 }}
+            {{- end }}
+
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory | quote }}
+              cpu: {{ .Values.resources.requests.cpu | quote }}
+            limits:
+              memory: {{ .Values.resources.limits.memory | quote }}
+              cpu: {{ .Values.resources.limits.cpu | quote }}
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: llmops-chat-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "llmops.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.syncWaves.app | quote }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "llmops.selectorLabels" . | nindent 4 }}
+
+{{- if .Values.route.enabled }}
+---
+# OpenShift Route
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: llmops-chat-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "llmops.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.syncWaves.app | quote }}    # Raise HAProxy timeout to match INFERENCE_TIMEOUT_S.
+    # The OpenShift default is 30s — too short for CPU inference.
+    haproxy.router.openshift.io/timeout: {{ printf "%ds" (.Values.route.timeoutSeconds | default 300 | int) | quote }}
+spec:
+  to:
+    kind: Service
+    name: llmops-chat-app
+  port:
+    targetPort: http
+  tls:
+    termination: {{ .Values.route.tls.termination }}
+    insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy }}
+{{- end }}
