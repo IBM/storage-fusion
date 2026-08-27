@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #0D1117;
+    color: #E2E8F0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(79, 142, 247, 0.25);
+    border-radius: 10px;
+  }
+}
+
+@layer components {
+  /* User chat bubble */
+  .user-bubble {
+    @apply bg-gradient-to-br from-brand-dark to-brand text-white rounded-[18px_18px_4px_18px] px-4 py-2.5 max-w-[72%] text-sm leading-relaxed break-words;
+  }
+
+  /* Source attribution card */
+  .source-card {
+    @apply bg-surface-3 border border-white/[0.07] border-l-[3px] border-l-brand rounded-[10px] p-4 my-2.5;
+  }
+
+  /* Metric card */
+  .metric-card {
+    @apply flex-1 bg-surface-3 border border-white/[0.07] rounded-[10px] p-3 text-center;
+  }
+
+  /* Sidebar input */
+  .sidebar-input {
+    @apply w-full bg-surface-4 border border-white/[0.08] text-primary text-sm rounded-lg px-3 py-2 outline-none focus:border-brand/55 focus:ring-2 focus:ring-brand/10 transition-all;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply w-full bg-gradient-to-br from-brand-dark to-brand text-white font-semibold text-sm px-4 py-2.5 rounded-[9px] border-0 cursor-pointer transition-all hover:opacity-90 hover:-translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0;
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply w-full bg-white/[0.04] border border-white/[0.09] text-secondary text-sm px-4 py-2.5 rounded-[9px] cursor-pointer transition-all hover:bg-brand/10 hover:border-brand/35 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed;
+  }
+
+  /* Chip */
+  .chip {
+    @apply bg-surface-3 border border-brand/20 rounded-[20px] px-3.5 py-1.5 text-xs text-brand cursor-default;
+  }
+
+  /* Section label */
+  .section-label {
+    @apply text-[0.78rem] font-medium text-subtle tracking-[0.01em] mb-1;
+  }
+}

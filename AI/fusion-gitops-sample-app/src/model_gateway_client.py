@@ -40,7 +40,12 @@ class ModelGatewayClient:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {config.api_key}"
         }
-        logger.info(f"Model Gateway client initialized: {self.base_url}")
+        # Respect MODEL_GATEWAY_VERIFY_SSL env var — defaults to False for
+        # self-signed OpenShift Route certificates.
+        import os as _os
+        _verify = _os.getenv("MODEL_GATEWAY_VERIFY_SSL", "false").lower()
+        self.verify_ssl = _verify not in ("false", "0", "no")
+        logger.info(f"Model Gateway client initialized: {self.base_url} (verify_ssl={self.verify_ssl})")
 
     def list_models(self) -> List[Dict[str, Any]]:
         """
@@ -55,7 +60,8 @@ class ModelGatewayClient:
             response = requests.get(
                 endpoint,
                 headers=self.headers,
-                timeout=self.config.timeout
+                timeout=self.config.timeout,
+                verify=self.verify_ssl
             )
             response.raise_for_status()
             result = response.json()
@@ -109,7 +115,8 @@ class ModelGatewayClient:
                     endpoint,
                     json=payload,
                     headers=self.headers,
-                    timeout=self.config.timeout
+                    timeout=self.config.timeout,
+                    verify=self.verify_ssl
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -171,7 +178,8 @@ class ModelGatewayClient:
                     endpoint,
                     json=payload,
                     headers=self.headers,
-                    timeout=self.config.timeout
+                    timeout=self.config.timeout,
+                    verify=self.verify_ssl
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -223,7 +231,8 @@ class ModelGatewayClient:
                 endpoint,
                 json=payload,
                 headers=self.headers,
-                timeout=self.config.timeout
+                timeout=self.config.timeout,
+                verify=self.verify_ssl
             )
             response.raise_for_status()
             result = response.json()

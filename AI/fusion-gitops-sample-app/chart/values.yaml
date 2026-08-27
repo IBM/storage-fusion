@@ -1,0 +1,183 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# llmops-chat-app  —  Helm values
+#
+# Every hardcoded value from the old ConfigMap and deployment YAML is defined
+# here.  Override specific keys per environment (dev/staging/prod) without
+# touching the templates.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ---------------------------------------------------------------------------
+# Deployment target
+# ---------------------------------------------------------------------------
+namespace: llmops-platform
+
+# ---------------------------------------------------------------------------
+# Container image
+# ---------------------------------------------------------------------------
+image:
+  repository: ""   # e.g. quay.io/your-org/chat-app
+  tag: ""          # e.g. v1.0.0
+  pullPolicy: Always
+
+# ---------------------------------------------------------------------------
+# CAS (Content-Aware Storage) configuration
+# These drive the ConfigMap; API keys are injected via ExternalSecret/Secret.
+# ---------------------------------------------------------------------------
+cas:
+  endpoint: ""     # e.g. https://ibm-cas-<instance>.apps.<cluster-domain>/
+  useMcp: "false"
+
+# ---------------------------------------------------------------------------
+# Model Gateway configuration
+# ---------------------------------------------------------------------------
+modelGateway:
+  endpoint: ""          # e.g. https://model-gateway-<ns>.apps.<cluster-domain>
+  modelName: ""         # e.g. granite-3-8b-instruct
+  verifySSL: "false"
+
+# ---------------------------------------------------------------------------
+# Application tuning
+# ---------------------------------------------------------------------------
+app:
+  defaultTopK: "5"
+
+# ---------------------------------------------------------------------------
+# Replica count
+# ---------------------------------------------------------------------------
+replicaCount: 1
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+service:
+  port: 8000
+  targetPort: 8000
+  type: ClusterIP
+
+# ---------------------------------------------------------------------------
+# OpenShift Route (set enabled: false for vanilla Kubernetes + Ingress)
+# ---------------------------------------------------------------------------
+route:
+  enabled: true
+  # HAProxy timeout — must be >= INFERENCE_TIMEOUT_S to avoid 504s on long
+  # CPU inference requests.  OpenShift default is 30s which is too short.
+  timeoutSeconds: 300
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# ---------------------------------------------------------------------------
+# Resource requests / limits
+# ---------------------------------------------------------------------------
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+
+# ---------------------------------------------------------------------------
+# Secrets — choose ONE backend
+# ---------------------------------------------------------------------------
+secrets:
+  # --- Option A: ExternalSecret with HashiCorp Vault (production) ---
+  # Vault KV path must contain keys:
+  #   cas_api_key           — CAS bearer token
+  #   model_gateway_api_key — Model Gateway bearer token
+  externalSecret:
+    enabled: true
+    refreshInterval: "5m"
+    secretStoreName: vault-backend
+    secretStoreKind: ClusterSecretStore
+    vaultPath: "llmops-platform/secrets"
+
+  # --- Option B: Hardcoded Kubernetes Secret (dev / CI only) ---
+  # Set enabled: true and externalSecret.enabled: false to use this instead.
+  hardcoded:
+    enabled: false
+    casApiKey: ""
+    modelGatewayApiKey: ""
+
+# ---------------------------------------------------------------------------
+# CPU multi-model — KServe InferenceServices in namespace deploy-models-cpu
+# All three tasks (chat / code / summarize) must be configured.
+# ---------------------------------------------------------------------------
+cpu:
+  # Namespace where the InferenceServices (and their token Secrets) are deployed.
+  # The kserve-view RoleBinding is created in THIS namespace.
+  modelsNamespace: "deploy-models-cpu"
+
+  # Inference timeout seconds (must match INFERENCE_TIMEOUT_S in the pod)
+  inferenceTimeoutSeconds: "300"
+
+  models:
+    chat:
+      id: "qwen2-5-1-5b-cpu"
+      url: "https://qwen2-5-1-5b-cpu-predictor.deploy-models-cpu.svc.cluster.local:8443"
+      saName: "qwen2-5-1-5b-cpu-sa"
+      # Capabilities reported in the unified /api/models registry.
+      # Determines which use-cases Auto Detect will route to this model.
+      capabilities: "chat"
+    code:
+      id: "qwen2-5-coder-1-5b-cpu"
+      url: "https://qwen2-5-coder-1-5b-cpu-predictor.deploy-models-cpu.svc.cluster.local:8443"
+      saName: "qwen2-5-coder-1-5b-cpu-sa"
+      capabilities: "code"
+    summarize:
+      id: "smollm2-1-7b-cpu"
+      url: "https://smollm2-1-7b-cpu-predictor.deploy-models-cpu.svc.cluster.local:8443"
+      saName: "smollm2-1-7b-cpu-sa"
+      capabilities: "summarize"
+
+  # ---------------------------------------------------------------------------
+  # CPU token secret — choose ONE backend (mirrors the top-level secrets block)
+  #
+  # The three bearer tokens live in Secrets inside deploy-models-cpu.
+  # A secretKeyRef cannot cross namespaces, so tokens must be copied into
+  # llmops-platform first.  Choose how:
+  # ---------------------------------------------------------------------------
+  tokens:
+    # --- Option A: ExternalSecret — pulls tokens from Vault (production) ---
+    # The three CPU bearer tokens are stored in the SAME Vault path as the
+    # existing llmops-platform secrets, using the same vault-backend store.
+    # Vault keys (added to llmops-platform/secrets):
+    #   external-access-token-qwen2-5-1-5b-cpu-sa
+    #   external-access-token-qwen2-5-coder-1-5b-cpu-sa
+    #   external-access-token-smollm2-1-7b-cpu-sa
+    externalSecret:
+      enabled: true
+      refreshInterval: "5m"
+      secretStoreName: vault-backend
+      secretStoreKind: ClusterSecretStore
+      vaultPath: "llmops-platform/secrets"
+      # Vault key names for each token
+      chatTokenSecret: "external-access-token-qwen2-5-1-5b-cpu-sa"
+      codeTokenSecret: "external-access-token-qwen2-5-coder-1-5b-cpu-sa"
+      summarizeTokenSecret: "external-access-token-smollm2-1-7b-cpu-sa"
+
+    # --- Option B: Hardcoded values (dev / testing only) ---
+    # Paste the raw token strings here.  Obtain them with:
+    #   oc get secret external-access-token-<model>-sa \
+    #     -n deploy-models-cpu -o jsonpath='{.data.token}' | base64 -d
+    hardcoded:
+      enabled: false
+      chatToken: ""
+      codeToken: ""
+      summarizeToken: ""
+
+# ---------------------------------------------------------------------------
+# Reloader annotations (stakater/reloader)
+# Set to true if the Reloader operator is deployed.
+# ---------------------------------------------------------------------------
+reloader:
+  enabled: true
+
+# ---------------------------------------------------------------------------
+# ArgoCD sync-wave overrides (rarely need changing)
+# ---------------------------------------------------------------------------
+syncWaves:
+  rbac: "0"
+  config: "1"
+  secrets: "2"
+  app: "3"
