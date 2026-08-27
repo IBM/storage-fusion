@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fusion-vllm-cpu-model-deploy-dev
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  labels:
+    environment: dev
+    component: model-deploy-cpu
+spec:
+  description: vLLM CPU Model Deploy – Development Environment
+
+  sourceRepos:
+    - 'https://github.com/IBM/storage-fusion.git'
+
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: admin
+      description: Admin role for vllm-cpu model-deploy dev environment
+      policies:
+        - p, proj:fusion-vllm-cpu-model-deploy-dev:admin, applications, *, fusion-vllm-cpu-model-deploy-dev/*, allow
+      groups:
+        - maas-admins
+        - maas-dev-admins
+
+    - name: developer
+      description: Developer role for vllm-cpu model-deploy dev environment
+      policies:
+        - p, proj:fusion-vllm-cpu-model-deploy-dev:developer, applications, get, fusion-vllm-cpu-model-deploy-dev/*, allow
+        - p, proj:fusion-vllm-cpu-model-deploy-dev:developer, applications, sync, fusion-vllm-cpu-model-deploy-dev/*, allow
+        - p, proj:fusion-vllm-cpu-model-deploy-dev:developer, applications, update, fusion-vllm-cpu-model-deploy-dev/*, allow
+      groups:
+        - maas-developers
+
+    - name: viewer
+      description: Read-only role for vllm-cpu model-deploy dev environment
+      policies:
+        - p, proj:fusion-vllm-cpu-model-deploy-dev:viewer, applications, get, fusion-vllm-cpu-model-deploy-dev/*, allow
+      groups:
+        - maas-viewers
+
+  orphanedResources:
+    warn: true
