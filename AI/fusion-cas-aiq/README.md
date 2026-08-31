@@ -608,25 +608,10 @@ documents from your vector store.
 | `FUSION_CAS_URL` | Yes | Base URL, e.g. `https://ibm-cas-ibm-cas.apps.<cluster>` |
 | `FUSION_VECTOR_STORE` | Yes | Vector store name (case-sensitive, must match Fusion UI) |
 | `FUSION_CAS_TOKEN` | Yes | Bearer token for API authentication |
-| `FUSION_VERIFY_SSL` | No | `true` (default) or `false` for self-signed certificates |
 | `FUSION_CAS_TOKEN_FILE` | No | Path to a file containing the token |
 
 ---
 
-## Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| No "Knowledge Base" toggle in UI | Server not restarted with new config — re-run Step 7 and Step 8, then hard-refresh browser |
-| `id: knowledge_layer` — toggle never appears | Change source id to anything other than `knowledge_layer` — see Step 3c |
-| `ValidationError: backend` — unknown value `nat_retriever` | `BackendType` literal not updated — apply Addition 2 in Step 3b and rebuild image |
-| `Unknown retriever type: fusion_cas` at startup | Eager import missing — apply Addition 1 in Step 3b and rebuild image |
-| `EmptySourceRegistryError`, 0 tools at startup | `data_source_registry` is declared before tool entries in YAML — fix ordering so tools come first |
-| HTTP 401 from Fusion CAS | Token expired — patch `aiq-credentials` and run `kubectl rollout restart deployment/aiq-backend -n ns-aiq` |
-| SSL certificate errors | Set `FUSION_VERIFY_SSL=false` in the Helm upgrade command |
-| `container create failed: Not a directory` | Do not use `fusionConfig.mountPath` pointing to a file path — use `volumeMounts` with `subPath` as shown in Step 8 |
-
----
 
 ## What is not supported
 
