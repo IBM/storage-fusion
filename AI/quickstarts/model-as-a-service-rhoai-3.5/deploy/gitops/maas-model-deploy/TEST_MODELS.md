@@ -7,7 +7,7 @@ the shared `openshift-ai-inference` Gateway**.
 All external access uses a single base URL — the OpenShift Route that fronts the Gateway:
 
 ```
-https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com
+https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com
 ```
 
 Each model is then reachable at:
@@ -37,8 +37,8 @@ Each section shows a **generic command** (using shell variables) followed by the
 
 | Model | External URL (via Gateway) |
 |---|---|
-| `tiny-llama-test` | `https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models/tiny-llama-test/v1/` |
-| `gpt-oss-20b` | `https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models/gpt-oss-20b/v1/` |
+| `tiny-llama-test` | `https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models/tiny-llama-test/v1/` |
+| `gpt-oss-20b` | `https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models/gpt-oss-20b/v1/` |
 
 ---
 
@@ -99,7 +99,7 @@ oc get route openshift-ai-inference -n openshift-ingress \
 
 **Expected output:**
 ```
-openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com
+openshift-ai-inference-openshift-ingress.apps.cluster.example.com
 ```
 
 ```bash
@@ -248,12 +248,12 @@ oc get route openshift-ai-inference -n openshift-ingress \
 
 **Expected output:**
 ```
-openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com
+openshift-ai-inference-openshift-ingress.apps.cluster.example.com
 ```
 
 ---
 
-### Part 2 — The cluster wildcard domain (`apps.f55l020.fusion.tadn.ibm.com`)
+### Part 2 — The cluster wildcard domain (`apps.cluster.example.com`)
 
 Every OpenShift cluster has a wildcard DNS domain that all Routes resolve under.
 It is set when the cluster is installed and does not change.
@@ -267,7 +267,7 @@ oc get ingresses.config.openshift.io cluster \
 
 **Expected output:**
 ```
-apps.f55l020.fusion.tadn.ibm.com
+apps.cluster.example.com
 ```
 
 This is also the value used for `gateway.wildcardDomain` in the Helm values files.
@@ -277,7 +277,7 @@ This is also the value used for `gateway.wildcardDomain` in the Helm values file
 ### Putting it together — the full gateway URL
 
 ```
-https://  openshift-ai-inference-openshift-ingress  .  apps.f55l020.fusion.tadn.ibm.com  /  deploy-models  /  <model-name>  /v1/chat/completions
+https://  openshift-ai-inference-openshift-ingress  .  apps.cluster.example.com  /  deploy-models  /  <model-name>  /v1/chat/completions
           ─────── Part 1: route name + namespace ────   ──────── Part 2: wildcard domain ───   ── namespace ──   ─ model name ─
 ```
 
@@ -340,7 +340,7 @@ responses are the actual output captured from that run.
 > MIG slice `nvidia.com/mig-2g.10gb`. Best suited for short, factual completions.
 > Use `max_tokens: 120` or lower to match the slice size.
 >
-> **Gateway URL:** `https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models/tiny-llama-test/v1/`
+> **Gateway URL:** `https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models/tiny-llama-test/v1/`
 
 #### Prompt 1 — OpenShift AI and KServe
 
@@ -482,7 +482,7 @@ curl -sk -X POST "https://${GATEWAY_HOST}/deploy-models/tiny-llama-test/v1/chat/
 > before the final answer is written. If `content` is `null` and `finish_reason`
 > is `"length"`, the reasoning phase exhausted the budget; increase `max_tokens`.
 >
-> **Gateway URL:** `https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models/gpt-oss-20b/v1/`
+> **Gateway URL:** `https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models/gpt-oss-20b/v1/`
 
 #### Prompt 1 — GitOps and model lifecycle
 

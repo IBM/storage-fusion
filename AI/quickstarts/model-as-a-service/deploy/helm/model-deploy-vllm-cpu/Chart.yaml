@@ -1,0 +1,22 @@
+apiVersion: v2
+name: model-deploy-vllm-cpu
+description: Helm chart for deploying LLM models on CPU (x86) using the vLLM CPU ServingRuntime for KServe on Red Hat OpenShift AI. Deploys a ServingRuntime + InferenceService pair — the standard KServe path for CPU-based inference.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - ai
+  - llm
+  - model
+  - inference
+  - vllm
+  - cpu
+  - x86
+  - kserve
+  - serving-runtime
+  - s3
+maintainers:
+  - name: Fusion AI Platform Team
+home: https://github.com/IBM/storage-fusion
+sources:
+  - https://github.com/IBM/storage-fusion

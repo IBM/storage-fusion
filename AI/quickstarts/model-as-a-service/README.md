@@ -368,7 +368,7 @@ Next steps:
 3. View logs: oc logs -n maas-models -l app.kubernetes.io/component=model-service
 
 Useful URLs:
-  OpenShift Console: https://console-openshift-console.apps.f55l020.fusion.tadn.ibm.com
+  OpenShift Console: https://console-openshift-console.apps.cluster.example.com
   Keycloak: https://N/A
 
 Installation complete!
@@ -645,7 +645,7 @@ Checking if model 'gpt-oss-20b' exists in model registry...
 ✓ Model validation passed
 
 Detecting cluster wildcard domain...
-✓ Detected cluster wildcard domain: apps.f55l020.fusion.tadn.ibm.com
+✓ Detected cluster wildcard domain: apps.cluster.example.com
 
 Namespace deploy-models-rhoai will be created by Helm
 
@@ -667,8 +667,8 @@ llminferenceservice.serving.kserve.io/gpt-oss-20b-version-1 condition met
 Gateway route will be created by Helm...
 ✓ Gateway route created successfully
 
-Gateway URL: https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com
-Model endpoint: https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1
+Gateway URL: https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com
+Model endpoint: https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1
 
 === Deployment Summary ===
 
@@ -678,10 +678,10 @@ Status: oc get llminferenceservice gpt-oss-20b-version-1 -n deploy-models-rhoai
 
 Test the model:
   TOKEN=$(oc whoami -t)
-  curl -k "https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/models" \
+  curl -k "https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/models" \
     -H "Authorization: Bearer ${TOKEN}"
 
-  curl -k -X POST "https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/completions" \
+  curl -k -X POST "https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/completions" \
     -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" \
     -d '{"model": "gpt-oss-20b-version-1", "prompt": "Hello", "max_tokens": 50}'
@@ -906,16 +906,20 @@ The runtime integrates with Prometheus and Grafana so that operators can monitor
 ```text
 model-as-a-service/
 ├── deploy/
-│   ├── helm/                      # Helm charts
-│   │   ├── maas-operators/        # Operator subscriptions
-│   │   ├── maas-platform/         # DataScienceCluster & platform config
-│   │   ├── maas-runtime/          # Gateway, Model Registry, RBAC
-│   │   ├── maas-model-service/    # Model deployment chart
-│   │   └── maas-model-registry/   # Model registry reconciler
+│   ├── helm/                           # Helm charts
+│   │   ├── maas-operators/             # OpenShift AI & dependent operator subscriptions
+│   │   ├── maas-platform/              # DataScienceCluster & platform configuration
+│   │   ├── maas-runtime/               # Gateway, Model Registry, tier groups, RBAC
+│   │   ├── maas-model-service/         # Individual model inference service (rate-limit, route, monitor)
+│   │   ├── maas-model-deploy/          # GPU model deployment (LLMInferenceService, S3 secret)
+│   │   ├── maas-model-registry/        # Model Registry GitOps reconciler (Python + CronJob)
+│   │   └── model-deploy-vllm-cpu/      # CPU model deployment (vLLM ServingRuntime + InferenceService)
 │   │
-│   └── gitops/                    # ArgoCD Applications
-│       ├── maas-gitops-deployment/      # Platform GitOps (operators, platform, runtime)
-│       │   └── environments/            # dev, staging, prod
+│   └── gitops/                         # ArgoCD Applications
+│       ├── maas-gitops-deployment/     # Platform GitOps (operators → platform → runtime)
+│       │   ├── argocd-cluster-rbac.yaml
+│       │   └── environments/           # dev, staging, prod
+│       │       ├── DEPLOYMENT_GUIDE.md
 │       │       └── prod/
 │       │           ├── 00-prod-app-of-apps.yaml
 │       │           ├── appproject-prod.yaml
@@ -924,26 +928,57 @@ model-as-a-service/
 │       │               ├── 02-maas-platform-prod.yaml
 │       │               └── 03-maas-runtime-prod.yaml
 │       │
-│       └── model-registry-gitops/       # Model registration GitOps
-│           ├── argocd/environments/     # ArgoCD apps (dev, staging, prod)
-│           ├── models/                  # Model definitions (granite, gpt-oss, qwen)
-│           └── docs/
+│       ├── maas-model-deploy/          # GPU model deploy GitOps (LLMInferenceService)
+│       │   └── environments/           # dev, staging, prod
+│       │       └── prod/
+│       │           ├── appproject-prod.yaml
+│       │           ├── application-tiny-llama.yaml
+│       │           └── application-gpt-oss-20b.yaml
+│       │
+│       ├── model-deploy-vllm-cpu/      # CPU model deploy GitOps (vLLM CPU ServingRuntime)
+│       │   └── environments/           # dev, staging, prod
+│       │       └── prod/
+│       │           ├── appproject-prod.yaml
+│       │           ├── application-qwen2-5-1-5b-cpu.yaml
+│       │           ├── application-qwen2-5-coder-1-5b-cpu.yaml
+│       │           └── application-smollm2-1-7b-cpu.yaml
+│       │
+│       └── model-registry-gitops/      # GitOps pipeline for model registration
+│           ├── argocd/environments/    # ArgoCD apps (dev, staging, prod)
+│           ├── models/                 # Model YAML definitions (granite, gpt-oss, qwen, chatgpt)
+│           │   ├── schema.yaml         # Model definition schema
+│           │   ├── ADDING_A_MODEL.md
+│           │   ├── granite/            # IBM Granite models
+│           │   ├── gpt-oss/            # GPT-OSS models
+│           │   ├── qwen/               # Qwen models
+│           │   └── chatgpt/            # ChatGPT / DialoGPT models
+│           ├── scripts/                # Reconciler build, secret setup, git credential helpers
+│           └── docs/                   # QUICKSTART.md, VERIFICATION_GUIDE.md
 │
 ├── examples/
-│   ├── Fusion-Agentic-Assistance-Platform/  # Complete use case
-│   │   ├── values.yaml                      # Combined configuration
-│   │   └── models/                          # Model-specific values
-│   └── model-registry-deployment/           # Model deployment examples
+│   ├── Fusion-Agentic-Assistance-Platform/  # Complete agentic use case
+│   │   ├── values.yaml                      # Combined platform configuration
+│   │   └── models/                          # Per-model values (gpt-oss-20b, nemotron)
+│   └── model-registry-deployment/           # Model deployment value examples
+│       ├── gpt-oss-20b-values.yaml
+│       ├── granite-3.1-8b-instruct-values.yaml
+│       └── qwen3-8b-fp8-dynamic-values.yaml
 │
 ├── scripts/
-│   ├── install-runtime.sh         # Automated platform deployment
-│   └── deploy-model.sh            # Model deployment
+│   ├── install-runtime.sh          # Automated platform deployment (operators → runtime)
+│   ├── deploy-model.sh             # Model deployment helper
+│   └── uninstall_rhoai.sh          # RHOAI uninstall helper
+│
+├── backstage/                      # Backstage catalog integration
+│   ├── catalog-info.yaml
+│   ├── mkdocs.yml
+│   └── docs/index.md
 │
 └── docs/
     ├── GETTING_STARTED.md
-    ├── 01-setup/                  # Deployment guides
-    ├── 02-model-catalog-and-registry/
-    └── 03-model-deployment/
+    ├── 01-setup/                   # DEPLOYMENT_ORDER.md, operator/platform/runtime guides
+    ├── 02-model-catalog-and-registry/  # MODEL_CATALOG_GUIDE.md, ADDING_MODELS_TO_REGISTRY.md
+    └── 03-model-deployment/        # DEPLOYING_MODEL_SERVICES.md
 ```
 
 ## IBM Fusion for AI Quick Start Features
@@ -990,10 +1025,15 @@ maas-model-service (requires runtime)
 
 For production deployments using Red Hat OpenShift GitOps (ArgoCD):
 
-- **[MaaS GitOps Deployment README](deploy/gitops/maas-gitops-deployment/README.md)** - Environment-specific GitOps deployment structure
-- **[MaaS Platform Deployment Guide](deploy/gitops/maas-gitops-deployment/environments/DEPLOYMENT_GUIDE.md)** - Full operational runbook: step-by-step sync, troubleshooting, RBAC, and migration
-- **[Model Registry GitOps README](deploy/gitops/model-registry-gitops/README.md)** - Architecture overview and prerequisites for automated model registration
-- **[Model Deploy GitOps README](deploy/gitops/maas-model-deploy/README.md)** - Per-model ArgoCD Applications, multi-model design, and values file conventions
+- **[MaaS GitOps Deployment README](deploy/gitops/maas-gitops-deployment/README.md)** — Environment-specific GitOps deployment structure (app-of-apps, AppProject, RBAC)
+- **[MaaS Platform Deployment Guide](deploy/gitops/maas-gitops-deployment/environments/DEPLOYMENT_GUIDE.md)** — Full operational runbook: step-by-step sync, troubleshooting, RBAC, and migration
+- **[Model Registry GitOps README](deploy/gitops/model-registry-gitops/README.md)** — Architecture overview and prerequisites for automated model registration
+- **[Model Registry GitOps Quickstart](deploy/gitops/model-registry-gitops/docs/QUICKSTART.md)** — Fast-path guide for registering your first model via GitOps
+- **[Model Registry Verification Guide](deploy/gitops/model-registry-gitops/docs/VERIFICATION_GUIDE.md)** — Steps to confirm model registration is healthy
+- **[Adding a Model to the Registry](deploy/gitops/model-registry-gitops/models/ADDING_A_MODEL.md)** — Schema reference and step-by-step instructions for authoring a new model YAML
+- **[GPU Model Deploy GitOps README](deploy/gitops/maas-model-deploy/README.md)** — Per-model ArgoCD Applications, multi-model design, and values file conventions (GPU / LLMInferenceService)
+- **[GPU Model Deploy Test Models](deploy/gitops/maas-model-deploy/TEST_MODELS.md)** — List of validated GPU models with S3 paths and resource configurations
+- **[vLLM CPU Model Deploy GitOps README](deploy/gitops/model-deploy-vllm-cpu/README.md)** — CPU-based model deployment (Qwen2.5, SmolLM2) using the vLLM CPU ServingRuntime; covers multi-model design, sync policy, ESO/Vault credentials, and troubleshooting
 
 ### Helm Chart Guides
 
@@ -1002,16 +1042,20 @@ For production deployments using Red Hat OpenShift GitOps (ArgoCD):
 | **maas-operators** | Installs OpenShift AI and dependent operators | [MaaS Operators Guide](docs/01-setup/MAAS_OPERATORS_GUIDE.md) |
 | **maas-platform** | Configures DataScienceCluster and platform components | [Platform Customization Guide](docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md) |
 | **maas-runtime** | Deploys gateway, model registry, and storage integration | [Runtime Customization Guide](docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) |
-| **maas-model-service** | Deploys individual AI models as inference services | [Deploying Model Services](docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md) |
+| **maas-model-service** | Deploys individual AI models as inference services (rate-limit, route, monitor) | [Deploying Model Services](docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md) |
+| **maas-model-deploy** | Deploys GPU-based LLM models via `LLMInferenceService` | [maas-model-deploy README](deploy/helm/maas-model-deploy/README.md) |
+| **maas-model-registry** | Model Registry GitOps reconciler (Python + CronJob) | [maas-model-registry README](deploy/helm/maas-model-registry/README.md) |
+| **model-deploy-vllm-cpu** | Deploys CPU-based LLM models via vLLM `ServingRuntime` + `InferenceService` | [model-deploy-vllm-cpu README](deploy/helm/model-deploy-vllm-cpu/README.md) · [Values Reference](deploy/helm/model-deploy-vllm-cpu/VALUES.md) |
 
 ### Getting Started
-- [Getting Started Guide](docs/GETTING_STARTED.md) - Complete installation and setup guide
-- [Deployment Order Guide](docs/01-setup/DEPLOYMENT_ORDER.md) - Step-by-step deployment sequence
+- [Getting Started Guide](docs/GETTING_STARTED.md) — Complete installation and setup guide
+- [Deployment Order Guide](docs/01-setup/DEPLOYMENT_ORDER.md) — Step-by-step deployment sequence
 
 ### Configuration Guides
-- [Model Catalog Guide](docs/02-model-catalog-and-registry/MODEL_CATALOG_GUIDE.md) - HuggingFace integration and model discovery
-- [Registering Models](docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md) - Model registration from catalog
+- [Model Catalog Guide](docs/02-model-catalog-and-registry/MODEL_CATALOG_GUIDE.md) — HuggingFace integration and model discovery
+- [Registering Models](docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md) — Model registration from catalog
+- [Helm Version Management](deploy/helm/VERSION_MANAGEMENT.md) — Chart versioning strategy and upgrade notes
 
 ### Examples
-- [Fusion Agentic Assistance Platform](examples/Fusion-Agentic-Assistance-Platform/README.md) - Complete use case with multiple models
-- [Model Registry Deployment](examples/model-registry-deployment/README.md) - Model registry entry examples
+- [Fusion Agentic Assistance Platform](examples/Fusion-Agentic-Assistance-Platform/README.md) — Complete agentic use case with GPT-OSS-20B and Nemotron models
+- [Model Registry Deployment](examples/model-registry-deployment/README.md) — Example values for GPT-OSS-20B, Granite 3.1-8B, and Qwen3-8B deployments
