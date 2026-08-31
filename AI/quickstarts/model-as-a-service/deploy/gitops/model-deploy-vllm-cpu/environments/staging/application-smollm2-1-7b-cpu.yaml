@@ -1,0 +1,121 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-vllm-cpu-model-deploy-staging-smollm2-1-7b
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "200"
+  labels:
+    environment: staging
+    component: model-deploy-cpu
+    model: smollm2-1-7b-cpu
+spec:
+  project: fusion-vllm-cpu-model-deploy-staging
+
+  source:
+    repoURL: https://github.com/IBM/storage-fusion.git
+    targetRevision: master
+    path: AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/staging/values-smollm2-1-7b-cpu.yaml
+      parameters:
+        - name: model.name
+          value: smollm2-1-7b-cpu
+        - name: model.namespace
+          value: deploy-models-cpu-staging
+        - name: s3.bucket
+          value: "model-registry-artifacts-p-c35fd54c-f447-4959-92d8-120718bbb1a5"
+        - name: s3.modelPath
+          value: "smollm2-1-7b-instruct-hf/1.0.0"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: deploy-models-cpu-staging
+
+  # Staging: automated sync with self-heal, no prune on delete
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+
+  ignoreDifferences:
+    - group: serving.kserve.io
+      kind: InferenceService
+      jsonPointers:
+        - /status
+    - group: serving.kserve.io
+      kind: ServingRuntime
+      jsonPointers:
+        - /status
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data/AWS_ACCESS_KEY_ID
+        - /data/AWS_SECRET_ACCESS_KEY
+    - group: ""
+      kind: Secret
+      name: storage-config
+      jqPathExpressions:
+        - .data
+        - .metadata.labels
+    - group: ""
+      kind: Namespace
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["model.name"]
+    - group: ""
+      kind: Secret
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["model.name"]
+    - group: ""
+      kind: ServiceAccount
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["model.name"]
+    # ── argocd-manager-vllm-cpu ClusterRole + RoleBinding are shared ─────────
+    # They are created by fusion-vllm-cpu-model-deploy-staging (qwen2-5-1-5b).
+    # Ignore ownership-label drift so this app does not report OutOfSync.
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: argocd-manager-vllm-cpu
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["helm.sh/chart"]
+        - .metadata.labels["model.name"]
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      name: argocd-manager-vllm-cpu
+      jqPathExpressions:
+        - .metadata.labels["app.kubernetes.io/instance"]
+        - .metadata.labels["helm.sh/chart"]
+        - .metadata.labels["model.name"]
+
+  info:
+    - name: Description
+      value: vLLM CPU Model Deploy – Staging (smollm2-1.7b-instruct)
+    - name: Component
+      value: ServingRuntime, InferenceService, S3 Connection Secret, ServiceAccount, Namespace
+    - name: Runtime
+      value: vLLM CPU (x86) — registry.redhat.io/rhoai/vllm-cpu-rhel9
+    - name: Sync Wave
+      value: "200"
+    - name: Namespace
+      value: deploy-models-cpu-staging
+    - name: Model
+      value: smollm2-1-7b-cpu
+    - name: Note
+      value: "CPU inference only — not published to MaaS catalogue."

@@ -1,8 +1,8 @@
 # vLLM CPU Model Deploy — GitOps
 
-ArgoCD manifests for deploying CPU-based LLM models on Red Hat OpenShift AI via the [`model-deploy-vllm-cpu`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu) Helm chart.
+ArgoCD manifests for deploying CPU-based LLM models on Red Hat OpenShift AI via the [`model-deploy-vllm-cpu`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu) Helm chart.
 
-Each environment has one `AppProject` and one `Application` manifest **per model**. Models run on CPU (x86) using the vLLM CPU `ServingRuntime` for KServe. For chart internals, values reference, and `helm install` instructions see [`../../helm/model-deploy-vllm-cpu/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/README.md).
+Each environment has one `AppProject` and one `Application` manifest **per model**. Models run on CPU (x86) using the vLLM CPU `ServingRuntime` for KServe. For chart internals, values reference, and `helm install` instructions see [`../../helm/model-deploy-vllm-cpu/README.md`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/README.md).
 
 ---
 
@@ -39,7 +39,7 @@ model-deploy-vllm-cpu/
 | `qwen2-5-coder-1-5b-cpu` | Qwen2.5-Coder-1.5B Instruct (CPU) | `fusion-vllm-cpu-model-deploy-prod-qwen2-5-coder-1-5b` | `qwen2-5-coder-1-5b-instruct-hf/1.0.0` | `deploy-models-cpu` |
 | `smollm2-1-7b-cpu` | SmolLM2-1.7B Instruct (CPU) | `fusion-vllm-cpu-model-deploy-prod-smollm2-1-7b` | `smollm2-1-7b-instruct-hf/1.0.0` | `deploy-models-cpu` |
 
-> S3 paths use **hyphens**, not dots (e.g. `qwen2-5-1-5b-instruct-hf/1.0.0`). For resource sizing, `VLLM_CPU_KVCACHE_SPACE` tuning, and ESO/Vault credential setup, see the [Helm chart README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/README.md).
+> S3 paths use **hyphens**, not dots (e.g. `qwen2-5-1-5b-instruct-hf/1.0.0`). For resource sizing, `VLLM_CPU_KVCACHE_SPACE` tuning, and ESO/Vault credential setup, see the [Helm chart README](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/README.md).
 
 ---
 
@@ -86,12 +86,12 @@ Every Application includes an `ignoreDifferences` block that suppresses `ServerS
 
 ## Prerequisites
 
-> **OpenShift AI is required.** This guide relies on Red Hat OpenShift AI (RHOAI) for model lifecycle management, KServe model serving, and `ServingRuntime`/`InferenceService` resources. RHOAI must be installed and in a `Ready` state before proceeding. See the [MaaS Quickstart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service-rhoai-3.5README.md) for installation steps.
+> **OpenShift AI is required.** This guide relies on Red Hat OpenShift AI (RHOAI) for model lifecycle management, KServe model serving, and `ServingRuntime`/`InferenceService` resources. RHOAI must be installed and in a `Ready` state before proceeding. See the [MaaS Quickstart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service/README.md) for installation steps.
 
 
 ### Required
 
-- **Completed MaaS Platform Quickstart**: The following must already be in place before proceeding — complete **Steps 1–4** of the [MaaS Quickstart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service-rhoai-3.5README.md) if you have not done so:
+- **Completed MaaS Platform Quickstart**: The following must already be in place before proceeding — complete **Steps 1–4** of the [MaaS Quickstart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service/README.md) if you have not done so:
   - ODF storage configured and an `ObjectBucketClaim` provisioned
   - Red Hat OpenShift AI (RHOAI) installed and in a `Ready` state
   - At least one model uploaded to ODF storage and registered in the Model Registry (its S3 artifact path becomes the `s3.modelPath` value in the Helm values file). The three example models (`Qwen2.5-1.5B-Instruct`, `Qwen2.5-Coder-1.5B-Instruct`, `SmolLM2-1.7B-Instruct`) are pre-uploaded and registered; no action needed if you are using those.
@@ -114,7 +114,7 @@ Every Application includes an `ignoreDifferences` block that suppresses `ServerS
   > vLLM CPU performs an AOT (ahead-of-time) compilation warmup at startup. During this phase memory usage peaks above the steady-state serving footprint — **do not reduce memory limits below 12 GiB** for these models, as that will cause an OOMKill before the server is ready.
 
 - **IBM Fusion with OpenShift Data Foundation (ODF)**: object storage is auto-provisioned via `ObjectBucketClaim`; no manual bucket or credential setup is required.
-- **GitHub account** with write access to a fork of the [IBM storage-fusion](https://github.com/IBM/storage-fusion) repository. The model deployment manifests live at `AI/quickstarts/model-as-a-service-rhoai-3.5` within the repository.
+- **GitHub account** with write access to a fork of the [IBM storage-fusion](https://github.com/IBM/storage-fusion) repository. The model deployment manifests live at `AI/quickstarts/model-as-a-service/` within the repository.
 
 ### Recommended
 
@@ -123,7 +123,7 @@ ESO with Vault is the default credential mode used in this guide. S3 credentials
 - **HashiCorp Vault**: stores S3 credentials outside Git. See [Deploying Vault Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-vault-guide.md)
 - **External Secrets Operator (ESO)**: syncs secrets from Vault into the cluster at sync time. See [Deploying External Secrets Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-external-secrets-guide.md)
 
-> **If Vault and ESO are not available**, you can disable ESO in the model values files and pass credentials manually at sync time instead. See the [Helm chart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service-rhoai-3.5deploy/helm/model-deploy-vllm-cpu/README.md) for how to switch modes. Manual credentials are acceptable for development and evaluation environments.
+> **If Vault and ESO are not available**, you can disable ESO in the model values files and pass credentials manually at sync time instead. See the [Helm chart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/README.md) for how to switch modes. Manual credentials are acceptable for development and evaluation environments.
 
 ### Verify Your Environment
 
@@ -163,14 +163,13 @@ argocd version
 oc get nodes -o custom-columns=NAME:.metadata.name,ARCH:.status.nodeInfo.architecture
 ```
 
-
 ---
 
 ## Quick Start
 
 > All commands below assume you are in the `deploy/gitops/model-deploy-vllm-cpu/` directory:
 > ```bash
-> cd storage-fusion/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-deploy-vllm-cpu
+> cd storage-fusion/AI/quickstarts/model-as-a-service/deploy/gitops/model-deploy-vllm-cpu
 > ```
 
 ### Step 1: Update `repoURL` and `targetRevision`
@@ -282,7 +281,7 @@ oc get applications.argoproj.io fusion-vllm-cpu-model-deploy-prod-qwen2-5-1-5b \
   -o jsonpath='{.status.operationState.message}'
 ```
 
-If the error is `admission webhook "connection-isvc.opendatahub.io" denied the request`, the `InferenceService` template is missing `argocd.argoproj.io/sync-wave: "2"`. See the [Helm chart README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/README.md#externalsecret-syncfailed--admission-webhook-denied-inferenceservice) for the fix.
+If the error is `admission webhook "connection-isvc.opendatahub.io" denied the request`, the `InferenceService` template is missing `argocd.argoproj.io/sync-wave: "2"`. See the [Helm chart README](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/README.md#externalsecret-syncfailed--admission-webhook-denied-inferenceservice) for the fix.
 
 ### ExternalSecret `SyncFailed` — validation error on `conversionStrategy`
 
@@ -358,7 +357,7 @@ oc get applications.argoproj.io fusion-vllm-cpu-model-deploy-prod-qwen2-5-1-5b \
 
 ### Pod-level issues (`OOMKilled`, `ImagePullBackOff`, `Pending`, `Init`, `ServingRuntime not found`)
 
-These originate in Helm chart rendering or pod scheduling, not the ArgoCD manifests. See the [Helm chart README troubleshooting section](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/README.md#troubleshooting) for root causes and fixes.
+These originate in Helm chart rendering or pod scheduling, not the ArgoCD manifests. See the [Helm chart README troubleshooting section](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/README.md#troubleshooting) for root causes and fixes.
 
 ### Check Application and model status
 
@@ -382,10 +381,10 @@ oc get events -n deploy-models-cpu --sort-by='.lastTimestamp' | tail -20
 
 | Resource | Location |
 |---|---|
-| Helm chart README | [`../../helm/model-deploy-vllm-cpu/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/README.md) |
-| Helm chart values reference | [`../../helm/model-deploy-vllm-cpu/VALUES.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/VALUES.md) |
-| Environment values changelog | [`../../helm/model-deploy-vllm-cpu/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/environments/CHANGELOG.md) |
-| CPU deployment blog | [`../../infoDocs/gitops-cpu-deployment-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/infoDocs/gitops-cpu-deployment-guide.md) |
-| CPU vs MaaS capability matrix | [`../../infoDocs/maas-cpu-vs-gpu-capabilities.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/infoDocs/maas-cpu-vs-gpu-capabilities.md) |
-| GPU model deploy GitOps | [`../maas-model-deploy/`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy) |
-| Platform GitOps | [`../maas-gitops-deployment/`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment) |
+| Helm chart README | [`../../helm/model-deploy-vllm-cpu/README.md`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/README.md) |
+| Helm chart values reference | [`../../helm/model-deploy-vllm-cpu/VALUES.md`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/VALUES.md) |
+| Environment values changelog | [`../../helm/model-deploy-vllm-cpu/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/environments/CHANGELOG.md) |
+| CPU deployment blog | [`../../infoDocs/gitops-cpu-deployment-guide.md`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/infoDocs/gitops-cpu-deployment-guide.md) |
+| CPU vs MaaS capability matrix | [`../../infoDocs/maas-cpu-vs-gpu-capabilities.md`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/infoDocs/maas-cpu-vs-gpu-capabilities.md) |
+| GPU model deploy GitOps | [`../maas-model-deploy/`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy) |
+| Platform GitOps | [`../maas-gitops-deployment/`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment) |

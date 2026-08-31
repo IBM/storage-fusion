@@ -368,7 +368,7 @@ Next steps:
 3. View logs: oc logs -n maas-models -l app.kubernetes.io/component=model-service
 
 Useful URLs:
-  OpenShift Console: https://console-openshift-console.apps.f55l020.fusion.tadn.ibm.com
+  OpenShift Console: https://console-openshift-console.apps.cluster.example.com
   Keycloak: https://N/A
 
 Installation complete!
@@ -645,7 +645,7 @@ Checking if model 'gpt-oss-20b' exists in model registry...
 ✓ Model validation passed
 
 Detecting cluster wildcard domain...
-✓ Detected cluster wildcard domain: apps.f55l020.fusion.tadn.ibm.com
+✓ Detected cluster wildcard domain: apps.cluster.example.com
 
 Namespace deploy-models-rhoai will be created by Helm
 
@@ -667,8 +667,8 @@ llminferenceservice.serving.kserve.io/gpt-oss-20b-version-1 condition met
 Gateway route will be created by Helm...
 ✓ Gateway route created successfully
 
-Gateway URL: https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com
-Model endpoint: https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1
+Gateway URL: https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com
+Model endpoint: https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1
 
 === Deployment Summary ===
 
@@ -678,10 +678,10 @@ Status: oc get llminferenceservice gpt-oss-20b-version-1 -n deploy-models-rhoai
 
 Test the model:
   TOKEN=$(oc whoami -t)
-  curl -k "https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/models" \
+  curl -k "https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/models" \
     -H "Authorization: Bearer ${TOKEN}"
 
-  curl -k -X POST "https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/completions" \
+  curl -k -X POST "https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/completions" \
     -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" \
     -d '{"model": "gpt-oss-20b-version-1", "prompt": "Hello", "max_tokens": 50}'

@@ -71,11 +71,11 @@ scheduling:
 # The LLMInferenceService controller manages the HTTPRoute automatically.
 #
 # External URL for this model:
-#   https://openshift-ai-inference-openshift-ingress.apps.f55l020.fusion.tadn.ibm.com/deploy-models/tiny-llama-test/v1/
+#   https://openshift-ai-inference-openshift-ingress.apps.cluster.example.com/deploy-models/tiny-llama-test/v1/
 gateway:
   name: openshift-ai-inference
   namespace: openshift-ingress
-  wildcardDomain: "apps.f55l020.fusion.tadn.ibm.com"
+  wildcardDomain: "apps.cluster.example.com"
   exposeGateway: true  # Route is owned by gpt-oss-20b
 
 # -----------------------------------------------------------------------------

@@ -379,7 +379,7 @@ Next steps:
 3. View logs: oc logs -n maas-models -l app.kubernetes.io/component=model-service
 
 Useful URLs:
-  OpenShift Console: https://console-openshift-console.apps.f55l020.fusion.tadn.ibm.com
+  OpenShift Console: https://console-openshift-console.apps.cluster.example.com
   Keycloak: https://N/A
 
 Installation complete!
@@ -666,7 +666,7 @@ Checking if model 'gpt-oss-20b' exists in model registry...
 ✓ Model validation passed
 
 Detecting cluster wildcard domain...
-✓ Detected cluster wildcard domain: apps.f55l020.fusion.tadn.ibm.com
+✓ Detected cluster wildcard domain: apps.cluster.example.com
 
 Namespace deploy-models-rhoai will be created by Helm
 
@@ -688,8 +688,8 @@ llminferenceservice.serving.kserve.io/gpt-oss-20b-version-1 condition met
 Gateway route will be created by Helm...
 ✓ Gateway route created successfully
 
-Gateway URL: https://maas.apps.f55l020.fusion.tadn.ibm.com
-Model endpoint: https://maas.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1
+Gateway URL: https://maas.apps.cluster.example.com
+Model endpoint: https://maas.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1
 
 === Deployment Summary ===
 
@@ -699,10 +699,10 @@ Status: oc get llminferenceservice gpt-oss-20b-version-1 -n deploy-models-rhoai
 
 Test the model:
   TOKEN=$(oc whoami -t)
-  curl -k "https://maas.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/models" \
+  curl -k "https://maas.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/models" \
     -H "Authorization: Bearer ${TOKEN}"
 
-  curl -k -X POST "https://maas.apps.f55l020.fusion.tadn.ibm.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/completions" \
+  curl -k -X POST "https://maas.apps.cluster.example.com/deploy-models-rhoai/gpt-oss-20b-version-1/v1/completions" \
     -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" \
     -d '{"model": "gpt-oss-20b-version-1", "prompt": "Hello", "max_tokens": 50}'
@@ -1086,18 +1086,35 @@ The runtime integrates with Prometheus and Grafana so that operators can monitor
 ## Project Structure
 
 ```text
-model-as-a-service/
+model-as-a-service-rhoai-3.5/
 ├── deploy/
-│   ├── helm/                      # Helm charts
-│   │   ├── maas-operators/        # Operator subscriptions
-│   │   ├── maas-platform/         # DataScienceCluster & platform config
-│   │   ├── maas-runtime/          # Gateway, Model Registry, RBAC
-│   │   ├── maas-model-service/    # Model deployment chart
-│   │   └── maas-model-registry/   # Model registry reconciler
+│   ├── helm/                           # Helm charts
+│   │   ├── maas-operators/             # OpenShift AI & dependent operator subscriptions
+│   │   ├── maas-platform/              # DataScienceCluster & platform config
+│   │   │   ├── POST_SYNC_MANUAL_STEPS.md
+│   │   │   ├── VAULT-SECRET-SETUP.md   # ESO / Vault setup for DB secrets
+│   │   │   └── VERIFICATION.md
+│   │   ├── maas-runtime/               # Gateway, Model Registry, tier groups, RBAC
+│   │   │   ├── README.md
+│   │   │   └── VAULT-SECRET-SETUP.md   # ESO / Vault setup for runtime secrets
+│   │   ├── maas-model-service/         # Individual model inference service (rate-limit, route, monitor)
+│   │   ├── maas-model-deploy/          # GPU model deployment (LLMInferenceService, MaaSModelRef, ESO)
+│   │   │   ├── VAULT-SECRET-SETUP.md   # ESO / Vault setup for S3 secrets
+│   │   │   └── environments/CHANGELOG.md
+│   │   ├── maas-model-registry/        # Model Registry GitOps reconciler (Python + CronJob)
+│   │   │   └── VAULT-SECRET-SETUP.md   # ESO / Vault setup for Git & HuggingFace secrets
+│   │   ├── maas-config/                # Governance resources (MaaSSubscription, MaaSAuthPolicy, Group)
+│   │   │   └── environments/CHANGELOG.md
+│   │   └── model-deploy-vllm-cpu/      # CPU model deployment (vLLM ServingRuntime + InferenceService)
+│   │       ├── VALUES.md               # Full values field reference
+│   │       └── environments/CHANGELOG.md
 │   │
-│   └── gitops/                    # ArgoCD Applications
-│       ├── maas-gitops-deployment/      # Platform GitOps (operators, platform, runtime)
-│       │   └── environments/            # dev, staging, prod
+│   └── gitops/                         # ArgoCD Applications
+│       ├── maas-gitops-deployment/     # Platform GitOps (operators → platform → runtime)
+│       │   ├── argocd-cluster-rbac.yaml
+│       │   ├── archived/               # Superseded single-env manifests
+│       │   └── environments/           # dev, staging, prod
+│       │       ├── DEPLOYMENT_GUIDE.md
 │       │       └── prod/
 │       │           ├── 00-prod-app-of-apps.yaml
 │       │           ├── appproject-prod.yaml
@@ -1106,26 +1123,59 @@ model-as-a-service/
 │       │               ├── 02-maas-platform-prod.yaml
 │       │               └── 03-maas-runtime-prod.yaml
 │       │
-│       └── model-registry-gitops/       # Model registration GitOps
-│           ├── argocd/environments/     # ArgoCD apps (dev, staging, prod)
-│           ├── models/                  # Model definitions (granite, gpt-oss, qwen)
-│           └── docs/
+│       ├── maas-model-deploy/          # GPU model deploy GitOps (LLMInferenceService + MaaSModelRef)
+│       │   ├── TEST_MODELS.md
+│       │   └── environments/           # dev, staging, prod
+│       │       └── prod/
+│       │           ├── appproject-prod.yaml
+│       │           ├── application-tiny-llama.yaml
+│       │           └── application-gpt-oss-20b.yaml
+│       │
+│       ├── model-deploy-vllm-cpu/      # CPU model deploy GitOps (vLLM CPU ServingRuntime)
+│       │   └── environments/           # dev, staging, prod
+│       │       └── prod/
+│       │           ├── appproject-prod.yaml
+│       │           ├── application-qwen2-5-1-5b-cpu.yaml
+│       │           ├── application-qwen2-5-coder-1-5b-cpu.yaml
+│       │           └── application-smollm2-1-7b-cpu.yaml
+│       │
+│       ├── maas-config/                # Governance GitOps (MaaSSubscription, MaaSAuthPolicy, Group)
+│       │   └── environments/           # dev, staging, prod
+│       │       └── prod/
+│       │           ├── appproject-prod.yaml
+│       │           └── application-governance-prod.yaml
+│       │
+│       └── model-registry-gitops/      # GitOps pipeline for model registration
+│           ├── argocd/environments/    # ArgoCD apps (dev, staging, prod)
+│           ├── models/                 # Model YAML definitions (granite, gpt-oss, qwen, chatgpt)
+│           │   ├── schema.yaml         # Model definition schema
+│           │   ├── ADDING_A_MODEL.md
+│           │   ├── granite/            # IBM Granite models
+│           │   ├── gpt-oss/            # GPT-OSS models
+│           │   ├── qwen/               # Qwen models
+│           │   └── chatgpt/            # ChatGPT / DialoGPT models
+│           ├── scripts/                # Reconciler build, secret setup, git credential helpers
+│           └── docs/                   # QUICKSTART.md, VERIFICATION_GUIDE.md
 │
 ├── examples/
-│   ├── Fusion-Agentic-Assistance-Platform/  # Complete use case
-│   │   ├── values.yaml                      # Combined configuration
-│   │   └── models/                          # Model-specific values
-│   └── model-registry-deployment/           # Model deployment examples
+│   ├── Fusion-Agentic-Assistance-Platform/  # Complete agentic use case
+│   │   ├── values.yaml                      # Combined platform configuration
+│   │   └── models/                          # Per-model values (gpt-oss-20b, nemotron)
+│   └── model-registry-deployment/           # Model deployment value examples
+│       ├── gpt-oss-20b-values.yaml
+│       ├── granite-3.1-8b-instruct-values.yaml
+│       └── qwen3-8b-fp8-dynamic-values.yaml
 │
 ├── scripts/
-│   ├── install-runtime.sh         # Automated platform deployment
-│   └── deploy-model.sh            # Model deployment
+│   ├── install-runtime.sh          # Automated platform deployment (operators → runtime)
+│   ├── deploy-model.sh             # Model deployment helper
+│   └── uninstall_rhoai.sh          # RHOAI uninstall helper
 │
 └── docs/
     ├── GETTING_STARTED.md
-    ├── 01-setup/                  # Deployment guides
-    ├── 02-model-catalog-and-registry/
-    └── 03-model-deployment/
+    ├── 01-setup/                   # DEPLOYMENT_ORDER.md, operator/platform/runtime guides
+    ├── 02-model-catalog-and-registry/  # MODEL_CATALOG_GUIDE.md, ADDING_MODELS_TO_REGISTRY.md
+    └── 03-model-deployment/        # DEPLOYING_MODEL_SERVICES.md
 ```
 
 ## IBM Fusion for AI Quick Start Features
@@ -1156,7 +1206,7 @@ A document analysis scenario is also planned for multimodal processing workloads
 
 ## Documentation
 
-The MaaS platform is deployed using four Helm charts that must be installed in sequence:
+The MaaS platform is deployed using Helm charts that must be installed in sequence:
 
 ```text
 maas-operators (install first)
@@ -1166,6 +1216,10 @@ maas-platform (requires operators)
 maas-runtime (requires platform)
     ↓
 maas-model-service (requires runtime)
+    ↓
+maas-model-deploy (requires runtime — per-model, GitOps)
+    ↓
+maas-config (requires maas-model-deploy — governance, wave 300)
 ```
 
 ### GitOps Deployment Guides
@@ -1178,10 +1232,11 @@ For production deployments using Red Hat OpenShift GitOps (ArgoCD):
 - **[Model Registry GitOps — Quick Start](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/docs/QUICKSTART.md)** — Get from zero to a registered model in production
 - **[Model Registry GitOps — Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md)** — Operational runbook for all three environments (dev / staging / prod)
 - **[Model Registry GitOps — Verification Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/docs/VERIFICATION_GUIDE.md)** — Post-deployment health checks for the model registry pipeline
-- **[Adding a Model to the Registry](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/models/ADDING_A_MODEL.md)** — How to register a new model via GitOps (create a `ModelVersion` YAML and commit)
-- **[Model Deploy GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/README.md)** — Per-model ArgoCD Applications, multi-model design, and values file conventions
-- **[Test Deployed Models](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/TEST_MODELS.md)** — Verify deployed models are healthy and serving inference requests through the gateway
-- **[MaaS Config GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-config/README.md)** — ArgoCD manifests for `MaaSSubscription`, `MaaSAuthPolicy`, and `Group` governance resources
+- **[Adding a Model to the Registry](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/models/ADDING_A_MODEL.md)** — How to register a new model via GitOps (create a model YAML and commit)
+- **[GPU Model Deploy GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/README.md)** — Per-model ArgoCD Applications, multi-model design, and values file conventions (GPU / LLMInferenceService + MaaSModelRef)
+- **[GPU Model Deploy Test Models](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/TEST_MODELS.md)** — Verify deployed models are healthy and serving inference requests through the gateway
+- **[vLLM CPU Model Deploy GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-deploy-vllm-cpu/README.md)** — CPU-based model deployment (Qwen2.5, SmolLM2) using the vLLM CPU ServingRuntime; covers multi-model design, sync policy, ESO/Vault credentials, and troubleshooting
+- **[MaaS Config GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-config/README.md)** — ArgoCD manifests for `MaaSSubscription`, `MaaSAuthPolicy`, and `Group` governance resources (sync wave 300, after model deploy)
 
 ### Helm Chart Guides
 
@@ -1189,11 +1244,12 @@ For production deployments using Red Hat OpenShift GitOps (ArgoCD):
 |-------|---------|---------------|
 | **maas-operators** | Installs OpenShift AI and dependent operators | [MaaS Operators Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_OPERATORS_GUIDE.md) |
 | **maas-platform** | Configures DataScienceCluster and platform components | [Platform Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md) · [Post-Sync Manual Steps](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md) · [Verification](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VERIFICATION.md) |
-| **maas-runtime** | Deploys gateway, model registry, and storage integration | [Runtime Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) |
+| **maas-runtime** | Deploys gateway, model registry, and storage integration | [Runtime Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) · [maas-runtime README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-runtime/README.md) |
 | **maas-model-service** | Deploys individual AI models as inference services (Helm quick-start) | [Deploying Model Services](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md) |
-| **maas-model-deploy** | Deploys LLM models via GitOps (`LLMInferenceService` + `MaaSModelRef`) | [maas-model-deploy README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/README.md) · [Vault/ESO Setup](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) · [Changelog](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) |
-| **maas-model-registry** | Deploys the Model Registry GitOps reconciler | [maas-model-registry README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/README.md) · [Vault/ESO Setup](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) |
+| **maas-model-deploy** | Deploys GPU LLM models via GitOps (`LLMInferenceService` + `MaaSModelRef`, optional ESO) | [maas-model-deploy README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/README.md) · [Vault/ESO Setup](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) · [Changelog](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) |
+| **maas-model-registry** | Deploys the Model Registry GitOps reconciler (Python + CronJob) | [maas-model-registry README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/README.md) · [Vault/ESO Setup](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) |
 | **maas-config** | Manages `MaaSSubscription`, `MaaSAuthPolicy`, and `Group` governance resources | [maas-config README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/README.md) · [Changelog](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/environments/CHANGELOG.md) |
+| **model-deploy-vllm-cpu** | Deploys CPU-based LLM models via vLLM `ServingRuntime` + `InferenceService` | [model-deploy-vllm-cpu README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/README.md) · [Values Reference](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/VALUES.md) · [Changelog](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/model-deploy-vllm-cpu/environments/CHANGELOG.md) |
 
 ### Getting Started
 - [Getting Started Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/GETTING_STARTED.md) — Complete installation and setup guide
@@ -1212,11 +1268,12 @@ Use External Secrets Operator to keep all credentials out of Git. Vault secrets 
 | Chart | Secrets managed | Guide |
 |---|---|---|
 | **maas-platform** | `maas-db-config` (DB connection URL), `maas-postgres-creds` (in-cluster PG) | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) |
+| **maas-runtime** | Gateway and runtime credentials | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-runtime/VAULT-SECRET-SETUP.md) |
 | **maas-model-deploy** | S3 connection Secret + KServe `storage-config` Secret (per model) | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) |
 | **maas-model-registry** | Git credentials (BuildConfig + CronJob) + Hugging Face token (Reconciler) | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) |
 
 ### Examples
-- [Fusion Agentic Assistance Platform](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/examples/Fusion-Agentic-Assistance-Platform/README.md) — Complete use case with multiple models
-- [Model Registry Deployment](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/examples/model-registry-deployment/README.md) — Model registry entry examples
+- [Fusion Agentic Assistance Platform](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/examples/Fusion-Agentic-Assistance-Platform/README.md) — Complete agentic use case with GPT-OSS-20B and Nemotron models
+- [Model Registry Deployment](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/examples/model-registry-deployment/README.md) — Example values for GPT-OSS-20B, Granite 3.1-8B, and Qwen3-8B deployments
 - [IBM Granite Models](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/models/granite/README.md) — Granite model definitions for the registry
 - [Qwen Models](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/models/qwen/README.md) — Qwen model definitions for the registry
