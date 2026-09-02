@@ -7,7 +7,12 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
 
 ![ECK Operator](elasticsearch-operator.png)
 
-**Note:** This [recipe](elasticsearch-operator-based-backup-restore.yaml) is verified for 2.16.1 and 3.0.0 of elasticsearch operator.
+**Notes:**
+1. This [recipe](elasticsearch-operator-based-backup-restore.yaml) is verified for 2.16.1 and 3.0.0 of elasticsearch operator.
+2. ECK operator version 3.4.0 ships a distroless operator image that does not include shell or curl
+   utilities. For version 3.4.0 or later, use the recipe under the folder
+   [v3.4.0/](v3.4.0/elasticsearch-operator-based-backup-restore.yaml), which executes hook
+   commands inside an Elasticsearch pod instead of the operator pod.
 
 ## Backup Prerequisites
 1. Install jq
@@ -20,7 +25,7 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
         sudo apt update
         sudo apt install jq
     ```
-2. ECK operator is installed either on HUB or SPOKE.    
+2. ECK operator is installed either on HUB or SPOKE.
 
 
 ## Backup
@@ -30,9 +35,9 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
 
 2. Run the pre-backup script on the cluster where the Elasticsearch application is present and follow along the prompts.
     ```
-      ./scripts/pre-backup.sh 
+      ./scripts/pre-backup.sh
     ```
-3. Apply the recipe 
+3. Apply the recipe
     ```
       oc apply -f elasticsearch-operator-based-recipe.yaml
     ```
@@ -41,18 +46,18 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
 
     a. From Fusion Console, create backup policy (fbp) specifying the frequency for backups
 
-    b. From Fusion Console, associate the backup policy to the Elasticsearch application. 
+    b. From Fusion Console, associate the backup policy to the Elasticsearch application.
 
     c. Retrieve the Policy Assignment Name:
     ```
       oc get fpa -n ibm-spectrum-fusion-ns -o custom-columns=NAME:.metadata.name --no-headers
-    ```  
+    ```
 
     d.  Update policy assignments (fpa) with recipe name and namespace
 
     ```
       oc -n ibm-spectrum-fusion-ns patch fpa <policy-assignment-name> --type merge -p '{"spec":{"recipe":{"name":"elasticsearch-operator-based-backup-restore-recipe", "namespace":"ibm-spectrum-fusion-ns"}}}'
-    ```  
+    ```
 
     ```
       recipe:
@@ -65,7 +70,7 @@ Backup and restore demonstration of Elasticsearch (ECK) application using Fusion
 
 1. Run the pre-restore script on the target cluster
     ```
-      ./scripts/pre-restore.sh 
+      ./scripts/pre-restore.sh
     ```
 
 ## Restore
