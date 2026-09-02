@@ -28,20 +28,9 @@ spec:
             # IMPORTANT: Must support ReadWriteMany (RWX) access mode
             # ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
             storageClassName: ""
-          catalog:
-            # ── Namespace-as-a-Service (NaaS) ──────────────────────────────────────
-            # Set enabled: true to register the NaaS Software Template in the catalog
-            # AND deploy the ArgoCD namespace-controller that watches the namespaces/
-            # directory for new namespace manifests.
-            # When enabled: false (default) neither resource is deployed.
-            naas:
-              enabled: false          # <-- flip to true to activate NaaS
-              # gitopsRepoURL must point to YOUR fork/mirror of this repository
-              # gitopsRepoURL: "https://github.com/your-org/your-repo.git"
-              # templateBranch: main
         argocd:
-          enabled: true
-          rbac:
+         enabled: true
+         rbac:
             enabled: true
   
   destination:
@@ -60,9 +49,6 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-      # Replace (not patch) the home-quick-access ConfigMap so stale
-      # icon keys from a previous install are fully removed on upgrade.
-      - Replace=true
     
     retry:
       limit: 5

@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+spec:
+  limits:
+    # Per-Pod limits
+    - type: Pod
+      max:
+        {%- if values.size == "small" %}
+        cpu: "8"
+        memory: 16Gi
+        {%- elif values.size == "medium" %}
+        cpu: "16"
+        memory: 32Gi
+        {%- else %}
+        cpu: "32"
+        memory: 64Gi
+        {%- endif %}
+      min:
+        cpu: 100m
+        memory: 128Mi
+    # Per-Container defaults and limits
+    - type: Container
+      default:
+        {%- if values.size == "small" %}
+        cpu: "1"
+        memory: 2Gi
+        {%- elif values.size == "medium" %}
+        cpu: "2"
+        memory: 4Gi
+        {%- else %}
+        cpu: "4"
+        memory: 8Gi
+        {%- endif %}
+      defaultRequest:
+        cpu: 250m
+        memory: 512Mi
+      max:
+        {%- if values.size == "small" %}
+        cpu: "4"
+        memory: 8Gi
+        {%- elif values.size == "medium" %}
+        cpu: "8"
+        memory: 16Gi
+        {%- else %}
+        cpu: "16"
+        memory: 32Gi
+        {%- endif %}
+      min:
+        cpu: 50m
+        memory: 64Mi
+    # Per-PersistentVolumeClaim limits
+    - type: PersistentVolumeClaim
+      max:
+        {%- if values.size == "small" %}
+        storage: 50Gi
+        {%- elif values.size == "medium" %}
+        storage: 100Gi
+        {%- else %}
+        storage: 200Gi
+        {%- endif %}
+      min:
+        storage: 1Gi

@@ -1,8 +1,7 @@
 # Production Configuration for IBM Fusion Developer Hub
 # This file provides production-ready settings with HA, security, and monitoring
 global:
-  # ── REQUIRED: Set this to your OCP cluster wildcard domain ───────────────
-  # Run:  oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+  # IMPORTANT: Change this to match your OpenShift cluster domain
   wildcardDomain: apps.<cluster-domain>.com
   # Name of the certificate secret for ingress (leave empty for self-signed)
   wildcardCertName: ""
@@ -12,19 +11,11 @@ global:
   toolsImage: quay.io/openshift/origin-cli:latest
 
 # Operators Configuration
-# operators.enabled=true + skipIfExists=true: Helm looks up whether a CSV or Subscription
-# already exists in the operator namespace. If found, the Subscription/OperatorGroup
-# resources are skipped entirely, preventing OLM from flagging duplicate Subscriptions as
-# Degraded. Enable operator installation only if you need to install or upgrade operators.
-# Set enabled: false only if the operators are already installed cluster-wide and you want
-# to skip the lookup logic entirely (e.g. in restricted ArgoCD environments — see dev values).
 operators:
-  # Set to true to install operators if they are not already present.
-  # Set to false if operators are already installed cluster-wide and you want to skip all
-  # Subscription/OperatorGroup rendering (required in ArgoCD where lookup() has no cluster access).
+  # Enable operator installation (disable if operators already exist)
   enabled: true
-  # Skip operator installation if they already exist in the cluster.
-  # Requires operators.enabled: true — performs a live lookup; no-ops if operator is found.
+  # Skip operator installation if they already exist in the cluster
+  # Set to true to use existing operators instead of installing new ones
   skipIfExists: true
   # Red Hat Developer Hub Operator
   developerHub:
@@ -114,12 +105,6 @@ developerHub:
   createInstance: true
   # Developer Hub instance name
   instanceName: developer-hub
-  # rhdhBaseUrl is AUTO-DERIVED — do NOT set it here.
-  # Formula: https://backstage-<instanceName>-<namespace>.<wildcardDomain>
-  # Helm helper: {{ include "fusion-developer-hub.rhdhBaseUrl" . }}
-  # Only override if you use a custom FQDN:
-  #   config:
-  #     hostname: "my-rhdh.example.com"
   # Namespace for Developer Hub instance
   # IMPORTANT: This should match the --namespace flag used with helm install/upgrade
   # Leave empty to use .Release.Namespace automatically
@@ -138,12 +123,14 @@ developerHub:
     annotations: {}
   # Storage configuration for dynamic plugins
   storage:
-    # Storage class for dynamic plugins PVC (ReadWriteMany access mode required).
-    # Must support ReadWriteMany (RWX):
-    #   ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
-    # Leave empty ("") to rely on the cluster's default StorageClass.
-    # Override only if your cluster does not set a default or you need a specific class.
-    storageClassName: "" # Uses cluster default; override if needed (e.g. ocs-storagecluster-cephfs for ODF)
+    # Storage class for dynamic plugins PVC (ReadWriteMany access mode required)
+    # Leave empty to use cluster default storage class
+    #
+    # IMPORTANT: Must support ReadWriteMany (RWX) access mode
+    # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
+    # - If using NFS: use "nfs-client" or your NFS storage class
+    # - Other filesystem storage classes that support RWX
+    storageClassName: "" # Uses cluster default
     # Storage size for dynamic plugins
     size: 5Gi
   # High Availability - 3 replicas
@@ -231,7 +218,7 @@ developerHub:
       github:
         enabled: false
         # target: https://github.com/your-org
-        # enterpriseHost: "github.example.com"  # set for GitHub Enterprise; leave empty for public GitHub
+        # enterpriseHost: "github.ibm.com"
         # enableToken: true
       # Catalog providers for automatic discovery
       providers:
@@ -355,35 +342,20 @@ developerHub:
           rules:
             - allow: [Component]
     # GitHub integration for catalog imports
-    # For GitHub Enterprise set enterpriseHost to your GHE hostname (e.g. github.example.com).
-    # Leave enterpriseHost empty to use public GitHub (github.com).
     github:
-      enabled: true
-      enterpriseHost: ""
-      target: "https://github.com/your-org"
+      enabled: false
+      target: https://github.com/your-org
+      # GitHub Enterprise Configuration (Optional)
+      # Uncomment to enable GitHub Enterprise
+      # enterpriseHost: "github.company.com"  # e.g., github.company.com (hostname only, no https://)
+
       # Enable GitHub PAT token for repository access
       # Requires GITHUB_TOKEN in github-auth-secret
-      enableToken: true
+      enableToken: false
     # GitLab integration
     gitlab:
       enabled: false
       target: https://gitlab.com/your-org
-    # NaaS (Namespace-as-a-Service) Template Configuration
-    naas:
-      # Toggle NaaS on or off.  When false the Software Template catalog entry and
-      # the ArgoCD namespace-controller Application are both omitted from the deployment.
-      # Set to true and fill in the values below to enable NaaS for your deployment.
-      enabled: false
-      # Repository name that holds the NaaS template (must match the actual GitHub repo name)
-      repoName: "your-gitops-repo"
-      # Branch in the GitOps repo that holds the NaaS template
-      templateBranch: "main"
-      # Path to the template.yaml within the repo
-      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
-      # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
-      gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
-      # Directory inside the GitOps repo where provisioned namespace manifests land
-      namespacesPath: "namespaces"
   # TechDocs configuration
   techdocs:
     enabled: true
@@ -422,32 +394,16 @@ developerHub:
       clientId: "" # OIDC Client ID
       clientSecret: "" # OIDC Client Secret
       signInResolver: "emailMatchingUserEntityProfileEmail"
-  # Extra environment variables from secrets.
-  # Neither secret is required for a basic deployment.
-  #
-  # fusion-cluster-tokens — only needed when fusionServices.enabled=true (CAS/DCS discovery).
-  #   Contains FUSION_<CLUSTER_ID>_SA_TOKEN and FUSION_<CLUSTER_ID>_CAS_SA_TOKEN.
-  #   Create with:
-  #     oc create secret generic fusion-cluster-tokens \
-  #       --from-literal=FUSION_<CLUSTER_ID_UPPER>_SA_TOKEN=<dcs-sa-token> \
-  #       --from-literal=FUSION_<CLUSTER_ID_UPPER>_CAS_SA_TOKEN=<cas-sa-token> \
-  #       -n <rhdh-namespace>
-  #   See RUNBOOK.md Phase 2 for full token creation steps.
-  #
-  # github-auth-secret — only needed when catalog.github.enableToken=true or
-  #   auth.github.enabled=true (GitHub OAuth / catalog imports from private repos).
-  #   Contains GITHUB_TOKEN (repo read scope) and optionally GITHUB_CLIENT_ID /
-  #   GITHUB_CLIENT_SECRET for OAuth.
-  #   Create with:
-  #     oc create secret generic github-auth-secret \
-  #       --from-literal=GITHUB_TOKEN=<your-pat> \
-  #       -n <rhdh-namespace>
-  #
-  # Uncomment the secrets you need. Remove this block entirely if neither is required.
+  # Extra environment variables from secrets
+  # The developerhub-secrets is automatically added when auth providers are enabled
+  # Add additional secrets here if needed
+  # Example:
+  # extraEnvs:
+  #   secrets:
+  #     - name: custom-secrets
   extraEnvs:
-    secrets:
-      - name: fusion-cluster-tokens
-      - name: github-auth-secret
+    secrets: []
+    # - name: github-auth-secret
   # Production resources
   resources:
     limits:
@@ -461,7 +417,7 @@ developerHub:
     enabled: true
     tls:
       enabled: true
-      secretName: "" # Leave empty for auto-generated cert (operator manages TLS termination)
+      secretName: "" # Leave empty for auto-generated cert
   # IBM Fusion AI Configuration
   fusion:
     enabled: true # Enable IBM Fusion features including templates
@@ -545,69 +501,6 @@ developerHub:
         drop:
           - ALL
       readOnlyRootFilesystem: false # Developer Hub needs to write temp files
-  # ── IBM Fusion CAS / DCS Services ─────────────────────────────────────────
-  # To add a cluster: append one entry to clusters[] with name + ocpApiUrl.
-  # All other fields are optional — DCS and CAS are enabled by default.
-  # See deploy/helm/values.yaml for the full reference schema.
-  fusionServices:
-    enabled: true
-
-    # Git repository that hosts the TechDocs source and catalog-info files.
-    # REQUIRED for private repos — must match the repo where this branch lives.
-    gitRepo: "https://github.ibm.com/ProjectAbell/Fusion-AI"
-    gitBranch: "cas-dcs-rhdh"
-
-    # GitHub token for private repo catalog imports.
-    # Set to true once github-auth-secret exists in the RHDH namespace.
-    # Create the secret in your terminal (NEVER paste the token here or in Git):
-    #   oc create secret generic github-auth-secret \
-    #     --from-literal=GITHUB_TOKEN=<your-pat> \
-    #     -n <rhdh-namespace>
-    # Token requires: repo (read) scope.
-    githubToken: true
-
-    # Clusters — one entry per IBM Fusion HCI cluster.
-    # Add:    append a block below, git push → ArgoCD syncs → entities appear.
-    # Remove: delete the block,     git push → ArgoCD syncs → entities gone.
-    # No pod restart. No oc apply. No other file changes needed.
-    #
-    # Replace the placeholder values below with your real cluster details.
-    # CLUSTER_ID_UPPER = uppercase(CLUSTER_ID), replace '-' with '_'
-    # e.g. my-cluster-01 → MY_CLUSTER_01
-    clusters:
-      # Add additional clusters below.
-      # Example self-hosted cluster (has oc CLI access / ServiceAccount tokens):
-      # - name: <cluster-id>
-      #   ocpApiUrl: https://api.<cluster-domain>:6443
-      #   clusterType: self-hosted
-      #   services:
-      #     dcs:
-      #       enabled: true
-      #       version: "<DCS_VERSION>"
-      #       namespace: ibm-data-cataloging
-      #       k8s:
-      #         tokenEnvVar: FUSION_<CLUSTER_ID_UPPER>_SA_TOKEN
-      #         labelSelector: "app=isd,component=discover"
-      #     cas:
-      #       enabled: true
-      #       version: "<CAS_VERSION>"
-      #       namespace: ibm-cas
-      #       k8s:
-      #         tokenEnvVar: FUSION_<CLUSTER_ID_UPPER>_CAS_SA_TOKEN
-      #         labelSelector: "app.kubernetes.io/name=cas.isf.ibm.com"
-      # Example proxy-only cluster (no direct oc access — CAS/DCS URLs auto-derived):
-      # - name: <cluster-id>
-      #   ocpApiUrl: https://api.<cluster-domain>:6443
-      #   clusterType: proxy-only
-      #   services:
-      #     dcs:
-      #       enabled: true
-      #       version: "<DCS_VERSION>"
-      #       namespace: ibm-data-cataloging
-      #     cas:
-      #       enabled: true
-      #       version: "<CAS_VERSION>"
-      #       namespace: ibm-cas
 
 # OpenShift Console QuickStart Configuration
 quickstart:

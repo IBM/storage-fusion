@@ -70,9 +70,16 @@ Existing deployments that do not set `fusionServices.enabled: true` are unaffect
 fusion-developer-hub/
 ├── values.yaml                    # Base defaults (required)
 └── environments/
-    ├── dev/values.yaml           # Development overrides
-    ├── staging/values.yaml       # Staging overrides
-    └── prod/values.yaml          # Production overrides
+    ├── dev/
+    │   ├── values.yaml                  # Development overrides (current)
+    │   └── values-v0-july2026.yaml      # Pre-NaaS snapshot
+    ├── staging/
+    │   ├── values.yaml                  # Staging overrides (current)
+    │   └── values-v0-july2026.yaml      # Pre-NaaS snapshot
+    └── prod/
+        ├── values.yaml                  # Production overrides (current)
+        ├── value-v0-may2026.yaml        # Initial baseline snapshot
+        └── values-v1-july2026.yaml      # Pre-NaaS snapshot
 ```
 
 **How it works:**
@@ -94,7 +101,26 @@ Edit `environments/{env}/values.yaml` for environment-specific changes.
 
 ## Version History
 
-### v1 (June 2026) - CURRENT
+### v2 (August 2026) - CURRENT
+**Date:** 2026-08-31
+
+#### Added
+- **Namespace-as-a-Service (NaaS)** feature toggle integrated into the main Developer Hub deployment
+  - `developerHub.catalog.naas.enabled` flag in all environment values files (default: `false`)
+  - When enabled, automatically registers the NaaS Software Template in the RHDH catalog
+  - When enabled, deploys an ArgoCD `Application` (`naas-controller`) that watches the `namespaces/` directory and provisions new namespaces on PR merge
+  - New Helm template: `deploy/helm/templates/naas-controller.yaml`
+  - New values fields: `naas.gitopsRepoURL`, `naas.namespacesPath`, `naas.templateBranch`, `naas.repoName`, `naas.templatePath`
+- NaaS toggle documented in all GitOps ArgoCD application files (`dev/`, `staging/`, `prod/`)
+
+#### Archived
+- `dev/values-v0-july2026.yaml` — dev snapshot before NaaS addition
+- `staging/values-v0-july2026.yaml` — staging snapshot before NaaS addition
+- `prod/values-v1-july2026.yaml` — prod snapshot before NaaS addition
+
+---
+
+### v1 (June 2026)
 **Date:** 2026-06-24
 
 #### Added
@@ -142,26 +168,43 @@ Edit `environments/{env}/values.yaml` for environment-specific changes.
 
 ## Rollback
 
-### Rollback Specific Environment
+### Rollback to pre-NaaS state (v1 → v2 revert)
 ```bash
-# Rollback to previous version
-git checkout HEAD~1 -- environments/dev/values.yaml
-
-# Rollback to v0 baseline
-cp environments/dev/values-v0-may2026.yaml environments/dev/values.yaml
+cp environments/dev/values-v0-july2026.yaml environments/dev/values.yaml
+cp environments/staging/values-v0-july2026.yaml environments/staging/values.yaml
+cp environments/prod/values-v1-july2026.yaml environments/prod/values.yaml
 ```
 
-### Rollback All Environments
+### Rollback to initial baseline (v0)
 ```bash
-# Restore all environments to v0
-cp environments/dev/values-v0-may2026.yaml environments/dev/values.yaml
-cp environments/staging/values-v0-may2026.yaml environments/staging/values.yaml
-cp environments/prod/values-v0-may2026.yaml environments/prod/values.yaml
+# Prod only — dev/staging have no v0-may2026 snapshot
+cp environments/prod/value-v0-may2026.yaml environments/prod/values.yaml
 ```
 
 ---
 
 ## Migration Notes
+
+### From v1 to v2 — Enabling NaaS
+
+NaaS is **off by default**. No action is required if you do not use it.
+
+To enable NaaS in an environment, set the following in the environment's `values.yaml`
+(or in the ArgoCD Application's `valuesObject`):
+
+```yaml
+developerHub:
+  catalog:
+    naas:
+      enabled: true
+      gitopsRepoURL: "https://github.com/your-org/your-repo.git"
+      templateBranch: main
+```
+
+Prerequisites when enabling:
+1. Ensure `argocd.enabled: true` is set (the controller Application requires it)
+2. Create the `github-auth-secret` in the target namespace containing `GITHUB_TOKEN`
+3. The `namespaces/` directory must exist in the GitOps repo at `namespacesPath`
 
 ### From v0 to v1
 

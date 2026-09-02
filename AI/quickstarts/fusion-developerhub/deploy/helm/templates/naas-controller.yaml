@@ -1,0 +1,88 @@
+{{- if .Values.developerHub.catalog.naas.enabled }}
+{{- if .Values.argocd.enabled }}
+---
+# ArgoCD Application — NaaS Namespace Controller
+#
+# Watches the namespaces/ directory in the GitOps repository and automatically
+# applies every manifest it finds there.  When the RHDH Software Template merges
+# a PR (skeleton files for a new namespace), ArgoCD detects the change and
+# provisions the Namespace, ResourceQuota, LimitRange, NetworkPolicies, and RBAC
+# objects within ~30 seconds.
+#
+# This resource is only rendered when:
+#   developerHub.catalog.naas.enabled: true   (NaaS feature toggle)
+#   argocd.enabled: true                      (deploying via ArgoCD)
+#
+# To enable NaaS, set in your values override or in the ArgoCD valuesObject:
+#   developerHub:
+#     catalog:
+#       naas:
+#         enabled: true
+#
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Release.Name }}-naas-controller
+  namespace: {{ .Values.argocd.rbac.namespace | default "openshift-gitops" }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: naas
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+spec:
+  project: default
+
+  source:
+    repoURL: {{ .Values.developerHub.catalog.naas.gitopsRepoURL | quote }}
+    targetRevision: {{ .Values.developerHub.catalog.naas.templateBranch | quote }}
+    # Each namespace provisioned by RHDH lands under namespaces/<project>-<env>/.
+    # directory.recurse is required to pick up manifests in subdirectories.
+    # catalog-info.yaml is a Backstage entity, not a Kubernetes manifest — exclude it.
+    path: {{ .Values.developerHub.catalog.naas.namespacesPath | quote }}
+    directory:
+      recurse: true
+      exclude: '**/catalog-info.yaml'
+
+  destination:
+    # Apply directly to the host cluster; namespaces are created by ArgoCD.
+    server: 'https://kubernetes.default.svc'
+    # NaaS resources are cluster-scoped (Namespace) or self-contained per namespace —
+    # no single target namespace is needed here.
+    namespace: {{ .Values.argocd.rbac.namespace | default "openshift-gitops" }}
+
+  syncPolicy:
+    automated:
+      # Remove manifests from the cluster when they are deleted from Git.
+      prune: true
+      # Re-apply drifted resources automatically.
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Ignore status fields that ArgoCD cannot manage.
+  ignoreDifferences:
+    - group: ""
+      kind: Namespace
+      jsonPointers:
+        - /status
+    - group: "v1"
+      kind: ResourceQuota
+      jsonPointers:
+        - /status
+
+{{- end }}
+{{- end }}
+
+# Made with Bob
