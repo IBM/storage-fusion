@@ -1,13 +1,12 @@
----
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: fusion-developer-hub-staging
-  namespace: openshift-gitops # ArgoCD namespace
+  name: fusion-developer-hub
+  namespace: openshift-gitops
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
-    environment: staging
+    environment: production
 spec:
   project: default
   source:
@@ -17,28 +16,16 @@ spec:
     helm:
       valueFiles:
         - values.yaml
-        - environments/staging/values.yaml   
+        - environments/prod/values.yaml
       valuesObject:
         global:
-          # IMPORTANT: Change this to match your OpenShift cluster domain
-          # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
-          wildcardDomain: apps.<cluster-domain>.com 
+          # IMPORTANT: Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+          wildcardDomain: apps.<cluster-domain>.com
         developerHub:
           storage:
-            # IMPORTANT: Must support ReadWriteMany (RWX) access mode
-            # ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
+            # IMPORTANT: Must support ReadWriteMany (RWX)
+            # ODF: ocs-storagecluster-cephfs | NFS: nfs-client
             storageClassName: ""
-          catalog:
-            # ── Namespace-as-a-Service (NaaS) ──────────────────────────────────────
-            # Set enabled: true to register the NaaS Software Template in the catalog
-            # AND deploy the ArgoCD namespace-controller that watches the namespaces/
-            # directory for new namespace manifests.
-            # When enabled: false (default) neither resource is deployed.
-            naas:
-              enabled: false          # <-- flip to true to activate NaaS
-              # gitopsRepoURL must point to YOUR fork/mirror of this repository
-              # gitopsRepoURL: "https://github.com/your-org/your-repo.git"
-              # templateBranch: main
         argocd:
           enabled: true
           rbac:
@@ -46,31 +33,19 @@ spec:
   
   destination:
     server: https://kubernetes.default.svc
-    namespace: fusion-developer-hub-staging
-  
+    namespace: fusion-developer-hub
   revisionHistoryLimit: 10
-  
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-      allowEmpty: false
-    
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-      # Replace (not patch) the home-quick-access ConfigMap so stale
-      # icon keys from a previous install are fully removed on upgrade.
-      - Replace=true
-    
     retry:
       limit: 5
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
-
   ignoreDifferences:
     - group: operators.coreos.com
       kind: Subscription
@@ -86,7 +61,7 @@ spec:
       jsonPointers:
         - /status
         - /metadata/annotations
-   
+
   info:
     - name: 'Deployment Order'
       value: |

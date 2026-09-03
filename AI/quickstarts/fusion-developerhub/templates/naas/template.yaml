@@ -1,0 +1,721 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: openshift-naas-template
+  title: Request OpenShift Namespace (NaaS)
+  description: >
+    Self-service provision a secured OpenShift namespace with built-in resource
+    quotas, LimitRange, network policies, and RBAC roles.
+  tags:
+    - openshift
+    - naas
+    - platform-engineering
+spec:
+  owner: platform-team
+  type: service
+
+  # ──────────────────────────────────────────────
+  # 1. Parameters
+  # ──────────────────────────────────────────────
+  parameters:
+
+    # ── Step 1: Namespace details ─────────────────────────────────────────────
+    # Hidden platform fields are co-located here so they don't create a blank
+    # wizard step. They are never rendered in the UI (ui:widget: hidden) and
+    # their default: values are the live deployment configuration.
+    # To reconfigure for a different deployment, update the default: values
+    # below and commit — RHDH re-fetches this file from GitHub on each run.
+    - title: Namespace Details
+      required:
+        - projectName
+        - environment
+        - businessUnit
+      properties:
+        # ── Platform settings (hidden — never shown in the UI or review step.)
+        # Set these defaults to match your deployment before registering this template.
+        # githubHost: leave empty for public GitHub, or set to your GHE hostname (e.g. github.example.com)
+        # repoOrg: GitHub organisation that owns the GitOps repository
+        # repoName: name of the GitOps repository
+        # targetBranch: base branch PRs are opened against (e.g. main)
+        # prReviewers: comma-separated list of GitHub usernames to request review from (optional)
+        # namespacesPath: repo-relative directory where namespace manifests are stored (default: namespaces)
+        githubHost:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoOrg:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'your-org'
+        repoName:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'your-gitops-repo'
+        targetBranch:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'main'
+        prReviewers:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        namespacesPath:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'namespaces'
+        argoCdInstance:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'openshift-gitops'
+        acmReplicate:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'false'
+        podSecurityStandard:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'baseline'
+        catalogOwner:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'platform-team'
+        catalogSystem:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'naas-platform'
+        # ── Visible fields
+        projectName:
+          title: Project Name
+          type: string
+          description: >
+            Unique identifier for your project (lowercase, alphanumeric, hyphens only).
+            The namespace will be named `{Project Name}-{Environment}`.
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          ui:autofocus: true
+        environment:
+          title: Environment
+          type: string
+          description: Select the target environment tier.
+          enum:
+            - development
+            - staging
+            - production
+          enumNames:
+            - Development
+            - Staging
+            - Production
+        businessUnit:
+          title: Business Unit / Cost Center
+          type: string
+          description: Used for chargeback and resource tracking labels.
+          enum:
+            - engineering
+            - marketing
+            - finance
+            - retail
+          enumNames:
+            - Engineering
+            - Marketing
+            - Finance
+            - Retail
+
+    # ── Step 2: Resource sizing ───────────────────────────────────────────────
+    - title: Resource Sizing
+      required:
+        - size
+      properties:
+        size:
+          title: Namespace Size Tier
+          type: string
+          description: Pre-configured resource quota allocations.
+          enum:
+            - small
+            - medium
+            - large
+          enumNames:
+            - 'Small  (4 CPU · 8 Gi RAM)'
+            - 'Medium (8 CPU · 16 Gi RAM)'
+            - 'Large  (16 CPU · 32 Gi RAM)'
+          default: small
+
+    # ── Step 3: Access control ────────────────────────────────────────────────
+    - title: Access Control
+      required:
+        - ownerGroup
+      properties:
+        ownerGroup:
+          title: Owner Group
+          type: string
+          description: >
+            OpenShift group granted namespace-admin rights
+            (e.g. `team-backend`). Must match an existing group in the cluster.
+          pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?$'
+          ui:autofocus: true
+        developerGroup:
+          title: Developer Group (optional)
+          type: string
+          description: >
+            OpenShift group granted namespace-developer rights.
+            Leave blank if not required.
+          pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?$'
+        viewerGroup:
+          title: Viewer Group (optional)
+          type: string
+          description: >
+            OpenShift group granted namespace-viewer (read-only) rights.
+            Leave blank if not required.
+          pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?$'
+
+  # ──────────────────────────────────────────────
+  # 2. Actions triggered on form submit
+  # ──────────────────────────────────────────────
+  steps:
+    - id: fetch-base
+      name: Fetch Manifest Skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        targetPath: ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}
+        values:
+          projectName: ${{ parameters.projectName }}
+          environment: ${{ parameters.environment }}
+          businessUnit: ${{ parameters.businessUnit }}
+          size: ${{ parameters.size }}
+          ownerGroup: ${{ parameters.ownerGroup }}
+          developerGroup: ${{ parameters.developerGroup }}
+          viewerGroup: ${{ parameters.viewerGroup }}
+          # Platform values forwarded to skeleton files
+          argoCdInstance: ${{ parameters.argoCdInstance }}
+          acmReplicate: ${{ parameters.acmReplicate }}
+          podSecurityStandard: ${{ parameters.podSecurityStandard }}
+          catalogOwner: ${{ parameters.catalogOwner }}
+          catalogSystem: ${{ parameters.catalogSystem }}
+          # Composed GitHub base URL — works for public GitHub and any GHE instance.
+          # When githubHost is blank the scaffolder resolves to github.com.
+          githubBaseUrl: ${{ ("https://" + parameters.githubHost) if parameters.githubHost else "https://github.com" }}
+          repoOrg: ${{ parameters.repoOrg }}
+          repoName: ${{ parameters.repoName }}
+          targetBranch: ${{ parameters.targetBranch }}
+
+    - id: publish-gitops
+      name: Publish to GitOps Repository
+      action: publish:github:pull-request
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        # repoUrl format: <host>?repo=<name>&owner=<org>
+        # An empty githubHost falls back to "github.com" (public GitHub).
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        title: 'NaaS: provision ${{ parameters.projectName }}-${{ parameters.environment }}'
+        description: |
+          Namespace provisioning request from Fusion Developer Hub.
+
+          | Field | Value |
+          |---|---|
+          | Project | `${{ parameters.projectName }}` |
+          | Environment | `${{ parameters.environment }}` |
+          | Business Unit | `${{ parameters.businessUnit }}` |
+          | Size | `${{ parameters.size }}` |
+          | Owner Group | `${{ parameters.ownerGroup }}` |
+          | Developer Group | `${{ parameters.developerGroup or '-' }}` |
+          | Viewer Group | `${{ parameters.viewerGroup or '-' }}` |
+
+          **Merge this PR** to trigger ArgoCD sync and provision the namespace.
+        branchName: naas-${{ parameters.projectName }}-${{ parameters.environment }}
+        targetBranchName: ${{ parameters.targetBranch }}
+        # prReviewers is a comma-separated string; split to array, filter blanks.
+        reviewers: ${{ parameters.prReviewers.split(",") | reject("equalto", "") | list if parameters.prReviewers else [] }}
+
+    - id: tag-pr-metadata
+      name: Tag Pull Request Metadata Labels
+      action: github:issues:label
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        number: ${{ steps['publish-gitops'].output.pullRequestNumber }}
+        labels:
+          - 'Project Name: ${{ parameters.projectName }}'
+          - 'Environment: ${{ parameters.environment }}'
+          - 'Business Unit: ${{ parameters.businessUnit }}'
+          - 'Size: ${{ parameters.size }}'
+          - 'NaaS - Provision'
+
+    - id: register
+      name: Register in RHDH Catalog
+      action: catalog:register
+      input:
+        # Full raw-file URL constructed from deploy-time parts.
+        # Pattern: <githubBaseUrl>/<org>/<repo>/blob/<prBranch>/<namespacesPath>/<ns>/catalog-info.yaml
+        catalogInfoUrl: ${{ (("https://" + parameters.githubHost) if parameters.githubHost else "https://github.com") + "/" + parameters.repoOrg + "/" + parameters.repoName + "/blob/naas-" + parameters.projectName + "-" + parameters.environment + "/" + parameters.namespacesPath + "/" + parameters.projectName + "-" + parameters.environment + "/catalog-info.yaml" }}
+
+  # ──────────────────────────────────────────────
+  # 3. Output links shown to the requester
+  # ──────────────────────────────────────────────
+  output:
+    links:
+      - title: View Pull Request
+        url: ${{ steps['publish-gitops'].output.remoteUrl }}
+        icon: github
+      - title: View Catalog Entry
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
+
+---
+# ══════════════════════════════════════════════════════════════════════════════
+# Template 2 of 3 — UPDATE an existing namespace
+# ══════════════════════════════════════════════════════════════════════════════
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: openshift-naas-update-template
+  title: Update OpenShift Namespace (NaaS)
+  description: >
+    Update resource sizing, access control, or labels for an existing
+    OpenShift namespace managed via GitOps.
+  tags:
+    - openshift
+    - naas
+    - platform-engineering
+spec:
+  owner: platform-team
+  type: service
+
+  # ──────────────────────────────────────────────
+  # 1. Parameters
+  # ──────────────────────────────────────────────
+  parameters:
+
+    # ── Step 1: Namespace to update ──────────────────────────────────────────
+    - title: Namespace Details
+      required:
+        - projectName
+        - environment
+        - businessUnit
+      properties:
+        # ── Platform settings (hidden)
+        # Set these defaults to match your deployment before registering this template.
+        githubHost:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoOrg:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'your-org'
+        repoName:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'your-gitops-repo'
+        targetBranch:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'main'
+        prReviewers:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        namespacesPath:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'namespaces'
+        argoCdInstance:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'openshift-gitops'
+        acmReplicate:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'false'
+        podSecurityStandard:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'baseline'
+        catalogOwner:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'platform-team'
+        catalogSystem:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'naas-platform'
+        # ── Visible fields
+        projectName:
+          title: Project Name
+          type: string
+          description: >
+            Name of the existing namespace to update (lowercase, alphanumeric, hyphens only).
+            The namespace is identified as `{Project Name}-{Environment}`.
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          ui:autofocus: true
+        environment:
+          title: Environment
+          type: string
+          description: Environment tier of the namespace to update.
+          enum:
+            - development
+            - staging
+            - production
+          enumNames:
+            - Development
+            - Staging
+            - Production
+        businessUnit:
+          title: Business Unit / Cost Center
+          type: string
+          description: Updated chargeback and resource tracking label.
+          enum:
+            - engineering
+            - marketing
+            - finance
+            - retail
+          enumNames:
+            - Engineering
+            - Marketing
+            - Finance
+            - Retail
+
+    # ── Step 2: Updated resource sizing ──────────────────────────────────────
+    - title: Resource Sizing
+      required:
+        - size
+      properties:
+        size:
+          title: Namespace Size Tier
+          type: string
+          description: Updated pre-configured resource quota allocations.
+          enum:
+            - small
+            - medium
+            - large
+          enumNames:
+            - 'Small  (4 CPU · 8 Gi RAM)'
+            - 'Medium (8 CPU · 16 Gi RAM)'
+            - 'Large  (16 CPU · 32 Gi RAM)'
+          default: small
+
+    # ── Step 3: Updated access control ───────────────────────────────────────
+    - title: Access Control
+      required:
+        - ownerGroup
+      properties:
+        ownerGroup:
+          title: Owner Group
+          type: string
+          description: >
+            OpenShift group granted namespace-admin rights.
+            Must match an existing group in the cluster.
+          pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?$'
+          ui:autofocus: true
+        developerGroup:
+          title: Developer Group (optional)
+          type: string
+          description: >
+            OpenShift group granted namespace-developer rights.
+            Leave blank if not required.
+          pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?$'
+        viewerGroup:
+          title: Viewer Group (optional)
+          type: string
+          description: >
+            OpenShift group granted namespace-viewer (read-only) rights.
+            Leave blank if not required.
+          pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?$'
+
+  # ──────────────────────────────────────────────
+  # 2. Actions triggered on form submit
+  # ──────────────────────────────────────────────
+  steps:
+    - id: fetch-base
+      name: Fetch Updated Manifest Skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        targetPath: ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}
+        values:
+          projectName: ${{ parameters.projectName }}
+          environment: ${{ parameters.environment }}
+          businessUnit: ${{ parameters.businessUnit }}
+          size: ${{ parameters.size }}
+          ownerGroup: ${{ parameters.ownerGroup }}
+          developerGroup: ${{ parameters.developerGroup }}
+          viewerGroup: ${{ parameters.viewerGroup }}
+          argoCdInstance: ${{ parameters.argoCdInstance }}
+          acmReplicate: ${{ parameters.acmReplicate }}
+          podSecurityStandard: ${{ parameters.podSecurityStandard }}
+          catalogOwner: ${{ parameters.catalogOwner }}
+          catalogSystem: ${{ parameters.catalogSystem }}
+          githubBaseUrl: ${{ ("https://" + parameters.githubHost) if parameters.githubHost else "https://github.com" }}
+          repoOrg: ${{ parameters.repoOrg }}
+          repoName: ${{ parameters.repoName }}
+          targetBranch: ${{ parameters.targetBranch }}
+
+    - id: publish-gitops
+      name: Publish Update to GitOps Repository
+      action: publish:github:pull-request
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        title: 'NaaS: update ${{ parameters.projectName }}-${{ parameters.environment }}'
+        description: |
+          Namespace update request from Fusion Developer Hub.
+
+          | Field | Value |
+          |---|---|
+          | Project | `${{ parameters.projectName }}` |
+          | Environment | `${{ parameters.environment }}` |
+          | Business Unit | `${{ parameters.businessUnit }}` |
+          | Size | `${{ parameters.size }}` |
+          | Owner Group | `${{ parameters.ownerGroup }}` |
+          | Developer Group | `${{ parameters.developerGroup or '-' }}` |
+          | Viewer Group | `${{ parameters.viewerGroup or '-' }}` |
+
+          **Merge this PR** to trigger ArgoCD sync and apply the namespace changes.
+        branchName: naas-update-${{ parameters.projectName }}-${{ parameters.environment }}
+        targetBranchName: ${{ parameters.targetBranch }}
+        reviewers: ${{ parameters.prReviewers.split(",") | reject("equalto", "") | list if parameters.prReviewers else [] }}
+
+    - id: tag-pr-metadata
+      name: Tag Pull Request Metadata Labels
+      action: github:issues:label
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        number: ${{ steps['publish-gitops'].output.pullRequestNumber }}
+        labels:
+          - 'Project Name: ${{ parameters.projectName }}'
+          - 'Environment: ${{ parameters.environment }}'
+          - 'Business Unit: ${{ parameters.businessUnit }}'
+          - 'Size: ${{ parameters.size }}'
+          - 'NaaS - Update'
+
+  # ──────────────────────────────────────────────
+  # 3. Output links shown to the requester
+  # ──────────────────────────────────────────────
+  output:
+    links:
+      - title: View Pull Request
+        url: ${{ steps['publish-gitops'].output.remoteUrl }}
+        icon: github
+
+---
+# ══════════════════════════════════════════════════════════════════════════════
+# Template 3 of 3 — DELETE an existing namespace
+# ══════════════════════════════════════════════════════════════════════════════
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: openshift-naas-delete-template
+  title: Delete OpenShift Namespace (NaaS)
+  description: >
+    Raise a GitOps PR to remove an existing OpenShift namespace and all its
+    managed manifests. ArgoCD will deprovision the namespace on merge.
+  tags:
+    - openshift
+    - naas
+    - platform-engineering
+spec:
+  owner: platform-team
+  type: service
+
+  # ──────────────────────────────────────────────
+  # 1. Parameters
+  # ──────────────────────────────────────────────
+  parameters:
+
+    # ── Step 1: Identify the namespace to delete ──────────────────────────────
+    - title: Namespace to Delete
+      required:
+        - projectName
+        - environment
+        - confirmDelete
+      properties:
+        # ── Platform settings (hidden)
+        # Set these defaults to match your deployment before registering this template.
+        githubHost:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoOrg:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'your-org'
+        repoName:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'your-gitops-repo'
+        targetBranch:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'main'
+        prReviewers:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        namespacesPath:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'namespaces'
+        # ── Visible fields
+        projectName:
+          title: Project Name
+          type: string
+          description: >
+            Name of the namespace to delete (lowercase, alphanumeric, hyphens only).
+            The namespace is identified as `{Project Name}-{Environment}`.
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          ui:autofocus: true
+        environment:
+          title: Environment
+          type: string
+          description: Environment tier of the namespace to delete.
+          enum:
+            - development
+            - staging
+            - production
+          enumNames:
+            - Development
+            - Staging
+            - Production
+        confirmDelete:
+          title: Confirm Deletion
+          type: string
+          description: >
+            Type the namespace name exactly as it will appear
+            (`{projectName}-{environment}`) to confirm you intend to delete it.
+
+  # ──────────────────────────────────────────────
+  # 2. Actions triggered on form submit
+  # ──────────────────────────────────────────────
+  steps:
+    - id: publish-gitops
+      name: Publish Deletion to GitOps Repository
+      action: publish:github:pull-request
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        title: 'NaaS: delete ${{ parameters.projectName }}-${{ parameters.environment }}'
+        description: |
+          Namespace deletion request from Fusion Developer Hub.
+
+          | Field | Value |
+          |---|---|
+          | Project | `${{ parameters.projectName }}` |
+          | Environment | `${{ parameters.environment }}` |
+          | Namespace | `${{ parameters.projectName }}-${{ parameters.environment }}` |
+
+          ⚠️ **Merging this PR will permanently remove the namespace manifests.**
+          ArgoCD will deprovision the namespace and all resources within it.
+        branchName: naas-delete-${{ parameters.projectName }}-${{ parameters.environment }}
+        targetBranchName: ${{ parameters.targetBranch }}
+        reviewers: ${{ parameters.prReviewers.split(",") | reject("equalto", "") | list if parameters.prReviewers else [] }}
+        filesToDelete:
+          - ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}/catalog-info.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}/limit-range.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}/namespace.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}/network-policy.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}/rbac-role.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}/resource-quota.yaml
+
+    - id: tag-pr-metadata
+      name: Tag Pull Request Metadata Labels
+      action: github:issues:label
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        number: ${{ steps['publish-gitops'].output.pullRequestNumber }}
+        labels:
+          - 'Project Name: ${{ parameters.projectName }}'
+          - 'Environment: ${{ parameters.environment }}'
+          - 'NaaS - Delete'
+
+  # ──────────────────────────────────────────────
+  # 3. Output links shown to the requester
+  # ──────────────────────────────────────────────
+  output:
+    links:
+      - title: View Pull Request
+        url: ${{ steps['publish-gitops'].output.remoteUrl }}
+        icon: github

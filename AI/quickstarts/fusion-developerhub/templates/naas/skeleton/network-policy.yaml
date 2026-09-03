@@ -1,0 +1,56 @@
+# ── Default deny: block all ingress to every pod in the namespace ────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# ── Allow intra-namespace traffic (pod-to-pod within the same namespace) ─────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+---
+# ── Allow ingress from the OpenShift router (for Route/Ingress exposure) ─────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-openshift-router
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-ingress
+---
+# ── Allow ingress from the OpenShift monitoring stack (Prometheus scraping) ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-openshift-monitoring
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-monitoring

@@ -14,9 +14,14 @@ metadata:
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
     {{- if not .Values.argocd.enabled }}
+    # In plain Helm: post-install/post-upgrade ensures the operator CRD exists before
+    # this resource is applied. hook-weight "5" places it before the setup Jobs (weight 10+).
+    # When argocd.enabled=true, sync-wave ordering is used instead.
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "5"
     {{- end }}
+    # sync-wave "60" — applied after operator Subscriptions (waves 0-40) and ConfigMaps
+    # (waves 50-55) are ready. The Backstage CR (wave 70) is applied after this cluster.
     argocd.argoproj.io/sync-wave: "60"
 spec:
   # PostgreSQL version
@@ -99,7 +104,19 @@ spec:
           work_mem: {{ .Values.developerHub.database.workMem | default "16MB" }}
 ---
 # Job to grant CREATEDB privilege to PostgreSQL user
-# This runs as a regular Job (not a Helm hook) to ensure PostgreSQL cluster is fully ready
+# Runs after the PostgresCluster (sync-wave 60) is ready.
+# helm.sh/hook: post-install,post-upgrade — in plain Helm installs this hook fires after
+#   all non-hook resources are applied, ensuring the PostgresCluster exists first.
+#   When argocd.enabled=true these annotations are omitted; ArgoCD sync-wave ordering
+#   handles sequencing instead. before-hook-creation deletes any prior completed Job
+#   before re-creating it on the next install/upgrade run.
+# Force=true,Replace=true — Jobs are immutable after creation; ArgoCD cannot patch a
+#   completed Job. Force+Replace deletes the old Job and creates a fresh one on re-sync,
+#   so the grant is re-confirmed after every upgrade without manual cleanup.
+# ttlSecondsAfterFinished is intentionally NOT set: Force=true,Replace=true already
+#   removes and recreates the Job on each sync, making TTL redundant. Adding a TTL would
+#   race against ArgoCD — the Job could be garbage-collected before ArgoCD records its
+#   completion status, causing spurious sync failures.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -118,8 +135,6 @@ metadata:
 spec:
   # Allow multiple retries with exponential backoff
   backoffLimit: 20
-  # Auto-cleanup completed job pods after 30 minutes (parity with helm-charts/ era)
-  ttlSecondsAfterFinished: 1800
   template:
     metadata:
       labels:
@@ -278,7 +293,14 @@ spec:
   storageClassName: {{ .Values.developerHub.database.backup.odfStorageClass | default "openshift-storage.noobaa.io" }}
 ---
 # Job to setup backup credentials from OBC
-# This runs as a regular Job (not a Helm hook) to ensure PostgreSQL cluster is ready first
+# Runs in the same sync-wave (60) as the PostgresCluster so OBC credentials are
+# available before the cluster tries to connect to the backup store.
+# helm.sh/hook / before-hook-creation: same rationale as the grant-createdb Job above —
+#   fires post-install/post-upgrade in plain Helm; omitted in ArgoCD (sync-wave used).
+# Force=true,Replace=true: Jobs are immutable; replace on re-sync for idempotency.
+# ttlSecondsAfterFinished is intentionally NOT set: same reason as grant-createdb above —
+#   Force=true,Replace=true already handles Job cleanup on each sync; a TTL would race
+#   against ArgoCD and could delete the Job before its status is recorded.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -296,8 +318,6 @@ metadata:
     argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
   backoffLimit: 10
-  # Auto-cleanup completed job pods after 30 minutes (parity with helm-charts/ era)
-  ttlSecondsAfterFinished: 1800
   template:
     metadata:
       labels:
@@ -576,8 +596,15 @@ data:
         - allow: [Component, System, API, Resource, Location, Template]
       locations:
         {{- if .Values.developerHub.fusion.enabled }}
+        {{- if .Values.developerHub.catalog.github.enterpriseHost }}
+        {{- $gheHost := .Values.developerHub.catalog.github.enterpriseHost }}
+        {{- $gheOrg := .Values.developerHub.catalog.github.target | trimSuffix "/" | trimPrefix (printf "https://%s/" $gheHost) }}
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/main/catalog-info.yaml
+          target: https://{{ $gheHost }}/{{ $gheOrg }}/{{ .Values.developerHub.catalog.naas.repoName }}/blob/{{ .Values.developerHub.catalog.naas.templateBranch }}/catalog-info.yaml
+        {{- else }}
+        - type: url
+          target: https://github.com/{{ .Values.developerHub.catalog.github.target | trimSuffix "/" | trimPrefix "https://github.com/" }}/{{ .Values.developerHub.catalog.naas.repoName }}/blob/{{ .Values.developerHub.catalog.naas.templateBranch }}/catalog-info.yaml
+        {{- end }}
         {{- end }}
         {{- if and .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
         # RHOAI Model Catalog Location - reads from location provider sidecar
@@ -591,7 +618,9 @@ data:
         {{- if .Values.developerHub.catalog.github.enabled }}
         github:
           providedOrg:
-            organization: {{ .Values.developerHub.catalog.github.target | trimPrefix "https://github.com/" }}
+            {{- $githubTarget := .Values.developerHub.catalog.github.target }}
+            {{- $githubHost := .Values.developerHub.catalog.github.enterpriseHost | default "github.com" }}
+            organization: {{ $githubTarget | trimPrefix (printf "https://%s/" $githubHost) | trimPrefix "https://github.com/" }}
             catalogPath: /catalog-info.yaml
             schedule:
               frequency: { minutes: 30 }
@@ -752,6 +781,7 @@ data:
         - id: 'fusion:ai-code-review'
           description: 'AI-powered code review'
     {{- end }}
+{{- $rhoaiEnabled := and .Values.developerHub.fusion .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
 ---
 # Developer Hub Instance
 # Note: This resource requires the RHDH operator to be installed first
@@ -767,9 +797,14 @@ metadata:
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
     {{- if not .Values.argocd.enabled }}
+    # In plain Helm: post-install/post-upgrade at weight "10" ensures all ConfigMaps,
+    # PVCs, and the PostgresCluster (weight 5) exist before the Backstage CR is created.
+    # When argocd.enabled=true, sync-wave "70" handles sequencing instead.
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "10"
     {{- end }}
+    # sync-wave "70" — last resource applied; ensures the full stack (operators, DB,
+    # ConfigMaps, dynamic-plugins PVC) is ready before RHDH starts.
     argocd.argoproj.io/sync-wave: "70"
 spec:
   application:
@@ -779,9 +814,7 @@ spec:
         {{- if .Values.developerHub.fusion.enabled }}
         - name: fusion-templates
         {{- end }}
-        {{- if and .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
         - name: app-config-ai-templates
-        {{- end }}
         {{- if .Values.developerHub.enabled }}
         - name: app-config-fusion-blueprints
         {{- end }}
@@ -791,16 +824,18 @@ spec:
         {{- /* They go into extraFiles.configMaps below — mounted as files, not loaded as config */}}
         - name: app-config-fusion-services
         {{- end }}
+        {{- if and .Values.developerHub.enabled .Values.developerHub.fusionServices.enabled }}
+        {{- /* Fusion AI Services — app-config ONLY (catalog locations, rules, k8s, proxy) */}}
+        {{- /* NOTE: catalog entity files (multi-doc YAML) must NOT be in appConfig.configMaps */}}
+        {{- /* They go into extraFiles.configMaps below — mounted as files, not loaded as config */}}
+        - name: app-config-fusion-services
+        {{- end }}
+        {{- if .Values.templates.naas }}
+        - name: app-config-naas
+        {{- end }}
     
-    # Dynamic plugins ConfigMap
-    {{- $homepageEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
-    {{- $rhoaiEnabled := and .Values.developerHub.fusion .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
-    {{- $fusionDynPlugins := and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled .Values.developerHub.fusionServices.dynamicPlugins .Values.developerHub.fusionServices.dynamicPlugins.enabled }}
-    {{- if $fusionDynPlugins }}
-    dynamicPluginsConfigMapName: fusion-ai-dynamic-plugins
-    {{- else if or $homepageEnabled $rhoaiEnabled }}
+    # Dynamic plugins ConfigMap — always set; fusion-dynamic-plugins is always created
     dynamicPluginsConfigMapName: fusion-dynamic-plugins
-    {{- end }}
     
     {{- if or .Values.developerHub.database.useOperator (and .Values.developerHub.extraEnvs .Values.developerHub.extraEnvs.secrets (gt (len .Values.developerHub.extraEnvs.secrets) 0)) }}
     extraEnvs:

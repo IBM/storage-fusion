@@ -645,10 +645,10 @@ Find the line that starts with `wildcardDomain:` inside the `valuesObject:` sect
 
 Before:
 ```yaml
-          wildcardDomain: apps.f80l034.fusion.tadn.ibm.com
+          wildcardDomain: apps.<cluster-domain>
 ```
 
-After (use your WILDCARD_DOMAIN from Step 0.3):
+After (replace with your WILDCARD_DOMAIN from Step 0.3):
 ```yaml
           wildcardDomain: apps.prod-east-01.fusion.example.com
 ```
@@ -659,14 +659,17 @@ After (use your WILDCARD_DOMAIN from Step 0.3):
 
 Find the line that starts with `storageClassName:` inside `valuesObject.developerHub.storage` (around line 34).
 
-Before:
+The default is an empty string, which uses the cluster's default StorageClass. Only change this
+if your cluster default does **not** support `ReadWriteMany` (RWX):
+
 ```yaml
-            storageClassName: "ocs-storagecluster-cephfs"
+            storageClassName: ""
 ```
 
-After (use your RWX_STORAGE_CLASS from Step 0.3, must support ReadWriteMany):
+If you need an explicit RWX class (e.g. your cluster has no RWX default), set it:
+
 ```yaml
-            storageClassName: "ocs-storagecluster-cephfs"
+            storageClassName: "ocs-storagecluster-cephfs"   # ODF CephFS — RWX
 ```
 
 > **Important:** If you need to change this, the value must be an RWX storage class. Using an RWO class

@@ -15,7 +15,7 @@ The portal integrates with OpenShift AI for automatic model discovery and OpenSh
 1. [What You Get](#1-what-you-get)
 2. [Architecture](#2-architecture)
 3. [Repository Layout](#3-repository-layout)
-4. [Prerequisites](#4-prerequisites)
+4. [Prerequisites](#4-prerequisites) — incl. [optional auth secrets](#optional-kubernetes-secrets-not-required-for-basic-install)
 5. [Deployment — Helm](#5-deployment--helm)
 6. [Deployment — GitOps (ArgoCD)](#6-deployment--gitops-argocd)
 7. [Verify & Access](#7-verify--access)
@@ -154,6 +154,55 @@ quickstarts/fusion-developerhub/
 |---|---|
 | Red Hat OpenShift AI (RHOAI) | For automatic AI model discovery (can be disabled — see [Section 8.5](#85-openshift-ai-rhoai-model-discovery)) |
 | OpenShift GitOps (ArgoCD) | Required for the GitOps deployment path only |
+
+### Optional Kubernetes Secrets (not required for basic install)
+
+Neither secret is needed for a basic deployment. Create them only when you enable the corresponding feature.
+
+#### `fusion-cluster-tokens` — required only when `fusionServices.enabled: true`
+
+Enables CAS/DCS service discovery from one or more IBM Fusion clusters. See [Section 10](#10-ibm-fusion-ai-service-discovery-cas--dcs) and [RUNBOOK.md Phase 2](deploy/gitops/environments/prod/RUNBOOK.md#phase-2--create-serviceaccount-tokens-on-the-fusion-cluster) for full token creation steps.
+
+```bash
+oc create secret generic fusion-cluster-tokens \
+  --from-literal=FUSION_<CLUSTER_ID_UPPER>_SA_TOKEN=<dcs-sa-token> \
+  --from-literal=FUSION_<CLUSTER_ID_UPPER>_CAS_SA_TOKEN=<cas-sa-token> \
+  -n <rhdh-namespace>
+```
+
+> `CLUSTER_ID_UPPER` = cluster name uppercased with hyphens replaced by underscores.
+> Example: `my-cluster-01` → `MY_CLUSTER_01`
+
+Then reference it in `values.yaml`:
+
+```yaml
+developerHub:
+  extraEnvs:
+    secrets:
+      - name: fusion-cluster-tokens
+```
+
+#### `github-auth-secret` — required only when using GitHub OAuth or private catalog repos
+
+Needed when `auth.github.enabled: true` or `catalog.github.enableToken: true`.
+
+```bash
+oc create secret generic github-auth-secret \
+  --from-literal=GITHUB_TOKEN=<your-pat> \
+  -n <rhdh-namespace>
+# For GitHub OAuth also add:
+#  --from-literal=GITHUB_CLIENT_ID=<id>
+#  --from-literal=GITHUB_CLIENT_SECRET=<secret>
+```
+
+Then reference it in `values.yaml`:
+
+```yaml
+developerHub:
+  extraEnvs:
+    secrets:
+      - name: github-auth-secret
+```
 
 ### Resource Requirements
 

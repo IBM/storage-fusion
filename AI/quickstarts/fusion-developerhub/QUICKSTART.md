@@ -133,15 +133,15 @@ IBM Fusion Developer Hub is an enterprise-ready developer portal built on Red Ha
 
 Deploy IBM Fusion Developer Hub using either Helm for direct installation or GitOps with ArgoCD for automated, Git-driven deployments. Choose the method that best fits your workflow and infrastructure management approach.
 
-For a direct Helm deployment, including prerequisites, operator installation, and configuration, see [2.1 Deploy using Helm](#21-deploy-using-helm) below or follow the detailed [Fusion Developer Hub Helm Quickstart Guide](https://community.ibm.com/community/user/blogs/anushka-jaiswal/2026/05/29/quickstart-developer-hub-on-ibm-fusion-with-redhat) on IBM Community.
+- For a direct Helm deployment, including prerequisites, operator installation, and configuration, see [2.1 Deploy using Helm](#21-deploy-using-helm) below or read the detailed [Fusion Developer Hub Helm Quickstart Guide](https://community.ibm.com/community/user/blogs/anushka-jaiswal/2026/05/29/quickstart-developer-hub-on-ibm-fusion-with-redhat) on IBM Community.
 
-For production deployments, GitOps is the recommended approach because it provides a declarative and auditable deployment model, where configuration changes are tracked in Git and applied through OpenShift GitOps (ArgoCD).
+- For production deployments, GitOps is the recommended approach because it provides a declarative and auditable deployment model, where configuration changes are tracked in Git and applied through OpenShift GitOps (ArgoCD).
 
 Before proceeding with the GitOps-based installation, OpenShift GitOps (ArgoCD) must be available on the cluster. Organizations have two options:
 
-Fusion GitOps Quick Start (Recommended): Recommended for teams looking to establish a GitOps foundation in an IBM Fusion environment. This approach provides a guided path for installing and configuring OpenShift GitOps and aligns with the examples used throughout this article.
+- Fusion GitOps Quick Start (Recommended): Recommended for teams looking to establish a GitOps foundation in an IBM Fusion environment. This approach provides a guided path for installing and configuring OpenShift GitOps and aligns with the examples used throughout this article.
 
-Existing OpenShift GitOps (ArgoCD) Installation: Teams that already operate and manage their own ArgoCD environment can use the same deployment workflow described in this guide. Depending on your environment, you may need to adjust namespace references, permissions, and synchronization policies to align with existing standards and practices.
+- Existing OpenShift GitOps (ArgoCD) Installation: Teams that already operate and manage their own ArgoCD environment can use the same deployment workflow described in this guide. Depending on your environment, you may need to adjust namespace references, permissions, and synchronization policies to align with existing standards and practices.
 
 ### Prerequisites
 
@@ -519,7 +519,7 @@ Find the `repoURL` field (around line 14) and change it to point to your fork:
 spec:
   source:
     repoURL: https://github.com/<YOUR-USERNAME>/storage-fusion.git  # ← Change to your username
-    targetRevision: master  # Keep 'master' or change only if using a custom branch
+    targetRevision: <branch-name>  # Must match the branch created in Step 1 or if you are using default branch then keep master.
 ```
 
 **Example:** If your GitHub username is `john-doe`, change it to:
@@ -1690,6 +1690,7 @@ helm install fusion-developer-hub \
 - [Production Deployment Guide](docs/README.md) - Advanced configuration options
 - [Homepage Customization](docs/homepage-customization.md) - Customize the UI
 - [RHOAI Integration](docs/getting-started/rhoai-integration.md) - Deep dive into AI integration
+
 - [Quickstart: Fusion Developer Hub via GitOps](https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops) - Step-by-step GitOps deployment guide
 
 ### AI Platform Components

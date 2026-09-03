@@ -11,16 +11,22 @@ global:
   toolsImage: quay.io/openshift/origin-cli:latest
 
 # Operators Configuration
-# operators.enabled=false: In the dev environment the RHDH and Crunchy Postgres operators
-# are expected to be pre-installed cluster-wide (AllNamespaces, CSV Succeeded) before
-# deploying this chart. Setting enabled: false skips Subscription/OperatorGroup rendering
-# entirely. This is required in ArgoCD-managed deployments because Helm's lookup() has no
-# cluster access, so skipIfExists has no effect — rendering Subscription resources causes
-# hookPhase=Failed on every sync. Set enabled: true only when you need to install or upgrade
-# operators from scratch (direct helm install/upgrade, not via ArgoCD).
+# operators.enabled=false (dev default): The dev environment assumes the RHDH and Crunchy
+# Postgres operators are already installed cluster-wide (AllNamespaces, CSV Succeeded).
+# Setting enabled: false skips all Subscription/OperatorGroup rendering, which avoids two
+# known issues in ArgoCD:
+#   1. Helm's lookup() has no cluster access inside ArgoCD, so skipIfExists cannot detect
+#      existing operators — the Subscription is always rendered and OLM treats it as a
+#      duplicate, causing the CSV to show Degraded.
+#   2. Operator CRDs may not exist yet when ArgoCD performs its server-side dry-run,
+#      causing the sync to fail with "no matches for kind".
+# Set enabled: true only when performing a fresh operator install or an operator upgrade
+# via a direct `helm install/upgrade` CLI call (not via ArgoCD).
+# For ArgoCD-managed deployments, operators must be pre-installed separately (e.g. via
+# OperatorHub in the OCP console) before applying this chart.
 operators:
-  # Set to false when operators are pre-installed cluster-wide.
-  # Set to true only for fresh installs or operator upgrades via direct helm CLI.
+  # false = operators are pre-installed; chart skips Subscription/OperatorGroup rendering.
+  # true  = chart installs operators (direct helm CLI only, not via ArgoCD).
   enabled: false
   skipIfExists: true
   # Red Hat Developer Hub Operator
@@ -230,7 +236,7 @@ developerHub:
       github:
         enabled: false
         # target: https://github.com/your-org
-        # enterpriseHost: "github.ibm.com"
+        # enterpriseHost: "github.example.com"  # set for GitHub Enterprise; leave empty for public GitHub
         # enableToken: true
       # Catalog providers for automatic discovery
       providers:
@@ -355,20 +361,35 @@ developerHub:
           rules:
             - allow: [Component]
     # GitHub integration for catalog imports
+    # For GitHub Enterprise set enterpriseHost to your GHE hostname (e.g. github.example.com).
+    # Leave enterpriseHost empty to use public GitHub (github.com).
     github:
-      enabled: false
-      target: https://github.com/your-org
-      # GitHub Enterprise Configuration (Optional)
-      # Uncomment to enable GitHub Enterprise
-      # enterpriseHost: "github.company.com"  # e.g., github.company.com (hostname only, no https://)
-
+      enabled: true
+      enterpriseHost: ""
+      target: "https://github.com/your-org"
       # Enable GitHub PAT token for repository access
       # Requires GITHUB_TOKEN in github-auth-secret
-      enableToken: false
+      enableToken: true
     # GitLab integration
     gitlab:
       enabled: false
       target: https://gitlab.com/your-org
+    # NaaS (Namespace-as-a-Service) Template Configuration
+    naas:
+      # Toggle NaaS on or off.  When false the Software Template catalog entry and
+      # the ArgoCD namespace-controller Application are both omitted from the deployment.
+      # Set to true and fill in the values below to enable NaaS for your deployment.
+      enabled: false
+      # Repository name that holds the NaaS template (must match the actual GitHub repo name)
+      repoName: "your-gitops-repo"
+      # Branch in the GitOps repo that holds the NaaS template
+      templateBranch: "main"
+      # Path to the template.yaml within the repo
+      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
+      # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
+      gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
+      # Directory inside the GitOps repo where provisioned namespace manifests land
+      namespacesPath: "namespaces"
   # TechDocs configuration
   techdocs:
     enabled: true
@@ -391,13 +412,10 @@ developerHub:
     # Enables "Sign in with GitHub" button
     # Requires github-auth-secret with GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET
     github:
-      enabled: false
-      # GitHub Enterprise Configuration (Optional)
-      # Uncomment to enable GitHub Enterprise OAuth
-      # enterpriseInstanceUrl: "https://github.company.com"  # e.g., https://github.company.com (full URL with https://)
-
-      # Set to true if want to Allow any GitHub user to sign in (not just catalog users)
-      allowSignInWithoutCatalog: false
+      enabled: true
+      enterpriseInstanceUrl: ""  # Set to your GitHub Enterprise URL (e.g. https://github.example.com); leave empty for public GitHub
+      # Allow any GitHub Enterprise user to sign in (not just users already in the catalog)
+      allowSignInWithoutCatalog: true
     # OIDC (OpenShift, Keycloak, etc.)
     # Set metadataUrl to enable OIDC authentication
     # Default: disabled to allow guest access
@@ -415,8 +433,8 @@ developerHub:
   #   secrets:
   #     - name: custom-secrets
   extraEnvs:
-    secrets: []
-    # - name: github-auth-secret
+    secrets:
+      - name: github-auth-secret  # must contain GITHUB_TOKEN
   # Production resources
   resources:
     limits:
@@ -592,7 +610,7 @@ security:
             port: 5432
   # Pod security standards
   podSecurity:
-    enabled: u2xMAAAdWSURBVGgF7VlpbFRVFP7uzHQ6LbRTCrRVBAltBSStS0FWQUNcQRQDoSoSY6L8MJqYmCCJBk00MUqMW0TUP6gkCnEjilpAZakoiqhgpSBO1dLGAgXa0nbamTl
+    enabled: true
     enforce: restricted
   # Security context
   podSecurityContext:
