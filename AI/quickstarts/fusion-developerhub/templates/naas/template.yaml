@@ -45,35 +45,35 @@ spec:
           ui:backstage:
             review:
               show: false
-          default: 'github.ibm.com'
+          default: ''
         repoOrg:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'ProjectAbell'
+          default: 'your-org'
         repoName:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'Fusion-AI'
+          default: 'your-gitops-repo'
         targetBranch:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'rhdh-namespace-as-a-service'
+          default: 'main'
         prReviewers:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'Purnanand-Kumar1'
+          default: ''
         namespacesPath:
           type: string
           ui:widget: hidden
@@ -332,35 +332,35 @@ spec:
           ui:backstage:
             review:
               show: false
-          default: 'github.ibm.com'
+          default: ''
         repoOrg:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'ProjectAbell'
+          default: 'your-org'
         repoName:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'Fusion-AI'
+          default: 'your-gitops-repo'
         targetBranch:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'rhdh-namespace-as-a-service'
+          default: 'main'
         prReviewers:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'Purnanand-Kumar1'
+          default: ''
         namespacesPath:
           type: string
           ui:widget: hidden
@@ -602,35 +602,35 @@ spec:
           ui:backstage:
             review:
               show: false
-          default: 'github.ibm.com'
+          default: ''
         repoOrg:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'ProjectAbell'
+          default: 'your-org'
         repoName:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'Fusion-AI'
+          default: 'your-gitops-repo'
         targetBranch:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'rhdh-namespace-as-a-service'
+          default: 'main'
         prReviewers:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'Purnanand-Kumar1'
+          default: ''
         namespacesPath:
           type: string
           ui:widget: hidden
