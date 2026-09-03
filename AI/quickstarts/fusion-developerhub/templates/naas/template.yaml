@@ -45,35 +45,35 @@ spec:
           ui:backstage:
             review:
               show: false
-          default: ''
+          default: 'github.ibm.com'
         repoOrg:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'your-org'
+          default: 'ProjectAbell'
         repoName:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'your-gitops-repo'
+          default: 'Fusion-AI'
         targetBranch:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'main'
+          default: 'rhdh-namespace-as-a-service'
         prReviewers:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: ''
+          default: 'Purnanand-Kumar1'
         namespacesPath:
           type: string
           ui:widget: hidden
@@ -332,35 +332,35 @@ spec:
           ui:backstage:
             review:
               show: false
-          default: ''
+          default: 'github.ibm.com'
         repoOrg:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'your-org'
+          default: 'ProjectAbell'
         repoName:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'your-gitops-repo'
+          default: 'Fusion-AI'
         targetBranch:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'main'
+          default: 'rhdh-namespace-as-a-service'
         prReviewers:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: ''
+          default: 'Purnanand-Kumar1'
         namespacesPath:
           type: string
           ui:widget: hidden
@@ -602,35 +602,35 @@ spec:
           ui:backstage:
             review:
               show: false
-          default: ''
+          default: 'github.ibm.com'
         repoOrg:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'your-org'
+          default: 'ProjectAbell'
         repoName:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'your-gitops-repo'
+          default: 'Fusion-AI'
         targetBranch:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: 'main'
+          default: 'rhdh-namespace-as-a-service'
         prReviewers:
           type: string
           ui:widget: hidden
           ui:backstage:
             review:
               show: false
-          default: ''
+          default: 'Purnanand-Kumar1'
         namespacesPath:
           type: string
           ui:widget: hidden
@@ -710,14 +710,6 @@ spec:
           - 'Project Name: ${{ parameters.projectName }}'
           - 'Environment: ${{ parameters.environment }}'
           - 'NaaS - Delete'
-
-    - id: deregister-catalog
-      name: Deregister from RHDH Catalog
-      # Removes the catalog location so Backstage stops tracking this namespace
-      # entity immediately. The namespace itself is deprovisioned when the PR merges.
-      action: catalog:unregister
-      input:
-        catalogInfoUrl: ${{ (("https://" + parameters.githubHost) if parameters.githubHost else "https://github.com") + "/" + parameters.repoOrg + "/" + parameters.repoName + "/blob/" + parameters.targetBranch + "/" + parameters.namespacesPath + "/" + parameters.projectName + "-" + parameters.environment + "/catalog-info.yaml" }}
 
   # ──────────────────────────────────────────────
   # 3. Output links shown to the requester
