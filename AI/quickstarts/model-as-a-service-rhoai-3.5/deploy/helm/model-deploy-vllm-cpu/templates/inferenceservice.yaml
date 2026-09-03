@@ -1,0 +1,83 @@
+---
+# InferenceService — KServe standard serving CR (CPU path)
+# -----------------------------------------------------------------------
+# Binds the model artefacts in S3 to the vLLM CPU ServingRuntime.
+# KServe's storage-initialiser downloads the model from S3 at pod
+# start-up using the ServiceAccount → connection Secret chain.
+#
+# API version: serving.kserve.io/v1beta1
+#
+# ⚠️  This is NOT an LLMInferenceService. It uses the standard KServe
+# InferenceService path (predictor.model) and does NOT integrate with
+# the MaaS gateway, subscriptions, or API-key enforcement.
+# It is intended for CPU inference testing only.
+# See infoDocs/maas-cpu-vs-gpu-capabilities.md for the full matrix.
+# -----------------------------------------------------------------------
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ .Values.model.name }}
+  namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+    opendatahub.io/dashboard: "true"
+    {{- if .Values.externalAccess.enabled }}
+    # Tells KServe to create an OpenShift Route for this InferenceService
+    networking.kserve.io/visibility: exposed
+    {{- end }}
+  annotations:
+    {{- include "model-deploy-vllm-cpu.annotations" . | nindent 4 }}
+    # Wave 2: must come after ExternalSecrets (wave 1) so that ESO has reconciled
+    # the connection Secret before the RHOAI webhook validates the InferenceService.
+    argocd.argoproj.io/sync-wave: "2"
+    openshift.io/display-name: {{ include "model-deploy-vllm-cpu.displayName" . | quote }}
+    opendatahub.io/model-type: generative
+    opendatahub.io/connections: {{ include "model-deploy-vllm-cpu.connectionSecretName" . }}
+    opendatahub.io/connection-path: {{ .Values.s3.modelPath | quote }}
+    serving.kserve.io/deploymentMode: Standard
+    {{- if .Values.externalAccess.enabled }}
+    # Require bearer-token authentication on the external route
+    security.opendatahub.io/enable-auth: "true"
+    {{- end }}
+spec:
+  predictor:
+    # Reference the vLLM CPU ServingRuntime registered in this namespace
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: {{ include "model-deploy-vllm-cpu.servingRuntimeName" . }}
+      storage:
+        key: {{ include "model-deploy-vllm-cpu.connectionSecretName" . }}
+        path: {{ .Values.s3.modelPath | quote }}
+      resources:
+        {{- toYaml .Values.resources | nindent 8 }}
+
+    # ServiceAccount whose secret list includes the S3 connection secret
+    serviceAccountName: {{ include "model-deploy-vllm-cpu.serviceAccountName" . }}
+    # Disable auto-mounting of SA token — explicit token SA used for auth instead
+    automountServiceAccountToken: false
+
+    # Rolling update — zero-downtime replacement (matches RHOAI dashboard default)
+    deploymentStrategy:
+      type: RollingUpdate
+
+    minReplicas: {{ .Values.inference.replicas }}
+    maxReplicas: {{ .Values.inference.replicas }}
+
+    # Inference timeout in seconds — match or be less than routeTimeoutSeconds
+    timeout: {{ .Values.externalAccess.routeTimeoutSeconds | default 300 }}
+
+    {{- if .Values.scheduling.nodeSelector }}
+    nodeSelector:
+      {{- toYaml .Values.scheduling.nodeSelector | nindent 6 }}
+    {{- end }}
+
+    {{- if .Values.scheduling.tolerations }}
+    tolerations:
+      {{- toYaml .Values.scheduling.tolerations | nindent 6 }}
+    {{- end }}
+
+    {{- if .Values.scheduling.affinity }}
+    affinity:
+      {{- toYaml .Values.scheduling.affinity | nindent 6 }}
+    {{- end }}

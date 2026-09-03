@@ -1,0 +1,64 @@
+{{- if .Values.cpu.models }}
+---
+# =============================================================================
+# RoleBinding — kserve-view  (in the MODELS namespace)
+# =============================================================================
+# KServe Authorino performs a SubjectAccessReview to check that the bearer
+# token's ServiceAccount has kserve-view permission **in the namespace where
+# the InferenceService lives** (cpu.modelsNamespace = deploy-models-cpu).
+#
+# This RoleBinding must therefore be created in that namespace, not in the
+# app namespace (llmops-platform).  The SA subjects also live there.
+# =============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: llmops-kserve-view-cpu-tokens
+  namespace: {{ .Values.cpu.modelsNamespace }}
+  labels:
+    {{- include "llmops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.syncWaves.rbac | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kserve-view
+subjects:
+{{- range $task, $model := .Values.cpu.models }}
+  - kind: ServiceAccount
+    name: {{ $model.saName | quote }}
+    namespace: {{ $.Values.cpu.modelsNamespace }}
+{{- end }}
+
+---
+# =============================================================================
+# ClusterRoleBinding — kserve-proxy-role
+# =============================================================================
+# kserve-proxy-role allows creating TokenReviews and SubjectAccessReviews —
+# cluster-scoped resources, so a ClusterRoleBinding is required.
+#
+# SA subjects reference the models namespace (deploy-models-cpu) because
+# that is where the external-access-token Secrets and ServiceAccounts were
+# created by the InferenceService operator.
+# =============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: llmops-kserve-proxy-cpu-tokens-{{ .Values.cpu.modelsNamespace }}
+  labels:
+    {{- include "llmops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.syncWaves.rbac | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kserve-proxy-role
+subjects:
+{{- range $task, $model := .Values.cpu.models }}
+  - kind: ServiceAccount
+    name: {{ $model.saName | quote }}
+    namespace: {{ $.Values.cpu.modelsNamespace }}
+{{- end }}
+{{- end }}

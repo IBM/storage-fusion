@@ -1,0 +1,124 @@
+# ── Role: namespace-admin ─────────────────────────────────────────────────────
+# Full control within this namespace. Intended for team leads / namespace owners.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: namespace-admin
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+# ── RoleBinding: namespace-admin → Owner Group ────────────────────────────────
+# Bind the team owner group to the admin role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: namespace-admin-group-binding
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: namespace-admin
+subjects:
+  - kind: Group
+    apiGroup: rbac.authorization.k8s.io
+    name: ${{ values.ownerGroup }}
+---
+# ── Role: namespace-developer ─────────────────────────────────────────────────
+# Least-privilege role for day-to-day development work.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: namespace-developer
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec", "services", "configmaps", "endpoints"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: ["route.openshift.io"]
+    resources: ["routes"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+---
+# ── Role: namespace-viewer ────────────────────────────────────────────────────
+# Read-only access for stakeholders and auditors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: namespace-viewer
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+{% if values.developerGroup %}
+# ── RoleBinding: namespace-developer → Developer Group ────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: namespace-developer-group-binding
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: namespace-developer
+subjects:
+  - kind: Group
+    apiGroup: rbac.authorization.k8s.io
+    name: ${{ values.developerGroup }}
+---
+{% endif %}
+{% if values.viewerGroup %}
+# ── RoleBinding: namespace-viewer → Viewer Group ──────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: namespace-viewer-group-binding
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: namespace-viewer
+subjects:
+  - kind: Group
+    apiGroup: rbac.authorization.k8s.io
+    name: ${{ values.viewerGroup }}
+---
+{% endif %}
+# ── RoleBinding: namespace-admin → ci-cd ServiceAccount ──────────────────────
+# Bind the CI/CD pipeline service account to the admin role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: namespace-admin-binding
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: namespace-admin
+subjects:
+  - kind: ServiceAccount
+    name: ${{ values.projectName }}-cicd
+    namespace: ${{ values.projectName }}-${{ values.environment }}
+---
+# ── ServiceAccount: CI/CD pipeline identity ───────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${{ values.projectName }}-cicd
+  namespace: ${{ values.projectName }}-${{ values.environment }}
+  labels:
+    app.kubernetes.io/managed-by: ${{ values.catalogSystem }}
+    project: ${{ values.projectName }}
+    environment: ${{ values.environment }}

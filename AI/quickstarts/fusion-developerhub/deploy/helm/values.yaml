@@ -212,25 +212,6 @@ developerHub:
               showEndpoints: true
               showStatus: true
               refreshInterval: 30s
-    # Catalog configuration
-    catalog:
-      enabled: true
-      # GitHub integration for catalog imports
-      github:
-        enabled: false
-        # target: https://github.com/your-org
-        # enterpriseHost: "github.ibm.com"
-        # enableToken: true
-      # Catalog providers for automatic discovery
-      providers:
-        # OpenShift AI provider
-        openshiftAI:
-          enabled: false
-          schedule:
-            frequency:
-              minutes: 1
-            timeout:
-              minutes: 3
     # TechDocs configuration
     techdocs:
       enabled: true
@@ -292,9 +273,43 @@ developerHub:
       destinationPath: s3://developerhub-postgres-backup
       s3Endpoint: "" # Auto-populated from OBC
       retentionPolicy: "30d"
-  # GitHub Enterprise configuration (outside config block to match base values.yaml)
+  # Catalog configuration
   catalog:
     enabled: true
+    # GitHub integration — enables backend.reading.allow + integrations.github
+    # For GitHub Enterprise set enterpriseHost to your GHE hostname (e.g. github.example.com).
+    # Leave enterpriseHost empty (or omit) to use public GitHub (github.com).
+    github:
+      enabled: true
+      enterpriseHost: ""               # hostname only, no https:// — leave empty for public GitHub
+      target: "https://github.com/your-org"  # org URL for catalog discovery provider
+      enableToken: true                # injects ${GITHUB_TOKEN} from github-auth-secret
+    # Catalog providers for automatic discovery
+    providers:
+      # OpenShift AI provider
+      openshiftAI:
+        enabled: false
+        schedule:
+          frequency:
+            minutes: 1
+          timeout:
+            minutes: 3
+    # NaaS (Namespace-as-a-Service) Template Configuration
+    naas:
+      # Toggle NaaS on or off.  When false the Software Template catalog entry and
+      # the ArgoCD namespace-controller Application are both omitted from the deployment.
+      # Set to true and fill in the values below to enable NaaS for your deployment.
+      enabled: false
+      # Repository name that holds the NaaS template (must match the actual GitHub repo name)
+      repoName: "your-gitops-repo"
+      # Branch in the GitOps repo that holds the NaaS template
+      templateBranch: "main"
+      # Path to the template.yaml within the repo
+      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
+      # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
+      gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
+      # Directory inside the GitOps repo where provisioned namespace manifests land
+      namespacesPath: "namespaces"
     # Fusion Blueprints Configuration
     # Define catalog locations for IBM Fusion AI blueprints and components
     # Each blueprint can have its own catalog-info.yaml with TechDocs support
@@ -342,17 +357,6 @@ developerHub:
           target: https://github.com/IBM/storage-fusion/blob/master/catalog-info.yaml
           rules:
             - allow: [Component]
-    # GitHub integration for catalog imports
-    github:
-      enabled: false
-      target: https://github.com/your-org
-      # GitHub Enterprise Configuration (Optional)
-      # Uncomment to enable GitHub Enterprise
-      # enterpriseHost: "github.company.com"  # e.g., github.company.com (hostname only, no https://)
-
-      # Enable GitHub PAT token for repository access
-      # Requires GITHUB_TOKEN in github-auth-secret
-      enableToken: false
     # GitLab integration
     gitlab:
       enabled: false
@@ -403,8 +407,8 @@ developerHub:
   #   secrets:
   #     - name: custom-secrets
   extraEnvs:
-    secrets: []
-    # - name: github-auth-secret
+    secrets:
+      - name: github-auth-secret
   # Production resources
   resources:
     limits:

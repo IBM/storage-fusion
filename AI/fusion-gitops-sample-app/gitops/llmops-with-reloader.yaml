@@ -37,8 +37,7 @@ spec:
 
 ---
 # Application 2: LLMOps Platform
-# Deploys the LLMOps platform components including chat application
-# Includes all platform resources from the applications directory
+# Deploys the chat app via the Helm chart at fusion-gitops-sample-app/chart/
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -53,8 +52,10 @@ spec:
   project: default
   source:
     repoURL: https://github.com/IBM/storage-fusion.git
-    targetRevision: main
-    path: AI/fusion-gitops-sample-app/gitops/applications
+    targetRevision: master
+    path: AI/fusion-gitops-sample-app/chart
+    helm:
+      releaseName: llmops-chat-app
   destination:
     server: https://kubernetes.default.svc
     namespace: llmops-platform
@@ -64,5 +65,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-
-# Made with Bob

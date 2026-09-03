@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${{ values.projectName }}-${{ values.environment }}
+  labels:
+    # IBM Fusion / ACM replication — set to "true" to replicate to managed clusters
+    apps.openclustermanagement.io/replicate: "${{ values.acmReplicate }}"
+    # ArgoCD management label — value is the namespace of the ArgoCD instance
+    argocd.argoproj.io/managed-by: ${{ values.argoCdInstance }}
+    # Chargeback and audit labels
+    business-unit: ${{ values.businessUnit }}
+    environment: ${{ values.environment }}
+    project: ${{ values.projectName }}
+    # Pod Security Standards admission labels
+    # Options: privileged | baseline | restricted
+    pod-security.kubernetes.io/enforce: ${{ values.podSecurityStandard }}
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest

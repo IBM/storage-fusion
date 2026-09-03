@@ -1,5 +1,8 @@
-# Production Configuration for IBM Fusion Developer Hub
-# This file provides production-ready settings with HA, security, and monitoring
+# Staging Configuration for IBM Fusion Developer Hub
+# This file mirrors the production environment for pre-production validation.
+# HA, security, and monitoring are enabled — identical to prod except for
+# cluster-specific values (wildcardDomain, storageClassName) which must be
+# set before deploying.
 global:
   # ── REQUIRED: Set this to your OCP cluster wildcard domain ───────────────
   # Run:  oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
@@ -223,7 +226,7 @@ developerHub:
       github:
         enabled: false
         # target: https://github.com/your-org
-        # enterpriseHost: "github.ibm.com"
+        # enterpriseHost: "github.example.com"  # set for GitHub Enterprise; leave empty for public GitHub
         # enableToken: true
       # Catalog providers for automatic discovery
       providers:
@@ -347,20 +350,35 @@ developerHub:
           rules:
             - allow: [Component]
     # GitHub integration for catalog imports
+    # For GitHub Enterprise set enterpriseHost to your GHE hostname (e.g. github.example.com).
+    # Leave enterpriseHost empty to use public GitHub (github.com).
     github:
-      enabled: false
-      target: https://github.com/your-org
-      # GitHub Enterprise Configuration (Optional)
-      # Uncomment to enable GitHub Enterprise
-      # enterpriseHost: "github.company.com"  # e.g., github.company.com (hostname only, no https://)
-
+      enabled: true
+      enterpriseHost: ""
+      target: "https://github.com/your-org"
       # Enable GitHub PAT token for repository access
       # Requires GITHUB_TOKEN in github-auth-secret
-      enableToken: false
+      enableToken: true
     # GitLab integration
     gitlab:
       enabled: false
       target: https://gitlab.com/your-org
+    # NaaS (Namespace-as-a-Service) Template Configuration
+    naas:
+      # Toggle NaaS on or off.  When false the Software Template catalog entry and
+      # the ArgoCD namespace-controller Application are both omitted from the deployment.
+      # Set to true and fill in the values below to enable NaaS for your deployment.
+      enabled: false
+      # Repository name that holds the NaaS template (must match the actual GitHub repo name)
+      repoName: "your-gitops-repo"
+      # Branch in the GitOps repo that holds the NaaS template
+      templateBranch: "main"
+      # Path to the template.yaml within the repo
+      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
+      # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
+      gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
+      # Directory inside the GitOps repo where provisioned namespace manifests land
+      namespacesPath: "namespaces"
   # TechDocs configuration
   techdocs:
     enabled: true

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llmops-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "llmops.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.syncWaves.config | quote }}
+data:
+  # CAS Configuration
+  cas-endpoint: {{ .Values.cas.endpoint | quote }}
+  cas-use-mcp:  {{ .Values.cas.useMcp | quote }}
+
+  # Model Gateway Configuration
+  model-gateway-endpoint: {{ .Values.modelGateway.endpoint | quote }}
+  model-name:             {{ .Values.modelGateway.modelName | quote }}
+
+  # Application Settings
+  default-top-k:           {{ .Values.app.defaultTopK | quote }}
+  inference-timeout-s:     {{ .Values.cpu.inferenceTimeoutSeconds | default "300" | quote }}

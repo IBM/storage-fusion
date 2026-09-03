@@ -231,7 +231,7 @@ developerHub:
       github:
         enabled: false
         # target: https://github.com/your-org
-        # enterpriseHost: "github.ibm.com"
+        # enterpriseHost: "github.example.com"  # set for GitHub Enterprise; leave empty for public GitHub
         # enableToken: true
       # Catalog providers for automatic discovery
       providers:
@@ -355,20 +355,35 @@ developerHub:
           rules:
             - allow: [Component]
     # GitHub integration for catalog imports
+    # For GitHub Enterprise set enterpriseHost to your GHE hostname (e.g. github.example.com).
+    # Leave enterpriseHost empty to use public GitHub (github.com).
     github:
-      enabled: false
-      target: https://github.com/your-org
-      # GitHub Enterprise Configuration (Optional)
-      # Uncomment to enable GitHub Enterprise
-      # enterpriseHost: "github.company.com"  # e.g., github.company.com (hostname only, no https://)
-
+      enabled: true
+      enterpriseHost: ""
+      target: "https://github.com/your-org"
       # Enable GitHub PAT token for repository access
       # Requires GITHUB_TOKEN in github-auth-secret
-      enableToken: false
+      enableToken: true
     # GitLab integration
     gitlab:
       enabled: false
       target: https://gitlab.com/your-org
+    # NaaS (Namespace-as-a-Service) Template Configuration
+    naas:
+      # Toggle NaaS on or off.  When false the Software Template catalog entry and
+      # the ArgoCD namespace-controller Application are both omitted from the deployment.
+      # Set to true and fill in the values below to enable NaaS for your deployment.
+      enabled: false
+      # Repository name that holds the NaaS template (must match the actual GitHub repo name)
+      repoName: "your-gitops-repo"
+      # Branch in the GitOps repo that holds the NaaS template
+      templateBranch: "main"
+      # Path to the template.yaml within the repo
+      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
+      # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
+      gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
+      # Directory inside the GitOps repo where provisioned namespace manifests land
+      namespacesPath: "namespaces"
   # TechDocs configuration
   techdocs:
     enabled: true
@@ -407,17 +422,32 @@ developerHub:
       clientId: "" # OIDC Client ID
       clientSecret: "" # OIDC Client Secret
       signInResolver: "emailMatchingUserEntityProfileEmail"
-  # Extra environment variables from secrets
-  # The developerhub-secrets is automatically added when auth providers are enabled
-  # Add additional secrets here if needed
-  # Example:
-  # extraEnvs:
-  #   secrets:
-  #     - name: custom-secrets
+  # Extra environment variables from secrets.
+  # Neither secret is required for a basic deployment.
+  #
+  # fusion-cluster-tokens — only needed when fusionServices.enabled=true (CAS/DCS discovery).
+  #   Contains FUSION_<CLUSTER_ID>_SA_TOKEN and FUSION_<CLUSTER_ID>_CAS_SA_TOKEN.
+  #   Create with:
+  #     oc create secret generic fusion-cluster-tokens \
+  #       --from-literal=FUSION_<CLUSTER_ID_UPPER>_SA_TOKEN=<dcs-sa-token> \
+  #       --from-literal=FUSION_<CLUSTER_ID_UPPER>_CAS_SA_TOKEN=<cas-sa-token> \
+  #       -n <rhdh-namespace>
+  #   See RUNBOOK.md Phase 2 for full token creation steps.
+  #
+  # github-auth-secret — only needed when catalog.github.enableToken=true or
+  #   auth.github.enabled=true (GitHub OAuth / catalog imports from private repos).
+  #   Contains GITHUB_TOKEN (repo read scope) and optionally GITHUB_CLIENT_ID /
+  #   GITHUB_CLIENT_SECRET for OAuth.
+  #   Create with:
+  #     oc create secret generic github-auth-secret \
+  #       --from-literal=GITHUB_TOKEN=<your-pat> \
+  #       -n <rhdh-namespace>
+  #
+  # Uncomment the secrets you need. Remove this block entirely if neither is required.
   extraEnvs:
     secrets:
-      - name: fusion-cluster-tokens   # FUSION_<CLUSTER_ID>_SA_TOKEN + FUSION_<CLUSTER_ID>_CAS_SA_TOKEN
-      - name: github-auth-secret      # GITHUB_TOKEN — read access to github.ibm.com/ProjectAbell/Fusion-AI
+      - name: fusion-cluster-tokens
+      - name: github-auth-secret
   # Production resources
   resources:
     limits:
@@ -521,31 +551,63 @@ developerHub:
   # See deploy/helm/values.yaml for the full reference schema.
   fusionServices:
     enabled: true
+
+    # Git repository that hosts the TechDocs source and catalog-info files.
+    # REQUIRED for private repos — must match the repo where this branch lives.
+    gitRepo: "https://github.ibm.com/ProjectAbell/Fusion-AI"
+    gitBranch: "cas-dcs-rhdh"
+
+    # GitHub token for private repo catalog imports.
+    # Set to true once github-auth-secret exists in the RHDH namespace.
+    # Create the secret in your terminal (NEVER paste the token here or in Git):
+    #   oc create secret generic github-auth-secret \
+    #     --from-literal=GITHUB_TOKEN=<your-pat> \
+    #     -n <rhdh-namespace>
+    # Token requires: repo (read) scope.
+    githubToken: true
+
     # Clusters — one entry per IBM Fusion HCI cluster.
     # Add:    append a block below, git push → ArgoCD syncs → entities appear.
     # Remove: delete the block,     git push → ArgoCD syncs → entities gone.
     # No pod restart. No oc apply. No other file changes needed.
-
+    #
+    # Replace the placeholder values below with your real cluster details.
+    # CLUSTER_ID_UPPER = uppercase(CLUSTER_ID), replace '-' with '_'
+    # e.g. my-cluster-01 → MY_CLUSTER_01
     clusters:
-      - name: <CLUSTER_ID>
-        ocpApiUrl: https://api.<CLUSTER_DOMAIN>:6443
-        clusterType: self-hosted
-        services:
-          dcs:
-            enabled: true
-            version: "<DCS_VERSION>"
-            namespace: <DCS_NAMESPACE>
-            k8s:
-              tokenEnvVar: FUSION_<CLUSTER_ID_UPPER>_SA_TOKEN
-              labelSelector: "app=isd,component=discover"
-          cas:
-            enabled: true
-            version: "<CAS_VERSION>"
-            namespace: <CAS_NAMESPACE>
-            k8s:
-              tokenEnvVar: FUSION_<CLUSTER_ID_UPPER>_CAS_SA_TOKEN
-              labelSelector: "app.kubernetes.io/name=cas.isf.ibm.com"
-
+      # Add additional clusters below.
+      # Example self-hosted cluster (has oc CLI access / ServiceAccount tokens):
+      # - name: <cluster-id>
+      #   ocpApiUrl: https://api.<cluster-domain>:6443
+      #   clusterType: self-hosted
+      #   services:
+      #     dcs:
+      #       enabled: true
+      #       version: "<DCS_VERSION>"
+      #       namespace: ibm-data-cataloging
+      #       k8s:
+      #         tokenEnvVar: FUSION_<CLUSTER_ID_UPPER>_SA_TOKEN
+      #         labelSelector: "app=isd,component=discover"
+      #     cas:
+      #       enabled: true
+      #       version: "<CAS_VERSION>"
+      #       namespace: ibm-cas
+      #       k8s:
+      #         tokenEnvVar: FUSION_<CLUSTER_ID_UPPER>_CAS_SA_TOKEN
+      #         labelSelector: "app.kubernetes.io/name=cas.isf.ibm.com"
+      # Example proxy-only cluster (no direct oc access — CAS/DCS URLs auto-derived):
+      # - name: <cluster-id>
+      #   ocpApiUrl: https://api.<cluster-domain>:6443
+      #   clusterType: proxy-only
+      #   services:
+      #     dcs:
+      #       enabled: true
+      #       version: "<DCS_VERSION>"
+      #       namespace: ibm-data-cataloging
+      #     cas:
+      #       enabled: true
+      #       version: "<CAS_VERSION>"
+      #       namespace: ibm-cas
 
 # OpenShift Console QuickStart Configuration
 quickstart:

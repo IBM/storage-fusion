@@ -1,0 +1,124 @@
+# =============================================================================
+# Environment override – Production  |  Model: qwen2.5-coder-1.5b-instruct (CPU)
+# =============================================================================
+# CPU vLLM production values for the Qwen2.5-Coder-1.5B-Instruct model.
+# Copy and rename for additional CPU models:  values-<model-name>.yaml
+#
+# Two modes — choose one:
+#
+#   Manual mode (s3.externalSecret.enabled: false):
+#     Supply s3.accessKeyId / s3.secretAccessKey via --set at deploy time.
+#     Never commit real credentials here.
+#
+#   ESO mode (s3.externalSecret.enabled: true):
+#     ALL five S3 fields are pulled from Vault via External Secrets Operator.
+#     Configure s3.externalSecret.remoteRef.key for this model.
+#     Vault command:
+#       vault kv put secret/maas/model-deploy/cpu/qwen2-5-coder-1-5b/s3 \
+#         access_key_id="<key>" \
+#         secret_access_key="<secret>" \
+#         endpoint="https://s3.openshift-storage.svc:443" \
+#         region="us-south" \
+#         bucket="<bucket-name>"
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  name: qwen2-5-coder-1-5b-cpu
+  displayName: "Qwen2.5-Coder-1.5B Instruct (CPU)"
+  namespace: deploy-models-cpu
+
+# -----------------------------------------------------------------------------
+# Project / Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  create: true
+  labels:
+    environment: prod
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage Configuration
+# -----------------------------------------------------------------------------
+s3:
+  endpoint: ""          # sourced from Vault
+  region: ""            # sourced from Vault
+  bucket: ""            # sourced from Vault
+  modelPath: "qwen2-5-coder-1-5b-instruct-hf/1.0.0"
+  accessKeyId: ""       # sourced from Vault
+  secretAccessKey: ""   # sourced from Vault
+  verifySSL: "0"
+  connectionSecretName: "deploy-models-cpu-connection"
+  serviceAccountName: ""
+
+  externalSecret:
+    enabled: true
+    refreshInterval: 1h
+    secretStoreRef:
+      name: vault-backend
+      kind: ClusterSecretStore
+    remoteRef:
+      key: maas/model-registry/object-storage
+
+# -----------------------------------------------------------------------------
+# vLLM CPU ServingRuntime
+# -----------------------------------------------------------------------------
+servingRuntime:
+  create: true   # false = reuse existing runtime in namespace; set name to that runtime's name
+  # name: ""     # default: model.name (qwen2-5-coder-1-5b-cpu). Set to share an existing runtime.
+  image: "registry.redhat.io/rhaii-early-access/vllm-cpu-rhel9@sha256:139e070c2e4e2bc0254aa852b436c35ec2659e8424e228cc4c77a3bc2ddf50b6"
+  # extraArgs intentionally empty — do NOT add --dtype=float32 or --max-model-len here.
+  # --dtype=float32 doubles weight memory vs bfloat16 (~5.6 GiB vs ~3 GiB).
+  # --max-model-len=4096 counter-intuitively inflates KV cache slot count (112,256 tokens),
+  # pushing total memory (weights + KV cache + AOT warmup) over the 12 GiB container limit → OOMKill.
+  # The cluster ServingRuntime (test-models-cpu reference) passes no extra args and works correctly.
+  extraArgs: []
+  # VLLM_CPU_KVCACHE_SPACE: container_limit - weights(bfloat16) - runtime_overhead
+  # 12 GiB limit, Qwen2.5-Coder-1.5B bfloat16 weights ~3 GiB, runtime ~2 GiB → 12 - 3 - 2 = 7 GiB headroom
+  # Without this cap vLLM allocates KV cache for ALL available memory → 4.7M tokens → OOMKill.
+  extraEnv:
+    - name: VLLM_CPU_KVCACHE_SPACE
+      value: "6"
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# External Access
+# -----------------------------------------------------------------------------
+externalAccess:
+  enabled: true
+  routeTimeoutSeconds: 300
+  tokenSAName: "external-access-token"
+
+# -----------------------------------------------------------------------------
+# Resource Allocation — sized for Qwen2.5-Coder-1.5B (bfloat16 ~3 GiB + overhead)
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "4"
+    memory: 12Gi
+  requests:
+    cpu: "4"
+    memory: 12Gi
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling — CPU nodes only; no GPU taint tolerations
+# -----------------------------------------------------------------------------
+scheduling:
+  nodeSelector: {}
+    # kubernetes.io/arch: amd64
+  tolerations: []
+  affinity: {}
+
+# -----------------------------------------------------------------------------
+# Additional Labels
+# -----------------------------------------------------------------------------
+labels:
+  environment: prod
+
+annotations: {}
