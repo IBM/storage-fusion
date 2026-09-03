@@ -1,0 +1,33 @@
+{{- if .Values.externalAccess.enabled }}
+---
+# External Access — Token Secret
+# -----------------------------------------------------------------------
+# A kubernetes.io/service-account-token Secret bound to the external
+# access ServiceAccount. OpenShift auto-populates the token, ca.crt,
+# and namespace fields after the Secret is created.
+#
+# The token value is what callers include in their Authorization header:
+#   Authorization: Bearer <token>
+#
+# Naming convention observed on cluster:
+#   external-access-token-<model.name>-sa
+#
+# The openshift.io/display-name annotation matches the value entered in
+# the RHOAI dashboard "Service account name" field (externalAccess.tokenSAName).
+# -----------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.externalAccess.tokenSAName }}-{{ .Values.model.name }}-sa
+  namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+    opendatahub.io/dashboard: "true"
+  annotations:
+    {{- include "model-deploy-vllm-cpu.annotations" . | nindent 4 }}
+    # Binds this token secret to the external access ServiceAccount
+    kubernetes.io/service-account.name: {{ .Values.model.name }}-sa
+    # Display name shown in the RHOAI dashboard token list
+    openshift.io/display-name: {{ .Values.externalAccess.tokenSAName | quote }}
+type: kubernetes.io/service-account-token
+{{- end }}

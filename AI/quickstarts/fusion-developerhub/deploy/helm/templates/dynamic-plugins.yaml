@@ -2,13 +2,11 @@
 {{- if .Values.developerHub.createInstance }}
 ---
 # Dynamic Plugins ConfigMap for Red Hat Developer Hub
-# This ConfigMap enables the DynamicHomePage plugin and configures
-# the Fusion homepage layout with quick links, welcome message,
-# featured content, and timezone clocks.
-# Only created when homepage.enabled or RHOAI connector is true.
+# This ConfigMap enables the scaffolder GitHub module (required for publish:github
+# and publish:github:pull-request actions), the DynamicHomePage plugin, and the
+# RHOAI model catalog plugin.
 {{- $homepageEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
 {{- $rhoaiEnabled := and .Values.developerHub.fusion .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
-{{- if or $homepageEnabled $rhoaiEnabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -24,6 +22,10 @@ data:
     includes:
       - dynamic-plugins.default.yaml
     plugins:
+      # Scaffolder GitHub module — provides publish:github and publish:github:pull-request
+      # actions used by the NaaS self-service template and the Fusion AI template.
+      - package: './dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-github-dynamic'
+        disabled: false
       {{- if $homepageEnabled }}
       # Enable the Dynamic Home Page plugin — required for custom homepage rendering
       - package: './dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page'
@@ -40,8 +42,12 @@ data:
 ---
 # QuickAccess ConfigMap for the homepage QuickAccessCard.
 # The ConfigMap name follows the RHDH convention: <backstage-instance-name>-home-quick-access
-# helm.sh/resource-policy: replace ensures Helm replaces (not patches) the ConfigMap on
-# upgrade so that stale icon keys from older installs are fully removed.
+#
+# No helm.sh/resource-policy: replace annotation is needed here.
+# When deploying via ArgoCD, Replace=true in the Application syncOptions already forces
+# a full delete+recreate for ALL resources on every sync, so stale keys are never retained.
+# When deploying via plain `helm upgrade`, the default 3-way strategic merge is sufficient
+# because the ConfigMap keys are deterministic (rendered from values.yaml on every upgrade).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -52,15 +58,6 @@ metadata:
     app.kubernetes.io/component: developerhub-homepage
   annotations:
     argocd.argoproj.io/sync-wave: "50"
-    # helm.sh/resource-policy: replace — replaces (not patches) the ConfigMap on every
-    # upgrade so that stale icon keys or link entries from older installs are fully removed.
-    # Without this, Helm's 3-way strategic merge retains deleted keys from previous releases.
-    # Verified safe during upgrades: ArgoCD deletes and recreates the resource atomically
-    # within the same sync wave. No functional disruption occurs because RHDH mounts this
-    # ConfigMap at startup and the pod rolls after the ConfigMap is refreshed.
-    # During ArgoCD cleanup (app deletion) this annotation is intentionally absent from the
-    # Subscription/Job resources, so it does not interfere with operator teardown.
-    helm.sh/resource-policy: replace
 data:
   data.json: |
     [
@@ -154,6 +151,5 @@ data:
     <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="100" fill="#76B900"/><text x="100" y="115" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="44" fill="white" letter-spacing="-1">NVIDIA</text></svg>
 binaryData:
   ai-models-icon.png: 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
-{{- end }}
 {{- end }}
 {{- end }}

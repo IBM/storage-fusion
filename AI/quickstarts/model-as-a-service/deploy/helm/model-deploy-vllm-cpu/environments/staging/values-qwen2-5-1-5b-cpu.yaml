@@ -1,0 +1,94 @@
+# =============================================================================
+# Environment override – Staging
+# =============================================================================
+# CPU vLLM staging environment — namespace: deploy-models-cpu-staging
+# Slightly larger resources than dev to closer mirror prod sizing.
+#
+# Supply s3.accessKeyId and s3.secretAccessKey at deploy time via
+# --set flags or sealed-secrets. Never commit real credentials here.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Identification
+# -----------------------------------------------------------------------------
+model:
+  namespace: deploy-models-cpu-staging
+
+# -----------------------------------------------------------------------------
+# Project / Namespace Configuration
+# -----------------------------------------------------------------------------
+project:
+  create: true
+  labels:
+    environment: staging
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage Configuration
+# -----------------------------------------------------------------------------
+s3:
+  endpoint: "https://s3.openshift-storage.svc:443"
+  region: "us-east-1"
+  bucket: ""
+  modelPath: ""
+  accessKeyId: ""
+  secretAccessKey: ""
+  verifySSL: "0"
+  connectionSecretName: "deploy-models-cpu-connection"
+  serviceAccountName: ""
+
+# -----------------------------------------------------------------------------
+# vLLM CPU ServingRuntime
+# -----------------------------------------------------------------------------
+servingRuntime:
+  create: true   # false = reuse existing runtime in namespace; set name to that runtime's name
+  # name: ""     # default: model.name. Set to share an existing runtime.
+  image: "registry.redhat.io/rhaii-early-access/vllm-cpu-rhel9@sha256:139e070c2e4e2bc0254aa852b436c35ec2659e8424e228cc4c77a3bc2ddf50b6"
+  # extraArgs intentionally empty — do NOT add --dtype=float32 or --max-model-len here.
+  # See prod values for detailed explanation of why these args cause OOMKill.
+  extraArgs: []
+  # VLLM_CPU_KVCACHE_SPACE: container_limit - weights(bfloat16) - runtime_overhead
+  # 24 GiB limit, Qwen2.5-1.5B bfloat16 weights ~3 GiB, runtime ~2 GiB → safe headroom
+  extraEnv:
+    - name: VLLM_CPU_KVCACHE_SPACE
+      value: "10"
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference:
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# External Access
+# -----------------------------------------------------------------------------
+externalAccess:
+  enabled: true
+  routeTimeoutSeconds: 300
+  tokenSAName: "external-access-token"
+
+# -----------------------------------------------------------------------------
+# Resource Allocation
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: "12"
+    memory: 24Gi
+  requests:
+    cpu: "8"
+    memory: 16Gi
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling
+# -----------------------------------------------------------------------------
+scheduling:
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# -----------------------------------------------------------------------------
+# Additional Labels
+# -----------------------------------------------------------------------------
+labels:
+  environment: staging
+
+annotations: {}

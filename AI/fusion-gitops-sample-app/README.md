@@ -1,594 +1,257 @@
-# Agentic Chat Assistant Sample Application
+# Agentic Chat Assistant — Sample Application
 
-A reference implementation demonstrating end-to-end GitOps deployment patterns with automatic secret management and rotation on Fusion HCI.
+A production-ready chat application for the IBM Fusion AI / LLMOps platform that unifies
+RAG (remote gateway models) and CPU (KServe InferenceServices) behind a single model
+dropdown with optional Auto Detect.
+
+---
+
 ## Table of Contents
 
-- [Overview](#overview)
-- [What This Sample Demonstrates](#what-this-sample-demonstrates)
-- [Application Architecture](#application-architecture)
-- [Application Description](#application-description)
-- [Running Locally](#running-locally)
-- [Building and Deploying the Container Image](#building-and-deploying-the-container-image)
-- [Prerequisites](#prerequisites-1)
-- [End-to-End Deployment Flow](#end-to-end-deployment-flow)
-  - [Step 1: Deploy ArgoCD](#step-1-deploy-argocd)
-  - [Step 2: Deploy Vault](#step-2-deploy-vault)
-  - [Step 3: Deploy External Secrets Operator](#step-3-deploy-external-secrets-operator)
-  - [Step 4: Configure Vault with Application Secrets](#step-4-configure-vault-with-application-secrets)
-  - [Step 5: Deploy the Sample Application via ArgoCD](#step-5-deploy-the-sample-application-via-argocd)
-  - [Step 6: Verify Deployment and Test Secret Rotation](#step-6-verify-deployment-and-test-secret-rotation)
-- [GitOps Structure](#gitops-structure)
-- [Secret Rotation Workflow](#secret-rotation-workflow)
-- [Accessing the Application](#accessing-the-application)
-- [Next Steps](#next-steps)
-- [Related Documentation](#related-documentation)
-  - [Quickstart Guides](#quickstart-guides)
-  - [External Resources](#external-resources)
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Repository Layout](#repository-layout)
+4. [Running Locally](#running-locally)
+5. [Deploying to a Cluster](#deploying-to-a-cluster)
+6. [API Reference](#api-reference)
 
+---
 
 ## Overview
 
-This sample application showcases production-ready deployment patterns using ArgoCD, HashiCorp Vault, and External Secrets Operator. It serves as a practical example of how to deploy AI/ML applications with secure secret management and zero-downtime updates on Fusion HCI.
+The application exposes a **unified model dropdown** and an **Auto Detect toggle** in the
+sidebar. The backend resolves which runtime to use (Model Gateway or KServe) transparently —
+the user only sees model names.
 
-## What This Sample Demonstrates
+### Unified model selection
 
-This reference implementation showcases:
+| Model type | Backed by | Selected when… |
+|---|---|---|
+| Gateway / large models | Model Gateway (GPU, remote cluster) | General chat, RAG, or any task the CPU models don't cover |
+| `qwen2-5-1-5b-cpu` | KServe InferenceService (CPU) | Auto Detect → `chat` task |
+| `qwen2-5-coder-1-5b-cpu` | KServe InferenceService (CPU) | Auto Detect → `code` task |
+| `smollm2-1-7b-cpu` | KServe InferenceService (CPU) | Auto Detect → `summarize` task |
 
-✅ **GitOps Continuous Delivery** - Declarative application deployment using ArgoCD  
-✅ **Automated Secret Management** - Vault integration with External Secrets Operator  
-✅ **Zero-Downtime Secret Rotation** - Automatic pod restarts using Stakater Reloader  
-✅ **Sync Wave Orchestration** - Ordered deployment of dependencies
+### Auto Detect
 
-## Application Architecture
+When **Auto Detect** is ON the backend classifies the prompt by keyword signals and routes
+to the best-matching model based on declared capabilities. When OFF the user picks any model
+from the dropdown explicitly.
 
-This sample application consists of:
+### CAS / RAG
 
-- **Model Gateway Integration** - Unified LLM API gateway with Bearer authentication for accessing multiple AI models
-- **CAS MCP Integration** - Content-Aware Storage integration for intelligent document retrieval and RAG workflows
-- **Streamlit UI** - Interactive chat interface with real-time progress tracking and source attribution
+CAS (Content-Aware Storage) vector search runs for **any model** when a vector store is
+selected — it is not restricted to gateway models.
 
-The application demonstrates a complete RAG (Retrieval-Augmented Generation) pipeline with enterprise-grade secret management.
+---
 
-## Application Description
+## Architecture
 
-This is an **Agentic Chat Assistant** - an AI-powered chat application that combines retrieval-augmented generation (RAG) with intelligent document search capabilities. The application provides:
+```
+┌──────────────────────────────────────────────────────────────┐
+│   React UI  (port 8000, /)                                   │
+│   Vite + TypeScript + Tailwind                               │
+│   served as static files by FastAPI's StaticFiles mount      │
+└──────────────────────┬───────────────────────────────────────┘
+                       │  fetch /api/*
+┌──────────────────────▼───────────────────────────────────────┐
+│   FastAPI backend  (port 8000)   backend/main.py             │
+│                                                              │
+│   GET  /api/config                                           │
+│   GET  /api/vector-stores                                    │
+│   GET  /api/models          ◄── unified model list           │
+│   POST /api/chat            ◄── unified chat (all models)    │
+│   GET  /healthz                                              │
+└──────────────┬───────────────────────┬───────────────────────┘
+               │  gateway path         │  CPU path
+     ┌─────────▼─────────┐   ┌────────▼────────────────────────┐
+     │  src/rag_flow      │   │  _handle_cpu_chat()             │
+     └─────────┬─────────┘   │  MODEL_URL_CHAT / CODE /        │
+     ┌─────────┴────────────┐ │  SUMMARIZE (env vars)           │
+     │  src/cas_client      │ └────────┬────────────────────────┘
+     │  src/model_gateway   │          │ KServe /v1/chat/completions
+     │       _client        │   ┌──────▼──────────────────────────────┐
+     └──────────────────────┘   │  namespace: deploy-models-cpu│
+                                │  qwen2-5-1-5b-cpu   (chat)          │
+                                │  qwen2-5-coder-1-5b-cpu (code)      │
+                                │  smollm2-1-7b-cpu   (summarize)     │
+                                └──────────────────────────────────────┘
+```
 
-### Core Features
+Container image is a **two-stage build**:
+- Stage 1 — `node:20-alpine` compiles the React app to static files
+- Stage 2 — `python:3.11-slim` runs FastAPI + serves the compiled UI
 
-- **Interactive Chat Interface** - Built with Streamlit, providing a modern, responsive web UI for natural language conversations
-- **RAG Pipeline** - Retrieves relevant context from enterprise documents using CAS (Content-Aware Storage) before generating responses
-- **Real-time Progress Tracking** - Visual feedback showing each stage of query processing (retrieval, context building, generation)
-- **Source Attribution** - Displays cited sources with relevance scores, and content snippets for transparency
-- **Multi-Model Support** - Connects to Model Gateway for flexible LLM selection (Qwen, Granite, Mistral, etc.)
-- **Vector Store Management** - Dynamic selection and management of multiple vector stores for document collections
-- **MCP Protocol Support** - Optional Model Context Protocol integration for advanced CAS interactions
+---
 
-### Technical Stack
+## Repository Layout
 
-- **Frontend**: Streamlit (Python web framework)
-- **LLM Integration**: Model Gateway with Bearer token authentication
-- **Document Retrieval**: CAS MCP/REST API for vector search
+```
+fusion-gitops-sample-app/
+├── frontend/                   # React UI (Vite + TypeScript + Tailwind)
+│   ├── src/
+│   │   ├── App.tsx             # Main application shell
+│   │   ├── api.ts              # Typed fetch wrappers for /api/*
+│   │   ├── types.ts            # Shared TypeScript interfaces
+│   │   └── components/
+│   │       ├── Sidebar.tsx     # Vector store / model selectors + Auto Detect toggle
+│   │       ├── ChatMessage.tsx # User + assistant bubbles (react-markdown)
+│   │       ├── MetricsAndSources.tsx  # Timing cards + source expander
+│   │       ├── WelcomeScreen.tsx
+│   │       └── Select.tsx
+│   ├── package.json
+│   └── vite.config.ts
+│
+├── backend/                    # FastAPI application
+│   ├── main.py                 # All API routes + unified model registry
+│   └── requirements.txt
+│
+├── src/                        # Core RAG logic
+│   ├── cas_client.py
+│   ├── model_gateway_client.py
+│   └── rag_flow.py
+│
+├── chart/                      # Helm chart
+│   ├── Chart.yaml
+│   ├── values.yaml             # All configurable values live here
+│   ├── VALUES.md               # Field-by-field reference for values.yaml
+│   └── templates/
+│       ├── _helpers.tpl
+│       ├── configmap.yaml      # Rendered from values.yaml
+│       ├── deployment.yaml     # Deployment + Service + Route (port 8000)
+│       ├── rbac.yaml
+│       └── secrets.yaml        # ExternalSecret OR hardcoded (toggle in values)
+│
+├── gitops/
+│   └── llmops-with-reloader.yaml   # ArgoCD Application manifests (apply once)
+│
+├── scripts/
+│   ├── build_and_push_chat_app.sh  # Build and push the container image
+│   └── verify_deployment.sh        # Post-deploy health check
+│
+├── Dockerfile.chat-app         # Multi-stage: Node 20 → Python 3.11-slim
+├── DEPLOYMENT.md               # ← Full deployment guide (read this next)
+└── env.example                 # Environment variable reference for local dev
+```
 
-### Use Cases
-
-- Enterprise knowledge base querying
-- Document Q&A with source verification
-- Technical documentation assistance
-- Compliance and audit trail with source attribution
+---
 
 ## Running Locally
 
-This section describes how to run the chat application on your local machine for development and testing.
-
 ### Prerequisites
 
-- **Python 3.11+** (required for optimal compatibility)
-- **pip** package manager
-- **Access to required services**:
-  - Model Gateway endpoint with API key
-  - CAS (Content-Aware Storage) endpoint with API key
-  - At least one vector store configured in CAS
+- Python 3.11+
+- Node.js 20+
+- Access to a CAS endpoint and a Model Gateway endpoint
 
-### Local Setup Instructions
-
-#### 1. Clone the Repository
-Clone this repository to your local machine and then:
-```bash
-cd AI/fusion-gitops-sample-app
-```
-
-#### 2. Create Virtual Environment
+### 1. Clone & configure environment
 
 ```bash
-# Create virtual environment
-python3 -m venv .venv
+git clone https://github.com/IBM/storage-fusion.git
+cd storage-fusion/fusion-gitops-sample-app
 
-# Activate virtual environment
-# On macOS/Linux:
-source .venv/bin/activate
-
-# On Windows:
-.venv\Scripts\activate
-```
-
-#### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-#### 4. Configure Environment Variables
-
-Copy the example environment file and configure your credentials:
-
-```bash
 cp env.example .env
+# Edit .env:
+#   CAS_ENDPOINT=https://your-cas.example.com
+#   CAS_API_KEY=your-cas-key
+#   CAS_VECTOR_STORE_ID=optional-store-id
+#   MODEL_GATEWAY_ENDPOINT=https://your-gateway.example.com
+#   MODEL_GATEWAY_API_KEY=your-bearer-token
+#   MODEL_NAME=granite
 ```
 
-Edit `.env` file with your actual values:
+### 2. Start the FastAPI backend
 
 ```bash
-# CAS Configuration
-CAS_ENDPOINT=https://your-cas-endpoint.com
-CAS_API_KEY=your-cas-api-key
-CAS_VECTOR_STORE_ID=your-vector-store-id
-CAS_USE_MCP=false  # Set to 'true' for MCP protocol, 'false' for REST API
-
-# Model Gateway Configuration
-MODEL_GATEWAY_ENDPOINT=https://your-model-gateway.com
-MODEL_GATEWAY_API_KEY=your-bearer-token
-MODEL_NAME=qwen2-5-72b-instruct  # Or: granite, mistral, etc.
-
-# Optional: Search Configuration
-DEFAULT_TOP_K=5  # Number of documents to retrieve
+python -m venv .venv && source .venv/bin/activate
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload --port 8000
 ```
 
-**Required Configuration**:
-- `CAS_ENDPOINT` - Your CAS service URL
-- `CAS_API_KEY` - Authentication key for CAS
-- `MODEL_GATEWAY_ENDPOINT` - Your Model Gateway URL
-- `MODEL_GATEWAY_API_KEY` - Bearer token for Model Gateway authentication
-- `CAS_VECTOR_STORE_ID` - ID of the vector store to query (required for REST API mode)
+The API is now at `http://localhost:8000`.
+Health check: `curl http://localhost:8000/healthz`
 
-#### 5. Start the Application
+### 3. Start the React dev server (with hot-reload)
+
+In a second terminal:
 
 ```bash
-# Run the Streamlit application
-streamlit run chat_app.py
-
-# Or use Python directly
-python -m streamlit run chat_app.py
+cd frontend
+npm install
+npm run dev          # http://localhost:5173
 ```
 
-#### 6. Access the Application
+The Vite dev server proxies `/api/*` → `http://localhost:8000` automatically.
+Open `http://localhost:5173` in your browser.
 
-Once started, the application will be available at:
+---
 
-```
-http://localhost:8501
-```
+## Deploying to a Cluster
 
-### Using the Application Locally
+> **→ See [DEPLOYMENT.md](./DEPLOYMENT.md) for the full guide.**
 
-The application auto-connects on first load using the values in your `.env` file. No manual configuration is required once the environment is set up.
+It covers, in order:
 
-1. **Open the app** — Navigate to `http://localhost:8501`. The sidebar shows **Connected** when all required endpoints and API keys are present
-2. **Select a Vector Store** — Use the **Vector Store** dropdown in the sidebar to choose which store to query
-3. **Select a Model** — Use the **Model** dropdown to pick the LLM to use for responses
-4. **Start Chatting** — Type your question in the chat input at the bottom; press **Enter** to submit
-5. **View Results** — See the AI response alongside cited sources
-6. **New Chat** — Click the **New Chat** button in the sidebar to clear the conversation
+| Step | What it covers |
+|---|---|
+| Prerequisites | Cluster operators, local tooling, platform services checklist |
+| Build & push | Container image build with `podman`, Apple Silicon notes |
+| Configure | Every `chart/values.yaml` field — image, CAS, Model Gateway, CPU models, secrets |
+| Vault setup | Storing all 5 secrets (CAS key, gateway key, 3 CPU SA tokens) |
+| ArgoCD deploy | Applying the Application manifests, sync wave ordering |
+| Verify | Running `scripts/verify_deployment.sh` and reading its output |
+| Day-2 ops | Image updates, API key rotation, model swaps, scaling |
+| Troubleshooting | Pod failures, ExternalSecret errors, ArgoCD OutOfSync, 502/504 errors |
 
-## Building and Deploying the Container Image
+For the Helm values field-by-field reference see [`chart/VALUES.md`](./chart/VALUES.md).
 
-Before deploying to Kubernetes/OpenShift, you need to build and push the container image to your own container registry.
+---
 
-### Prerequisites for Container Build
+## API Reference
 
-- **Podman** or **Docker** installed
-- Access to a container registry (Docker Hub, Quay.io, private registry, etc.)
-- Registry credentials configured (`podman login` or `docker login`)
+All endpoints are served on port `8000` alongside the React UI.
 
-### Build the Container Image
+| Endpoint | Method | Description |
+|---|---|---|
+| `/healthz` | GET | Liveness / readiness probe |
+| `/api/config` | GET | Active endpoint configuration (no secrets) |
+| `/api/vector-stores` | GET | Available CAS vector stores |
+| `/api/models` | GET | All models — gateway + CPU, with capabilities |
+| `/api/chat` | POST | Unified chat — gateway or CPU, with optional RAG |
+| `/api/rag/chat` | POST | Legacy RAG-only endpoint (backward compat) |
+| `/api/cpu/models` | GET | Legacy CPU task → model mapping |
+| `/api/cpu/chat` | POST | Legacy CPU-only endpoint (backward compat) |
 
-```bash
-# Navigate to the application directory
-cd fusion-gitops-sample-app
+### `POST /api/chat` request
 
-# Build the image (using podman)
-podman build --platform linux/amd64 -f Dockerfile.chat-app -t your-registry.example.com/your-namespace/chat-app:latest .
-
-# Or using docker
-docker build --platform linux/amd64 -f Dockerfile.chat-app -t your-registry.example.com/your-namespace/chat-app:latest .
-```
-
-**Replace** `your-registry.example.com/your-namespace` with your actual registry details.
-
-### Push the Image to Your Registry
-
-```bash
-# Push the image (using podman)
-podman push your-registry.example.com/your-namespace/chat-app:latest
-
-# Or using docker
-docker push your-registry.example.com/your-namespace/chat-app:latest
-```
-
-### Update the Deployment Configuration
-
-After building and pushing your image, update the deployment manifest:
-
-1. **Edit the deployment file**: `gitops/applications/chat-app-deployment.yaml`
-2. **Update line 25** with your image reference:
-   ```yaml
-   image: your-registry.example.com/your-namespace/chat-app:latest
-   ```
-3. **Commit and push** your changes to your forked repository
-
-The ArgoCD application will automatically sync and deploy your custom image.
-
-## Prerequisites
-
-Before deploying this sample application, you must complete the following quickstart guides:
-
-1. **[Deploy ArgoCD](../quickstarts/fusion-gitops/docs/deploying-gitops-guide.md)** - GitOps platform for continuous delivery
-2. **[Deploy Vault](../quickstarts/fusion-gitops/docs/deploying-vault-guide.md)** - Secret storage and encryption
-3. **[Deploy External Secrets Operator](../quickstarts/fusion-gitops/docs/deploying-external-secrets-guide.md)** - Secret synchronization
-
-### Quick Links to Quickstart Guides
-
-| Component | Guide | Purpose |
-|-----------|-------|---------|
-| **ArgoCD** | [Deploying GitOps Guide](../quickstarts/fusion-gitops/docs/deploying-gitops-guide.md) | Continuous delivery platform |
-| **Vault** | [Deploying Vault Guide](../quickstarts/fusion-gitops/docs/deploying-vault-guide.md) | Secret management backend |
-| **External Secrets** | [Deploying External Secrets Guide](../quickstarts/fusion-gitops/docs/deploying-external-secrets-guide.md) | Secret synchronization |
-
-### Additional Requirements
-
-- OpenShift 4.20+ or Kubernetes 1.27+ on Fusion HCI
-- Cluster admin access
-- `oc` or `kubectl` CLI configured
-- Model Gateway (for LLM serving)
-- CAS endpoint accessible (for document retrieval)
-
-## End-to-End Deployment Flow
-
-Follow these steps to deploy the sample application from scratch:
-
-### Step 1: Deploy ArgoCD
-
-Deploy the GitOps platform that will manage all subsequent deployments:
-
-```bash
-cd AI/quickstarts/fusion-gitops
-
-# Deploy with default configuration
-./scripts/deploy-gitops.sh
-
-# Or use production profile for HA
-./scripts/deploy-gitops.sh -f helm/fusion-gitops/environments/prod/values.yaml
-
-# Verify deployment
-./scripts/validate-gitops.sh
+```json
+{
+  "query": "Write a Python function that reverses a linked list",
+  "vector_store_id": "my-store",
+  "model_id": "qwen2-5-1-5b-cpu",
+  "auto_detect": false,
+  "max_tokens": 512,
+  "temperature": 0.7,
+  "history": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+}
 ```
 
-**What this provides**:
-- ArgoCD server for GitOps workflows
-- Application lifecycle management
-- Automated sync and self-healing
+- `model_id` — any ID from `GET /api/models`; empty = use default model
+- `auto_detect` — `true` classifies the prompt and picks the best-matching model
+- `vector_store_id` — optional; triggers CAS RAG for any model when set
+- `history` — multi-turn conversation context
 
-📖 **Detailed guide**: [Deploying GitOps Guide](../quickstarts/fusion-gitops/docs/deploying-gitops-guide.md)
+### `POST /api/chat` response
 
-### Step 2: Deploy Vault
-
-Deploy HashiCorp Vault for secure secret storage:
-
-```bash
-cd AI/quickstarts/fusion-gitops
-
-# Deploy with default configuration (Shamir seal)
-./scripts/deploy-secret-manager.sh
-
-# Or deploy with AWS KMS auto-unseal (recommended for production)
-./scripts/deploy-secret-manager.sh \
-  --seal-type awskms \
-  --kms-region us-east-1 \
-  --kms-key-id alias/vault-unseal
-
-# Verify deployment
-./scripts/validate-secret-manager.sh
+```json
+{
+  "response": "def reverse_linked_list(head): ...",
+  "model_id": "qwen2-5-1-5b-cpu",
+  "sources": [],
+  "metrics": {"processing_time": 1.2, "sources_count": 0, "cas_search_count": 0},
+  "usage": {"prompt_tokens": 18, "completion_tokens": 87, "total_tokens": 105}
+}
 ```
 
-**What this provides**:
-- Encrypted secret storage
-- High availability (multi-replica)
-- Automatic unsealing (with AWS KMS)
-
-📖 **Detailed guide**: [Deploying Vault Guide](../quickstarts/fusion-gitops/docs/deploying-vault-guide.md)
-
-### Step 3: Deploy External Secrets Operator
-
-Deploy the operator that synchronizes secrets from Vault to Kubernetes:
-
-```bash
-cd AI/quickstarts/fusion-gitops
-
-# Deploy operator with Vault backend
-./scripts/deploy-external-secrets.sh --backend vault
-
-# Verify deployment
-./scripts/validate-external-secrets.sh
-```
-
-**What this provides**:
-- Automatic secret synchronization from Vault
-- ClusterSecretStore for centralized configuration
-- Real-time secret updates
-
-📖 **Detailed guide**: [Deploying External Secrets Guide](../quickstarts/fusion-gitops/docs/deploying-external-secrets-guide.md)
-
-### Step 4: Configure Vault with Application Secrets
-
-Store the application secrets in Vault:
-
-```bash
-# Get Vault root token
-export VAULT_TOKEN=$(oc get secret vault-unseal-keys -n vault \
-  -o jsonpath='{.data.root-token}' | base64 -d)
-
-# Port-forward to Vault (if not using route)
-oc port-forward -n vault svc/vault 8200:8200 &
-
-# Set Vault address
-export VAULT_ADDR=http://localhost:8200
-
-# Create secrets in Vault
-vault kv put secret/llmops-platform/secrets \
-  cas_api_key="your-cas-api-key" \
-  model_gateway_api_key="your-model-gateway-bearer-token"
-
-# Verify secrets are stored
-vault kv get llmops-platform/secrets
-```
-
-**Required secrets**:
-- `cas_api_key` - CAS API key for document retrieval
-- `model_gateway_api_key` - Model Gateway Bearer token for LLM access
-
-### Step 5: Deploy the Sample Application via ArgoCD
-
-Deploy the application using GitOps:
-
-```bash
-# Update the repository URL in the ArgoCD application manifest
-# Edit: fusion-gitops-sample-app/gitops/llmops-with-reloader.yaml
-# Change repoURL to your forked repository
-
-# Apply the ArgoCD application
-oc apply -f fusion-gitops-sample-app/gitops/llmops-with-reloader.yaml
-
-# Watch the deployment
-oc get applications.argoproj.io -n openshift-gitops -w
-
-# Check application status
-argocd app get llmops-platform --refresh
-```
-
-**What gets deployed**:
-1. **Reloader** - Automatic pod restart on secret changes
-2. **ExternalSecret** - Secret synchronization from Vault
-3. **Application** - Chat application with Model Gateway integration
-
-### Step 6: Verify Deployment and Test Secret Rotation
-
-Verify the deployment is successful:
-
-```bash
-# Check all pods are running
-oc get pods -n llmops-platform
-
-# Check ExternalSecret status
-oc get externalsecret llmops-secrets -n llmops-platform
-
-# Verify secret was created
-oc get secret llmops-secrets -n llmops-platform
-```
-
-**Test automatic secret rotation**:
-
-```bash
-# Update secret in Vault
-vault kv put secret/llmops-platform/secrets \
-  cas_api_key="new-cas-api-key" \
-  model_gateway_api_key="new-model-gateway-token"
-
-# Watch for automatic sync and pod restart
-oc get externalsecret llmops-secrets -n llmops-platform -w
-oc get pods -n llmops-platform -w
-
-# Verify new secret values (after sync)
-oc get secret llmops-secrets -n llmops-platform -o yaml
-```
-
-The deployment will automatically restart with new secrets within 5 minutes (default refresh interval).
-
-## GitOps Structure
-
-The sample application uses ArgoCD sync waves to orchestrate deployment order:
-
-### Sync Wave Strategy
-
-```
-Wave 0: Access Control
-└── RBAC configuration
-
-Wave 1: Configuration
-└── ConfigMap
-
-Wave 2: Secret Management
-└── ExternalSecret resource
-
-Wave 3: Application Deployment
-├── Chat application deployment
-├── Service
-└── Route
-```
-
-### Deployment Manifests
-
-```
-fusion-gitops-sample-app/gitops/
-├── llmops-with-reloader.yaml          # ArgoCD Application
-└── applications/
-    ├── chat-app-deployment.yaml       # Application deployment
-    ├── externalsecret-llmops.yaml     # ExternalSecret
-    ├── configmap.yaml                 # Configuration
-    └── rbac.yaml                      # RBAC resources
-```
-
-### Key Annotations
-
-The deployment uses these critical annotations:
-
-```yaml
-# Automatic restart on secret changes
-secret.reloader.stakater.com/reload: "llmops-secrets"
-
-# Automatic restart on ConfigMap changes
-configmap.reloader.stakater.com/reload: "llmops-config"
-```
-
-Both annotations are watched by Stakater Reloader. Whenever either the `llmops-secrets`
-Secret **or** the `llmops-config` ConfigMap is updated in the cluster, Reloader triggers
-a rolling restart of the `llmops-chat-app` deployment automatically, no manual rollout
-required. This means committing a change to `configmap.yaml` and pushing it to Git is all that is needed:
-ArgoCD applies the updated ConfigMap, and Reloader immediately restarts the pod to pick
-up the new values.
-
-## Secret Rotation Workflow
-
-The sample demonstrates production-ready automatic secret rotation:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Secret Rotation Flow                     │
-└─────────────────────────────────────────────────────────────┘
-
-1. Update Secret in Vault
-   │
-   │  vault kv put secret/llmops-platform/secrets \
-   │    cas_api_key="new-key" \
-   │    model_gateway_api_key="new-token"
-   │
-   ▼
-2. External Secrets Operator Detects Change
-   │  (refreshInterval: 5m)
-   │
-   ▼
-3. Kubernetes Secret Updated
-   │  (llmops-secrets in llmops-platform namespace)
-   │
-   ▼
-4. Stakater Reloader Detects Secret Change
-   │  (watches annotation: secret.reloader.stakater.com/reload)
-   │
-   ▼
-5. Reloader Updates Deployment Annotation
-   │  (triggers rolling restart)
-   │
-   ▼
-6. Kubernetes Performs Rolling Restart
-   │  (zero downtime)
-   │
-   ▼
-7. New Pods Start with Updated Secrets
-   │  (application automatically uses new credentials)
-   │
-   ▼
-8. Old Pods Terminated
-   └─> ✅ Secret Rotation Complete
-```
-
-### Configuration
-
-**ExternalSecret refresh interval**:
-```yaml
-spec:
-  refreshInterval: 5m  # Check Vault every 5 minutes
-```
-
-**Reloader annotation**:
-```yaml
-metadata:
-  annotations:
-    secret.reloader.stakater.com/reload: "llmops-secrets"
-```
-
-## Accessing the Application
-
-### Get the Application URL
-
-```bash
-# Get the route URL
-oc get route llmops-chat-app -n llmops-platform \
-  -o jsonpath='{.spec.host}' && echo
-
-# Open in browser
-https://<route-host>
-```
-
-### Access via Port-Forward (Alternative)
-
-```bash
-# Port-forward to the service
-oc port-forward -n llmops-platform svc/llmops-chat-app 8501:8501
-
-# Open in browser
-http://localhost:8501
-```
-
-### Default Configuration
-
-The application is configured with:
-- **Model Gateway endpoint** - From ConfigMap
-- **CAS integration** - Using secrets from Vault
-- **Model name** - Configurable via ConfigMap
-
-## Next Steps
-
-### Customize the Deployment
-
-1. **Fork the repository** to your own Git account
-2. **Update the ArgoCD application** to point to your fork:
-   ```yaml
-   # Edit: fusion-gitops-sample-app/gitops/llmops-with-reloader.yaml
-   spec:
-     source:
-       repoURL: https://github.com/<your-org>/storage-fusion.git
-   ```
-3. **Modify configurations** in your fork
-4. **Commit and push** - ArgoCD will automatically sync changes
-
-### Extend the Pattern
-
-Use this sample as a template for your own applications:
-
-- **Add more applications** using the same GitOps pattern
-- **Implement multi-environment** deployments (dev, staging, prod)
-- **Add monitoring** with Prometheus and Grafana
-- **Integrate CI/CD** pipelines for automated builds
-- **Implement progressive delivery** with Argo Rollouts
-
-## Related Documentation
-
-### Quickstart Guides
-- [Deploying GitOps Guide](../quickstarts/fusion-gitops/docs/deploying-gitops-guide.md)
-- [Deploying Vault Guide](../quickstarts/fusion-gitops/docs/deploying-vault-guide.md)
-- [Deploying External Secrets Guide](../quickstarts/fusion-gitops/docs/deploying-external-secrets-guide.md)
-- [GitOps Quickstart Overview](../quickstarts/fusion-gitops/README.md)
-
-### External Resources
-- [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
-- [HashiCorp Vault Documentation](https://www.vaultproject.io/docs)
-- [External Secrets Operator](https://external-secrets.io/)
-- [Stakater Reloader](https://github.com/stakater/Reloader)
+- `sources` and `metrics` are populated when CAS search ran
+- `usage` is populated when a CPU/KServe model answered

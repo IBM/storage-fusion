@@ -17,13 +17,19 @@ metadata:
   annotations:
     {{- include "fusion-developer-hub.annotations" . | nindent 4 }}
     {{- if not .Values.argocd.enabled }}
-    # helm hooks are used only in plain Helm installs to enforce creation order.
-    # When argocd.enabled=true these are omitted; ArgoCD uses sync-wave instead.
+    # helm.sh/hook — plain Helm installs only (argocd.enabled=false).
+    # Enforces Namespace → OperatorGroup → Subscription creation order via hook weights.
+    # Omitted when argocd.enabled=true because ArgoCD uses sync-wave for ordering instead.
+    # Using both together causes ArgoCD to treat hook resources as out-of-band and ignore
+    # sync-wave, breaking the ordering guarantee.
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-10"
     {{- end }}
-    # sync-wave ensures the Namespace exists before the OperatorGroup and Subscription
-    # that reference it (waves 20 and 30). ArgoCD applies resources in ascending wave order.
+    # argocd.argoproj.io/sync-wave — ArgoCD-managed deployments only.
+    # Wave 0 ensures the Namespace is created before the OperatorGroup (wave 20) and
+    # Subscription (wave 30) that reference it.  Without this, ArgoCD applies all resources
+    # in a single batch and the Subscription may be rejected because the namespace does not
+    # exist yet.  These annotations are harmless in plain Helm installs (Helm ignores them).
     argocd.argoproj.io/sync-wave: "0"
 ---
 # OperatorGroup for Red Hat Developer Hub
@@ -40,10 +46,7 @@ metadata:
     helm.sh/hook-weight: "-9"
     {{- end }}
     argocd.argoproj.io/sync-wave: "20"
-    # SkipDryRunOnMissingResource: OLM populates .status after the OperatorGroup is
-    # created; ArgoCD's dry-run (server-side apply validation) fails when the
-    # operators.coreos.com/v1 webhook is absent on the cluster. This option makes
-    # ArgoCD skip the dry-run for this resource, preventing spurious sync failures.
+    # Required: OLM webhook is absent on fresh clusters; ArgoCD dry-run fails without this.
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec: {}
   # RHDH operator requires AllNamespaces install mode
@@ -64,11 +67,8 @@ metadata:
     helm.sh/hook-weight: "-8"
     {{- end }}
     argocd.argoproj.io/sync-wave: "30"
-    # Replace=true: OLM Subscriptions are immutable once the installPlan is created;
-    # ArgoCD's default patch strategy causes "field is immutable" errors on re-sync.
-    # Replace=true forces a delete+recreate instead of a patch, which is safe here
-    # because OLM re-evaluates the Subscription and continues from its current state.
-    # SkipDryRunOnMissingResource: avoids dry-run failures before OLM CRDs are ready.
+    # Replace=true: OLM Subscriptions are immutable after InstallPlan creation; patch → "field is immutable".
+    # SkipDryRunOnMissingResource=true: OLM CRDs may be absent on fresh clusters; prevents dry-run failure.
     argocd.argoproj.io/sync-options: Replace=true,SkipDryRunOnMissingResource=true
 spec:
   channel: {{ .Values.operators.developerHub.channel }}
@@ -91,16 +91,15 @@ metadata:
     app.kubernetes.io/component: rhdh-operator-setup
   annotations:
     {{- if not .Values.argocd.enabled }}
-    # In plain Helm: runs after install/upgrade completes, deleted before re-creation.
+    # Plain Helm only: post-install/post-upgrade hook; before-hook-creation cleans up prior run.
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "1"
     helm.sh/hook-delete-policy: before-hook-creation
     {{- end }}
     argocd.argoproj.io/sync-wave: "40"
-    # Force=true,Replace=true: Jobs are immutable after creation. On re-sync ArgoCD cannot
-    # patch a completed Job, so Force+Replace ensures the old Job is deleted and a fresh
-    # one is created to re-validate operator readiness after upgrades.
-    argocd.argoproj.io/sync-options: Force=true,Replace=true
+    # Jobs are immutable after creation; Force+Replace deletes and recreates on each sync.
+    # SkipDryRunOnMissingResource=true: prevents dry-run failure when batch/v1 webhook absent.
+    argocd.argoproj.io/sync-options: Force=true,Replace=true,SkipDryRunOnMissingResource=true
 spec:
   template:
     metadata:

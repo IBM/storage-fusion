@@ -1,0 +1,90 @@
+---
+# ArgoCD RBAC
+# -----------------------------------------------------------------------
+# Single file for all permissions the ArgoCD application-controller needs
+# to manage resources in the model namespace.
+#
+# Wave 0: applied before all chart resources.
+#
+# ClusterRole      — defines the permissions (cluster-scoped)
+# RoleBinding      — binds the ClusterRole to the ArgoCD SA in this namespace
+#
+# Covers:
+#   serving.kserve.io   — ServingRuntime, InferenceService (always required)
+#   external-secrets.io — ExternalSecret (only when ESO mode is enabled)
+# -----------------------------------------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-manager-vllm-cpu
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-rbac
+rules:
+  # KServe — always required; ArgoCD manages ServingRuntime + InferenceService
+  - apiGroups:
+      - serving.kserve.io
+    resources:
+      - servingruntimes
+      - inferenceservices
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - serving.kserve.io
+    resources:
+      - servingruntimes/status
+      - inferenceservices/status
+    verbs:
+      - get
+      - list
+      - watch
+  {{- if .Values.s3.externalSecret.enabled }}
+  # External Secrets Operator — only when ESO mode is enabled
+  - apiGroups:
+      - external-secrets.io
+    resources:
+      - externalsecrets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - external-secrets.io
+    resources:
+      - externalsecrets/status
+    verbs:
+      - get
+      - list
+      - watch
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-manager-vllm-cpu
+  namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-manager-vllm-cpu
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.argocd.serviceAccountName }}
+    namespace: {{ .Values.argocd.namespace }}

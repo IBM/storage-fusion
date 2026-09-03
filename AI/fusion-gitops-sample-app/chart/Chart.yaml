@@ -1,0 +1,14 @@
+apiVersion: v2
+name: llmops-chat-app
+description: Agentic Chat Assistant — LLMOps platform sample application
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - llmops
+  - rag
+  - chat
+  - ibm-fusion
+home: https://github.com/IBM/storage-fusion
+maintainers:
+  - name: IBM Fusion AI Team

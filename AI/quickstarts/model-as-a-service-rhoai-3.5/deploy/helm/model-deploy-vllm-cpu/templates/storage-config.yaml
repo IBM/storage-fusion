@@ -1,0 +1,44 @@
+{{- if not .Values.s3.externalSecret.enabled }}
+---
+# storage-config Secret — Manual mode
+# -----------------------------------------------------------------------
+# KServe's storage-initialiser reads S3 credentials from a Secret named
+# "storage-config" in the model namespace. Each key in the Secret is the
+# name of a data connection (matching the connection secret name), and the
+# value is a JSON object with the S3 credentials.
+#
+# This mirrors the Secret that RHOAI creates automatically when you deploy
+# a model via the dashboard. Without it, the KServe init-container cannot
+# authenticate to S3 and the pod will fail to start.
+#
+# Rendered only when s3.externalSecret.enabled is false (default).
+# When ESO mode is on, templates/storage-config-externalsecret.yaml owns
+# this Secret instead and ESO assembles the JSON from Vault fields.
+# -----------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: storage-config
+  namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+    opendatahub.io/managed: "true"
+  annotations:
+    # Shared resource – keep so a second model Application does not
+    # recreate or delete the storage-config secret.
+    helm.sh/resource-policy: keep
+    {{- include "model-deploy-vllm-cpu.annotations" . | nindent 4 }}
+type: Opaque
+stringData:
+  # Key = connection secret name; value = JSON credentials used by KServe
+  {{ include "model-deploy-vllm-cpu.connectionSecretName" . }}: |
+    {
+      "type": "s3",
+      "access_key_id": {{ .Values.s3.accessKeyId | required "s3.accessKeyId is required" | quote }},
+      "secret_access_key": {{ .Values.s3.secretAccessKey | required "s3.secretAccessKey is required" | quote }},
+      "endpoint_url": {{ .Values.s3.endpoint | quote }},
+      "region": {{ .Values.s3.region | quote }},
+      "bucket": {{ .Values.s3.bucket | required "s3.bucket is required" | quote }},
+      "cabundle_configmap": "odh-kserve-custom-ca-bundle"
+    }
+{{- end }}

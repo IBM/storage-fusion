@@ -1,0 +1,28 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ${{ values.projectName }}-${{ values.environment }}
+  title: "${{ values.projectName }} (${{ values.environment }})"
+  description: >
+    OpenShift namespace for the ${{ values.projectName }} project
+    (${{ values.environment }} environment), provisioned via IBM Fusion NaaS.
+  annotations:
+    github.com/project-slug: ${{ values.repoOrg }}/${{ values.repoName }}
+    backstage.io/source-location: >
+      url:${{ values.githubBaseUrl }}/${{ values.repoOrg }}/${{ values.repoName }}/blob/naas-${{ values.projectName }}-${{ values.environment }}/namespaces/${{ values.projectName }}-${{ values.environment }}/catalog-info.yaml
+    openshift.io/display-name: "${{ values.projectName }}-${{ values.environment }}"
+  labels:
+    business-unit: ${{ values.businessUnit }}
+    environment: ${{ values.environment }}
+    project: ${{ values.projectName }}
+    size: ${{ values.size }}
+  tags:
+    - namespace
+    - openshift
+    - naas
+    - ${{ values.environment }}
+spec:
+  type: openshift-namespace
+  owner: ${{ values.catalogOwner }}
+  lifecycle: ${{ values.environment }}
+  system: ${{ values.catalogSystem }}
