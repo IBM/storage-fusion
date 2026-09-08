@@ -270,3 +270,4 @@ echo "Please verify that the pods for the following deployment have successfully
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "node-agent"
