@@ -10,8 +10,6 @@ SDS_PREFIX="cp.icr.io/cp/fusion-sds"
 CPOPEN_PREFIX="icr.io/cpopen"
 
 TRANSACTIONMANAGER=guardian-transaction-manager@sha256:38e8e301b44356704d0f55fb21753fcb76c6c3b8136736c2410a58d8a118cc03
-OADP_VELERO_14=fbr-velero@sha256:23dd51d3a32788c46a641774045ef9efc487300950c302c53991022bef0aeb56
-OADP_VELERO_15=fbr-velero15@sha256:8e19c99ea41bf3dc6c026aa0229e3095971e3c765a6f432c38d8487ec36cb00b
 
 #check_cmd:
 # Returns:
@@ -70,8 +68,6 @@ copy_images() {
 
 declare -a IMAGES=(
   $TRANSACTIONMANAGER
-  $OADP_VELERO_14
-  $OADP_VELERO_15
 )
 
 declare -a FUSIONIMAGES_HCI=(
