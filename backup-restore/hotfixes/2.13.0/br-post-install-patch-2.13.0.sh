@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run this script on hub and spoke clusters to apply the latest hotfixes for 2.13.0 release.
-HOTFIX_NUMBER=1
+HOTFIX_NUMBER=2
 EXPECTED_VERSION=2.13.0
 IMAGE_SOURCE="br-2.13.0patch-offline-mirror.sh"
 
@@ -98,6 +98,9 @@ update_hotfix_configmap() {
     fi
 }
 
+get_oadp_version() {
+    oc get csv  -l operators.coreos.com/redhat-oadp-operator.${BR_NS} -n "$BR_NS" -o json | jq .items[0].spec.version
+}
 
 set_deployment_image() {
     name=$1
@@ -192,6 +195,24 @@ check_for_required_dependencies() {
     fi
 }
 
+set_velero_image() {
+    OADP_VERSION=$(get_oadp_version)
+    if [[ $OADP_VERSION == *"1.4"* ]]; then
+        image=$1
+    else
+        image=$2
+    fi
+
+    echo "Patching OADP $OADP_VERSION"
+
+    if (oc -n "$BR_NS" get dpa velero -o yaml >$DIR/velero.save.yaml); then
+        echo "Patching deployment/velero image..."
+        patch="[{\"op\": \"replace\", \"path\": \"/spec/unsupportedOverrides/veleroImageFqin\", \"value\":\"${image}\"}, {\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp14\", \"value\": \"${oadp_velero_14}\"},{\"op\": \"replace\", \"path\": \"/metadata/annotations/veleroforoadp15\", \"value\": \"${oadp_velero_15}\"}]"
+        oc -n "$BR_NS" ${DRY_RUN:+"${DRY_RUN}"} patch dataprotectionapplication.oadp.openshift.io velero --type='json' -p="${patch}" -o yaml >$DIR/velero.patch.yaml
+        echo "Velero Deployement is restarting with replacement image"
+        oc wait --namespace "$BR_NS" deployment.apps/velero --for=jsonpath='{.status.readyReplicas}'=1
+    fi
+}
 check_for_required_dependencies
 
 oc whoami > /dev/null || ( echo "Not logged in to your cluster" ; exit 1)
@@ -238,9 +259,14 @@ tm_image=$(build_icr_path ${BNR_PREFIX} ${TRANSACTIONMANAGER})
 set_deployment_image transaction-manager transaction-manager "${tm_image}"
 set_deployment_image dbr-controller dbr-controller "${tm_image}"
 
+# update oadp velero
+oadp_velero_14=$(build_icr_path ${BNR_PREFIX} ${OADP_VELERO_14})
+oadp_velero_15=$(build_icr_path ${BNR_PREFIX} ${OADP_VELERO_15})
+set_velero_image ${oadp_velero_14} ${oadp_velero_15}
 hotfix="hotfix-${EXPECTED_VERSION}.${HOTFIX_NUMBER}"
 update_hotfix_configmap ${hotfix}
 
 echo "Please verify that the pods for the following deployment have successfully restarted:"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "dbr-controller"
+printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "velero"

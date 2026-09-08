@@ -6,7 +6,15 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
-## Hotfix hotfix-2.13.0.1 (Latest)
+## Hotfix hotfix-2.13.0.2 (Latest)
+
+**Release Date:** September 8th, 2026
+
+### Issues Fixed
+
+1. Backup fails when the application PVC has a PV with multiple node selectors. This issue was observed in a multizone cluster with Azure disk and LINSTOR storage.
+
+## Hotfix hotfix-2.13.0.1
 
 **Release Date:** August 13th, 2026
 
