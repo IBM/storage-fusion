@@ -1,0 +1,4440 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "serialNumber": "urn:uuid:a961efc6-7a85-4525-92eb-662f5059a7e8",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-04-13T22:55:28Z",
+    "component": {
+      "type": "container",
+      "bom-ref": "b6775504a4172636",
+      "name": "nvstaging/nim/cosmos-reason2-8b",
+      "version": "1.7.0.rc1-48244744"
+    },
+    "properties": [
+      {
+        "name": "syft:image:labels:com.nvidia.nim.category",
+        "value": "multimodal"
+      },
+      {
+        "name": "syft:image:labels:com.nvidia.nim.inference_protocol",
+        "value": "http"
+      },
+      {
+        "name": "syft:image:labels:com.nvidia.nim.model",
+        "value": "nvidia/cosmos-reason2-8b"
+      },
+      {
+        "name": "syft:image:labels:com.nvidia.nim.model-nspect",
+        "value": "NSPECT-4XVH-14YQ"
+      },
+      {
+        "name": "syft:image:labels:com.nvidia.nim.name",
+        "value": "nvidia/cosmos-reason2-8b"
+      },
+      {
+        "name": "syft:image:labels:com.nvidia.nim.nspect",
+        "value": "NSPECT-HFIK-RMS9"
+      },
+      {
+        "name": "syft:image:labels:com.nvidia.nim.owner",
+        "value": "nvidia"
+      },
+      {
+        "name": "syft:image:labels:com.nvidia.nim.type",
+        "value": "multimodal"
+      },
+      {
+        "name": "syft:image:labels:com.nvidia.nim.version",
+        "value": "1.7.0.rc1"
+      },
+      {
+        "name": "syft:image:labels:maintainer",
+        "value": "NVIDIA CORPORATION <cudatools@nvidia.com>"
+      },
+      {
+        "name": "syft:image:labels:org.opencontainers.image.ref.name",
+        "value": "ubuntu"
+      },
+      {
+        "name": "syft:image:labels:org.opencontainers.image.version",
+        "value": "22.04"
+      },
+      {
+        "name": "disclaimers",
+        "value": "NOTICES AND DISCLAIMERS FOR NVIDIA SOFTWARE BILL OF MATERIALS\n\nAll information, including but not limited to an electronic file containing details of ingredients included in a particular NVIDIA named product (collectively “SBOM”), provided in this document constitutes NVIDIA Confidential Information and is subject to the confidentiality terms below.  You may (a) use the SBOM internally to investigate and track common vulnerability exposure and other product security issues, and (b) provide the SBOM to your customer, provided that it is disclosed under a non-disclosure agreement, using the same degree of care to protect the SBOM that you use to protect your own confidential information.  You may not use the SBOM to (i) reverse engineer any NVIDIA product, software, or process, and (ii) monetize the SBOM.\n\nConfidentiality.\n“Confidential Information” means any non-public information, including this SBOM and its terms, provided in any format by NVIDIA to you under this SBOM, that was designated or identified by NVIDIA as confidential, or should be known by you when exercising reasonable business judgment to be confidential given the nature or circumstances of its disclosure.\n\nRight to Use Confidential Information.\nYou may use NVIDIA Confidential Information only to exercise its rights and perform its obligations under this SBOM. You may disclose NVIDIA Confidential Information to its affiliates, directors, officers, employees, contractors, independent external auditors, and advisors (including legal and accounting) who have a need to know that information in their work for you under this SBOM and who are bound to protect that information under obligations of confidentiality at least as restrictive as those described in this SBOM. You will not disclose NVIDIA Confidential Information to any third party, except as expressly authorized in this SBOM, without first having written approval of NVIDIA. You will protect NVIDIA Confidential Information with at least the same degree of care that you use to protect your own similar confidential and proprietary information, but no less than a reasonable degree of care. If the NVIDIA sends a written request, you will promptly return or destroy all Confidential Information received from NVIDIA, together with copies, except that a party may retain archival copies in accordance with its document retention policy or as required by law.\n\nExceptions.\nConfidential Information does not and will not include information that: (i) was in the public domain at the time it was communicated to you by NVIDIA, or later entered the public domain other than by a breach of this SBOM by you, (ii) is or was rightfully received or known by you without restriction on disclosure or any obligation of confidentiality, (iii) is or was independently developed by or for you without using any of NVIDIA Confidential Information, or (iv) is or was generally made available by NVIDIA without restriction on disclosure. You will not be liable for disclosure of Confidential Information required to be disclosed in response to a valid order by a court or other governmental body of competent jurisdiction, if you provide NVIDIA with prior written notice of the required disclosure to permit the disclosing party to seek confidential treatment of such information and you disclose only the information necessary to comply with the requirements.\n\nTo obtain the latest information, please contact your NVIDIA representative. Product or service performance varies by use, configuration and other factors. Your costs and results may vary. No product or component is absolutely secure. The SBOM is provided “as is”, and is subject to change at anytime without notice. TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, NVIDIA DISCLAIMS ALL WARRANTIES AND REPRESENTATIONS OF ANY KIND, WHETHER EXPRESS, IMPLIED OR STATUTORY, RELATING TO OR ARISING UNDER THIS DOCUMENT, INCLUDING, WITHOUT LIMITATION, THE WARRANTIES OF TITLE, NONINFRINGEMENT, MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, USAGE OF TRADE AND COURSE OF DEALING. NVIDIA products are not intended or authorized for use as critical components in a system or application where the use of or failure of such system or application developed with products, technology, software or services provided by NVIDIA could result in injury, death or catastrophic damage.\n\nExcept for your express permitted use of the SBOM contained in this document, no license or right is granted by implication, estoppel or otherwise. If this document directly includes or links to third-party websites, products, services or information, please consult other sources to evaluate if and how to use that information since NVIDIA does not support, endorse or assume any responsibility for any third party offerings or its accuracy or usefulness.\n\nThe SBOM provided above has been generated using Anchore SBOM Generator Tool.  Please report any concerns regarding the accuracy to your Customer Support Manager.\n\nTO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT WILL NVIDIA BE LIABLE FOR ANY (I) INDIRECT, PUNITIVE, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES, OR (II) DAMAGES FOR THE (A) COST OF PROCURING SUBSTITUTE GOODS OR (B) LOSS OF PROFITS, REVENUES, USE, DATA OR GOODWILL ARISING OUT OF OR RELATED TO THIS DOCUMENT, WHETHER BASED ON BREACH OF CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY, OR OTHERWISE, AND EVEN IF NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES AND EVEN IF A PARTY'S REMEDIES FAIL THEIR ESSENTIAL PURPOSE. ADDITIONALLY, TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, NVIDIA’S TOTAL CUMULATIVE AGGREGATE LIABILITY FOR ANY AND ALL LIABILITIES, OBLIGATIONS OR CLAIMS ARISING OUT OF OR RELATED TO THIS DOCUMENT WILL NOT EXCEED FIVE U.S. DOLLARS (US$5).\n\nStatements in this document that refer to future plans or expectations are forward-looking statements. These statements are based on currently available information, beliefs, assumptions and involve many risks and uncertainties that could cause actual results to differ materially from those expressed or implied in these statements. For more information on the factors that could cause actual results to differ materially, see our most recent earnings release and SEC filings at NVIDIA Corporation SEC Filings.\n\n© NVIDIA Corporation. All rights reserved. NVIDIA, the NVIDIA logo, and other NVIDIA marks are trademarks of NVIDIA Corporation or its affiliates. Other names and brands may be claimed as the property of others."
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "application",
+      "bom-ref": "3943e01d921cfccc",
+      "name": "Simple Launcher",
+      "version": "1.1.0.14"
+    },
+    {
+      "type": "application",
+      "bom-ref": "4a32aba911868839",
+      "name": "Simple Launcher",
+      "version": "1.1.0.14"
+    },
+    {
+      "type": "application",
+      "bom-ref": "46aa6828423e0025",
+      "name": "Simple Launcher",
+      "version": "1.1.0.14"
+    },
+    {
+      "type": "application",
+      "bom-ref": "027d8c1201a84729",
+      "name": "Simple Launcher",
+      "version": "1.1.0.14"
+    },
+    {
+      "type": "application",
+      "bom-ref": "5cabff45f496a0a8",
+      "name": "Simple Launcher",
+      "version": "1.1.0.14"
+    },
+    {
+      "type": "application",
+      "bom-ref": "2ccc82adbf832828",
+      "name": "Simple Launcher",
+      "version": "1.1.0.14"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/accelerate@1.12.0?package-id=8d05f30a1147347d",
+      "name": "accelerate",
+      "version": "1.12.0",
+      "purl": "pkg:pypi/accelerate@1.12.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/adduser@3.118ubuntu5?arch=all&distro=ubuntu-22.04&package-id=d92eefd2f2007729",
+      "name": "adduser",
+      "version": "3.118ubuntu5",
+      "purl": "pkg:deb/ubuntu/adduser@3.118ubuntu5?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/aiofile@3.9.0?package-id=8295d8f348212183",
+      "name": "aiofile",
+      "version": "3.9.0",
+      "purl": "pkg:pypi/aiofile@3.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/aiofiles@25.1.0?package-id=878f67c225741ef5",
+      "name": "aiofiles",
+      "version": "25.1.0",
+      "purl": "pkg:pypi/aiofiles@25.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/aiohappyeyeballs@2.6.1?package-id=0a64f5fb46d8b91f",
+      "name": "aiohappyeyeballs",
+      "version": "2.6.1",
+      "purl": "pkg:pypi/aiohappyeyeballs@2.6.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/aiohappyeyeballs@2.6.1?package-id=12979659548cff51",
+      "name": "aiohappyeyeballs",
+      "version": "2.6.1",
+      "purl": "pkg:pypi/aiohappyeyeballs@2.6.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/aiohttp@3.13.3?package-id=7cfa804e8a488c19",
+      "name": "aiohttp",
+      "version": "3.13.3",
+      "purl": "pkg:pypi/aiohttp@3.13.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/aiohttp@3.13.3?package-id=7798f578a80cc473",
+      "name": "aiohttp",
+      "version": "3.13.3",
+      "purl": "pkg:pypi/aiohttp@3.13.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/aiosignal@1.4.0?package-id=208079570f2fa5e0",
+      "name": "aiosignal",
+      "version": "1.4.0",
+      "purl": "pkg:pypi/aiosignal@1.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/aiosignal@1.4.0?package-id=291c35fbbdff4b95",
+      "name": "aiosignal",
+      "version": "1.4.0",
+      "purl": "pkg:pypi/aiosignal@1.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/annotated-doc@0.0.4?package-id=1d7b3c94837ee338",
+      "name": "annotated-doc",
+      "version": "0.0.4",
+      "purl": "pkg:pypi/annotated-doc@0.0.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/annotated-types@0.7.0?package-id=bb47060eb9031669",
+      "name": "annotated-types",
+      "version": "0.7.0",
+      "purl": "pkg:pypi/annotated-types@0.7.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/anthropic@0.71.0?package-id=07f805991b86830c",
+      "name": "anthropic",
+      "version": "0.71.0",
+      "purl": "pkg:pypi/anthropic@0.71.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/anyio@4.12.1?package-id=1f7e551f3e061c08",
+      "name": "anyio",
+      "version": "4.12.1",
+      "purl": "pkg:pypi/anyio@4.12.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/apache-tvm-ffi@0.1.8.post2?package-id=5dbdd4f52bd50294",
+      "name": "apache-tvm-ffi",
+      "version": "0.1.8.post2",
+      "purl": "pkg:pypi/apache-tvm-ffi@0.1.8.post2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/apt@2.4.14?arch=amd64&distro=ubuntu-22.04&package-id=c485dec50fae0d24",
+      "name": "apt",
+      "version": "2.4.14",
+      "purl": "pkg:deb/ubuntu/apt@2.4.14?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/asgiref@3.11.1?package-id=af755ff0acf85069",
+      "name": "asgiref",
+      "version": "3.11.1",
+      "purl": "pkg:pypi/asgiref@3.11.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/astor@0.8.1?package-id=a819cfb2e36cec8d",
+      "name": "astor",
+      "version": "0.8.1",
+      "purl": "pkg:pypi/astor@0.8.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/attrs@25.4.0?package-id=4d767b74bdf400a2",
+      "name": "attrs",
+      "version": "25.4.0",
+      "purl": "pkg:pypi/attrs@25.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/attrs@26.1.0?package-id=ed633127b94fded1",
+      "name": "attrs",
+      "version": "26.1.0",
+      "purl": "pkg:pypi/attrs@26.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/autocommand@2.2.2?package-id=cfd16a285d5f5ce9",
+      "name": "autocommand",
+      "version": "2.2.2",
+      "purl": "pkg:pypi/autocommand@2.2.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/av@17.0.0?package-id=ad692e5a4b6b468e",
+      "name": "av",
+      "version": "17.0.0",
+      "purl": "pkg:pypi/av@17.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/awscrt@0.31.1?package-id=d3917843fa620c2f",
+      "name": "awscrt",
+      "version": "0.31.1",
+      "purl": "pkg:pypi/awscrt@0.31.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/backports-tarfile@1.2.0?package-id=de94c1b92cc78232",
+      "name": "backports-tarfile",
+      "version": "1.2.0",
+      "purl": "pkg:pypi/backports-tarfile@1.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/base-files@12ubuntu4.7?arch=amd64&distro=ubuntu-22.04&package-id=fa476521e3e5ec86",
+      "name": "base-files",
+      "version": "12ubuntu4.7",
+      "purl": "pkg:deb/ubuntu/base-files@12ubuntu4.7?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/base-passwd@3.5.52build1?arch=amd64&distro=ubuntu-22.04&package-id=6266a2caa2afc2cc",
+      "name": "base-passwd",
+      "version": "3.5.52build1",
+      "purl": "pkg:deb/ubuntu/base-passwd@3.5.52build1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/bash@5.1-6ubuntu1.1?arch=amd64&distro=ubuntu-22.04&package-id=7254b1f7d381ed04",
+      "name": "bash",
+      "version": "5.1-6ubuntu1.1",
+      "purl": "pkg:deb/ubuntu/bash@5.1-6ubuntu1.1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/binutils@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&package-id=bf9eefe6eb9c6c1d",
+      "name": "binutils",
+      "version": "2.38-4ubuntu2.12",
+      "purl": "pkg:deb/ubuntu/binutils@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/binutils-common@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&package-id=cc68312103f7264c&upstream=binutils",
+      "name": "binutils-common",
+      "version": "2.38-4ubuntu2.12",
+      "purl": "pkg:deb/ubuntu/binutils-common@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&upstream=binutils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/binutils-x86-64-linux-gnu@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&package-id=264bf3744c1fba60&upstream=binutils",
+      "name": "binutils-x86-64-linux-gnu",
+      "version": "2.38-4ubuntu2.12",
+      "purl": "pkg:deb/ubuntu/binutils-x86-64-linux-gnu@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&upstream=binutils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/bitsandbytes@0.49.1?package-id=5124cdb77e76c906",
+      "name": "bitsandbytes",
+      "version": "0.49.1",
+      "purl": "pkg:pypi/bitsandbytes@0.49.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/blake3@1.0.8?package-id=3313d2ca1b28617f",
+      "name": "blake3",
+      "version": "1.0.8",
+      "purl": "pkg:pypi/blake3@1.0.8"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/blinker@1.4?package-id=a66f3889b21c7f18",
+      "name": "blinker",
+      "version": "1.4",
+      "purl": "pkg:pypi/blinker@1.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/boto3@1.42.34?package-id=fef6e21829809485",
+      "name": "boto3",
+      "version": "1.42.34",
+      "purl": "pkg:pypi/boto3@1.42.34"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/botocore@1.42.34?package-id=89ae48bc467bcfc6",
+      "name": "botocore",
+      "version": "1.42.34",
+      "purl": "pkg:pypi/botocore@1.42.34"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/bsdutils@1%3A2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&package-id=bc78c018924e4030&upstream=util-linux%402.37.2-4ubuntu3.4",
+      "name": "bsdutils",
+      "version": "1:2.37.2-4ubuntu3.4",
+      "purl": "pkg:deb/ubuntu/bsdutils@1%3A2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&upstream=util-linux%402.37.2-4ubuntu3.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/build-essential@12.9ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=5509b6b71f126095",
+      "name": "build-essential",
+      "version": "12.9ubuntu3",
+      "purl": "pkg:deb/ubuntu/build-essential@12.9ubuntu3?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/bzip2@1.0.8-5build1?arch=amd64&distro=ubuntu-22.04&package-id=5d5a760a6027569a",
+      "name": "bzip2",
+      "version": "1.0.8-5build1",
+      "purl": "pkg:deb/ubuntu/bzip2@1.0.8-5build1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/ca-certificates@20240203~22.04.1?arch=all&distro=ubuntu-22.04&package-id=1a097baedd8d35ad",
+      "name": "ca-certificates",
+      "version": "20240203~22.04.1",
+      "purl": "pkg:deb/ubuntu/ca-certificates@20240203~22.04.1?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cachetools@6.2.4?package-id=3e7b47d816c11255",
+      "name": "cachetools",
+      "version": "6.2.4",
+      "purl": "pkg:pypi/cachetools@6.2.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/caio@0.9.25?package-id=01be983b05d62370",
+      "name": "caio",
+      "version": "0.9.25",
+      "purl": "pkg:pypi/caio@0.9.25"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cbor2@5.9.0?package-id=43ffe3d81ce23a23",
+      "name": "cbor2",
+      "version": "5.9.0",
+      "purl": "pkg:pypi/cbor2@5.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/certifi@2026.1.4?package-id=94d77363b3f04963",
+      "name": "certifi",
+      "version": "2026.1.4",
+      "purl": "pkg:pypi/certifi@2026.1.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cffi@2.0.0?package-id=e91b7b3cd8140112",
+      "name": "cffi",
+      "version": "2.0.0",
+      "purl": "pkg:pypi/cffi@2.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/charset-normalizer@3.4.4?package-id=6e8c741f22f45997",
+      "name": "charset-normalizer",
+      "version": "3.4.4",
+      "purl": "pkg:pypi/charset-normalizer@3.4.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/click@8.3.1?package-id=ab79943e42944ef9",
+      "name": "click",
+      "version": "8.3.1",
+      "purl": "pkg:pypi/click@8.3.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cloudpickle@3.1.2?package-id=a42cd1f0f0767e56",
+      "name": "cloudpickle",
+      "version": "3.1.2",
+      "purl": "pkg:pypi/cloudpickle@3.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/colorama@0.4.6?package-id=a682d733ca71c49a",
+      "name": "colorama",
+      "version": "0.4.6",
+      "purl": "pkg:pypi/colorama@0.4.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/compressed-tensors@0.13.0?package-id=ea3323189894198c",
+      "name": "compressed-tensors",
+      "version": "0.13.0",
+      "purl": "pkg:pypi/compressed-tensors@0.13.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/coreutils@8.32-4.1ubuntu1.2?arch=amd64&distro=ubuntu-22.04&package-id=d757ebf2713bc388",
+      "name": "coreutils",
+      "version": "8.32-4.1ubuntu1.2",
+      "purl": "pkg:deb/ubuntu/coreutils@8.32-4.1ubuntu1.2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cpp@4%3A11.2.0-1ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=09fe0bba60d23238&upstream=gcc-defaults%401.193ubuntu1",
+      "name": "cpp",
+      "version": "4:11.2.0-1ubuntu1",
+      "purl": "pkg:deb/ubuntu/cpp@4%3A11.2.0-1ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=gcc-defaults%401.193ubuntu1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cpp-11@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=a17148f9971fa808&upstream=gcc-11",
+      "name": "cpp-11",
+      "version": "11.4.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/cpp-11@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cryptography@3.4.8?package-id=797611296459cc23",
+      "name": "cryptography",
+      "version": "3.4.8",
+      "purl": "pkg:pypi/cryptography@3.4.8"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cryptography@46.0.7?package-id=5ffc050167efd5d6",
+      "name": "cryptography",
+      "version": "46.0.7",
+      "purl": "pkg:pypi/cryptography@46.0.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cuda-bindings@13.1.1?package-id=c7f99ce3d43cdd80",
+      "name": "cuda-bindings",
+      "version": "13.1.1",
+      "purl": "pkg:pypi/cuda-bindings@13.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-cccl-13-0@13.0.85-1?arch=amd64&distro=ubuntu-22.04&package-id=c554c6bf6ad92eac&upstream=cuda-cccl",
+      "name": "cuda-cccl-13-0",
+      "version": "13.0.85-1",
+      "purl": "pkg:deb/ubuntu/cuda-cccl-13-0@13.0.85-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-cccl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-compat-13-0@580.82.07-0ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=eba913a72fe55084&upstream=nvidia-graphics-drivers-580",
+      "name": "cuda-compat-13-0",
+      "version": "580.82.07-0ubuntu1",
+      "purl": "pkg:deb/ubuntu/cuda-compat-13-0@580.82.07-0ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=nvidia-graphics-drivers-580"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-crt-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&package-id=44c8e24244199f73&upstream=cuda-crt",
+      "name": "cuda-crt-13-0",
+      "version": "13.0.88-1",
+      "purl": "pkg:deb/ubuntu/cuda-crt-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-crt"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-cudart-13-0@13.0.96-1?arch=amd64&distro=ubuntu-22.04&package-id=9e84a6a0107c3074&upstream=cuda-cudart",
+      "name": "cuda-cudart-13-0",
+      "version": "13.0.96-1",
+      "purl": "pkg:deb/ubuntu/cuda-cudart-13-0@13.0.96-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-cudart"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-cudart-dev-13-0@13.0.96-1?arch=amd64&distro=ubuntu-22.04&package-id=930455f87d150be1&upstream=cuda-cudart",
+      "name": "cuda-cudart-dev-13-0",
+      "version": "13.0.96-1",
+      "purl": "pkg:deb/ubuntu/cuda-cudart-dev-13-0@13.0.96-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-cudart"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-culibos-dev-13-0@13.0.85-1?arch=amd64&distro=ubuntu-22.04&package-id=a152ea1069d89ad9&upstream=cuda-culibos",
+      "name": "cuda-culibos-dev-13-0",
+      "version": "13.0.85-1",
+      "purl": "pkg:deb/ubuntu/cuda-culibos-dev-13-0@13.0.85-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-culibos"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-cuobjdump-13-0@13.0.85-1?arch=amd64&distro=ubuntu-22.04&package-id=ada9b46fd1f6d723&upstream=cuda-cuobjdump",
+      "name": "cuda-cuobjdump-13-0",
+      "version": "13.0.85-1",
+      "purl": "pkg:deb/ubuntu/cuda-cuobjdump-13-0@13.0.85-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-cuobjdump"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-driver-dev-13-0@13.0.96-1?arch=amd64&distro=ubuntu-22.04&package-id=6d76604d98cceb4c&upstream=cuda-cudart",
+      "name": "cuda-driver-dev-13-0",
+      "version": "13.0.96-1",
+      "purl": "pkg:deb/ubuntu/cuda-driver-dev-13-0@13.0.96-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-cudart"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-keyring@1.1-1?arch=all&distro=ubuntu-22.04&package-id=c646186a701ff008",
+      "name": "cuda-keyring",
+      "version": "1.1-1",
+      "purl": "pkg:deb/ubuntu/cuda-keyring@1.1-1?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-nvcc-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&package-id=661b4f689af74f72&upstream=cuda-nvcc",
+      "name": "cuda-nvcc-13-0",
+      "version": "13.0.88-1",
+      "purl": "pkg:deb/ubuntu/cuda-nvcc-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-nvcc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-nvrtc-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&package-id=144a0ad65bae8b16&upstream=cuda-nvrtc",
+      "name": "cuda-nvrtc-13-0",
+      "version": "13.0.88-1",
+      "purl": "pkg:deb/ubuntu/cuda-nvrtc-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&upstream=cuda-nvrtc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cuda-pathfinder@1.3.3?package-id=255229c4ad2a2723",
+      "name": "cuda-pathfinder",
+      "version": "1.3.3",
+      "purl": "pkg:pypi/cuda-pathfinder@1.3.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cuda-python@13.1.1?package-id=5d4c4449a41d8815",
+      "name": "cuda-python",
+      "version": "13.1.1",
+      "purl": "pkg:pypi/cuda-python@13.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-toolkit-13-0-config-common@13.0.88-1?arch=all&distro=ubuntu-22.04&package-id=a1504a1f2a99f101&upstream=cuda-cudart",
+      "name": "cuda-toolkit-13-0-config-common",
+      "version": "13.0.88-1",
+      "purl": "pkg:deb/ubuntu/cuda-toolkit-13-0-config-common@13.0.88-1?arch=all&distro=ubuntu-22.04&upstream=cuda-cudart"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-toolkit-13-config-common@13.0.88-1?arch=all&distro=ubuntu-22.04&package-id=93a24a9d137b310c&upstream=cuda-cudart",
+      "name": "cuda-toolkit-13-config-common",
+      "version": "13.0.88-1",
+      "purl": "pkg:deb/ubuntu/cuda-toolkit-13-config-common@13.0.88-1?arch=all&distro=ubuntu-22.04&upstream=cuda-cudart"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/cuda-toolkit-config-common@13.0.88-1?arch=all&distro=ubuntu-22.04&package-id=5564aaf0ebbb5a9b&upstream=cuda-cudart",
+      "name": "cuda-toolkit-config-common",
+      "version": "13.0.88-1",
+      "purl": "pkg:deb/ubuntu/cuda-toolkit-config-common@13.0.88-1?arch=all&distro=ubuntu-22.04&upstream=cuda-cudart"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cufile-python@0.2.0?package-id=7b85b16e44d04d23",
+      "name": "cufile-python",
+      "version": "0.2.0",
+      "purl": "pkg:pypi/cufile-python@0.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cupy-cuda12x@13.6.0?package-id=73fc2e2c22ecda84",
+      "name": "cupy-cuda12x",
+      "version": "13.6.0",
+      "purl": "pkg:pypi/cupy-cuda12x@13.6.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/curl@7.81.0-1ubuntu1.23?arch=amd64&distro=ubuntu-22.04&package-id=85663832d698860c",
+      "name": "curl",
+      "version": "7.81.0-1ubuntu1.23",
+      "purl": "pkg:deb/ubuntu/curl@7.81.0-1ubuntu1.23?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/cvcuda-cu13@0.16.0?package-id=9bd6fb8511c0a21e",
+      "name": "cvcuda-cu13",
+      "version": "0.16.0",
+      "purl": "pkg:pypi/cvcuda-cu13@0.16.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/dash@0.5.11%2Bgit20210903%2B057cd650a4ed-3build1?arch=amd64&distro=ubuntu-22.04&package-id=c45a2e205b370ab5",
+      "name": "dash",
+      "version": "0.5.11+git20210903+057cd650a4ed-3build1",
+      "purl": "pkg:deb/ubuntu/dash@0.5.11%2Bgit20210903%2B057cd650a4ed-3build1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/dbus@1.12.20-2ubuntu4.1?arch=amd64&distro=ubuntu-22.04&package-id=1e89a75fcfae9390",
+      "name": "dbus",
+      "version": "1.12.20-2ubuntu4.1",
+      "purl": "pkg:deb/ubuntu/dbus@1.12.20-2ubuntu4.1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/dbus-python@1.2.18?package-id=e76f24b730216c0d",
+      "name": "dbus-python",
+      "version": "1.2.18",
+      "purl": "pkg:pypi/dbus-python@1.2.18"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/debconf@1.5.79ubuntu1?arch=all&distro=ubuntu-22.04&package-id=c994f228b246687e",
+      "name": "debconf",
+      "version": "1.5.79ubuntu1",
+      "purl": "pkg:deb/ubuntu/debconf@1.5.79ubuntu1?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/debianutils@5.5-1ubuntu2?arch=amd64&distro=ubuntu-22.04&package-id=954ca99cc0e027f5",
+      "name": "debianutils",
+      "version": "5.5-1ubuntu2",
+      "purl": "pkg:deb/ubuntu/debianutils@5.5-1ubuntu2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/deep-ep@1.2.1%2B73b6ea4?package-id=2c557ce2234bc4c5",
+      "name": "deep-ep",
+      "version": "1.2.1+73b6ea4",
+      "purl": "pkg:pypi/deep-ep@1.2.1%2B73b6ea4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/deep-gemm@2.1.0%2B594953a?package-id=f37b745d2c85c272",
+      "name": "deep-gemm",
+      "version": "2.1.0+594953a",
+      "purl": "pkg:pypi/deep-gemm@2.1.0%2B594953a"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/depyf@0.20.0?package-id=8a9f46a94966d675",
+      "name": "depyf",
+      "version": "0.20.0",
+      "purl": "pkg:pypi/depyf@0.20.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/diffutils@1%3A3.8-0ubuntu2?arch=amd64&distro=ubuntu-22.04&package-id=36457d292b136853",
+      "name": "diffutils",
+      "version": "1:3.8-0ubuntu2",
+      "purl": "pkg:deb/ubuntu/diffutils@1%3A3.8-0ubuntu2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/dill@0.4.1?package-id=7934e433fa3a1769",
+      "name": "dill",
+      "version": "0.4.1",
+      "purl": "pkg:pypi/dill@0.4.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/dirmngr@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=2d995e9dbc2ddbc0&upstream=gnupg2",
+      "name": "dirmngr",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/dirmngr@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/diskcache@5.6.3?package-id=83a4610b8f15d88f",
+      "name": "diskcache",
+      "version": "5.6.3",
+      "purl": "pkg:pypi/diskcache@5.6.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/distro@1.7.0?package-id=294ef7d8c3dc7cc8",
+      "name": "distro",
+      "version": "1.7.0",
+      "purl": "pkg:pypi/distro@1.7.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/distro@1.9.0?package-id=a81fdde1b01d149e",
+      "name": "distro",
+      "version": "1.9.0",
+      "purl": "pkg:pypi/distro@1.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/distro-info-data@0.52ubuntu0.11?arch=all&distro=ubuntu-22.04&package-id=7defaf1275fd6c49",
+      "name": "distro-info-data",
+      "version": "0.52ubuntu0.11",
+      "purl": "pkg:deb/ubuntu/distro-info-data@0.52ubuntu0.11?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/dnspython@2.8.0?package-id=f58bad933f325193",
+      "name": "dnspython",
+      "version": "2.8.0",
+      "purl": "pkg:pypi/dnspython@2.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/docstring-parser@0.17.0?package-id=42fdf26604223da6",
+      "name": "docstring-parser",
+      "version": "0.17.0",
+      "purl": "pkg:pypi/docstring-parser@0.17.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/dpkg@1.21.1ubuntu2.3?arch=amd64&distro=ubuntu-22.04&package-id=781bcceede0d24a0",
+      "name": "dpkg",
+      "version": "1.21.1ubuntu2.3",
+      "purl": "pkg:deb/ubuntu/dpkg@1.21.1ubuntu2.3?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/dpkg-dev@1.21.1ubuntu2.6?arch=all&distro=ubuntu-22.04&package-id=7ee55812784a6ac4&upstream=dpkg",
+      "name": "dpkg-dev",
+      "version": "1.21.1ubuntu2.6",
+      "purl": "pkg:deb/ubuntu/dpkg-dev@1.21.1ubuntu2.6?arch=all&distro=ubuntu-22.04&upstream=dpkg"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/e2fsprogs@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&package-id=12978af3b638252f",
+      "name": "e2fsprogs",
+      "version": "1.46.5-2ubuntu1.2",
+      "purl": "pkg:deb/ubuntu/e2fsprogs@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/einops@0.8.1?package-id=cd308e7fddb4b50b",
+      "name": "einops",
+      "version": "0.8.1",
+      "purl": "pkg:pypi/einops@0.8.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/email-validator@2.3.0?package-id=b655a83d2a3e48b9",
+      "name": "email-validator",
+      "version": "2.3.0",
+      "purl": "pkg:pypi/email-validator@2.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/fastapi@0.120.4?package-id=e2c122e7c6a2c8f6",
+      "name": "fastapi",
+      "version": "0.120.4",
+      "purl": "pkg:pypi/fastapi@0.120.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/fastapi-cli@0.0.20?package-id=c4f2fd90868c050d",
+      "name": "fastapi-cli",
+      "version": "0.0.20",
+      "purl": "pkg:pypi/fastapi-cli@0.0.20"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/fastapi-cloud-cli@0.11.0?package-id=4a45f316c6de319d",
+      "name": "fastapi-cloud-cli",
+      "version": "0.11.0",
+      "purl": "pkg:pypi/fastapi-cloud-cli@0.11.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/fastar@0.8.0?package-id=7c9bd91f15849da0",
+      "name": "fastar",
+      "version": "0.8.0",
+      "purl": "pkg:pypi/fastar@0.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/fastrlock@0.8.3?package-id=0095786be35476ed",
+      "name": "fastrlock",
+      "version": "0.8.3",
+      "purl": "pkg:pypi/fastrlock@0.8.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/filelock@3.20.3?package-id=a8f16d7c266e4192",
+      "name": "filelock",
+      "version": "3.20.3",
+      "purl": "pkg:pypi/filelock@3.20.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/findutils@4.8.0-1ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=263fb82085c9c20a",
+      "name": "findutils",
+      "version": "4.8.0-1ubuntu3",
+      "purl": "pkg:deb/ubuntu/findutils@4.8.0-1ubuntu3?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/flashinfer-cubin@0.5.3?package-id=bad17c02f39564c2",
+      "name": "flashinfer-cubin",
+      "version": "0.5.3",
+      "purl": "pkg:pypi/flashinfer-cubin@0.5.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/flashinfer-jit-cache@0.5.3%2Bcu130?package-id=bce177e7f59cdba5",
+      "name": "flashinfer-jit-cache",
+      "version": "0.5.3+cu130",
+      "purl": "pkg:pypi/flashinfer-jit-cache@0.5.3%2Bcu130"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/flashinfer-python@0.5.3?package-id=3564917b9b92bfb8",
+      "name": "flashinfer-python",
+      "version": "0.5.3",
+      "purl": "pkg:pypi/flashinfer-python@0.5.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/frozenlist@1.8.0?package-id=3189cb1824da9bcb",
+      "name": "frozenlist",
+      "version": "1.8.0",
+      "purl": "pkg:pypi/frozenlist@1.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/frozenlist@1.8.0?package-id=2cb13bbcc6e37fff",
+      "name": "frozenlist",
+      "version": "1.8.0",
+      "purl": "pkg:pypi/frozenlist@1.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/fsspec@2026.1.0?package-id=fa80cb5362bb2f60",
+      "name": "fsspec",
+      "version": "2026.1.0",
+      "purl": "pkg:pypi/fsspec@2026.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/g%2B%2B@4%3A11.2.0-1ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=c5457f501662416a&upstream=gcc-defaults%401.193ubuntu1",
+      "name": "g++",
+      "version": "4:11.2.0-1ubuntu1",
+      "purl": "pkg:deb/ubuntu/g%2B%2B@4%3A11.2.0-1ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=gcc-defaults%401.193ubuntu1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/g%2B%2B-11@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=8224242b76111277&upstream=gcc-11",
+      "name": "g++-11",
+      "version": "11.4.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/g%2B%2B-11@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gcc@4%3A11.2.0-1ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=5219a08edaae5181&upstream=gcc-defaults%401.193ubuntu1",
+      "name": "gcc",
+      "version": "4:11.2.0-1ubuntu1",
+      "purl": "pkg:deb/ubuntu/gcc@4%3A11.2.0-1ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=gcc-defaults%401.193ubuntu1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gcc-11@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=e1187c2f5c3b640b",
+      "name": "gcc-11",
+      "version": "11.4.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/gcc-11@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gcc-11-base@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=a9be4462bb38756b&upstream=gcc-11",
+      "name": "gcc-11-base",
+      "version": "11.4.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/gcc-11-base@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gcc-12-base@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=992e4d8def56535b&upstream=gcc-12",
+      "name": "gcc-12-base",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/gcc-12-base@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/gguf@0.17.1?package-id=6b9ffe100bbd5955",
+      "name": "gguf",
+      "version": "0.17.1",
+      "purl": "pkg:pypi/gguf@0.17.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gir1.2-glib-2.0@1.72.0-1?arch=amd64&distro=ubuntu-22.04&package-id=99608078ff43ba81&upstream=gobject-introspection",
+      "name": "gir1.2-glib-2.0",
+      "version": "1.72.0-1",
+      "purl": "pkg:deb/ubuntu/gir1.2-glib-2.0@1.72.0-1?arch=amd64&distro=ubuntu-22.04&upstream=gobject-introspection"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gir1.2-packagekitglib-1.0@1.2.5-2ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=d3970e20ac8e5da8&upstream=packagekit",
+      "name": "gir1.2-packagekitglib-1.0",
+      "version": "1.2.5-2ubuntu3",
+      "purl": "pkg:deb/ubuntu/gir1.2-packagekitglib-1.0@1.2.5-2ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=packagekit"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gnupg@2.2.27-3ubuntu2.5?arch=all&distro=ubuntu-22.04&package-id=87d85fc31d97759c&upstream=gnupg2",
+      "name": "gnupg",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gnupg@2.2.27-3ubuntu2.5?arch=all&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gnupg-l10n@2.2.27-3ubuntu2.5?arch=all&distro=ubuntu-22.04&package-id=21e433471ebcdd4c&upstream=gnupg2",
+      "name": "gnupg-l10n",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gnupg-l10n@2.2.27-3ubuntu2.5?arch=all&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gnupg-utils@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=4da066024d6bd485&upstream=gnupg2",
+      "name": "gnupg-utils",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gnupg-utils@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gnupg2@2.2.27-3ubuntu2.5?arch=all&distro=ubuntu-22.04&package-id=be7029cb13ed57af",
+      "name": "gnupg2",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gnupg2@2.2.27-3ubuntu2.5?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/google-api-core@2.29.0?package-id=20355858ff5d8311",
+      "name": "google-api-core",
+      "version": "2.29.0",
+      "purl": "pkg:pypi/google-api-core@2.29.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/google-auth@2.47.0?package-id=3fb72dac12d70ba4",
+      "name": "google-auth",
+      "version": "2.47.0",
+      "purl": "pkg:pypi/google-auth@2.47.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/google-cloud-core@2.5.0?package-id=47b7e9f8d2d1cdf6",
+      "name": "google-cloud-core",
+      "version": "2.5.0",
+      "purl": "pkg:pypi/google-cloud-core@2.5.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/google-cloud-storage@3.8.0?package-id=495746923e98a50b",
+      "name": "google-cloud-storage",
+      "version": "3.8.0",
+      "purl": "pkg:pypi/google-cloud-storage@3.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/google-crc32c@1.8.0?package-id=1acab413f865cc52",
+      "name": "google-crc32c",
+      "version": "1.8.0",
+      "purl": "pkg:pypi/google-crc32c@1.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/google-resumable-media@2.8.0?package-id=627c7386e7ececf5",
+      "name": "google-resumable-media",
+      "version": "2.8.0",
+      "purl": "pkg:pypi/google-resumable-media@2.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/googleapis-common-protos@1.72.0?package-id=8910e979b7990253",
+      "name": "googleapis-common-protos",
+      "version": "1.72.0",
+      "purl": "pkg:pypi/googleapis-common-protos@1.72.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gpg@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=ac02a22afc1598d4&upstream=gnupg2",
+      "name": "gpg",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gpg@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gpg-agent@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=77792b77bb0fcaba&upstream=gnupg2",
+      "name": "gpg-agent",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gpg-agent@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gpg-wks-client@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=fe3c51f7337154a3&upstream=gnupg2",
+      "name": "gpg-wks-client",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gpg-wks-client@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gpg-wks-server@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=bf862e676a9f55f3&upstream=gnupg2",
+      "name": "gpg-wks-server",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gpg-wks-server@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gpgconf@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=5c6a194c9301a444&upstream=gnupg2",
+      "name": "gpgconf",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gpgconf@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gpgsm@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=5e7058fe04099641&upstream=gnupg2",
+      "name": "gpgsm",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gpgsm@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gpgv@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=2551cbcb93b2aea5&upstream=gnupg2",
+      "name": "gpgv",
+      "version": "2.2.27-3ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/gpgv@2.2.27-3ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=gnupg2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/grep@3.7-1build1?arch=amd64&distro=ubuntu-22.04&package-id=8a262e2d19b880ab",
+      "name": "grep",
+      "version": "3.7-1build1",
+      "purl": "pkg:deb/ubuntu/grep@3.7-1build1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/grpcio@1.76.0?package-id=cd45fd4e34ece78d",
+      "name": "grpcio",
+      "version": "1.76.0",
+      "purl": "pkg:pypi/grpcio@1.76.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/grpcio-reflection@1.76.0?package-id=a3f833f267c98260",
+      "name": "grpcio-reflection",
+      "version": "1.76.0",
+      "purl": "pkg:pypi/grpcio-reflection@1.76.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/gzip@1.10-4ubuntu4.1?arch=amd64&distro=ubuntu-22.04&package-id=55e157ff0099c55f",
+      "name": "gzip",
+      "version": "1.10-4ubuntu4.1",
+      "purl": "pkg:deb/ubuntu/gzip@1.10-4ubuntu4.1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/h11@0.16.0?package-id=925e174d6c6b07c2",
+      "name": "h11",
+      "version": "0.16.0",
+      "purl": "pkg:pypi/h11@0.16.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/hf-transfer@0.1.9?package-id=82e929f6df14c696",
+      "name": "hf-transfer",
+      "version": "0.1.9",
+      "purl": "pkg:pypi/hf-transfer@0.1.9"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/hf-xet@1.2.0?package-id=289fb40283f46334",
+      "name": "hf-xet",
+      "version": "1.2.0",
+      "purl": "pkg:pypi/hf-xet@1.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/hostname@3.23ubuntu2?arch=amd64&distro=ubuntu-22.04&package-id=8fe0dd4572083d73",
+      "name": "hostname",
+      "version": "3.23ubuntu2",
+      "purl": "pkg:deb/ubuntu/hostname@3.23ubuntu2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/httpcore@1.0.9?package-id=5810b2279c987ff6",
+      "name": "httpcore",
+      "version": "1.0.9",
+      "purl": "pkg:pypi/httpcore@1.0.9"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/httplib2@0.20.2?package-id=f0b998f07ad81614",
+      "name": "httplib2",
+      "version": "0.20.2",
+      "purl": "pkg:pypi/httplib2@0.20.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/httptools@0.7.1?package-id=e54817845515d09a",
+      "name": "httptools",
+      "version": "0.7.1",
+      "purl": "pkg:pypi/httptools@0.7.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/httpx@0.28.1?package-id=d0b4f5c93176ef3f",
+      "name": "httpx",
+      "version": "0.28.1",
+      "purl": "pkg:pypi/httpx@0.28.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/httpx-retries@0.4.6?package-id=20a55506dbbed104",
+      "name": "httpx-retries",
+      "version": "0.4.6",
+      "purl": "pkg:pypi/httpx-retries@0.4.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/httpx-sse@0.4.3?package-id=39882f489a4ae923",
+      "name": "httpx-sse",
+      "version": "0.4.3",
+      "purl": "pkg:pypi/httpx-sse@0.4.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/huggingface-hub@0.36.0?package-id=b3eb1245fb17ce83",
+      "name": "huggingface-hub",
+      "version": "0.36.0",
+      "purl": "pkg:pypi/huggingface-hub@0.36.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/humanfriendly@10.0?package-id=73efc559db6cdd4e",
+      "name": "humanfriendly",
+      "version": "10.0",
+      "purl": "pkg:pypi/humanfriendly@10.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/humanize@4.15.0?package-id=582cbfdbbf1f2f1f",
+      "name": "humanize",
+      "version": "4.15.0",
+      "purl": "pkg:pypi/humanize@4.15.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/ibverbs-providers@39.0-1?arch=amd64&distro=ubuntu-22.04&package-id=cf261b977b7f7de7&upstream=rdma-core",
+      "name": "ibverbs-providers",
+      "version": "39.0-1",
+      "purl": "pkg:deb/ubuntu/ibverbs-providers@39.0-1?arch=amd64&distro=ubuntu-22.04&upstream=rdma-core"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/idna@3.11?package-id=fec3e9c595a3d13b",
+      "name": "idna",
+      "version": "3.11",
+      "purl": "pkg:pypi/idna@3.11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/idna@3.11?package-id=505316597e24f6fd",
+      "name": "idna",
+      "version": "3.11",
+      "purl": "pkg:pypi/idna@3.11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/ijson@3.4.0.post0?package-id=af8072ccb068739d",
+      "name": "ijson",
+      "version": "3.4.0.post0",
+      "purl": "pkg:pypi/ijson@3.4.0.post0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/importlib-metadata@8.7.1?package-id=6b4dd5beade1f574",
+      "name": "importlib-metadata",
+      "version": "8.7.1",
+      "purl": "pkg:pypi/importlib-metadata@8.7.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/importlib-metadata@8.7.1?package-id=943604bf41774d4b",
+      "name": "importlib-metadata",
+      "version": "8.7.1",
+      "purl": "pkg:pypi/importlib-metadata@8.7.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/init-system-helpers@1.62?arch=all&distro=ubuntu-22.04&package-id=be9b5d2383b6a4e9",
+      "name": "init-system-helpers",
+      "version": "1.62",
+      "purl": "pkg:deb/ubuntu/init-system-helpers@1.62?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/interegular@0.3.3?package-id=9b8ebb7102d7f9bc",
+      "name": "interegular",
+      "version": "0.3.3",
+      "purl": "pkg:pypi/interegular@0.3.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/iso-codes@4.9.0-1?arch=all&distro=ubuntu-22.04&package-id=1c01a94beeaa5645",
+      "name": "iso-codes",
+      "version": "4.9.0-1",
+      "purl": "pkg:deb/ubuntu/iso-codes@4.9.0-1?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jaraco-context@6.1.0?package-id=79502b5aa06aa10d",
+      "name": "jaraco-context",
+      "version": "6.1.0",
+      "purl": "pkg:pypi/jaraco-context@6.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jaraco-context@6.1.2?package-id=3f23a08f56b1605f",
+      "name": "jaraco-context",
+      "version": "6.1.2",
+      "purl": "pkg:pypi/jaraco-context@6.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jaraco-functools@4.4.0?package-id=825132acee04cdf2",
+      "name": "jaraco-functools",
+      "version": "4.4.0",
+      "purl": "pkg:pypi/jaraco-functools@4.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jaraco-text@4.0.0?package-id=a8db7709b3e34050",
+      "name": "jaraco-text",
+      "version": "4.0.0",
+      "purl": "pkg:pypi/jaraco-text@4.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jeepney@0.7.1?package-id=6bf121777396e81f",
+      "name": "jeepney",
+      "version": "0.7.1",
+      "purl": "pkg:pypi/jeepney@0.7.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jinja2@3.1.6?package-id=52c52c51b7ad7a61",
+      "name": "jinja2",
+      "version": "3.1.6",
+      "purl": "pkg:pypi/jinja2@3.1.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jiter@0.12.0?package-id=55d98aa59540d9a1",
+      "name": "jiter",
+      "version": "0.12.0",
+      "purl": "pkg:pypi/jiter@0.12.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jmespath@1.1.0?package-id=e3ed154a2b6ebcf4",
+      "name": "jmespath",
+      "version": "1.1.0",
+      "purl": "pkg:pypi/jmespath@1.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jsonschema@4.26.0?package-id=827cc921a04bf56a",
+      "name": "jsonschema",
+      "version": "4.26.0",
+      "purl": "pkg:pypi/jsonschema@4.26.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jsonschema-specifications@2025.9.1?package-id=1a6d056b8e502a4b",
+      "name": "jsonschema-specifications",
+      "version": "2025.9.1",
+      "purl": "pkg:pypi/jsonschema-specifications@2025.9.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/keyring@23.5.0?package-id=33b21f1400bb57df",
+      "name": "keyring",
+      "version": "23.5.0",
+      "purl": "pkg:pypi/keyring@23.5.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/lark@1.2.2?package-id=afa3a9f7f2b24b94",
+      "name": "lark",
+      "version": "1.2.2",
+      "purl": "pkg:pypi/lark@1.2.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/launchpadlib@1.10.16?package-id=90eea69979c495b2",
+      "name": "launchpadlib",
+      "version": "1.10.16",
+      "purl": "pkg:pypi/launchpadlib@1.10.16"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/lazr-restfulclient@0.14.4?package-id=8fef86d53f0b4aa4",
+      "name": "lazr-restfulclient",
+      "version": "0.14.4",
+      "purl": "pkg:pypi/lazr-restfulclient@0.14.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/lazr-uri@1.0.6?package-id=c7ce48dc3555b386",
+      "name": "lazr-uri",
+      "version": "1.0.6",
+      "purl": "pkg:pypi/lazr-uri@1.0.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libacl1@2.3.1-1?arch=amd64&distro=ubuntu-22.04&package-id=bfd86512a80abb42&upstream=acl",
+      "name": "libacl1",
+      "version": "2.3.1-1",
+      "purl": "pkg:deb/ubuntu/libacl1@2.3.1-1?arch=amd64&distro=ubuntu-22.04&upstream=acl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libapparmor1@3.0.4-2ubuntu2.5?arch=amd64&distro=ubuntu-22.04&package-id=2095554fea8cd498&upstream=apparmor",
+      "name": "libapparmor1",
+      "version": "3.0.4-2ubuntu2.5",
+      "purl": "pkg:deb/ubuntu/libapparmor1@3.0.4-2ubuntu2.5?arch=amd64&distro=ubuntu-22.04&upstream=apparmor"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libappstream4@0.15.2-2?arch=amd64&distro=ubuntu-22.04&package-id=17482be86b5c3794&upstream=appstream",
+      "name": "libappstream4",
+      "version": "0.15.2-2",
+      "purl": "pkg:deb/ubuntu/libappstream4@0.15.2-2?arch=amd64&distro=ubuntu-22.04&upstream=appstream"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libapt-pkg6.0@2.4.14?arch=amd64&distro=ubuntu-22.04&package-id=9780a648eaca9ec6&upstream=apt",
+      "name": "libapt-pkg6.0",
+      "version": "2.4.14",
+      "purl": "pkg:deb/ubuntu/libapt-pkg6.0@2.4.14?arch=amd64&distro=ubuntu-22.04&upstream=apt"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libargon2-1@0~20171227-0.3?arch=amd64&distro=ubuntu-22.04&package-id=d9c0c73b6a293aca&upstream=argon2",
+      "name": "libargon2-1",
+      "version": "0~20171227-0.3",
+      "purl": "pkg:deb/ubuntu/libargon2-1@0~20171227-0.3?arch=amd64&distro=ubuntu-22.04&upstream=argon2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libasan6@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=0eb41db6fee34b90&upstream=gcc-11",
+      "name": "libasan6",
+      "version": "11.4.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libasan6@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libassuan0@2.5.5-1build1?arch=amd64&distro=ubuntu-22.04&package-id=c775be0764ffce89&upstream=libassuan",
+      "name": "libassuan0",
+      "version": "2.5.5-1build1",
+      "purl": "pkg:deb/ubuntu/libassuan0@2.5.5-1build1?arch=amd64&distro=ubuntu-22.04&upstream=libassuan"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libatomic1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=1311301b95bc6ac5&upstream=gcc-12",
+      "name": "libatomic1",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libatomic1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libattr1@1%3A2.5.1-1build1?arch=amd64&distro=ubuntu-22.04&package-id=bdf1046bd4bc6bd1&upstream=attr",
+      "name": "libattr1",
+      "version": "1:2.5.1-1build1",
+      "purl": "pkg:deb/ubuntu/libattr1@1%3A2.5.1-1build1?arch=amd64&distro=ubuntu-22.04&upstream=attr"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libaudit-common@1%3A3.0.7-1build1?arch=all&distro=ubuntu-22.04&package-id=151bfbf05df194fd&upstream=audit",
+      "name": "libaudit-common",
+      "version": "1:3.0.7-1build1",
+      "purl": "pkg:deb/ubuntu/libaudit-common@1%3A3.0.7-1build1?arch=all&distro=ubuntu-22.04&upstream=audit"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libaudit1@1%3A3.0.7-1build1?arch=amd64&distro=ubuntu-22.04&package-id=8c130de3977d3ca4&upstream=audit",
+      "name": "libaudit1",
+      "version": "1:3.0.7-1build1",
+      "purl": "pkg:deb/ubuntu/libaudit1@1%3A3.0.7-1build1?arch=amd64&distro=ubuntu-22.04&upstream=audit"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libbinutils@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&package-id=42c6f6beb653fbc8&upstream=binutils",
+      "name": "libbinutils",
+      "version": "2.38-4ubuntu2.12",
+      "purl": "pkg:deb/ubuntu/libbinutils@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&upstream=binutils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libblkid1@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&package-id=271412be2ed897f8&upstream=util-linux",
+      "name": "libblkid1",
+      "version": "2.37.2-4ubuntu3.4",
+      "purl": "pkg:deb/ubuntu/libblkid1@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&upstream=util-linux"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libbrotli1@1.0.9-2build6?arch=amd64&distro=ubuntu-22.04&package-id=2ea0ddce9d769b21&upstream=brotli",
+      "name": "libbrotli1",
+      "version": "1.0.9-2build6",
+      "purl": "pkg:deb/ubuntu/libbrotli1@1.0.9-2build6?arch=amd64&distro=ubuntu-22.04&upstream=brotli"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libbsd0@0.11.5-1?arch=amd64&distro=ubuntu-22.04&package-id=4535901a8b5a3121&upstream=libbsd",
+      "name": "libbsd0",
+      "version": "0.11.5-1",
+      "purl": "pkg:deb/ubuntu/libbsd0@0.11.5-1?arch=amd64&distro=ubuntu-22.04&upstream=libbsd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libbz2-1.0@1.0.8-5build1?arch=amd64&distro=ubuntu-22.04&package-id=0e4b0390824b8ea6&upstream=bzip2",
+      "name": "libbz2-1.0",
+      "version": "1.0.8-5build1",
+      "purl": "pkg:deb/ubuntu/libbz2-1.0@1.0.8-5build1?arch=amd64&distro=ubuntu-22.04&upstream=bzip2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libc-bin@2.35-0ubuntu3.10?arch=amd64&distro=ubuntu-22.04&package-id=082a73e38791e421&upstream=glibc",
+      "name": "libc-bin",
+      "version": "2.35-0ubuntu3.10",
+      "purl": "pkg:deb/ubuntu/libc-bin@2.35-0ubuntu3.10?arch=amd64&distro=ubuntu-22.04&upstream=glibc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libc-dev-bin@2.35-0ubuntu3.12?arch=amd64&distro=ubuntu-22.04&package-id=a0aac650932009e1&upstream=glibc",
+      "name": "libc-dev-bin",
+      "version": "2.35-0ubuntu3.12",
+      "purl": "pkg:deb/ubuntu/libc-dev-bin@2.35-0ubuntu3.12?arch=amd64&distro=ubuntu-22.04&upstream=glibc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libc6@2.35-0ubuntu3.12?arch=amd64&distro=ubuntu-22.04&package-id=9c97b717367a27af&upstream=glibc",
+      "name": "libc6",
+      "version": "2.35-0ubuntu3.12",
+      "purl": "pkg:deb/ubuntu/libc6@2.35-0ubuntu3.12?arch=amd64&distro=ubuntu-22.04&upstream=glibc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libc6-dev@2.35-0ubuntu3.12?arch=amd64&distro=ubuntu-22.04&package-id=f163f7da8035c6aa&upstream=glibc",
+      "name": "libc6-dev",
+      "version": "2.35-0ubuntu3.12",
+      "purl": "pkg:deb/ubuntu/libc6-dev@2.35-0ubuntu3.12?arch=amd64&distro=ubuntu-22.04&upstream=glibc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcap-ng0@0.7.9-2.2build3?arch=amd64&distro=ubuntu-22.04&package-id=76761d1c34939b40&upstream=libcap-ng",
+      "name": "libcap-ng0",
+      "version": "0.7.9-2.2build3",
+      "purl": "pkg:deb/ubuntu/libcap-ng0@0.7.9-2.2build3?arch=amd64&distro=ubuntu-22.04&upstream=libcap-ng"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcap2@1%3A2.44-1ubuntu0.22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=d484853dcafb1616",
+      "name": "libcap2",
+      "version": "1:2.44-1ubuntu0.22.04.2",
+      "purl": "pkg:deb/ubuntu/libcap2@1%3A2.44-1ubuntu0.22.04.2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcap2-bin@1%3A2.44-1ubuntu0.22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=ba8da780edea67ac&upstream=libcap2",
+      "name": "libcap2-bin",
+      "version": "1:2.44-1ubuntu0.22.04.2",
+      "purl": "pkg:deb/ubuntu/libcap2-bin@1%3A2.44-1ubuntu0.22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=libcap2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcc1-0@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=52e843e45a80c905&upstream=gcc-12",
+      "name": "libcc1-0",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libcc1-0@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcom-err2@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&package-id=ce6cc7ac7b6f8a1b&upstream=e2fsprogs",
+      "name": "libcom-err2",
+      "version": "1.46.5-2ubuntu1.2",
+      "purl": "pkg:deb/ubuntu/libcom-err2@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&upstream=e2fsprogs"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcrypt-dev@1%3A4.4.27-1?arch=amd64&distro=ubuntu-22.04&package-id=cf0b0466df889c20&upstream=libxcrypt",
+      "name": "libcrypt-dev",
+      "version": "1:4.4.27-1",
+      "purl": "pkg:deb/ubuntu/libcrypt-dev@1%3A4.4.27-1?arch=amd64&distro=ubuntu-22.04&upstream=libxcrypt"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcrypt1@1%3A4.4.27-1?arch=amd64&distro=ubuntu-22.04&package-id=3c24c7993ef63bac&upstream=libxcrypt",
+      "name": "libcrypt1",
+      "version": "1:4.4.27-1",
+      "purl": "pkg:deb/ubuntu/libcrypt1@1%3A4.4.27-1?arch=amd64&distro=ubuntu-22.04&upstream=libxcrypt"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcryptsetup12@2%3A2.4.3-1ubuntu1.3?arch=amd64&distro=ubuntu-22.04&package-id=3bc6544d03e76aeb&upstream=cryptsetup",
+      "name": "libcryptsetup12",
+      "version": "2:2.4.3-1ubuntu1.3",
+      "purl": "pkg:deb/ubuntu/libcryptsetup12@2%3A2.4.3-1ubuntu1.3?arch=amd64&distro=ubuntu-22.04&upstream=cryptsetup"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libctf-nobfd0@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&package-id=0092a58fea8a04ae&upstream=binutils",
+      "name": "libctf-nobfd0",
+      "version": "2.38-4ubuntu2.12",
+      "purl": "pkg:deb/ubuntu/libctf-nobfd0@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&upstream=binutils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libctf0@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&package-id=7e3d0354d1d40132&upstream=binutils",
+      "name": "libctf0",
+      "version": "2.38-4ubuntu2.12",
+      "purl": "pkg:deb/ubuntu/libctf0@2.38-4ubuntu2.12?arch=amd64&distro=ubuntu-22.04&upstream=binutils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcublas-13-0@13.1.0.3-1?arch=amd64&distro=ubuntu-22.04&package-id=46974999f0606bdd&upstream=libcublas",
+      "name": "libcublas-13-0",
+      "version": "13.1.0.3-1",
+      "purl": "pkg:deb/ubuntu/libcublas-13-0@13.1.0.3-1?arch=amd64&distro=ubuntu-22.04&upstream=libcublas"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcurand-13-0@10.4.0.35-1?arch=amd64&distro=ubuntu-22.04&package-id=c3d622ba9ea9d6bd&upstream=libcurand",
+      "name": "libcurand-13-0",
+      "version": "10.4.0.35-1",
+      "purl": "pkg:deb/ubuntu/libcurand-13-0@10.4.0.35-1?arch=amd64&distro=ubuntu-22.04&upstream=libcurand"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcurand-dev-13-0@10.4.0.35-1?arch=amd64&distro=ubuntu-22.04&package-id=216480501a5e29a9&upstream=libcurand",
+      "name": "libcurand-dev-13-0",
+      "version": "10.4.0.35-1",
+      "purl": "pkg:deb/ubuntu/libcurand-dev-13-0@10.4.0.35-1?arch=amd64&distro=ubuntu-22.04&upstream=libcurand"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcurl3-gnutls@7.81.0-1ubuntu1.21?arch=amd64&distro=ubuntu-22.04&package-id=827d943d36a4ff76&upstream=curl",
+      "name": "libcurl3-gnutls",
+      "version": "7.81.0-1ubuntu1.21",
+      "purl": "pkg:deb/ubuntu/libcurl3-gnutls@7.81.0-1ubuntu1.21?arch=amd64&distro=ubuntu-22.04&upstream=curl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libcurl4@7.81.0-1ubuntu1.23?arch=amd64&distro=ubuntu-22.04&package-id=f57b509f5f2cafa2&upstream=curl",
+      "name": "libcurl4",
+      "version": "7.81.0-1ubuntu1.23",
+      "purl": "pkg:deb/ubuntu/libcurl4@7.81.0-1ubuntu1.23?arch=amd64&distro=ubuntu-22.04&upstream=curl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdb5.3@5.3.28%2Bdfsg1-0.8ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=f39bcecc0a46fe0a&upstream=db5.3",
+      "name": "libdb5.3",
+      "version": "5.3.28+dfsg1-0.8ubuntu3",
+      "purl": "pkg:deb/ubuntu/libdb5.3@5.3.28%2Bdfsg1-0.8ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=db5.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdbus-1-3@1.12.20-2ubuntu4.1?arch=amd64&distro=ubuntu-22.04&package-id=cccebd96e3919003&upstream=dbus",
+      "name": "libdbus-1-3",
+      "version": "1.12.20-2ubuntu4.1",
+      "purl": "pkg:deb/ubuntu/libdbus-1-3@1.12.20-2ubuntu4.1?arch=amd64&distro=ubuntu-22.04&upstream=dbus"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdebconfclient0@0.261ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=56b546c6f7dfd27d&upstream=cdebconf",
+      "name": "libdebconfclient0",
+      "version": "0.261ubuntu1",
+      "purl": "pkg:deb/ubuntu/libdebconfclient0@0.261ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=cdebconf"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdevmapper1.02.1@2%3A1.02.175-2.1ubuntu5?arch=amd64&distro=ubuntu-22.04&package-id=e07a5a67c91a1f36&upstream=lvm2%402.03.11-2.1ubuntu5",
+      "name": "libdevmapper1.02.1",
+      "version": "2:1.02.175-2.1ubuntu5",
+      "purl": "pkg:deb/ubuntu/libdevmapper1.02.1@2%3A1.02.175-2.1ubuntu5?arch=amd64&distro=ubuntu-22.04&upstream=lvm2%402.03.11-2.1ubuntu5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdpkg-perl@1.21.1ubuntu2.6?arch=all&distro=ubuntu-22.04&package-id=f73ab9de06913555&upstream=dpkg",
+      "name": "libdpkg-perl",
+      "version": "1.21.1ubuntu2.6",
+      "purl": "pkg:deb/ubuntu/libdpkg-perl@1.21.1ubuntu2.6?arch=all&distro=ubuntu-22.04&upstream=dpkg"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdrm-amdgpu1@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=8ea16c094d17574a&upstream=libdrm",
+      "name": "libdrm-amdgpu1",
+      "version": "2.4.113-2~ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/libdrm-amdgpu1@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=libdrm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdrm-common@2.4.113-2~ubuntu0.22.04.1?arch=all&distro=ubuntu-22.04&package-id=8774294f87766225&upstream=libdrm",
+      "name": "libdrm-common",
+      "version": "2.4.113-2~ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/libdrm-common@2.4.113-2~ubuntu0.22.04.1?arch=all&distro=ubuntu-22.04&upstream=libdrm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdrm-intel1@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=129662a98f902104&upstream=libdrm",
+      "name": "libdrm-intel1",
+      "version": "2.4.113-2~ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/libdrm-intel1@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=libdrm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdrm-nouveau2@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=a44a3250a14eca79&upstream=libdrm",
+      "name": "libdrm-nouveau2",
+      "version": "2.4.113-2~ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/libdrm-nouveau2@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=libdrm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdrm-radeon1@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=7e974966185d01c6&upstream=libdrm",
+      "name": "libdrm-radeon1",
+      "version": "2.4.113-2~ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/libdrm-radeon1@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=libdrm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdrm2@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=2a8580ef58f3f19b&upstream=libdrm",
+      "name": "libdrm2",
+      "version": "2.4.113-2~ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/libdrm2@2.4.113-2~ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=libdrm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libdw1@0.186-1ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=f1d92d1044986c5e&upstream=elfutils",
+      "name": "libdw1",
+      "version": "0.186-1ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libdw1@0.186-1ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=elfutils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libedit2@3.1-20210910-1build1?arch=amd64&distro=ubuntu-22.04&package-id=e1657e29f82ce59c&upstream=libedit",
+      "name": "libedit2",
+      "version": "3.1-20210910-1build1",
+      "purl": "pkg:deb/ubuntu/libedit2@3.1-20210910-1build1?arch=amd64&distro=ubuntu-22.04&upstream=libedit"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libelf1@0.186-1ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=32dafbefe20c0f19&upstream=elfutils",
+      "name": "libelf1",
+      "version": "0.186-1ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libelf1@0.186-1ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=elfutils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libexpat1@2.4.7-1ubuntu0.6?arch=amd64&distro=ubuntu-22.04&package-id=893368f1976286f1&upstream=expat",
+      "name": "libexpat1",
+      "version": "2.4.7-1ubuntu0.6",
+      "purl": "pkg:deb/ubuntu/libexpat1@2.4.7-1ubuntu0.6?arch=amd64&distro=ubuntu-22.04&upstream=expat"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libexpat1-dev@2.4.7-1ubuntu0.6?arch=amd64&distro=ubuntu-22.04&package-id=cc41c33313a0f642&upstream=expat",
+      "name": "libexpat1-dev",
+      "version": "2.4.7-1ubuntu0.6",
+      "purl": "pkg:deb/ubuntu/libexpat1-dev@2.4.7-1ubuntu0.6?arch=amd64&distro=ubuntu-22.04&upstream=expat"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libext2fs2@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&package-id=a7a36fa0f9a6eefc&upstream=e2fsprogs",
+      "name": "libext2fs2",
+      "version": "1.46.5-2ubuntu1.2",
+      "purl": "pkg:deb/ubuntu/libext2fs2@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&upstream=e2fsprogs"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libffi8@3.4.2-4?arch=amd64&distro=ubuntu-22.04&package-id=ae9fa8c7524d69b6&upstream=libffi",
+      "name": "libffi8",
+      "version": "3.4.2-4",
+      "purl": "pkg:deb/ubuntu/libffi8@3.4.2-4?arch=amd64&distro=ubuntu-22.04&upstream=libffi"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgcc-11-dev@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=803c5c153125ccfd&upstream=gcc-11",
+      "name": "libgcc-11-dev",
+      "version": "11.4.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libgcc-11-dev@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgcc-s1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=53d9362bc6d04684&upstream=gcc-12",
+      "name": "libgcc-s1",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libgcc-s1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgcrypt20@1.9.4-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=87eed888bbd0fa74",
+      "name": "libgcrypt20",
+      "version": "1.9.4-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libgcrypt20@1.9.4-3ubuntu3?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgdbm-compat4@1.23-1?arch=amd64&distro=ubuntu-22.04&package-id=630295bac6c00ffe&upstream=gdbm",
+      "name": "libgdbm-compat4",
+      "version": "1.23-1",
+      "purl": "pkg:deb/ubuntu/libgdbm-compat4@1.23-1?arch=amd64&distro=ubuntu-22.04&upstream=gdbm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgdbm6@1.23-1?arch=amd64&distro=ubuntu-22.04&package-id=a45b1912f1ecab65&upstream=gdbm",
+      "name": "libgdbm6",
+      "version": "1.23-1",
+      "purl": "pkg:deb/ubuntu/libgdbm6@1.23-1?arch=amd64&distro=ubuntu-22.04&upstream=gdbm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgdrapi@2.5.1?arch=amd64&distro=ubuntu-22.04&package-id=d5354c7e6e9ce621",
+      "name": "libgdrapi",
+      "version": "2.5.1",
+      "purl": "pkg:deb/ubuntu/libgdrapi@2.5.1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgirepository-1.0-1@1.72.0-1?arch=amd64&distro=ubuntu-22.04&package-id=3dccde30de0161c8&upstream=gobject-introspection",
+      "name": "libgirepository-1.0-1",
+      "version": "1.72.0-1",
+      "purl": "pkg:deb/ubuntu/libgirepository-1.0-1@1.72.0-1?arch=amd64&distro=ubuntu-22.04&upstream=gobject-introspection"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgl1@1.4.0-1?arch=amd64&distro=ubuntu-22.04&package-id=1c73ccd1a494fd04&upstream=libglvnd",
+      "name": "libgl1",
+      "version": "1.4.0-1",
+      "purl": "pkg:deb/ubuntu/libgl1@1.4.0-1?arch=amd64&distro=ubuntu-22.04&upstream=libglvnd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgl1-mesa-dri@23.2.1-1ubuntu3.1~22.04.3?arch=amd64&distro=ubuntu-22.04&package-id=6d8e0039f246a6b8&upstream=mesa",
+      "name": "libgl1-mesa-dri",
+      "version": "23.2.1-1ubuntu3.1~22.04.3",
+      "purl": "pkg:deb/ubuntu/libgl1-mesa-dri@23.2.1-1ubuntu3.1~22.04.3?arch=amd64&distro=ubuntu-22.04&upstream=mesa"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libglapi-mesa@23.2.1-1ubuntu3.1~22.04.3?arch=amd64&distro=ubuntu-22.04&package-id=f9f8a49f76159709&upstream=mesa",
+      "name": "libglapi-mesa",
+      "version": "23.2.1-1ubuntu3.1~22.04.3",
+      "purl": "pkg:deb/ubuntu/libglapi-mesa@23.2.1-1ubuntu3.1~22.04.3?arch=amd64&distro=ubuntu-22.04&upstream=mesa"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libglib2.0-0@2.72.4-0ubuntu2.8?arch=amd64&distro=ubuntu-22.04&package-id=6940de7e3eba220b&upstream=glib2.0",
+      "name": "libglib2.0-0",
+      "version": "2.72.4-0ubuntu2.8",
+      "purl": "pkg:deb/ubuntu/libglib2.0-0@2.72.4-0ubuntu2.8?arch=amd64&distro=ubuntu-22.04&upstream=glib2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libglib2.0-bin@2.72.4-0ubuntu2.8?arch=amd64&distro=ubuntu-22.04&package-id=b7994c0560cd083c&upstream=glib2.0",
+      "name": "libglib2.0-bin",
+      "version": "2.72.4-0ubuntu2.8",
+      "purl": "pkg:deb/ubuntu/libglib2.0-bin@2.72.4-0ubuntu2.8?arch=amd64&distro=ubuntu-22.04&upstream=glib2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libglib2.0-data@2.72.4-0ubuntu2.8?arch=all&distro=ubuntu-22.04&package-id=0bd5ab49a8eeb0c3&upstream=glib2.0",
+      "name": "libglib2.0-data",
+      "version": "2.72.4-0ubuntu2.8",
+      "purl": "pkg:deb/ubuntu/libglib2.0-data@2.72.4-0ubuntu2.8?arch=all&distro=ubuntu-22.04&upstream=glib2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libglvnd0@1.4.0-1?arch=amd64&distro=ubuntu-22.04&package-id=daf7c039066a628c&upstream=libglvnd",
+      "name": "libglvnd0",
+      "version": "1.4.0-1",
+      "purl": "pkg:deb/ubuntu/libglvnd0@1.4.0-1?arch=amd64&distro=ubuntu-22.04&upstream=libglvnd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libglx-mesa0@23.2.1-1ubuntu3.1~22.04.3?arch=amd64&distro=ubuntu-22.04&package-id=bdfc0faedff6e6c6&upstream=mesa",
+      "name": "libglx-mesa0",
+      "version": "23.2.1-1ubuntu3.1~22.04.3",
+      "purl": "pkg:deb/ubuntu/libglx-mesa0@23.2.1-1ubuntu3.1~22.04.3?arch=amd64&distro=ubuntu-22.04&upstream=mesa"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libglx0@1.4.0-1?arch=amd64&distro=ubuntu-22.04&package-id=26816f997d3a9f06&upstream=libglvnd",
+      "name": "libglx0",
+      "version": "1.4.0-1",
+      "purl": "pkg:deb/ubuntu/libglx0@1.4.0-1?arch=amd64&distro=ubuntu-22.04&upstream=libglvnd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgmp10@2%3A6.2.1%2Bdfsg-3ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=49df55f7bebfad4f&upstream=gmp",
+      "name": "libgmp10",
+      "version": "2:6.2.1+dfsg-3ubuntu1",
+      "purl": "pkg:deb/ubuntu/libgmp10@2%3A6.2.1%2Bdfsg-3ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=gmp"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgnutls30@3.7.3-4ubuntu1.7?arch=amd64&distro=ubuntu-22.04&package-id=2b3dd6fd860d2717&upstream=gnutls28",
+      "name": "libgnutls30",
+      "version": "3.7.3-4ubuntu1.7",
+      "purl": "pkg:deb/ubuntu/libgnutls30@3.7.3-4ubuntu1.7?arch=amd64&distro=ubuntu-22.04&upstream=gnutls28"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgomp1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=f68dae73bfe69140&upstream=gcc-12",
+      "name": "libgomp1",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libgomp1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgpg-error0@1.43-3?arch=amd64&distro=ubuntu-22.04&package-id=e08b7fc39b1c7ff5&upstream=libgpg-error",
+      "name": "libgpg-error0",
+      "version": "1.43-3",
+      "purl": "pkg:deb/ubuntu/libgpg-error0@1.43-3?arch=amd64&distro=ubuntu-22.04&upstream=libgpg-error"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgssapi-krb5-2@1.19.2-2ubuntu0.7?arch=amd64&distro=ubuntu-22.04&package-id=7ebe6985efb0ab50&upstream=krb5",
+      "name": "libgssapi-krb5-2",
+      "version": "1.19.2-2ubuntu0.7",
+      "purl": "pkg:deb/ubuntu/libgssapi-krb5-2@1.19.2-2ubuntu0.7?arch=amd64&distro=ubuntu-22.04&upstream=krb5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libgstreamer1.0-0@1.20.3-0ubuntu1.1?arch=amd64&distro=ubuntu-22.04&package-id=abb9f6f2ae0aca9b&upstream=gstreamer1.0",
+      "name": "libgstreamer1.0-0",
+      "version": "1.20.3-0ubuntu1.1",
+      "purl": "pkg:deb/ubuntu/libgstreamer1.0-0@1.20.3-0ubuntu1.1?arch=amd64&distro=ubuntu-22.04&upstream=gstreamer1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libhogweed6@3.7.3-1build2?arch=amd64&distro=ubuntu-22.04&package-id=61ee2037f82bad13&upstream=nettle",
+      "name": "libhogweed6",
+      "version": "3.7.3-1build2",
+      "purl": "pkg:deb/ubuntu/libhogweed6@3.7.3-1build2?arch=amd64&distro=ubuntu-22.04&upstream=nettle"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libibverbs-dev@39.0-1?arch=amd64&distro=ubuntu-22.04&package-id=3c3eb243d01b2d26&upstream=rdma-core",
+      "name": "libibverbs-dev",
+      "version": "39.0-1",
+      "purl": "pkg:deb/ubuntu/libibverbs-dev@39.0-1?arch=amd64&distro=ubuntu-22.04&upstream=rdma-core"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libibverbs1@39.0-1?arch=amd64&distro=ubuntu-22.04&package-id=6116ef799da490a6&upstream=rdma-core",
+      "name": "libibverbs1",
+      "version": "39.0-1",
+      "purl": "pkg:deb/ubuntu/libibverbs1@39.0-1?arch=amd64&distro=ubuntu-22.04&upstream=rdma-core"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libice6@2%3A1.0.10-1build2?arch=amd64&distro=ubuntu-22.04&package-id=556bdf7ce3ace078&upstream=libice",
+      "name": "libice6",
+      "version": "2:1.0.10-1build2",
+      "purl": "pkg:deb/ubuntu/libice6@2%3A1.0.10-1build2?arch=amd64&distro=ubuntu-22.04&upstream=libice"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libicu70@70.1-2?arch=amd64&distro=ubuntu-22.04&package-id=ded7743d5ea91c0a&upstream=icu",
+      "name": "libicu70",
+      "version": "70.1-2",
+      "purl": "pkg:deb/ubuntu/libicu70@70.1-2?arch=amd64&distro=ubuntu-22.04&upstream=icu"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libidn2-0@2.3.2-2build1?arch=amd64&distro=ubuntu-22.04&package-id=adeff216fe42e562&upstream=libidn2",
+      "name": "libidn2-0",
+      "version": "2.3.2-2build1",
+      "purl": "pkg:deb/ubuntu/libidn2-0@2.3.2-2build1?arch=amd64&distro=ubuntu-22.04&upstream=libidn2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libip4tc2@1.8.7-1ubuntu5.2?arch=amd64&distro=ubuntu-22.04&package-id=5a684707f6897a1c&upstream=iptables",
+      "name": "libip4tc2",
+      "version": "1.8.7-1ubuntu5.2",
+      "purl": "pkg:deb/ubuntu/libip4tc2@1.8.7-1ubuntu5.2?arch=amd64&distro=ubuntu-22.04&upstream=iptables"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libisl23@0.24-2build1?arch=amd64&distro=ubuntu-22.04&package-id=7922112e4257d81c&upstream=isl",
+      "name": "libisl23",
+      "version": "0.24-2build1",
+      "purl": "pkg:deb/ubuntu/libisl23@0.24-2build1?arch=amd64&distro=ubuntu-22.04&upstream=isl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libitm1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=07f85240667e34b0&upstream=gcc-12",
+      "name": "libitm1",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libitm1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libjson-c5@0.15-3~ubuntu1.22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=1320b02560169fb3&upstream=json-c",
+      "name": "libjson-c5",
+      "version": "0.15-3~ubuntu1.22.04.2",
+      "purl": "pkg:deb/ubuntu/libjson-c5@0.15-3~ubuntu1.22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=json-c"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libk5crypto3@1.19.2-2ubuntu0.7?arch=amd64&distro=ubuntu-22.04&package-id=cdfc97cd731e3d1a&upstream=krb5",
+      "name": "libk5crypto3",
+      "version": "1.19.2-2ubuntu0.7",
+      "purl": "pkg:deb/ubuntu/libk5crypto3@1.19.2-2ubuntu0.7?arch=amd64&distro=ubuntu-22.04&upstream=krb5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libkeyutils1@1.6.1-2ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=977171575d1ab200&upstream=keyutils",
+      "name": "libkeyutils1",
+      "version": "1.6.1-2ubuntu3",
+      "purl": "pkg:deb/ubuntu/libkeyutils1@1.6.1-2ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=keyutils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libkmod2@29-1ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=a76fb904be102ba8&upstream=kmod",
+      "name": "libkmod2",
+      "version": "29-1ubuntu1",
+      "purl": "pkg:deb/ubuntu/libkmod2@29-1ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=kmod"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libkrb5-3@1.19.2-2ubuntu0.7?arch=amd64&distro=ubuntu-22.04&package-id=b5f251784db87672&upstream=krb5",
+      "name": "libkrb5-3",
+      "version": "1.19.2-2ubuntu0.7",
+      "purl": "pkg:deb/ubuntu/libkrb5-3@1.19.2-2ubuntu0.7?arch=amd64&distro=ubuntu-22.04&upstream=krb5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libkrb5support0@1.19.2-2ubuntu0.7?arch=amd64&distro=ubuntu-22.04&package-id=47f49be5a76a87b4&upstream=krb5",
+      "name": "libkrb5support0",
+      "version": "1.19.2-2ubuntu0.7",
+      "purl": "pkg:deb/ubuntu/libkrb5support0@1.19.2-2ubuntu0.7?arch=amd64&distro=ubuntu-22.04&upstream=krb5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libksba8@1.6.0-2ubuntu0.2?arch=amd64&distro=ubuntu-22.04&package-id=c2ab539b73a7850e&upstream=libksba",
+      "name": "libksba8",
+      "version": "1.6.0-2ubuntu0.2",
+      "purl": "pkg:deb/ubuntu/libksba8@1.6.0-2ubuntu0.2?arch=amd64&distro=ubuntu-22.04&upstream=libksba"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libldap-2.5-0@2.5.19%2Bdfsg-0ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=f30d6572eca4af51&upstream=openldap",
+      "name": "libldap-2.5-0",
+      "version": "2.5.19+dfsg-0ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/libldap-2.5-0@2.5.19%2Bdfsg-0ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=openldap"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libllvm15@1%3A15.0.7-0ubuntu0.22.04.3?arch=amd64&distro=ubuntu-22.04&package-id=21d7c71a4aaf060c&upstream=llvm-toolchain-15",
+      "name": "libllvm15",
+      "version": "1:15.0.7-0ubuntu0.22.04.3",
+      "purl": "pkg:deb/ubuntu/libllvm15@1%3A15.0.7-0ubuntu0.22.04.3?arch=amd64&distro=ubuntu-22.04&upstream=llvm-toolchain-15"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/liblsan0@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=910dda4e54f03db8&upstream=gcc-12",
+      "name": "liblsan0",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/liblsan0@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/liblz4-1@1.9.3-2build2?arch=amd64&distro=ubuntu-22.04&package-id=1c99fc6a3f0d67df&upstream=lz4",
+      "name": "liblz4-1",
+      "version": "1.9.3-2build2",
+      "purl": "pkg:deb/ubuntu/liblz4-1@1.9.3-2build2?arch=amd64&distro=ubuntu-22.04&upstream=lz4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/liblzma5@5.2.5-2ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=c6e1c0486c5b505e&upstream=xz-utils",
+      "name": "liblzma5",
+      "version": "5.2.5-2ubuntu1",
+      "purl": "pkg:deb/ubuntu/liblzma5@5.2.5-2ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=xz-utils"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libmd0@1.0.4-1build1?arch=amd64&distro=ubuntu-22.04&package-id=fcc9635a7c69aad1&upstream=libmd",
+      "name": "libmd0",
+      "version": "1.0.4-1build1",
+      "purl": "pkg:deb/ubuntu/libmd0@1.0.4-1build1?arch=amd64&distro=ubuntu-22.04&upstream=libmd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libmount1@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&package-id=0f8e0f64b7cd3257&upstream=util-linux",
+      "name": "libmount1",
+      "version": "2.37.2-4ubuntu3.4",
+      "purl": "pkg:deb/ubuntu/libmount1@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&upstream=util-linux"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libmpc3@1.2.1-2build1?arch=amd64&distro=ubuntu-22.04&package-id=a7ddd0a019b78371&upstream=mpclib3",
+      "name": "libmpc3",
+      "version": "1.2.1-2build1",
+      "purl": "pkg:deb/ubuntu/libmpc3@1.2.1-2build1?arch=amd64&distro=ubuntu-22.04&upstream=mpclib3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libmpdec3@2.5.1-2build2?arch=amd64&distro=ubuntu-22.04&package-id=c47765efc5183fa6&upstream=mpdecimal",
+      "name": "libmpdec3",
+      "version": "2.5.1-2build2",
+      "purl": "pkg:deb/ubuntu/libmpdec3@2.5.1-2build2?arch=amd64&distro=ubuntu-22.04&upstream=mpdecimal"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libmpfr6@4.1.0-3build3?arch=amd64&distro=ubuntu-22.04&package-id=c0e9bee6fa7ddadb&upstream=mpfr4",
+      "name": "libmpfr6",
+      "version": "4.1.0-3build3",
+      "purl": "pkg:deb/ubuntu/libmpfr6@4.1.0-3build3?arch=amd64&distro=ubuntu-22.04&upstream=mpfr4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnccl-dev@2.29.2-1%2Bcuda13.1?arch=amd64&distro=ubuntu-22.04&package-id=a1a826415665dfb2&upstream=nccl",
+      "name": "libnccl-dev",
+      "version": "2.29.2-1+cuda13.1",
+      "purl": "pkg:deb/ubuntu/libnccl-dev@2.29.2-1%2Bcuda13.1?arch=amd64&distro=ubuntu-22.04&upstream=nccl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnccl2@2.29.2-1%2Bcuda13.1?arch=amd64&distro=ubuntu-22.04&package-id=f5f6d2b166bebd42&upstream=nccl",
+      "name": "libnccl2",
+      "version": "2.29.2-1+cuda13.1",
+      "purl": "pkg:deb/ubuntu/libnccl2@2.29.2-1%2Bcuda13.1?arch=amd64&distro=ubuntu-22.04&upstream=nccl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libncurses6@6.3-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=b635485d53d5cd3f&upstream=ncurses",
+      "name": "libncurses6",
+      "version": "6.3-2ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libncurses6@6.3-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=ncurses"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libncursesw6@6.3-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=f04802cda5fff11d&upstream=ncurses",
+      "name": "libncursesw6",
+      "version": "6.3-2ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libncursesw6@6.3-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=ncurses"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnettle8@3.7.3-1build2?arch=amd64&distro=ubuntu-22.04&package-id=f643077a176aed7f&upstream=nettle",
+      "name": "libnettle8",
+      "version": "3.7.3-1build2",
+      "purl": "pkg:deb/ubuntu/libnettle8@3.7.3-1build2?arch=amd64&distro=ubuntu-22.04&upstream=nettle"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnghttp2-14@1.43.0-1ubuntu0.2?arch=amd64&distro=ubuntu-22.04&package-id=cd4214eb1c222605&upstream=nghttp2",
+      "name": "libnghttp2-14",
+      "version": "1.43.0-1ubuntu0.2",
+      "purl": "pkg:deb/ubuntu/libnghttp2-14@1.43.0-1ubuntu0.2?arch=amd64&distro=ubuntu-22.04&upstream=nghttp2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnl-3-200@3.5.0-0.1?arch=amd64&distro=ubuntu-22.04&package-id=8ef211790703e09f&upstream=libnl3",
+      "name": "libnl-3-200",
+      "version": "3.5.0-0.1",
+      "purl": "pkg:deb/ubuntu/libnl-3-200@3.5.0-0.1?arch=amd64&distro=ubuntu-22.04&upstream=libnl3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnl-3-dev@3.5.0-0.1?arch=amd64&distro=ubuntu-22.04&package-id=6b950a74314a972f&upstream=libnl3",
+      "name": "libnl-3-dev",
+      "version": "3.5.0-0.1",
+      "purl": "pkg:deb/ubuntu/libnl-3-dev@3.5.0-0.1?arch=amd64&distro=ubuntu-22.04&upstream=libnl3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnl-route-3-200@3.5.0-0.1?arch=amd64&distro=ubuntu-22.04&package-id=29f707308ec30f8b&upstream=libnl3",
+      "name": "libnl-route-3-200",
+      "version": "3.5.0-0.1",
+      "purl": "pkg:deb/ubuntu/libnl-route-3-200@3.5.0-0.1?arch=amd64&distro=ubuntu-22.04&upstream=libnl3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnl-route-3-dev@3.5.0-0.1?arch=amd64&distro=ubuntu-22.04&package-id=d9451c372e53ede5&upstream=libnl3",
+      "name": "libnl-route-3-dev",
+      "version": "3.5.0-0.1",
+      "purl": "pkg:deb/ubuntu/libnl-route-3-dev@3.5.0-0.1?arch=amd64&distro=ubuntu-22.04&upstream=libnl3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnpth0@1.6-3build2?arch=amd64&distro=ubuntu-22.04&package-id=8d8e94e27b567d2a&upstream=npth",
+      "name": "libnpth0",
+      "version": "1.6-3build2",
+      "purl": "pkg:deb/ubuntu/libnpth0@1.6-3build2?arch=amd64&distro=ubuntu-22.04&upstream=npth"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnsl-dev@1.3.0-2build2?arch=amd64&distro=ubuntu-22.04&package-id=d1df5742afa3fca1&upstream=libnsl",
+      "name": "libnsl-dev",
+      "version": "1.3.0-2build2",
+      "purl": "pkg:deb/ubuntu/libnsl-dev@1.3.0-2build2?arch=amd64&distro=ubuntu-22.04&upstream=libnsl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnsl2@1.3.0-2build2?arch=amd64&distro=ubuntu-22.04&package-id=5a7e153364488625&upstream=libnsl",
+      "name": "libnsl2",
+      "version": "1.3.0-2build2",
+      "purl": "pkg:deb/ubuntu/libnsl2@1.3.0-2build2?arch=amd64&distro=ubuntu-22.04&upstream=libnsl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnvptxcompiler-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&package-id=65b18a7dca711a20&upstream=libnvptxcompiler",
+      "name": "libnvptxcompiler-13-0",
+      "version": "13.0.88-1",
+      "purl": "pkg:deb/ubuntu/libnvptxcompiler-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&upstream=libnvptxcompiler"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libnvvm-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&package-id=22b22ad3bc256b2f&upstream=libnvvm",
+      "name": "libnvvm-13-0",
+      "version": "13.0.88-1",
+      "purl": "pkg:deb/ubuntu/libnvvm-13-0@13.0.88-1?arch=amd64&distro=ubuntu-22.04&upstream=libnvvm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libp11-kit0@0.24.0-6build1?arch=amd64&distro=ubuntu-22.04&package-id=06ece903c708343f&upstream=p11-kit",
+      "name": "libp11-kit0",
+      "version": "0.24.0-6build1",
+      "purl": "pkg:deb/ubuntu/libp11-kit0@0.24.0-6build1?arch=amd64&distro=ubuntu-22.04&upstream=p11-kit"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpackagekit-glib2-18@1.2.5-2ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=0f0d3ac12cf2f96a&upstream=packagekit",
+      "name": "libpackagekit-glib2-18",
+      "version": "1.2.5-2ubuntu3",
+      "purl": "pkg:deb/ubuntu/libpackagekit-glib2-18@1.2.5-2ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=packagekit"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpam-modules@1.4.0-11ubuntu2.6?arch=amd64&distro=ubuntu-22.04&package-id=dddb6c9c36b09d92&upstream=pam",
+      "name": "libpam-modules",
+      "version": "1.4.0-11ubuntu2.6",
+      "purl": "pkg:deb/ubuntu/libpam-modules@1.4.0-11ubuntu2.6?arch=amd64&distro=ubuntu-22.04&upstream=pam"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpam-modules-bin@1.4.0-11ubuntu2.6?arch=amd64&distro=ubuntu-22.04&package-id=950f666d2dd72e2a&upstream=pam",
+      "name": "libpam-modules-bin",
+      "version": "1.4.0-11ubuntu2.6",
+      "purl": "pkg:deb/ubuntu/libpam-modules-bin@1.4.0-11ubuntu2.6?arch=amd64&distro=ubuntu-22.04&upstream=pam"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpam-runtime@1.4.0-11ubuntu2.6?arch=all&distro=ubuntu-22.04&package-id=69efae9a4d94a5aa&upstream=pam",
+      "name": "libpam-runtime",
+      "version": "1.4.0-11ubuntu2.6",
+      "purl": "pkg:deb/ubuntu/libpam-runtime@1.4.0-11ubuntu2.6?arch=all&distro=ubuntu-22.04&upstream=pam"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpam-systemd@249.11-0ubuntu3.17?arch=amd64&distro=ubuntu-22.04&package-id=14bbcac656146271&upstream=systemd",
+      "name": "libpam-systemd",
+      "version": "249.11-0ubuntu3.17",
+      "purl": "pkg:deb/ubuntu/libpam-systemd@249.11-0ubuntu3.17?arch=amd64&distro=ubuntu-22.04&upstream=systemd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpam0g@1.4.0-11ubuntu2.6?arch=amd64&distro=ubuntu-22.04&package-id=0f3f3e3640efb248&upstream=pam",
+      "name": "libpam0g",
+      "version": "1.4.0-11ubuntu2.6",
+      "purl": "pkg:deb/ubuntu/libpam0g@1.4.0-11ubuntu2.6?arch=amd64&distro=ubuntu-22.04&upstream=pam"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpciaccess0@0.16-3?arch=amd64&distro=ubuntu-22.04&package-id=58574a22915228c4&upstream=libpciaccess",
+      "name": "libpciaccess0",
+      "version": "0.16-3",
+      "purl": "pkg:deb/ubuntu/libpciaccess0@0.16-3?arch=amd64&distro=ubuntu-22.04&upstream=libpciaccess"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpcre2-8-0@10.39-3ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=28cfc0a0b958dc4d&upstream=pcre2",
+      "name": "libpcre2-8-0",
+      "version": "10.39-3ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libpcre2-8-0@10.39-3ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=pcre2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpcre3@2%3A8.39-13ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=a1080f742c38e287&upstream=pcre3",
+      "name": "libpcre3",
+      "version": "2:8.39-13ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/libpcre3@2%3A8.39-13ubuntu0.22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=pcre3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libperl5.34@5.34.0-3ubuntu1.5?arch=amd64&distro=ubuntu-22.04&package-id=fee49952071dc032&upstream=perl",
+      "name": "libperl5.34",
+      "version": "5.34.0-3ubuntu1.5",
+      "purl": "pkg:deb/ubuntu/libperl5.34@5.34.0-3ubuntu1.5?arch=amd64&distro=ubuntu-22.04&upstream=perl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpolkit-agent-1-0@0.105-33?arch=amd64&distro=ubuntu-22.04&package-id=9222afda92b00f73&upstream=policykit-1",
+      "name": "libpolkit-agent-1-0",
+      "version": "0.105-33",
+      "purl": "pkg:deb/ubuntu/libpolkit-agent-1-0@0.105-33?arch=amd64&distro=ubuntu-22.04&upstream=policykit-1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpolkit-gobject-1-0@0.105-33?arch=amd64&distro=ubuntu-22.04&package-id=714a71e2d07b4a32&upstream=policykit-1",
+      "name": "libpolkit-gobject-1-0",
+      "version": "0.105-33",
+      "purl": "pkg:deb/ubuntu/libpolkit-gobject-1-0@0.105-33?arch=amd64&distro=ubuntu-22.04&upstream=policykit-1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libprocps8@2%3A3.3.17-6ubuntu2.1?arch=amd64&distro=ubuntu-22.04&package-id=fd3e6f5fe06711cb&upstream=procps",
+      "name": "libprocps8",
+      "version": "2:3.3.17-6ubuntu2.1",
+      "purl": "pkg:deb/ubuntu/libprocps8@2%3A3.3.17-6ubuntu2.1?arch=amd64&distro=ubuntu-22.04&upstream=procps"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpsl5@0.21.0-1.2build2?arch=amd64&distro=ubuntu-22.04&package-id=f89ff9e6238c8049&upstream=libpsl",
+      "name": "libpsl5",
+      "version": "0.21.0-1.2build2",
+      "purl": "pkg:deb/ubuntu/libpsl5@0.21.0-1.2build2?arch=amd64&distro=ubuntu-22.04&upstream=libpsl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpython3-stdlib@3.10.6-1~22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=7b620a2b31ab150b&upstream=python3-defaults",
+      "name": "libpython3-stdlib",
+      "version": "3.10.6-1~22.04.1",
+      "purl": "pkg:deb/ubuntu/libpython3-stdlib@3.10.6-1~22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=python3-defaults"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpython3.10-minimal@3.10.12-1~22.04.13?arch=amd64&distro=ubuntu-22.04&package-id=0a9813a4d8010eb8&upstream=python3.10",
+      "name": "libpython3.10-minimal",
+      "version": "3.10.12-1~22.04.13",
+      "purl": "pkg:deb/ubuntu/libpython3.10-minimal@3.10.12-1~22.04.13?arch=amd64&distro=ubuntu-22.04&upstream=python3.10"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpython3.10-stdlib@3.10.12-1~22.04.13?arch=amd64&distro=ubuntu-22.04&package-id=d21db9a19954c137&upstream=python3.10",
+      "name": "libpython3.10-stdlib",
+      "version": "3.10.12-1~22.04.13",
+      "purl": "pkg:deb/ubuntu/libpython3.10-stdlib@3.10.12-1~22.04.13?arch=amd64&distro=ubuntu-22.04&upstream=python3.10"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpython3.12@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&package-id=c79f8a9a8cbb351f&upstream=python3.12",
+      "name": "libpython3.12",
+      "version": "3.12.12-1+jammy1",
+      "purl": "pkg:deb/ubuntu/libpython3.12@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&upstream=python3.12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpython3.12-dev@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&package-id=bb43cdbef6317a20&upstream=python3.12",
+      "name": "libpython3.12-dev",
+      "version": "3.12.12-1+jammy1",
+      "purl": "pkg:deb/ubuntu/libpython3.12-dev@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&upstream=python3.12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libpython3.12-stdlib@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&package-id=38ffdc12171a3047&upstream=python3.12",
+      "name": "libpython3.12-stdlib",
+      "version": "3.12.12-1+jammy1",
+      "purl": "pkg:deb/ubuntu/libpython3.12-stdlib@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&upstream=python3.12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libquadmath0@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=b5846e0c3ea0801f&upstream=gcc-12",
+      "name": "libquadmath0",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libquadmath0@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libreadline8@8.1.2-1?arch=amd64&distro=ubuntu-22.04&package-id=0348859ebfac7488&upstream=readline",
+      "name": "libreadline8",
+      "version": "8.1.2-1",
+      "purl": "pkg:deb/ubuntu/libreadline8@8.1.2-1?arch=amd64&distro=ubuntu-22.04&upstream=readline"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/librtmp1@2.4%2B20151223.gitfa8646d.1-2build4?arch=amd64&distro=ubuntu-22.04&package-id=164ed36b24e4082d&upstream=rtmpdump",
+      "name": "librtmp1",
+      "version": "2.4+20151223.gitfa8646d.1-2build4",
+      "purl": "pkg:deb/ubuntu/librtmp1@2.4%2B20151223.gitfa8646d.1-2build4?arch=amd64&distro=ubuntu-22.04&upstream=rtmpdump"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsasl2-2@2.1.27%2Bdfsg2-3ubuntu1.2?arch=amd64&distro=ubuntu-22.04&package-id=60a5c7d4d13f457c&upstream=cyrus-sasl2",
+      "name": "libsasl2-2",
+      "version": "2.1.27+dfsg2-3ubuntu1.2",
+      "purl": "pkg:deb/ubuntu/libsasl2-2@2.1.27%2Bdfsg2-3ubuntu1.2?arch=amd64&distro=ubuntu-22.04&upstream=cyrus-sasl2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsasl2-modules-db@2.1.27%2Bdfsg2-3ubuntu1.2?arch=amd64&distro=ubuntu-22.04&package-id=8abab1d91ea34ca6&upstream=cyrus-sasl2",
+      "name": "libsasl2-modules-db",
+      "version": "2.1.27+dfsg2-3ubuntu1.2",
+      "purl": "pkg:deb/ubuntu/libsasl2-modules-db@2.1.27%2Bdfsg2-3ubuntu1.2?arch=amd64&distro=ubuntu-22.04&upstream=cyrus-sasl2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libseccomp2@2.5.3-2ubuntu3~22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=c13d5d5b779d900f&upstream=libseccomp",
+      "name": "libseccomp2",
+      "version": "2.5.3-2ubuntu3~22.04.1",
+      "purl": "pkg:deb/ubuntu/libseccomp2@2.5.3-2ubuntu3~22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=libseccomp"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libselinux1@3.3-1build2?arch=amd64&distro=ubuntu-22.04&package-id=54af77facfa080ef&upstream=libselinux",
+      "name": "libselinux1",
+      "version": "3.3-1build2",
+      "purl": "pkg:deb/ubuntu/libselinux1@3.3-1build2?arch=amd64&distro=ubuntu-22.04&upstream=libselinux"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsemanage-common@3.3-1build2?arch=all&distro=ubuntu-22.04&package-id=25bcea01ea3ba418&upstream=libsemanage",
+      "name": "libsemanage-common",
+      "version": "3.3-1build2",
+      "purl": "pkg:deb/ubuntu/libsemanage-common@3.3-1build2?arch=all&distro=ubuntu-22.04&upstream=libsemanage"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsemanage2@3.3-1build2?arch=amd64&distro=ubuntu-22.04&package-id=19875621a55f99e5&upstream=libsemanage",
+      "name": "libsemanage2",
+      "version": "3.3-1build2",
+      "purl": "pkg:deb/ubuntu/libsemanage2@3.3-1build2?arch=amd64&distro=ubuntu-22.04&upstream=libsemanage"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsensors-config@1%3A3.6.0-7ubuntu1?arch=all&distro=ubuntu-22.04&package-id=a570be2ed1319cff&upstream=lm-sensors",
+      "name": "libsensors-config",
+      "version": "1:3.6.0-7ubuntu1",
+      "purl": "pkg:deb/ubuntu/libsensors-config@1%3A3.6.0-7ubuntu1?arch=all&distro=ubuntu-22.04&upstream=lm-sensors"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsensors5@1%3A3.6.0-7ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=12983c2463f007c1&upstream=lm-sensors",
+      "name": "libsensors5",
+      "version": "1:3.6.0-7ubuntu1",
+      "purl": "pkg:deb/ubuntu/libsensors5@1%3A3.6.0-7ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=lm-sensors"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsepol2@3.3-1build1?arch=amd64&distro=ubuntu-22.04&package-id=a75957a700a0b5df&upstream=libsepol",
+      "name": "libsepol2",
+      "version": "3.3-1build1",
+      "purl": "pkg:deb/ubuntu/libsepol2@3.3-1build1?arch=amd64&distro=ubuntu-22.04&upstream=libsepol"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsm6@2%3A1.2.3-1build2?arch=amd64&distro=ubuntu-22.04&package-id=38a7909741348fed&upstream=libsm",
+      "name": "libsm6",
+      "version": "2:1.2.3-1build2",
+      "purl": "pkg:deb/ubuntu/libsm6@2%3A1.2.3-1build2?arch=amd64&distro=ubuntu-22.04&upstream=libsm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsmartcols1@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&package-id=f40458efe1273af9&upstream=util-linux",
+      "name": "libsmartcols1",
+      "version": "2.37.2-4ubuntu3.4",
+      "purl": "pkg:deb/ubuntu/libsmartcols1@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&upstream=util-linux"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsqlite3-0@3.37.2-2ubuntu0.5?arch=amd64&distro=ubuntu-22.04&package-id=75b743bb456ea936&upstream=sqlite3",
+      "name": "libsqlite3-0",
+      "version": "3.37.2-2ubuntu0.5",
+      "purl": "pkg:deb/ubuntu/libsqlite3-0@3.37.2-2ubuntu0.5?arch=amd64&distro=ubuntu-22.04&upstream=sqlite3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libss2@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&package-id=87373e4261012606&upstream=e2fsprogs",
+      "name": "libss2",
+      "version": "1.46.5-2ubuntu1.2",
+      "purl": "pkg:deb/ubuntu/libss2@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&upstream=e2fsprogs"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libssh-4@0.9.6-2ubuntu0.22.04.5?arch=amd64&distro=ubuntu-22.04&package-id=ff4cb78a9e34107f&upstream=libssh",
+      "name": "libssh-4",
+      "version": "0.9.6-2ubuntu0.22.04.5",
+      "purl": "pkg:deb/ubuntu/libssh-4@0.9.6-2ubuntu0.22.04.5?arch=amd64&distro=ubuntu-22.04&upstream=libssh"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libssl3@3.0.2-0ubuntu1.19?arch=amd64&distro=ubuntu-22.04&package-id=ca70646a0b7c1cfd&upstream=openssl",
+      "name": "libssl3",
+      "version": "3.0.2-0ubuntu1.19",
+      "purl": "pkg:deb/ubuntu/libssl3@3.0.2-0ubuntu1.19?arch=amd64&distro=ubuntu-22.04&upstream=openssl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libstdc%2B%2B-11-dev@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=c28985d9fb8f87c8&upstream=gcc-11",
+      "name": "libstdc++-11-dev",
+      "version": "11.4.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libstdc%2B%2B-11-dev@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libstdc%2B%2B6@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=9540ccca9e462857&upstream=gcc-12",
+      "name": "libstdc++6",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libstdc%2B%2B6@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libstemmer0d@2.2.0-1build1?arch=amd64&distro=ubuntu-22.04&package-id=532d5dcdcc58e37e&upstream=snowball",
+      "name": "libstemmer0d",
+      "version": "2.2.0-1build1",
+      "purl": "pkg:deb/ubuntu/libstemmer0d@2.2.0-1build1?arch=amd64&distro=ubuntu-22.04&upstream=snowball"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libsystemd0@249.11-0ubuntu3.17?arch=amd64&distro=ubuntu-22.04&package-id=31a86dcc55efda59&upstream=systemd",
+      "name": "libsystemd0",
+      "version": "249.11-0ubuntu3.17",
+      "purl": "pkg:deb/ubuntu/libsystemd0@249.11-0ubuntu3.17?arch=amd64&distro=ubuntu-22.04&upstream=systemd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libtasn1-6@4.18.0-4ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=3be87cdee412cb0c",
+      "name": "libtasn1-6",
+      "version": "4.18.0-4ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libtasn1-6@4.18.0-4ubuntu0.1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libtinfo6@6.3-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=8523f7e9cbd5d4fb&upstream=ncurses",
+      "name": "libtinfo6",
+      "version": "6.3-2ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libtinfo6@6.3-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=ncurses"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libtirpc-common@1.3.2-2ubuntu0.1?arch=all&distro=ubuntu-22.04&package-id=df9a817b3a9aa35b&upstream=libtirpc",
+      "name": "libtirpc-common",
+      "version": "1.3.2-2ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libtirpc-common@1.3.2-2ubuntu0.1?arch=all&distro=ubuntu-22.04&upstream=libtirpc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libtirpc-dev@1.3.2-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=4bcb3f94d653cc0a&upstream=libtirpc",
+      "name": "libtirpc-dev",
+      "version": "1.3.2-2ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libtirpc-dev@1.3.2-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=libtirpc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libtirpc3@1.3.2-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=5547b4e7ac45ea0d&upstream=libtirpc",
+      "name": "libtirpc3",
+      "version": "1.3.2-2ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/libtirpc3@1.3.2-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=libtirpc"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libtsan0@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=64ae7f91afd5cf8c&upstream=gcc-11",
+      "name": "libtsan0",
+      "version": "11.4.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libtsan0@11.4.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libubsan1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=d2f56c0d905a01a4&upstream=gcc-12",
+      "name": "libubsan1",
+      "version": "12.3.0-1ubuntu1~22.04.2",
+      "purl": "pkg:deb/ubuntu/libubsan1@12.3.0-1ubuntu1~22.04.2?arch=amd64&distro=ubuntu-22.04&upstream=gcc-12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libudev1@249.11-0ubuntu3.16?arch=amd64&distro=ubuntu-22.04&package-id=0a080d362aab61a3&upstream=systemd",
+      "name": "libudev1",
+      "version": "249.11-0ubuntu3.16",
+      "purl": "pkg:deb/ubuntu/libudev1@249.11-0ubuntu3.16?arch=amd64&distro=ubuntu-22.04&upstream=systemd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libunistring2@1.0-1?arch=amd64&distro=ubuntu-22.04&package-id=1f67c0fbea801b84&upstream=libunistring",
+      "name": "libunistring2",
+      "version": "1.0-1",
+      "purl": "pkg:deb/ubuntu/libunistring2@1.0-1?arch=amd64&distro=ubuntu-22.04&upstream=libunistring"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libunwind8@1.3.2-2build2.1?arch=amd64&distro=ubuntu-22.04&package-id=4e420f37cc719284&upstream=libunwind",
+      "name": "libunwind8",
+      "version": "1.3.2-2build2.1",
+      "purl": "pkg:deb/ubuntu/libunwind8@1.3.2-2build2.1?arch=amd64&distro=ubuntu-22.04&upstream=libunwind"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libuuid1@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&package-id=49f1743c1114c55d&upstream=util-linux",
+      "name": "libuuid1",
+      "version": "2.37.2-4ubuntu3.4",
+      "purl": "pkg:deb/ubuntu/libuuid1@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&upstream=util-linux"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libx11-6@2%3A1.7.5-1ubuntu0.3?arch=amd64&distro=ubuntu-22.04&package-id=eca4da1ab7c4c3ac&upstream=libx11",
+      "name": "libx11-6",
+      "version": "2:1.7.5-1ubuntu0.3",
+      "purl": "pkg:deb/ubuntu/libx11-6@2%3A1.7.5-1ubuntu0.3?arch=amd64&distro=ubuntu-22.04&upstream=libx11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libx11-data@2%3A1.7.5-1ubuntu0.3?arch=all&distro=ubuntu-22.04&package-id=02c9b6cba4238998&upstream=libx11",
+      "name": "libx11-data",
+      "version": "2:1.7.5-1ubuntu0.3",
+      "purl": "pkg:deb/ubuntu/libx11-data@2%3A1.7.5-1ubuntu0.3?arch=all&distro=ubuntu-22.04&upstream=libx11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libx11-xcb1@2%3A1.7.5-1ubuntu0.3?arch=amd64&distro=ubuntu-22.04&package-id=ef0559f1d738e576&upstream=libx11",
+      "name": "libx11-xcb1",
+      "version": "2:1.7.5-1ubuntu0.3",
+      "purl": "pkg:deb/ubuntu/libx11-xcb1@2%3A1.7.5-1ubuntu0.3?arch=amd64&distro=ubuntu-22.04&upstream=libx11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxau6@1%3A1.0.9-1build5?arch=amd64&distro=ubuntu-22.04&package-id=6142f551790c539b&upstream=libxau",
+      "name": "libxau6",
+      "version": "1:1.0.9-1build5",
+      "purl": "pkg:deb/ubuntu/libxau6@1%3A1.0.9-1build5?arch=amd64&distro=ubuntu-22.04&upstream=libxau"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb-dri2-0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=eb03b052ed1f30b0&upstream=libxcb",
+      "name": "libxcb-dri2-0",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb-dri2-0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb-dri3-0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=689ca6ba5152ed84&upstream=libxcb",
+      "name": "libxcb-dri3-0",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb-dri3-0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb-glx0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=738778c0adfc2d2f&upstream=libxcb",
+      "name": "libxcb-glx0",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb-glx0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb-present0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=00e7abf83d9126fe&upstream=libxcb",
+      "name": "libxcb-present0",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb-present0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb-randr0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=c520d91e582ca6f2&upstream=libxcb",
+      "name": "libxcb-randr0",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb-randr0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb-shm0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=1fe8d1f812abc7a8&upstream=libxcb",
+      "name": "libxcb-shm0",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb-shm0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb-sync1@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=e708626cb836773f&upstream=libxcb",
+      "name": "libxcb-sync1",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb-sync1@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb-xfixes0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=11f05c792f2a38d9&upstream=libxcb",
+      "name": "libxcb-xfixes0",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb-xfixes0@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxcb1@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=d141e30cb979b861&upstream=libxcb",
+      "name": "libxcb1",
+      "version": "1.14-3ubuntu3",
+      "purl": "pkg:deb/ubuntu/libxcb1@1.14-3ubuntu3?arch=amd64&distro=ubuntu-22.04&upstream=libxcb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxdmcp6@1%3A1.1.3-0ubuntu5?arch=amd64&distro=ubuntu-22.04&package-id=83217eee044e345d&upstream=libxdmcp",
+      "name": "libxdmcp6",
+      "version": "1:1.1.3-0ubuntu5",
+      "purl": "pkg:deb/ubuntu/libxdmcp6@1%3A1.1.3-0ubuntu5?arch=amd64&distro=ubuntu-22.04&upstream=libxdmcp"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxext6@2%3A1.3.4-1build1?arch=amd64&distro=ubuntu-22.04&package-id=da4eee105cc73238&upstream=libxext",
+      "name": "libxext6",
+      "version": "2:1.3.4-1build1",
+      "purl": "pkg:deb/ubuntu/libxext6@2%3A1.3.4-1build1?arch=amd64&distro=ubuntu-22.04&upstream=libxext"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxfixes3@1%3A6.0.0-1?arch=amd64&distro=ubuntu-22.04&package-id=0d6c4b39f0068af7&upstream=libxfixes",
+      "name": "libxfixes3",
+      "version": "1:6.0.0-1",
+      "purl": "pkg:deb/ubuntu/libxfixes3@1%3A6.0.0-1?arch=amd64&distro=ubuntu-22.04&upstream=libxfixes"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxml2@2.9.13%2Bdfsg-1ubuntu0.11?arch=amd64&distro=ubuntu-22.04&package-id=6cac52fedb36b17a",
+      "name": "libxml2",
+      "version": "2.9.13+dfsg-1ubuntu0.11",
+      "purl": "pkg:deb/ubuntu/libxml2@2.9.13%2Bdfsg-1ubuntu0.11?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxmlb2@0.3.6-2build1?arch=amd64&distro=ubuntu-22.04&package-id=fb0086b8eb746b50&upstream=libxmlb",
+      "name": "libxmlb2",
+      "version": "0.3.6-2build1",
+      "purl": "pkg:deb/ubuntu/libxmlb2@0.3.6-2build1?arch=amd64&distro=ubuntu-22.04&upstream=libxmlb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxshmfence1@1.3-1build4?arch=amd64&distro=ubuntu-22.04&package-id=5fc99d03879995e0&upstream=libxshmfence",
+      "name": "libxshmfence1",
+      "version": "1.3-1build4",
+      "purl": "pkg:deb/ubuntu/libxshmfence1@1.3-1build4?arch=amd64&distro=ubuntu-22.04&upstream=libxshmfence"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxxf86vm1@1%3A1.1.4-1build3?arch=amd64&distro=ubuntu-22.04&package-id=d1ff9485d78a5144&upstream=libxxf86vm",
+      "name": "libxxf86vm1",
+      "version": "1:1.1.4-1build3",
+      "purl": "pkg:deb/ubuntu/libxxf86vm1@1%3A1.1.4-1build3?arch=amd64&distro=ubuntu-22.04&upstream=libxxf86vm"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libxxhash0@0.8.1-1?arch=amd64&distro=ubuntu-22.04&package-id=6bb3ea548940fa04&upstream=xxhash",
+      "name": "libxxhash0",
+      "version": "0.8.1-1",
+      "purl": "pkg:deb/ubuntu/libxxhash0@0.8.1-1?arch=amd64&distro=ubuntu-22.04&upstream=xxhash"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libyaml-0-2@0.2.2-1build2?arch=amd64&distro=ubuntu-22.04&package-id=d5b9b09982f56df0&upstream=libyaml",
+      "name": "libyaml-0-2",
+      "version": "0.2.2-1build2",
+      "purl": "pkg:deb/ubuntu/libyaml-0-2@0.2.2-1build2?arch=amd64&distro=ubuntu-22.04&upstream=libyaml"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/libzstd1@1.4.8%2Bdfsg-3build1?arch=amd64&distro=ubuntu-22.04&package-id=c76e629c8d688bb1&upstream=libzstd",
+      "name": "libzstd1",
+      "version": "1.4.8+dfsg-3build1",
+      "purl": "pkg:deb/ubuntu/libzstd1@1.4.8%2Bdfsg-3build1?arch=amd64&distro=ubuntu-22.04&upstream=libzstd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/linux-libc-dev@5.15.0-164.174?arch=amd64&distro=ubuntu-22.04&package-id=17110e84f19dad9b&upstream=linux",
+      "name": "linux-libc-dev",
+      "version": "5.15.0-164.174",
+      "purl": "pkg:deb/ubuntu/linux-libc-dev@5.15.0-164.174?arch=amd64&distro=ubuntu-22.04&upstream=linux"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/llguidance@1.3.0?package-id=aca27005e36fbc58",
+      "name": "llguidance",
+      "version": "1.3.0",
+      "purl": "pkg:pypi/llguidance@1.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/llvmlite@0.44.0?package-id=9cb6bfe9334f1972",
+      "name": "llvmlite",
+      "version": "0.44.0",
+      "purl": "pkg:pypi/llvmlite@0.44.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/lm-format-enforcer@0.11.3?package-id=1363a703e09ad39c",
+      "name": "lm-format-enforcer",
+      "version": "0.11.3",
+      "purl": "pkg:pypi/lm-format-enforcer@0.11.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/lmcache@0.3.12?package-id=d44f5b03041a8e38",
+      "name": "lmcache",
+      "version": "0.3.12",
+      "purl": "pkg:pypi/lmcache@0.3.12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/login@1%3A4.8.1-2ubuntu2.2?arch=amd64&distro=ubuntu-22.04&package-id=a490a8bc8f81cb80&upstream=shadow",
+      "name": "login",
+      "version": "1:4.8.1-2ubuntu2.2",
+      "purl": "pkg:deb/ubuntu/login@1%3A4.8.1-2ubuntu2.2?arch=amd64&distro=ubuntu-22.04&upstream=shadow"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/logsave@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&package-id=05848bb5f13b651b&upstream=e2fsprogs",
+      "name": "logsave",
+      "version": "1.46.5-2ubuntu1.2",
+      "purl": "pkg:deb/ubuntu/logsave@1.46.5-2ubuntu1.2?arch=amd64&distro=ubuntu-22.04&upstream=e2fsprogs"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/loguru@0.7.3?package-id=2488c401c944cbb2",
+      "name": "loguru",
+      "version": "0.7.3",
+      "purl": "pkg:pypi/loguru@0.7.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/lsb-base@11.1.0ubuntu4?arch=all&distro=ubuntu-22.04&package-id=1daff013c0ad9528&upstream=lsb",
+      "name": "lsb-base",
+      "version": "11.1.0ubuntu4",
+      "purl": "pkg:deb/ubuntu/lsb-base@11.1.0ubuntu4?arch=all&distro=ubuntu-22.04&upstream=lsb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/lsb-release@11.1.0ubuntu4?arch=all&distro=ubuntu-22.04&package-id=195c26b4f470ef81&upstream=lsb",
+      "name": "lsb-release",
+      "version": "11.1.0ubuntu4",
+      "purl": "pkg:deb/ubuntu/lsb-release@11.1.0ubuntu4?arch=all&distro=ubuntu-22.04&upstream=lsb"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/lto-disabled-list@24?arch=all&distro=ubuntu-22.04&package-id=797ba1c3ad6e17a9",
+      "name": "lto-disabled-list",
+      "version": "24",
+      "purl": "pkg:deb/ubuntu/lto-disabled-list@24?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/mailcap@3.70%2Bnmu1ubuntu1?arch=all&distro=ubuntu-22.04&package-id=021283e99308e5b2",
+      "name": "mailcap",
+      "version": "3.70+nmu1ubuntu1",
+      "purl": "pkg:deb/ubuntu/mailcap@3.70%2Bnmu1ubuntu1?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/make@4.3-4.1build1?arch=amd64&distro=ubuntu-22.04&package-id=a4c3e442139dc778&upstream=make-dfsg",
+      "name": "make",
+      "version": "4.3-4.1build1",
+      "purl": "pkg:deb/ubuntu/make@4.3-4.1build1?arch=amd64&distro=ubuntu-22.04&upstream=make-dfsg"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/markdown-it-py@4.0.0?package-id=1d7ad5c49ab17f59",
+      "name": "markdown-it-py",
+      "version": "4.0.0",
+      "purl": "pkg:pypi/markdown-it-py@4.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/markupsafe@3.0.3?package-id=415c95d3032ab5ac",
+      "name": "markupsafe",
+      "version": "3.0.3",
+      "purl": "pkg:pypi/markupsafe@3.0.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/mawk@1.3.4.20200120-3?arch=amd64&distro=ubuntu-22.04&package-id=1ced6e201146d10b",
+      "name": "mawk",
+      "version": "1.3.4.20200120-3",
+      "purl": "pkg:deb/ubuntu/mawk@1.3.4.20200120-3?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/mcp@1.25.0?package-id=753792524c694ff4",
+      "name": "mcp",
+      "version": "1.25.0",
+      "purl": "pkg:pypi/mcp@1.25.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/mdurl@0.1.2?package-id=276c374e56cd9027",
+      "name": "mdurl",
+      "version": "0.1.2",
+      "purl": "pkg:pypi/mdurl@0.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/media-types@7.0.0?arch=all&distro=ubuntu-22.04&package-id=31234d2046ec05a1",
+      "name": "media-types",
+      "version": "7.0.0",
+      "purl": "pkg:deb/ubuntu/media-types@7.0.0?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/mime-support@3.66?arch=all&distro=ubuntu-22.04&package-id=75ab951217546496",
+      "name": "mime-support",
+      "version": "3.66",
+      "purl": "pkg:deb/ubuntu/mime-support@3.66?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/mistral-common@1.8.8?package-id=3123b8a68ab3f49a",
+      "name": "mistral-common",
+      "version": "1.8.8",
+      "purl": "pkg:pypi/mistral-common@1.8.8"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/model-hosting-container-standards@0.1.13?package-id=1d24d7954297175c",
+      "name": "model-hosting-container-standards",
+      "version": "0.1.13",
+      "purl": "pkg:pypi/model-hosting-container-standards@0.1.13"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/modelscope@1.34.0?package-id=2750b61d917cc2b1",
+      "name": "modelscope",
+      "version": "1.34.0",
+      "purl": "pkg:pypi/modelscope@1.34.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/more-itertools@10.8.0?package-id=578c1e2f66db2f40",
+      "name": "more-itertools",
+      "version": "10.8.0",
+      "purl": "pkg:pypi/more-itertools@10.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/more-itertools@8.10.0?package-id=b9a7ad2cb86dabc6",
+      "name": "more-itertools",
+      "version": "8.10.0",
+      "purl": "pkg:pypi/more-itertools@8.10.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/mount@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&package-id=97970404ae4af622&upstream=util-linux",
+      "name": "mount",
+      "version": "2.37.2-4ubuntu3.4",
+      "purl": "pkg:deb/ubuntu/mount@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&upstream=util-linux"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/mpmath@1.3.0?package-id=248c141b4689d76b",
+      "name": "mpmath",
+      "version": "1.3.0",
+      "purl": "pkg:pypi/mpmath@1.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/msgpack@1.1.2?package-id=2d7c50a1056ed156",
+      "name": "msgpack",
+      "version": "1.1.2",
+      "purl": "pkg:pypi/msgpack@1.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/msgspec@0.20.0?package-id=7334fd7c20adf035",
+      "name": "msgspec",
+      "version": "0.20.0",
+      "purl": "pkg:pypi/msgspec@0.20.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/multidict@6.7.0?package-id=35306c3cb476c94b",
+      "name": "multidict",
+      "version": "6.7.0",
+      "purl": "pkg:pypi/multidict@6.7.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/multidict@6.7.1?package-id=e7fb702131f6869a",
+      "name": "multidict",
+      "version": "6.7.1",
+      "purl": "pkg:pypi/multidict@6.7.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/ncurses-base@6.3-2ubuntu0.1?arch=all&distro=ubuntu-22.04&package-id=834d85bcb22efc52&upstream=ncurses",
+      "name": "ncurses-base",
+      "version": "6.3-2ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/ncurses-base@6.3-2ubuntu0.1?arch=all&distro=ubuntu-22.04&upstream=ncurses"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/ncurses-bin@6.3-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&package-id=056c0a251d9fbd1d&upstream=ncurses",
+      "name": "ncurses-bin",
+      "version": "6.3-2ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/ncurses-bin@6.3-2ubuntu0.1?arch=amd64&distro=ubuntu-22.04&upstream=ncurses"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/networkx@3.6.1?package-id=f315b2b7585038d7",
+      "name": "networkx",
+      "version": "3.6.1",
+      "purl": "pkg:pypi/networkx@3.6.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nim-inference-sdk@0.4.5?package-id=ff7e80d044097f2b",
+      "name": "nim-inference-sdk",
+      "version": "0.4.5",
+      "purl": "pkg:pypi/nim-inference-sdk@0.4.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nim-sdk@0.11.4?package-id=8858c377d451c588",
+      "name": "nim-sdk",
+      "version": "0.11.4",
+      "purl": "pkg:pypi/nim-sdk@0.11.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nimlib@0.14.6?package-id=59557d7554ad3a2e",
+      "name": "nimlib",
+      "version": "0.14.6",
+      "purl": "pkg:pypi/nimlib@0.14.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/ninja@1.13.0?package-id=0ea1ad51ed925c82",
+      "name": "ninja",
+      "version": "1.13.0",
+      "purl": "pkg:pypi/ninja@1.13.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nixl@0.9.0?package-id=ff3baba788c17284",
+      "name": "nixl",
+      "version": "0.9.0",
+      "purl": "pkg:pypi/nixl@0.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nixl-cu12@0.9.0?package-id=e21db1925d5ea4d1",
+      "name": "nixl-cu12",
+      "version": "0.9.0",
+      "purl": "pkg:pypi/nixl-cu12@0.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nixl-cu13@0.9.0?package-id=97238b140a4a1dfd",
+      "name": "nixl-cu13",
+      "version": "0.9.0",
+      "purl": "pkg:pypi/nixl-cu13@0.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/numba@0.61.2?package-id=136a1ddacd1b52f0",
+      "name": "numba",
+      "version": "0.61.2",
+      "purl": "pkg:pypi/numba@0.61.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/numpy@2.2.6?package-id=8409fd19e75f91de",
+      "name": "numpy",
+      "version": "2.2.6",
+      "purl": "pkg:pypi/numpy@2.2.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cublas@13.0.0.19?package-id=1c446c2853dd56c5",
+      "name": "nvidia-cublas",
+      "version": "13.0.0.19",
+      "purl": "pkg:pypi/nvidia-cublas@13.0.0.19"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cuda-cupti@13.0.48?package-id=bed52ca607eaeee4",
+      "name": "nvidia-cuda-cupti",
+      "version": "13.0.48",
+      "purl": "pkg:pypi/nvidia-cuda-cupti@13.0.48"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cuda-nvrtc@13.0.48?package-id=69c4827393cea8b3",
+      "name": "nvidia-cuda-nvrtc",
+      "version": "13.0.48",
+      "purl": "pkg:pypi/nvidia-cuda-nvrtc@13.0.48"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cuda-runtime@13.0.48?package-id=08ff9859062c3c62",
+      "name": "nvidia-cuda-runtime",
+      "version": "13.0.48",
+      "purl": "pkg:pypi/nvidia-cuda-runtime@13.0.48"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cudnn-cu13@9.13.0.50?package-id=64f8bcc44f8d8b91",
+      "name": "nvidia-cudnn-cu13",
+      "version": "9.13.0.50",
+      "purl": "pkg:pypi/nvidia-cudnn-cu13@9.13.0.50"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cudnn-frontend@1.17.0?package-id=37faa5f048d01317",
+      "name": "nvidia-cudnn-frontend",
+      "version": "1.17.0",
+      "purl": "pkg:pypi/nvidia-cudnn-frontend@1.17.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cufft@12.0.0.15?package-id=262528b978a99ddf",
+      "name": "nvidia-cufft",
+      "version": "12.0.0.15",
+      "purl": "pkg:pypi/nvidia-cufft@12.0.0.15"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cufile@1.15.0.42?package-id=e306bb39eef90f1f",
+      "name": "nvidia-cufile",
+      "version": "1.15.0.42",
+      "purl": "pkg:pypi/nvidia-cufile@1.15.0.42"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-curand@10.4.0.35?package-id=673d7c11f4c7b021",
+      "name": "nvidia-curand",
+      "version": "10.4.0.35",
+      "purl": "pkg:pypi/nvidia-curand@10.4.0.35"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cusolver@12.0.3.29?package-id=221ba89a54fe103d",
+      "name": "nvidia-cusolver",
+      "version": "12.0.3.29",
+      "purl": "pkg:pypi/nvidia-cusolver@12.0.3.29"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cusparse@12.6.2.49?package-id=1c1cd4ef28b67c01",
+      "name": "nvidia-cusparse",
+      "version": "12.6.2.49",
+      "purl": "pkg:pypi/nvidia-cusparse@12.6.2.49"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cusparselt-cu13@0.8.0?package-id=4934158cfa12ee34",
+      "name": "nvidia-cusparselt-cu13",
+      "version": "0.8.0",
+      "purl": "pkg:pypi/nvidia-cusparselt-cu13@0.8.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-cutlass-dsl@4.3.5?package-id=cd0b6aa3e5726af0",
+      "name": "nvidia-cutlass-dsl",
+      "version": "4.3.5",
+      "purl": "pkg:pypi/nvidia-cutlass-dsl@4.3.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-ml-py@12.575.51?package-id=29d0443cb1a8e148",
+      "name": "nvidia-ml-py",
+      "version": "12.575.51",
+      "purl": "pkg:pypi/nvidia-ml-py@12.575.51"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-nccl-cu13@2.27.7?package-id=925c1dd0820b628f",
+      "name": "nvidia-nccl-cu13",
+      "version": "2.27.7",
+      "purl": "pkg:pypi/nvidia-nccl-cu13@2.27.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-nvjitlink@13.0.39?package-id=f5f41c317e64fb30",
+      "name": "nvidia-nvjitlink",
+      "version": "13.0.39",
+      "purl": "pkg:pypi/nvidia-nvjitlink@13.0.39"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-nvshmem-cu13@3.3.24?package-id=30d93de16ad03389",
+      "name": "nvidia-nvshmem-cu13",
+      "version": "3.3.24",
+      "purl": "pkg:pypi/nvidia-nvshmem-cu13@3.3.24"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvidia-nvtx@13.0.39?package-id=f44248267a63f594",
+      "name": "nvidia-nvtx",
+      "version": "13.0.39",
+      "purl": "pkg:pypi/nvidia-nvtx@13.0.39"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/nvtx@0.2.14?package-id=78f53ebe6c02f01f",
+      "name": "nvtx",
+      "version": "0.2.14",
+      "purl": "pkg:pypi/nvtx@0.2.14"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/oauthlib@3.2.0?package-id=c54ef3ec48212842",
+      "name": "oauthlib",
+      "version": "3.2.0",
+      "purl": "pkg:pypi/oauthlib@3.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/openai@2.15.0?package-id=14bc704a5df65f51",
+      "name": "openai",
+      "version": "2.15.0",
+      "purl": "pkg:pypi/openai@2.15.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/openai-harmony@0.0.8?package-id=43e196af71e7ce23",
+      "name": "openai-harmony",
+      "version": "0.0.8",
+      "purl": "pkg:pypi/openai-harmony@0.0.8"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opencv-python-headless@4.13.0.90?package-id=4d38de1369a4d6a5",
+      "name": "opencv-python-headless",
+      "version": "4.13.0.90",
+      "purl": "pkg:pypi/opencv-python-headless@4.13.0.90"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/openssl@3.0.2-0ubuntu1.23?arch=amd64&distro=ubuntu-22.04&package-id=f69af6cac6018c15",
+      "name": "openssl",
+      "version": "3.0.2-0ubuntu1.23",
+      "purl": "pkg:deb/ubuntu/openssl@3.0.2-0ubuntu1.23?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-api@1.41.0?package-id=ba54f8d75da5bd80",
+      "name": "opentelemetry-api",
+      "version": "1.41.0",
+      "purl": "pkg:pypi/opentelemetry-api@1.41.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-exporter-otlp-proto-common@1.41.0?package-id=24af743881dfe8c1",
+      "name": "opentelemetry-exporter-otlp-proto-common",
+      "version": "1.41.0",
+      "purl": "pkg:pypi/opentelemetry-exporter-otlp-proto-common@1.41.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-exporter-otlp-proto-http@1.41.0?package-id=eef04a878cfa6629",
+      "name": "opentelemetry-exporter-otlp-proto-http",
+      "version": "1.41.0",
+      "purl": "pkg:pypi/opentelemetry-exporter-otlp-proto-http@1.41.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation@0.62b0?package-id=8bec472f79380dad",
+      "name": "opentelemetry-instrumentation",
+      "version": "0.62b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation@0.62b0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-asgi@0.62b0?package-id=82077be20ae78b97",
+      "name": "opentelemetry-instrumentation-asgi",
+      "version": "0.62b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-asgi@0.62b0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.62b0?package-id=a0cd356910de3804",
+      "name": "opentelemetry-instrumentation-fastapi",
+      "version": "0.62b0",
+      "purl": "pkg:pypi/opentelemetry-instrumentation-fastapi@0.62b0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-proto@1.41.0?package-id=5238be8acb188ede",
+      "name": "opentelemetry-proto",
+      "version": "1.41.0",
+      "purl": "pkg:pypi/opentelemetry-proto@1.41.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-sdk@1.41.0?package-id=7775c047443105f5",
+      "name": "opentelemetry-sdk",
+      "version": "1.41.0",
+      "purl": "pkg:pypi/opentelemetry-sdk@1.41.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-semantic-conventions@0.62b0?package-id=7053f7d96217c93a",
+      "name": "opentelemetry-semantic-conventions",
+      "version": "0.62b0",
+      "purl": "pkg:pypi/opentelemetry-semantic-conventions@0.62b0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/opentelemetry-util-http@0.62b0?package-id=af73112f717f3f2e",
+      "name": "opentelemetry-util-http",
+      "version": "0.62b0",
+      "purl": "pkg:pypi/opentelemetry-util-http@0.62b0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/outlines-core@0.2.11?package-id=b3b949cf7605ec63",
+      "name": "outlines-core",
+      "version": "0.2.11",
+      "purl": "pkg:pypi/outlines-core@0.2.11"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/packagekit@1.2.5-2ubuntu3?arch=amd64&distro=ubuntu-22.04&package-id=be9d5109d39a03cc",
+      "name": "packagekit",
+      "version": "1.2.5-2ubuntu3",
+      "purl": "pkg:deb/ubuntu/packagekit@1.2.5-2ubuntu3?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/packaging@26.0?package-id=8a966e58c34bd2f2",
+      "name": "packaging",
+      "version": "26.0",
+      "purl": "pkg:pypi/packaging@26.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/packaging@26.0?package-id=6fa768ddc7e80a14",
+      "name": "packaging",
+      "version": "26.0",
+      "purl": "pkg:pypi/packaging@26.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/partial-json-parser@0.2.1.1.post7?package-id=afc0c566381da4bd",
+      "name": "partial-json-parser",
+      "version": "0.2.1.1.post7",
+      "purl": "pkg:pypi/partial-json-parser@0.2.1.1.post7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/passwd@1%3A4.8.1-2ubuntu2.2?arch=amd64&distro=ubuntu-22.04&package-id=0d182cd636622a0e&upstream=shadow",
+      "name": "passwd",
+      "version": "1:4.8.1-2ubuntu2.2",
+      "purl": "pkg:deb/ubuntu/passwd@1%3A4.8.1-2ubuntu2.2?arch=amd64&distro=ubuntu-22.04&upstream=shadow"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/patch@2.7.6-7build2?arch=amd64&distro=ubuntu-22.04&package-id=e0cdfc61de4da8c1",
+      "name": "patch",
+      "version": "2.7.6-7build2",
+      "purl": "pkg:deb/ubuntu/patch@2.7.6-7build2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/perl@5.34.0-3ubuntu1.5?arch=amd64&distro=ubuntu-22.04&package-id=4c20d3c53313e626",
+      "name": "perl",
+      "version": "5.34.0-3ubuntu1.5",
+      "purl": "pkg:deb/ubuntu/perl@5.34.0-3ubuntu1.5?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/perl-base@5.34.0-3ubuntu1.5?arch=amd64&distro=ubuntu-22.04&package-id=4352b032fc51628f&upstream=perl",
+      "name": "perl-base",
+      "version": "5.34.0-3ubuntu1.5",
+      "purl": "pkg:deb/ubuntu/perl-base@5.34.0-3ubuntu1.5?arch=amd64&distro=ubuntu-22.04&upstream=perl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/perl-modules-5.34@5.34.0-3ubuntu1.5?arch=all&distro=ubuntu-22.04&package-id=e93c905774f6e475&upstream=perl",
+      "name": "perl-modules-5.34",
+      "version": "5.34.0-3ubuntu1.5",
+      "purl": "pkg:deb/ubuntu/perl-modules-5.34@5.34.0-3ubuntu1.5?arch=all&distro=ubuntu-22.04&upstream=perl"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pillow@12.2.0?package-id=26ca6b25722e3f4f",
+      "name": "pillow",
+      "version": "12.2.0",
+      "purl": "pkg:pypi/pillow@12.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/pinentry-curses@1.1.1-1build2?arch=amd64&distro=ubuntu-22.04&package-id=5eb41975f1c02786&upstream=pinentry",
+      "name": "pinentry-curses",
+      "version": "1.1.1-1build2",
+      "purl": "pkg:deb/ubuntu/pinentry-curses@1.1.1-1build2?arch=amd64&distro=ubuntu-22.04&upstream=pinentry"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pip@26.0.1?package-id=c1c1bee1a69a8550",
+      "name": "pip",
+      "version": "26.0.1",
+      "purl": "pkg:pypi/pip@26.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/pkexec@0.105-33?arch=amd64&distro=ubuntu-22.04&package-id=70350b10b2b7b6b2&upstream=policykit-1",
+      "name": "pkexec",
+      "version": "0.105-33",
+      "purl": "pkg:deb/ubuntu/pkexec@0.105-33?arch=amd64&distro=ubuntu-22.04&upstream=policykit-1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/platformdirs@4.4.0?package-id=0b0056d4dc1d857a",
+      "name": "platformdirs",
+      "version": "4.4.0",
+      "purl": "pkg:pypi/platformdirs@4.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/policykit-1@0.105-33?arch=amd64&distro=ubuntu-22.04&package-id=6ab59fed919a5e5d",
+      "name": "policykit-1",
+      "version": "0.105-33",
+      "purl": "pkg:deb/ubuntu/policykit-1@0.105-33?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/polkitd@0.105-33?arch=amd64&distro=ubuntu-22.04&package-id=d6ebfc22c91ab9f3&upstream=policykit-1",
+      "name": "polkitd",
+      "version": "0.105-33",
+      "purl": "pkg:deb/ubuntu/polkitd@0.105-33?arch=amd64&distro=ubuntu-22.04&upstream=policykit-1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pplx-kernels@0.0.1?package-id=7736677a360909de",
+      "name": "pplx-kernels",
+      "version": "0.0.1",
+      "purl": "pkg:pypi/pplx-kernels@0.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/procps@2%3A3.3.17-6ubuntu2.1?arch=amd64&distro=ubuntu-22.04&package-id=06550beb775a2d70",
+      "name": "procps",
+      "version": "2:3.3.17-6ubuntu2.1",
+      "purl": "pkg:deb/ubuntu/procps@2%3A3.3.17-6ubuntu2.1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/prometheus-client@0.24.1?package-id=f668980f8edc90d3",
+      "name": "prometheus-client",
+      "version": "0.24.1",
+      "purl": "pkg:pypi/prometheus-client@0.24.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/prometheus-fastapi-instrumentator@7.1.0?package-id=4a61c40299833f1e",
+      "name": "prometheus-fastapi-instrumentator",
+      "version": "7.1.0",
+      "purl": "pkg:pypi/prometheus-fastapi-instrumentator@7.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/propcache@0.4.1?package-id=45099f9bfcd0b258",
+      "name": "propcache",
+      "version": "0.4.1",
+      "purl": "pkg:pypi/propcache@0.4.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/propcache@0.4.1?package-id=272cbe2e1ea65291",
+      "name": "propcache",
+      "version": "0.4.1",
+      "purl": "pkg:pypi/propcache@0.4.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/proto-plus@1.27.0?package-id=7a658099e329860e",
+      "name": "proto-plus",
+      "version": "1.27.0",
+      "purl": "pkg:pypi/proto-plus@1.27.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/protobuf@7.34.1?package-id=4267ca7bfaa51b07",
+      "name": "protobuf",
+      "version": "7.34.1",
+      "purl": "pkg:pypi/protobuf@7.34.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/psutil@7.2.1?package-id=5fef79485dff2ec4",
+      "name": "psutil",
+      "version": "7.2.1",
+      "purl": "pkg:pypi/psutil@7.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/psutil@7.2.2?package-id=262fcd3154e2d309",
+      "name": "psutil",
+      "version": "7.2.2",
+      "purl": "pkg:pypi/psutil@7.2.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/py-cpuinfo@9.0.0?package-id=40158716b6d534e5",
+      "name": "py-cpuinfo",
+      "version": "9.0.0",
+      "purl": "pkg:pypi/py-cpuinfo@9.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyasn1@0.6.3?package-id=bc348ac85a076789",
+      "name": "pyasn1",
+      "version": "0.6.3",
+      "purl": "pkg:pypi/pyasn1@0.6.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyasn1-modules@0.4.2?package-id=93773c688e8394c9",
+      "name": "pyasn1-modules",
+      "version": "0.4.2",
+      "purl": "pkg:pypi/pyasn1-modules@0.4.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pybase64@1.4.3?package-id=5bb5620a5a41030e",
+      "name": "pybase64",
+      "version": "1.4.3",
+      "purl": "pkg:pypi/pybase64@1.4.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pycountry@24.6.1?package-id=3bc4af8699ee262a",
+      "name": "pycountry",
+      "version": "24.6.1",
+      "purl": "pkg:pypi/pycountry@24.6.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pycparser@3.0?package-id=367785fa706b536e",
+      "name": "pycparser",
+      "version": "3.0",
+      "purl": "pkg:pypi/pycparser@3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pydantic@2.12.5?package-id=04ae8943036a0a2c",
+      "name": "pydantic",
+      "version": "2.12.5",
+      "purl": "pkg:pypi/pydantic@2.12.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pydantic-core@2.41.5?package-id=452ab5b2ee572829",
+      "name": "pydantic-core",
+      "version": "2.41.5",
+      "purl": "pkg:pypi/pydantic-core@2.41.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pydantic-extra-types@2.11.0?package-id=2deaee1be24e9079",
+      "name": "pydantic-extra-types",
+      "version": "2.11.0",
+      "purl": "pkg:pypi/pydantic-extra-types@2.11.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pydantic-settings@2.12.0?package-id=7db4daba99e97996",
+      "name": "pydantic-settings",
+      "version": "2.12.0",
+      "purl": "pkg:pypi/pydantic-settings@2.12.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pygments@2.19.2?package-id=a74cfffac092c2f4",
+      "name": "pygments",
+      "version": "2.19.2",
+      "purl": "pkg:pypi/pygments@2.19.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pygobject@3.42.1?package-id=24d76eaf9119ac12",
+      "name": "pygobject",
+      "version": "3.42.1",
+      "purl": "pkg:pypi/pygobject@3.42.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyjwt@2.12.1?package-id=8d3b590ec0b07365",
+      "name": "pyjwt",
+      "version": "2.12.1",
+      "purl": "pkg:pypi/pyjwt@2.12.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyjwt@2.3.0?package-id=725e99181a86ded1",
+      "name": "pyjwt",
+      "version": "2.3.0",
+      "purl": "pkg:pypi/pyjwt@2.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pynvml@13.0.1?package-id=05e5d5faa6136493",
+      "name": "pynvml",
+      "version": "13.0.1",
+      "purl": "pkg:pypi/pynvml@13.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pynvvideocodec@2.0.3?package-id=9727618540da7277",
+      "name": "pynvvideocodec",
+      "version": "2.0.3",
+      "purl": "pkg:pypi/pynvvideocodec@2.0.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyparsing@2.4.7?package-id=4caa007123255396",
+      "name": "pyparsing",
+      "version": "2.4.7",
+      "purl": "pkg:pypi/pyparsing@2.4.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/python-apt@2.4.0%2Bubuntu4.1?package-id=38c658abbe2fb9e8",
+      "name": "python-apt",
+      "version": "2.4.0+ubuntu4.1",
+      "purl": "pkg:pypi/python-apt@2.4.0%2Bubuntu4.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python-apt-common@2.4.0ubuntu4.1?arch=all&distro=ubuntu-22.04&package-id=0e0673d1fb875ea4&upstream=python-apt",
+      "name": "python-apt-common",
+      "version": "2.4.0ubuntu4.1",
+      "purl": "pkg:deb/ubuntu/python-apt-common@2.4.0ubuntu4.1?arch=all&distro=ubuntu-22.04&upstream=python-apt"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/python-dateutil@2.9.0.post0?package-id=51b17fe38dbc761a",
+      "name": "python-dateutil",
+      "version": "2.9.0.post0",
+      "purl": "pkg:pypi/python-dateutil@2.9.0.post0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/python-dotenv@1.2.1?package-id=5e96ce7e2bcb1102",
+      "name": "python-dotenv",
+      "version": "1.2.1",
+      "purl": "pkg:pypi/python-dotenv@1.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/python-json-logger@4.0.0?package-id=3fe32e3a025d5240",
+      "name": "python-json-logger",
+      "version": "4.0.0",
+      "purl": "pkg:pypi/python-json-logger@4.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/python-multipart@0.0.26?package-id=6269ab06131f85ac",
+      "name": "python-multipart",
+      "version": "0.0.26",
+      "purl": "pkg:pypi/python-multipart@0.0.26"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3@3.10.6-1~22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=d0511b1070af2259&upstream=python3-defaults",
+      "name": "python3",
+      "version": "3.10.6-1~22.04.1",
+      "purl": "pkg:deb/ubuntu/python3@3.10.6-1~22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=python3-defaults"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-apt@2.4.0ubuntu4.1?arch=amd64&distro=ubuntu-22.04&package-id=af7d6c97e8840d25&upstream=python-apt",
+      "name": "python3-apt",
+      "version": "2.4.0ubuntu4.1",
+      "purl": "pkg:deb/ubuntu/python3-apt@2.4.0ubuntu4.1?arch=amd64&distro=ubuntu-22.04&upstream=python-apt"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-blinker@1.4%2Bdfsg1-0.4?arch=all&distro=ubuntu-22.04&package-id=cadcee0558c2bc9e&upstream=blinker",
+      "name": "python3-blinker",
+      "version": "1.4+dfsg1-0.4",
+      "purl": "pkg:deb/ubuntu/python3-blinker@1.4%2Bdfsg1-0.4?arch=all&distro=ubuntu-22.04&upstream=blinker"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-cffi-backend@1.15.0-1build2?arch=amd64&distro=ubuntu-22.04&package-id=d63a3ddca9be209d&upstream=python-cffi",
+      "name": "python3-cffi-backend",
+      "version": "1.15.0-1build2",
+      "purl": "pkg:deb/ubuntu/python3-cffi-backend@1.15.0-1build2?arch=amd64&distro=ubuntu-22.04&upstream=python-cffi"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-cryptography@3.4.8-1ubuntu2.2?arch=amd64&distro=ubuntu-22.04&package-id=e66b6d7d57fea678&upstream=python-cryptography",
+      "name": "python3-cryptography",
+      "version": "3.4.8-1ubuntu2.2",
+      "purl": "pkg:deb/ubuntu/python3-cryptography@3.4.8-1ubuntu2.2?arch=amd64&distro=ubuntu-22.04&upstream=python-cryptography"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-dbus@1.2.18-3build1?arch=amd64&distro=ubuntu-22.04&package-id=28ecb9790aa58c21&upstream=dbus-python",
+      "name": "python3-dbus",
+      "version": "1.2.18-3build1",
+      "purl": "pkg:deb/ubuntu/python3-dbus@1.2.18-3build1?arch=amd64&distro=ubuntu-22.04&upstream=dbus-python"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-distro@1.7.0-1?arch=all&distro=ubuntu-22.04&package-id=28e07861321abfa4&upstream=python-distro",
+      "name": "python3-distro",
+      "version": "1.7.0-1",
+      "purl": "pkg:deb/ubuntu/python3-distro@1.7.0-1?arch=all&distro=ubuntu-22.04&upstream=python-distro"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-distutils@3.10.8-1~22.04?arch=all&distro=ubuntu-22.04&package-id=3eba9e626e2b64bd&upstream=python3-stdlib-extensions",
+      "name": "python3-distutils",
+      "version": "3.10.8-1~22.04",
+      "purl": "pkg:deb/ubuntu/python3-distutils@3.10.8-1~22.04?arch=all&distro=ubuntu-22.04&upstream=python3-stdlib-extensions"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-gi@3.42.1-0ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=92111db564022340&upstream=pygobject",
+      "name": "python3-gi",
+      "version": "3.42.1-0ubuntu1",
+      "purl": "pkg:deb/ubuntu/python3-gi@3.42.1-0ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=pygobject"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-httplib2@0.20.2-2?arch=all&distro=ubuntu-22.04&package-id=2820bb75f8ed05cb&upstream=python-httplib2",
+      "name": "python3-httplib2",
+      "version": "0.20.2-2",
+      "purl": "pkg:deb/ubuntu/python3-httplib2@0.20.2-2?arch=all&distro=ubuntu-22.04&upstream=python-httplib2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-importlib-metadata@4.6.4-1?arch=all&distro=ubuntu-22.04&package-id=bacff1a4bb876c4a&upstream=python-importlib-metadata",
+      "name": "python3-importlib-metadata",
+      "version": "4.6.4-1",
+      "purl": "pkg:deb/ubuntu/python3-importlib-metadata@4.6.4-1?arch=all&distro=ubuntu-22.04&upstream=python-importlib-metadata"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-jeepney@0.7.1-3?arch=all&distro=ubuntu-22.04&package-id=49ebf47ff22af40c&upstream=jeepney",
+      "name": "python3-jeepney",
+      "version": "0.7.1-3",
+      "purl": "pkg:deb/ubuntu/python3-jeepney@0.7.1-3?arch=all&distro=ubuntu-22.04&upstream=jeepney"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-jwt@2.3.0-1ubuntu0.2?arch=all&distro=ubuntu-22.04&package-id=e56c47d53f3459a1&upstream=pyjwt",
+      "name": "python3-jwt",
+      "version": "2.3.0-1ubuntu0.2",
+      "purl": "pkg:deb/ubuntu/python3-jwt@2.3.0-1ubuntu0.2?arch=all&distro=ubuntu-22.04&upstream=pyjwt"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-keyring@23.5.0-1?arch=all&distro=ubuntu-22.04&package-id=2d46d3380902c95f&upstream=python-keyring",
+      "name": "python3-keyring",
+      "version": "23.5.0-1",
+      "purl": "pkg:deb/ubuntu/python3-keyring@23.5.0-1?arch=all&distro=ubuntu-22.04&upstream=python-keyring"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-launchpadlib@1.10.16-1?arch=all&distro=ubuntu-22.04&package-id=444ef7caf9c6b3f4&upstream=python-launchpadlib",
+      "name": "python3-launchpadlib",
+      "version": "1.10.16-1",
+      "purl": "pkg:deb/ubuntu/python3-launchpadlib@1.10.16-1?arch=all&distro=ubuntu-22.04&upstream=python-launchpadlib"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-lazr.restfulclient@0.14.4-1?arch=all&distro=ubuntu-22.04&package-id=d602f4fe37b2605a&upstream=lazr.restfulclient",
+      "name": "python3-lazr.restfulclient",
+      "version": "0.14.4-1",
+      "purl": "pkg:deb/ubuntu/python3-lazr.restfulclient@0.14.4-1?arch=all&distro=ubuntu-22.04&upstream=lazr.restfulclient"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-lazr.uri@1.0.6-2?arch=all&distro=ubuntu-22.04&package-id=c481355a9d84c37e&upstream=lazr.uri",
+      "name": "python3-lazr.uri",
+      "version": "1.0.6-2",
+      "purl": "pkg:deb/ubuntu/python3-lazr.uri@1.0.6-2?arch=all&distro=ubuntu-22.04&upstream=lazr.uri"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-lib2to3@3.10.8-1~22.04?arch=all&distro=ubuntu-22.04&package-id=d39eed5060bed757&upstream=python3-stdlib-extensions",
+      "name": "python3-lib2to3",
+      "version": "3.10.8-1~22.04",
+      "purl": "pkg:deb/ubuntu/python3-lib2to3@3.10.8-1~22.04?arch=all&distro=ubuntu-22.04&upstream=python3-stdlib-extensions"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-minimal@3.10.6-1~22.04.1?arch=amd64&distro=ubuntu-22.04&package-id=2e7c6f6edb47f9f1&upstream=python3-defaults",
+      "name": "python3-minimal",
+      "version": "3.10.6-1~22.04.1",
+      "purl": "pkg:deb/ubuntu/python3-minimal@3.10.6-1~22.04.1?arch=amd64&distro=ubuntu-22.04&upstream=python3-defaults"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-more-itertools@8.10.0-2?arch=all&distro=ubuntu-22.04&package-id=a3d40315ee6ee3fe&upstream=more-itertools",
+      "name": "python3-more-itertools",
+      "version": "8.10.0-2",
+      "purl": "pkg:deb/ubuntu/python3-more-itertools@8.10.0-2?arch=all&distro=ubuntu-22.04&upstream=more-itertools"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-oauthlib@3.2.0-1ubuntu0.1?arch=all&distro=ubuntu-22.04&package-id=d6c7041bc14364d2&upstream=python-oauthlib",
+      "name": "python3-oauthlib",
+      "version": "3.2.0-1ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/python3-oauthlib@3.2.0-1ubuntu0.1?arch=all&distro=ubuntu-22.04&upstream=python-oauthlib"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-pip@22.0.2%2Bdfsg-1ubuntu0.7?arch=all&distro=ubuntu-22.04&package-id=7669db4923d45512&upstream=python-pip",
+      "name": "python3-pip",
+      "version": "22.0.2+dfsg-1ubuntu0.7",
+      "purl": "pkg:deb/ubuntu/python3-pip@22.0.2%2Bdfsg-1ubuntu0.7?arch=all&distro=ubuntu-22.04&upstream=python-pip"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-pkg-resources@59.6.0-1.2ubuntu0.22.04.3?arch=all&distro=ubuntu-22.04&package-id=b09df21f6099e8f2&upstream=setuptools",
+      "name": "python3-pkg-resources",
+      "version": "59.6.0-1.2ubuntu0.22.04.3",
+      "purl": "pkg:deb/ubuntu/python3-pkg-resources@59.6.0-1.2ubuntu0.22.04.3?arch=all&distro=ubuntu-22.04&upstream=setuptools"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-pyparsing@2.4.7-1?arch=all&distro=ubuntu-22.04&package-id=18aab09e9d79eaed&upstream=pyparsing",
+      "name": "python3-pyparsing",
+      "version": "2.4.7-1",
+      "purl": "pkg:deb/ubuntu/python3-pyparsing@2.4.7-1?arch=all&distro=ubuntu-22.04&upstream=pyparsing"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-secretstorage@3.3.1-1?arch=all&distro=ubuntu-22.04&package-id=c962267d7f903b12&upstream=python-secretstorage",
+      "name": "python3-secretstorage",
+      "version": "3.3.1-1",
+      "purl": "pkg:deb/ubuntu/python3-secretstorage@3.3.1-1?arch=all&distro=ubuntu-22.04&upstream=python-secretstorage"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-setuptools@59.6.0-1.2ubuntu0.22.04.3?arch=all&distro=ubuntu-22.04&package-id=d37353d668e8eb21&upstream=setuptools",
+      "name": "python3-setuptools",
+      "version": "59.6.0-1.2ubuntu0.22.04.3",
+      "purl": "pkg:deb/ubuntu/python3-setuptools@59.6.0-1.2ubuntu0.22.04.3?arch=all&distro=ubuntu-22.04&upstream=setuptools"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-six@1.16.0-3ubuntu1?arch=all&distro=ubuntu-22.04&package-id=a23c782e59d96924&upstream=six",
+      "name": "python3-six",
+      "version": "1.16.0-3ubuntu1",
+      "purl": "pkg:deb/ubuntu/python3-six@1.16.0-3ubuntu1?arch=all&distro=ubuntu-22.04&upstream=six"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-software-properties@0.99.22.9?arch=all&distro=ubuntu-22.04&package-id=f79053ba5a5f25f5&upstream=software-properties",
+      "name": "python3-software-properties",
+      "version": "0.99.22.9",
+      "purl": "pkg:deb/ubuntu/python3-software-properties@0.99.22.9?arch=all&distro=ubuntu-22.04&upstream=software-properties"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-wadllib@1.3.6-1?arch=all&distro=ubuntu-22.04&package-id=01a92b2fea52c833&upstream=python-wadllib",
+      "name": "python3-wadllib",
+      "version": "1.3.6-1",
+      "purl": "pkg:deb/ubuntu/python3-wadllib@1.3.6-1?arch=all&distro=ubuntu-22.04&upstream=python-wadllib"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-wheel@0.37.1-2ubuntu0.22.04.1?arch=all&distro=ubuntu-22.04&package-id=b1fbe9d18e66ac85&upstream=wheel",
+      "name": "python3-wheel",
+      "version": "0.37.1-2ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/python3-wheel@0.37.1-2ubuntu0.22.04.1?arch=all&distro=ubuntu-22.04&upstream=wheel"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3-zipp@1.0.0-3ubuntu0.1?arch=all&distro=ubuntu-22.04&package-id=f8bb29411347bda6&upstream=python-zipp",
+      "name": "python3-zipp",
+      "version": "1.0.0-3ubuntu0.1",
+      "purl": "pkg:deb/ubuntu/python3-zipp@1.0.0-3ubuntu0.1?arch=all&distro=ubuntu-22.04&upstream=python-zipp"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3.10@3.10.12-1~22.04.13?arch=amd64&distro=ubuntu-22.04&package-id=a63359ca9cf8fa42",
+      "name": "python3.10",
+      "version": "3.10.12-1~22.04.13",
+      "purl": "pkg:deb/ubuntu/python3.10@3.10.12-1~22.04.13?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3.10-minimal@3.10.12-1~22.04.13?arch=amd64&distro=ubuntu-22.04&package-id=ae51eb30d81abc34&upstream=python3.10",
+      "name": "python3.10-minimal",
+      "version": "3.10.12-1~22.04.13",
+      "purl": "pkg:deb/ubuntu/python3.10-minimal@3.10.12-1~22.04.13?arch=amd64&distro=ubuntu-22.04&upstream=python3.10"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3.12@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&package-id=30ca12e5a0043f0c",
+      "name": "python3.12",
+      "version": "3.12.12-1+jammy1",
+      "purl": "pkg:deb/ubuntu/python3.12@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3.12-dev@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&package-id=dd751a7e4b62b6c8&upstream=python3.12",
+      "name": "python3.12-dev",
+      "version": "3.12.12-1+jammy1",
+      "purl": "pkg:deb/ubuntu/python3.12-dev@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&upstream=python3.12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/python3.12-venv@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&package-id=e326664f2ffc9329&upstream=python3.12",
+      "name": "python3.12-venv",
+      "version": "3.12.12-1+jammy1",
+      "purl": "pkg:deb/ubuntu/python3.12-venv@3.12.12-1%2Bjammy1?arch=amd64&distro=ubuntu-22.04&upstream=python3.12"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyyaml@6.0.3?package-id=7a13862d7751ed0c",
+      "name": "pyyaml",
+      "version": "6.0.3",
+      "purl": "pkg:pypi/pyyaml@6.0.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyzmq@27.1.0?package-id=d7ed4bf573228994",
+      "name": "pyzmq",
+      "version": "27.1.0",
+      "purl": "pkg:pypi/pyzmq@27.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/ray@2.54.1?package-id=032fb1e97cc9e27f",
+      "name": "ray",
+      "version": "2.54.1",
+      "purl": "pkg:pypi/ray@2.54.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/readline-common@8.1.2-1?arch=all&distro=ubuntu-22.04&package-id=e505765d090dc2f1&upstream=readline",
+      "name": "readline-common",
+      "version": "8.1.2-1",
+      "purl": "pkg:deb/ubuntu/readline-common@8.1.2-1?arch=all&distro=ubuntu-22.04&upstream=readline"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/redis@7.1.0?package-id=0e247d2af7dccf9b",
+      "name": "redis",
+      "version": "7.1.0",
+      "purl": "pkg:pypi/redis@7.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/referencing@0.37.0?package-id=d0939a3594a11a07",
+      "name": "referencing",
+      "version": "0.37.0",
+      "purl": "pkg:pypi/referencing@0.37.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/regex@2026.1.15?package-id=a696820586930a85",
+      "name": "regex",
+      "version": "2026.1.15",
+      "purl": "pkg:pypi/regex@2026.1.15"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/requests@2.32.5?package-id=92381ba288951b20",
+      "name": "requests",
+      "version": "2.32.5",
+      "purl": "pkg:pypi/requests@2.32.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/requests-toolbelt@1.0.0?package-id=e2c5fe50d1bacf80",
+      "name": "requests-toolbelt",
+      "version": "1.0.0",
+      "purl": "pkg:pypi/requests-toolbelt@1.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/rich@14.2.0?package-id=410f2bd1c318eefb",
+      "name": "rich",
+      "version": "14.2.0",
+      "purl": "pkg:pypi/rich@14.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/rich-toolkit@0.17.1?package-id=ef9fff0f27ca3ee4",
+      "name": "rich-toolkit",
+      "version": "0.17.1",
+      "purl": "pkg:pypi/rich-toolkit@0.17.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/rignore@0.7.6?package-id=8f8bf8623aa9c192",
+      "name": "rignore",
+      "version": "0.7.6",
+      "purl": "pkg:pypi/rignore@0.7.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/rpcsvc-proto@1.4.2-0ubuntu6?arch=amd64&distro=ubuntu-22.04&package-id=4c76760fc26eccc4",
+      "name": "rpcsvc-proto",
+      "version": "1.4.2-0ubuntu6",
+      "purl": "pkg:deb/ubuntu/rpcsvc-proto@1.4.2-0ubuntu6?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/rpds-py@0.30.0?package-id=d5b067caa8fc4b1f",
+      "name": "rpds-py",
+      "version": "0.30.0",
+      "purl": "pkg:pypi/rpds-py@0.30.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/rsa@4.9.1?package-id=8157fdf456cc6c15",
+      "name": "rsa",
+      "version": "4.9.1",
+      "purl": "pkg:pypi/rsa@4.9.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/runai-model-streamer@0.15.5?package-id=46f9fe3eb8a5ecba",
+      "name": "runai-model-streamer",
+      "version": "0.15.5",
+      "purl": "pkg:pypi/runai-model-streamer@0.15.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/runai-model-streamer-gcs@0.15.5?package-id=7f044f7e843398a0",
+      "name": "runai-model-streamer-gcs",
+      "version": "0.15.5",
+      "purl": "pkg:pypi/runai-model-streamer-gcs@0.15.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/runai-model-streamer-s3@0.15.5?package-id=a4bba432be96f000",
+      "name": "runai-model-streamer-s3",
+      "version": "0.15.5",
+      "purl": "pkg:pypi/runai-model-streamer-s3@0.15.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/s3transfer@0.16.0?package-id=c789749e02ce9b82",
+      "name": "s3transfer",
+      "version": "0.16.0",
+      "purl": "pkg:pypi/s3transfer@0.16.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/safetensors@0.7.0?package-id=7fa40b93ef0f8c35",
+      "name": "safetensors",
+      "version": "0.7.0",
+      "purl": "pkg:pypi/safetensors@0.7.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/secretstorage@3.3.1?package-id=c1d5b2dc1448a627",
+      "name": "secretstorage",
+      "version": "3.3.1",
+      "purl": "pkg:pypi/secretstorage@3.3.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/sed@4.8-1ubuntu2?arch=amd64&distro=ubuntu-22.04&package-id=848db6b0b27a609c",
+      "name": "sed",
+      "version": "4.8-1ubuntu2",
+      "purl": "pkg:deb/ubuntu/sed@4.8-1ubuntu2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/semver@2.13.0?package-id=d94534eeec32e347",
+      "name": "semver",
+      "version": "2.13.0",
+      "purl": "pkg:pypi/semver@2.13.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/sensible-utils@0.0.17?arch=all&distro=ubuntu-22.04&package-id=5cdeb5bbf96f6c38",
+      "name": "sensible-utils",
+      "version": "0.0.17",
+      "purl": "pkg:deb/ubuntu/sensible-utils@0.0.17?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sentencepiece@0.2.1?package-id=a79a37f01e656947",
+      "name": "sentencepiece",
+      "version": "0.2.1",
+      "purl": "pkg:pypi/sentencepiece@0.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sentry-sdk@2.50.0?package-id=ceaf6fd975d940ce",
+      "name": "sentry-sdk",
+      "version": "2.50.0",
+      "purl": "pkg:pypi/sentry-sdk@2.50.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/setproctitle@1.3.7?package-id=275d56fd4097e853",
+      "name": "setproctitle",
+      "version": "1.3.7",
+      "purl": "pkg:pypi/setproctitle@1.3.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/setuptools@59.6.0?package-id=332b7935715e95be",
+      "name": "setuptools",
+      "version": "59.6.0",
+      "purl": "pkg:pypi/setuptools@59.6.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/setuptools@82.0.1?package-id=b87fa16904fda9dc",
+      "name": "setuptools",
+      "version": "82.0.1",
+      "purl": "pkg:pypi/setuptools@82.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/setuptools-scm@9.2.2?package-id=81ae5a1d3549121e",
+      "name": "setuptools-scm",
+      "version": "9.2.2",
+      "purl": "pkg:pypi/setuptools-scm@9.2.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/shared-mime-info@2.1-2?arch=amd64&distro=ubuntu-22.04&package-id=14bbef84e3b0c4d8",
+      "name": "shared-mime-info",
+      "version": "2.1-2",
+      "purl": "pkg:deb/ubuntu/shared-mime-info@2.1-2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/shellingham@1.5.4?package-id=bfcf01df53fb9517",
+      "name": "shellingham",
+      "version": "1.5.4",
+      "purl": "pkg:pypi/shellingham@1.5.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/six@1.16.0?package-id=64e630b32a1bc827",
+      "name": "six",
+      "version": "1.16.0",
+      "purl": "pkg:pypi/six@1.16.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/six@1.17.0?package-id=4bb76179ba02beb1",
+      "name": "six",
+      "version": "1.17.0",
+      "purl": "pkg:pypi/six@1.17.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sniffio@1.3.1?package-id=16a461f6b5bc23c3",
+      "name": "sniffio",
+      "version": "1.3.1",
+      "purl": "pkg:pypi/sniffio@1.3.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/software-properties-common@0.99.22.9?arch=all&distro=ubuntu-22.04&package-id=d6d83b8b9d24d0ce&upstream=software-properties",
+      "name": "software-properties-common",
+      "version": "0.99.22.9",
+      "purl": "pkg:deb/ubuntu/software-properties-common@0.99.22.9?arch=all&distro=ubuntu-22.04&upstream=software-properties"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sortedcontainers@2.4.0?package-id=6713f14cacbd9cdb",
+      "name": "sortedcontainers",
+      "version": "2.4.0",
+      "purl": "pkg:pypi/sortedcontainers@2.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sse-starlette@3.2.0?package-id=cf7f2d9237a76123",
+      "name": "sse-starlette",
+      "version": "3.2.0",
+      "purl": "pkg:pypi/sse-starlette@3.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/starlette@0.49.3?package-id=b0bcde0a280037df",
+      "name": "starlette",
+      "version": "0.49.3",
+      "purl": "pkg:pypi/starlette@0.49.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/sudo@1.9.9-1ubuntu2.6?arch=amd64&distro=ubuntu-22.04&package-id=836e155c93294b69",
+      "name": "sudo",
+      "version": "1.9.9-1ubuntu2.6",
+      "purl": "pkg:deb/ubuntu/sudo@1.9.9-1ubuntu2.6?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/supervisor@4.3.0?package-id=7a4a4e44896a26de",
+      "name": "supervisor",
+      "version": "4.3.0",
+      "purl": "pkg:pypi/supervisor@4.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/sympy@1.14.0?package-id=5c9215c8250bc3f4",
+      "name": "sympy",
+      "version": "1.14.0",
+      "purl": "pkg:pypi/sympy@1.14.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/systemd@249.11-0ubuntu3.17?arch=amd64&distro=ubuntu-22.04&package-id=c5f366d8f045ab6c",
+      "name": "systemd",
+      "version": "249.11-0ubuntu3.17",
+      "purl": "pkg:deb/ubuntu/systemd@249.11-0ubuntu3.17?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/systemd-sysv@249.11-0ubuntu3.17?arch=amd64&distro=ubuntu-22.04&package-id=337f8bbfa84d9b9c&upstream=systemd",
+      "name": "systemd-sysv",
+      "version": "249.11-0ubuntu3.17",
+      "purl": "pkg:deb/ubuntu/systemd-sysv@249.11-0ubuntu3.17?arch=amd64&distro=ubuntu-22.04&upstream=systemd"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/sysvinit-utils@3.01-1ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=bb596b48989c54b0&upstream=sysvinit",
+      "name": "sysvinit-utils",
+      "version": "3.01-1ubuntu1",
+      "purl": "pkg:deb/ubuntu/sysvinit-utils@3.01-1ubuntu1?arch=amd64&distro=ubuntu-22.04&upstream=sysvinit"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/tabulate@0.9.0?package-id=9e2506e818220c14",
+      "name": "tabulate",
+      "version": "0.9.0",
+      "purl": "pkg:pypi/tabulate@0.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/tar@1.34%2Bdfsg-1ubuntu0.1.22.04.2?arch=amd64&distro=ubuntu-22.04&package-id=9b058d03070aecf3",
+      "name": "tar",
+      "version": "1.34+dfsg-1ubuntu0.1.22.04.2",
+      "purl": "pkg:deb/ubuntu/tar@1.34%2Bdfsg-1ubuntu0.1.22.04.2?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/tiktoken@0.12.0?package-id=e4062e5a5ad2a43f",
+      "name": "tiktoken",
+      "version": "0.12.0",
+      "purl": "pkg:pypi/tiktoken@0.12.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/timm@1.0.24?package-id=b1338ca41a1cfe46",
+      "name": "timm",
+      "version": "1.0.24",
+      "purl": "pkg:pypi/timm@1.0.24"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/tokenizers@0.22.2?package-id=bb4fd6310220e009",
+      "name": "tokenizers",
+      "version": "0.22.2",
+      "purl": "pkg:pypi/tokenizers@0.22.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/tomli@2.4.0?package-id=2c2130ef6b7bb060",
+      "name": "tomli",
+      "version": "2.4.0",
+      "purl": "pkg:pypi/tomli@2.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/torch@2.9.1%2Bcu130?package-id=e9d35773e5da9735",
+      "name": "torch",
+      "version": "2.9.1+cu130",
+      "purl": "pkg:pypi/torch@2.9.1%2Bcu130"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/torchaudio@2.9.1%2Bcu130?package-id=65099cd8a42e67cc",
+      "name": "torchaudio",
+      "version": "2.9.1+cu130",
+      "purl": "pkg:pypi/torchaudio@2.9.1%2Bcu130"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/torchvision@0.24.1%2Bcu130?package-id=7cd500b9e8a72848",
+      "name": "torchvision",
+      "version": "0.24.1+cu130",
+      "purl": "pkg:pypi/torchvision@0.24.1%2Bcu130"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/tqdm@4.67.1?package-id=efb644fab87023ef",
+      "name": "tqdm",
+      "version": "4.67.1",
+      "purl": "pkg:pypi/tqdm@4.67.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/transformers@4.57.6?package-id=f47516a9bab2d466",
+      "name": "transformers",
+      "version": "4.57.6",
+      "purl": "pkg:pypi/transformers@4.57.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/triton@3.5.1?package-id=2f6cf2eb5790e02c",
+      "name": "triton",
+      "version": "3.5.1",
+      "purl": "pkg:pypi/triton@3.5.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/typer@0.21.1?package-id=548af1a286cb6371",
+      "name": "typer",
+      "version": "0.21.1",
+      "purl": "pkg:pypi/typer@0.21.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/typing-extensions@4.15.0?package-id=9de40026282aa9ea",
+      "name": "typing-extensions",
+      "version": "4.15.0",
+      "purl": "pkg:pypi/typing-extensions@4.15.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/typing-extensions@4.15.0?package-id=90b9d5e68c26ecd9",
+      "name": "typing-extensions",
+      "version": "4.15.0",
+      "purl": "pkg:pypi/typing-extensions@4.15.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/typing-inspection@0.4.2?package-id=e3a7dc3b51dd809c",
+      "name": "typing-inspection",
+      "version": "0.4.2",
+      "purl": "pkg:pypi/typing-inspection@0.4.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/tzdata@2025b-0ubuntu0.22.04.1?arch=all&distro=ubuntu-22.04&package-id=6e3ba2a59c32af21",
+      "name": "tzdata",
+      "version": "2025b-0ubuntu0.22.04.1",
+      "purl": "pkg:deb/ubuntu/tzdata@2025b-0ubuntu0.22.04.1?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/ubuntu-keyring@2021.03.26?arch=all&distro=ubuntu-22.04&package-id=538d0ba8bf7616d4",
+      "name": "ubuntu-keyring",
+      "version": "2021.03.26",
+      "purl": "pkg:deb/ubuntu/ubuntu-keyring@2021.03.26?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/urllib3@2.6.3?package-id=5c745c2fb59930b9",
+      "name": "urllib3",
+      "version": "2.6.3",
+      "purl": "pkg:pypi/urllib3@2.6.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/usrmerge@25ubuntu2?arch=all&distro=ubuntu-22.04&package-id=27da7b9addbb258b",
+      "name": "usrmerge",
+      "version": "25ubuntu2",
+      "purl": "pkg:deb/ubuntu/usrmerge@25ubuntu2?arch=all&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/util-linux@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04&package-id=eda66505a23c54f2",
+      "name": "util-linux",
+      "version": "2.37.2-4ubuntu3.4",
+      "purl": "pkg:deb/ubuntu/util-linux@2.37.2-4ubuntu3.4?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/uv@0.9.26?package-id=7061404a4cd6254f",
+      "name": "uv",
+      "version": "0.9.26",
+      "purl": "pkg:pypi/uv@0.9.26"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/uvicorn@0.40.0?package-id=a24dc80b8c81be07",
+      "name": "uvicorn",
+      "version": "0.40.0",
+      "purl": "pkg:pypi/uvicorn@0.40.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/uvloop@0.22.1?package-id=4bbef161d67e38ae",
+      "name": "uvloop",
+      "version": "0.22.1",
+      "purl": "pkg:pypi/uvloop@0.22.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/vllm@0.14.1%2Bcu130?package-id=d60c7d25f246d287",
+      "name": "vllm",
+      "version": "0.14.1+cu130",
+      "purl": "pkg:pypi/vllm@0.14.1%2Bcu130"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/wadllib@1.3.6?package-id=b7433b907f408a64",
+      "name": "wadllib",
+      "version": "1.3.6",
+      "purl": "pkg:pypi/wadllib@1.3.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/watchfiles@1.1.1?package-id=a7a8323a2258319d",
+      "name": "watchfiles",
+      "version": "1.1.1",
+      "purl": "pkg:pypi/watchfiles@1.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/websockets@16.0?package-id=4eb9dd2e6c9d04d3",
+      "name": "websockets",
+      "version": "16.0",
+      "purl": "pkg:pypi/websockets@16.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/wheel@0.46.3?package-id=b8a8984af4b5af1a",
+      "name": "wheel",
+      "version": "0.46.3",
+      "purl": "pkg:pypi/wheel@0.46.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/wheel@0.46.3?package-id=86bdd0717e14d740",
+      "name": "wheel",
+      "version": "0.46.3",
+      "purl": "pkg:pypi/wheel@0.46.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/wrapt@2.1.2?package-id=7b5dfc7e5b8e468d",
+      "name": "wrapt",
+      "version": "2.1.2",
+      "purl": "pkg:pypi/wrapt@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/x11-common@1%3A7.7%2B23ubuntu2?arch=all&distro=ubuntu-22.04&package-id=a43f3eff57aed094&upstream=xorg",
+      "name": "x11-common",
+      "version": "1:7.7+23ubuntu2",
+      "purl": "pkg:deb/ubuntu/x11-common@1%3A7.7%2B23ubuntu2?arch=all&distro=ubuntu-22.04&upstream=xorg"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/xgrammar@0.1.33?package-id=b733a8ea204c157b",
+      "name": "xgrammar",
+      "version": "0.1.33",
+      "purl": "pkg:pypi/xgrammar@0.1.33"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/xz-utils@5.2.5-2ubuntu1?arch=amd64&distro=ubuntu-22.04&package-id=5f88c409a1c96ce4",
+      "name": "xz-utils",
+      "version": "5.2.5-2ubuntu1",
+      "purl": "pkg:deb/ubuntu/xz-utils@5.2.5-2ubuntu1?arch=amd64&distro=ubuntu-22.04"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/yarl@1.22.0?package-id=88a1cf6defaed3df",
+      "name": "yarl",
+      "version": "1.22.0",
+      "purl": "pkg:pypi/yarl@1.22.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/yarl@1.23.0?package-id=0f6e966f8be4b0c7",
+      "name": "yarl",
+      "version": "1.23.0",
+      "purl": "pkg:pypi/yarl@1.23.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/zipp@3.23.0?package-id=da9ca6c6e80369c9",
+      "name": "zipp",
+      "version": "3.23.0",
+      "purl": "pkg:pypi/zipp@3.23.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/zipp@3.23.0?package-id=b7bd28ea98864617",
+      "name": "zipp",
+      "version": "3.23.0",
+      "purl": "pkg:pypi/zipp@3.23.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:deb/ubuntu/zlib1g@1%3A1.2.11.dfsg-2ubuntu9.2?arch=amd64&distro=ubuntu-22.04&package-id=2fe7e329ba1a83a5&upstream=zlib",
+      "name": "zlib1g",
+      "version": "1:1.2.11.dfsg-2ubuntu9.2",
+      "purl": "pkg:deb/ubuntu/zlib1g@1%3A1.2.11.dfsg-2ubuntu9.2?arch=amd64&distro=ubuntu-22.04&upstream=zlib"
+    },
+    {
+      "type": "operating-system",
+      "bom-ref": "os:ubuntu@22.04",
+      "name": "ubuntu",
+      "version": "22.04"
+    }
+  ],
+  "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json"
+}
