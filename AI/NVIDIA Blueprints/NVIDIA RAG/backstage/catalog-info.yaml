@@ -2,41 +2,47 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: nvidia-rag-blueprint
-  title: Guide to deploy NVIDIA RAG Blueprint on IBM Fusion
+  title: NVIDIA RAG Blueprint on IBM Fusion HCI
   description: |
-    Deploy a Retrieval-Augmented Generation (RAG) blueprint on IBM Fusion HCI. 
-    It enables users to ask questions and get accurate answers grounded in their own documents instead of relying on generic LLM guesses.
-    
-    Key features include multi-modal document intelligence, processing complex documents through OCR, PDF layout parsing, and table or chart extraction. Answers are grounded with context and citations via NVIDIA NIM, keeping responses traceable. Infrastructure is converged, with compute, GPU, and storage unified under a single OpenShift-managed system. Performance is production-ready, with NVMe-backed storage delivering the throughput RAG workloads need.
+    NVIDIA RAG (Retrieval-Augmented Generation) is a validated AI blueprint that grounds LLM responses in your own enterprise documents — eliminating hallucinations and ensuring every answer is traceable to a source. Deployed on IBM Fusion HCI using NVIDIA NIM microservices. This card covers v2 (latest); the original v1 deployment guide is also available on IBM Tech Exchange.
+
+    How it works:
+    - Ingests enterprise documents (PDFs, manuals, research papers) through OCR, table parsing, and layout extraction
+    - Indexes content into a vector store (Elasticsearch via ECK Operator in v2) for fast semantic retrieval
+    - At query time, retrieves the most relevant chunks, re-ranks them, and assembles an augmented prompt
+    - LLM generates a grounded answer with citations — responses are fully traceable to source documents
+
+    What makes it production-ready:
+    - Multi-modal document intelligence — handles tables, charts, scanned PDFs, and complex layouts
+    - Bring-your-own model endpoints — connect your own LLM, embedding, and reranking services
+    - IBM-mirrored container images (icr.io/cp/fsh) — air-gap ready, no NVIDIA NGC pull required
+    - Built-in telemetry and evaluation tooling for operational observability
+
+    Why IBM Fusion HCI:
+    - Converged compute and storage — GPU nodes and NVMe storage on the same platform
+    - Predictable GPU scheduling via Red Hat OpenShift with the NVIDIA GPU Operator
+    - Unified environment where multiple AI blueprints (RAG, AI-Q, VSS) coexist on one cluster
+    - Deployed directly from the OpenShift Software Catalog — no Helm CLI or NGC credentials needed
   tags:
     - nvidia
-    - rag
-    - ai
     - blueprint
     - fusion
-    - gpu
-    - llm
+    - rag
   annotations:
     backstage.io/techdocs-ref: dir:.
     github.com/project-slug: IBM/storage-fusion
-    
   links:
-    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/02/03/deploying-nvidia-rag-on-fusion-hci
-      title: Read on IBM Tech Exchange
+    - url: https://community.ibm.com/community/user/blogs/hasrat-ali-arzoo/2026/08/30/deploying-nvidia-rag-on-fusion-hci-v2
+      title: Read the IBM Tech Exchange Blog
       icon: article
     - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
-      title: View on Fusion Tech Community
+      title: Explore on Fusion Tech Community
       icon: web
-    - url: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20RAG/Fusion_NVIDIA_RAG_Guide.md
-      title: Complete deployment guide on GitHub
-      icon: docs
-    - url: https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/deploy-helm.md
-      title: NVIDIA Documentation
+    - url: https://build.nvidia.com/nvidia/build-an-enterprise-rag-pipeline
+      title: Explore on NVIDIA Blueprint Catalog
       icon: launch
 spec:
   type: blueprint
   lifecycle: production
-  owner: IBM
-  
-  providesApis: []
-  consumesApis: []
+  owner: group:default/fusion-platform-team
+  system: fusion-ai-services
