@@ -1,143 +1,270 @@
 # Deploying NVIDIA RAG on IBM Fusion HCI
 
-Retrieval-Augmented Generation (RAG) is rapidly becoming a core enterprise capability. However, moving RAG from development to production requires more than just connecting an LLM to a vector database: it demands GPU-optimized inference, scalable semantic search, efficient embedding generation, and enterprise infrastructure to reliably support these multiple components.
+Retrieval-Augmented Generation (RAG) is rapidly becoming a core enterprise capability — grounding LLM responses in verified enterprise documents to eliminate hallucinations and ensure every answer is traceable to a source. Moving RAG to production demands GPU-optimized inference, scalable semantic search, efficient document ingestion, and enterprise infrastructure to hold it all together.
 
-This article walks through a validated production deployment of NVIDIA's RAG Blueprint on IBM Fusion HCI with Red Hat OpenShift. The deployment uses:
+This guide covers deploying the NVIDIA RAG Blueprint on **IBM Fusion HCI** with **Red Hat OpenShift**. Two deployment paths are documented:
 
-- NVIDIA RAG Blueprint v2.3.0 (Helm-based deployment)
-- NVIDIA NIM with Nemotron Nano 8B for optimized LLM inference
-- Milvus for distributed vector search
-- NeMo Retriever for embedding generation
-- IBM Fusion Data Foundation for enterprise-grade persistent storage
-- Red Hat OpenShift on IBM Fusion HCI
+- **v2 (Recommended) — OpenShift Software Catalog:** IBM Fusion HCI packages RAG v2.6.0 as a Helm chart with images pre-mirrored to IBM Cloud Container Registry (`icr.io/cp/fsh/`). The chart appears automatically in the OpenShift Software Catalog — no Helm CLI, no NGC credentials required. Uses Elasticsearch (ECK Operator) as the vector store and SeaweedFS for document storage.
+- **v1 — Helm CLI:** The original deployment path using RAG v2.3.0 pulled from NVIDIA NGC. Uses Milvus as the vector store and MinIO for object storage. Still valid for environments that prefer direct Helm control.
 
-## Table of Contents
+---
 
-- Why IBM Fusion HCI for RAG deployments
-- Prerequisites
-- Configuration steps for Red Hat OpenShift deployment
-- Validation & Testing
-- What we accomplished
-- Key observations
-- Troubleshooting common issues
-- Further Reading
+## What Is NVIDIA RAG?
 
-## Why IBM Fusion HCI:
+NVIDIA's Enterprise RAG Blueprint provides a consistent, production-oriented pipeline connecting LLMs to multi-modal enterprise content:
 
-Enterprise RAG platforms simultaneously demand high GPU utilization, consistent storage performance, and streamlined operations. IBM Fusion HCI provides converged infrastructure where compute, storage, and Red Hat OpenShift are integrated and managed as a unified system.
+- **Multi-modal document intelligence** — OCR, PDF layout parsing, table and chart extraction
+- **Grounded generation** — provides context and citations to LLMs for traceable, accurate responses
+- **Semantic search** — vector embeddings + re-ranking ensure the most relevant content surfaces every time
+- **Enterprise operations** — built-in telemetry, evaluation tooling, and Kubernetes-native deployment
 
-This deployment demonstrates:
+### RAG Pipeline Architecture
 
-- Direct GPU pass-through for NIM containers (no virtualization overhead)
-- High-performance NVMe storage for Milvus vector operations
-- Native Red Hat OpenShift integration simplifying platform operations
-- Single management plane for infrastructure and AI workloads
-- Performance and reliability requirements met for production RAG
+**Query Flow:**
+User question → RAG server → vector embedding → Elasticsearch (v2) / Milvus (v1) semantic search → re-ranker → augmented prompt → LLM → grounded answer with citations
+
+**Document Ingestion Flow:**
+Upload → ingestor-server → OCR / table parsing / chart extraction → SeaweedFS (v2) / MinIO (v1) → embedding model → vector store index
+
+---
+
+## Why IBM Fusion HCI?
+
+Enterprise RAG simultaneously demands high GPU utilization, consistent storage performance, and streamlined operations. IBM Fusion HCI provides converged infrastructure where compute, storage, and Red Hat OpenShift are integrated and managed as a unified system:
+
+- **Direct GPU pass-through** — no virtualization overhead for NIM containers
+- **NVMe-backed storage** — high-performance persistent volumes for vector database operations
+- **Unified management plane** — single control plane for infrastructure and AI workloads
+- **Air-gap readiness** — in v2, all images are pre-mirrored to IBM ICR; no NGC access needed at deploy time
+- **Deployed directly from OpenShift Software Catalog** — reduces deployment to a values form, not a sequence of CLI commands
+
+---
+
+## What Changed from v1 to v2
+
+| | v1 (RAG v2.3.0) | v2 (RAG v2.6.0) |
+|---|---|---|
+| **Deployment** | Helm CLI from NGC | OpenShift Software Catalog |
+| **Image source** | NVIDIA NGC (`nvcr.io`) | IBM Cloud Registry (`icr.io/cp/fsh/`) |
+| **NGC credentials** | Required | Not required |
+| **Vector store** | Milvus | Elasticsearch (via ECK Operator) |
+| **Object store** | MinIO | SeaweedFS |
+| **OpenShift support** | Manual SCC + KubeletConfig | `openshift.enabled: true` flag |
+| **Air-gap** | Manual image mirror + NGC secrets | ITMS redirect only |
+
+---
 
 ## Prerequisites
 
-Before deploying the NVIDIA RAG Blueprint, ensure the following requirements are met on your Fusion HCI system:
+### 1. Hardware
 
-### 1. Hardware requirements
+- IBM Fusion HCI cluster installed and running
+- Minimum: 8 GPUs with 24 GB VRAM each (40 GB+ recommended)
+- Supported GPU types: NVIDIA L40S, A100, H100, RTX PRO 6000, B200
+- Note: v1 testing was conducted on NVIDIA L40S GPUs with 46 GB VRAM
 
-Verify that your cluster meets the minimum hardware specifications for the RAG Blueprint deployment:
-
-— IBM Fusion HCI cluster installed and running.
-
-— GPU requirements:
-
-- Minimum: 8 GPUs
-- GPU memory: 24GB+ VRAM per GPU (40GB+ recommended for larger models).
-- GPU types: NVIDIA L40S, A100, H100, RTX PRO 6000, B200 or equivalent.
-- Note: This deployment was tested on NVIDIA L40S GPUs with 46GB VRAM
-
-Check available cluster resources:
+Check available GPU resources:
 ```bash
 oc describe nodes | grep -A 5 "Allocated resources"
+oc get nodes -o json | jq -r '.items[] | select(.metadata.labels."nvidia.com/gpu.present" == "true") | {node: .metadata.name, gpu_product: .metadata.labels."nvidia.com/gpu.product", gpu_count: .metadata.labels."nvidia.com/gpu.count"}'
 ```
 
-Identify the type of GPUs:
-```bash
-oc get nodes -o json | jq -r '.items[] | select(.metadata.labels."nvidia.com/gpu.present" == "true") | {node: .metadata.name, gpu_product: .metadata.labels."nvidia.com/gpu.product", gpu_count: .metadata.labels."nvidia.com/gpu.count", gpu_memory: .metadata.labels."nvidia.com/gpu.memory"}'
-```
+### 2. Storage
 
-### 2. Storage configuration
-
-Verify that you have a default storage class available:
+A default StorageClass is required for persistent volumes (vector database, object store, ingestor data).
 ```bash
 oc get sc
 ```
 
-Look for a storage class marked as (default). If a default storage class exists, you are ready to proceed.
+**Recommended:** IBM Fusion Data Foundation — use `ocs-storagecluster-ceph-rbd` for block storage.
 
-If no default storage class is set, configure one using IBM Fusion Data Foundation or another storage provider:
-
-**Option 1: IBM Fusion Data Foundation**
-
-Install IBM Fusion Data Foundation following the guide here.
-
-Once installed & configured, verify the storage class:
-```bash
-oc get storageclass | grep ocs
-# Use: ocs-storagecluster-ceph-rbd
-```
-
-**Option 2: Local path provisioner**
+**Alternative: local path provisioner**
 ```bash
 oc apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml
 oc patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 ```
 
-Note: This deployment was tested with IBM Fusion Data Foundation v4.18.
-
 ### 3. NVIDIA GPU Operator
 
-- Verify that you have installed the NVIDIA GPU Operator using the the following instructions:
-- Check GPU operator status:
+Verify the GPU Operator is installed and running:
 ```bash
 oc get pods -n nvidia-gpu-operator
-```
-
-- Confirm GPU resources are detected:
-```bash
 oc get nodes -o json | jq '.items[].status.allocatable | select(."nvidia.com/gpu" != null)'
 ```
 
-### 4. NGC API key
+### 4. ECK Operator *(v2 only)*
 
-- Obtain your NGC API key from: https://ngc.nvidia.com/setup/api-key
-- Export as an environment variable:
+v2 uses Elasticsearch via the ECK Operator as its vector store. The ECK Operator must be installed **before** the RAG chart — it registers the Elasticsearch CRD that the RAG chart depends on. Without it, the install fails immediately.
+
+Install via the OpenShift Software Catalog (search for **ECK Operator**) before proceeding to RAG deployment.
+
+### 5. NGC API Key *(v1 only)*
+
 ```bash
 export NGC_API_KEY=<your-ngc-api-key>
 ```
 
-### 5. Optional: GPU time-slicing
+### 6. Helm and CLI *(v1 only)*
 
-- You can enable time slicing for sharing GPUs between pods.
-- For details, refer to this detailed guide on time-slicing.
-
-### 6. Install Helm and OpenShift CLI
-
-Ensure Helm v3.19.4 is installed, as this version is validated with the NVIDIA RAG Blueprint.
+Helm v3.19.4 is the validated version for the v1 RAG Blueprint:
 ```bash
-helm version
-<-- output --> 
-version.BuildInfo{Version:"v3.19.4", ...}
-```
-
-Verify Red Hat OpenShift CLI is installed and connected to the cluster:
-```bash
+helm version   # must show v3.19.4
 oc version
 oc whoami
 ```
 
-## Configuration steps:
+---
 
-Before deploying the NVIDIA RAG Blueprint, a few modifications are required. Follow these steps sequentially:
+## Deployment — v2: OpenShift Software Catalog *(Recommended)*
+
+### Step 1: Install the ECK Operator
+
+1. Open the **OpenShift Dashboard**
+2. Navigate to **Ecosystem → Software Catalog**
+3. Search for **ECK Operator** and install it
+4. Verify the operator is ready before proceeding:
+```bash
+oc get pods -n elastic-system
+```
+
+### Step 2: Create the RAG namespace
+
+```bash
+oc new-project rag
+```
+
+Confirm the `rag` namespace is selected in the OpenShift Dashboard top navigation.
+
+### Step 3: Find the RAG Blueprint in the Software Catalog
+
+1. Open the **OpenShift Dashboard**
+2. Confirm the `rag` namespace is selected
+3. Navigate to **Ecosystem → Software Catalog**
+4. Search for **NVIDIA RAG Blueprint**
+5. Click the chart tile → **Create**
+
+### Step 4: Configure the values form
+
+**Required — OpenShift support** (handles Routes and SCC permissions automatically):
+```yaml
+openshift:
+  enabled: true
+```
+
+**Required — Your model endpoints:**
+```yaml
+envVars:
+  # LLM
+  APP_LLM_MODELNAME: "<your-llm-model-name>"
+  APP_LLM_SERVERURL: "<your-llm-service>:8000"
+  APP_QUERYREWRITER_MODELNAME: "<your-llm-model-name>"
+  APP_QUERYREWRITER_SERVERURL: "<your-llm-service>:8000"
+  REFLECTION_LLM: "<your-llm-model-name>"
+  REFLECTION_LLM_SERVERURL: "<your-llm-service>:8000"
+
+  # Embedding
+  APP_EMBEDDINGS_MODELNAME: "<your-embedding-model-name>"
+  APP_EMBEDDINGS_SERVERURL: "<your-embedding-service>:8000/v1"
+  APP_EMBEDDINGS_DIMENSIONS: "2048"
+
+  # Reranking
+  APP_RANKING_MODELNAME: "<your-reranking-model-name>"
+  APP_RANKING_SERVERURL: "<your-reranking-service>:8000"
+
+ingestor-server:
+  envVars:
+    SUMMARY_LLM: "<your-llm-model-name>"
+    SUMMARY_LLM_SERVERURL: "<your-llm-service>:8000"
+    APP_EMBEDDINGS_MODELNAME: "<your-embedding-model-name>"
+    APP_EMBEDDINGS_SERVERURL: "<your-embedding-service>:8000/v1"
+
+nv-ingest:
+  envVars:
+    EMBEDDING_NIM_MODEL_NAME: "<your-embedding-model-name>"
+    EMBEDDING_NIM_ENDPOINT: "http://<your-embedding-service>:8000/v1"
+```
+
+**Conditional — StorageClass** (only if `ocs-storagecluster-ceph-rbd` is not your cluster default):
+```yaml
+seaweedfs:
+  allInOne:
+    data:
+      storageClass: "ocs-storagecluster-ceph-rbd"
+
+ingestor-server:
+  persistence:
+    storageClass: "ocs-storagecluster-ceph-rbd"
+
+eck-elasticsearch:
+  nodeSets:
+  - name: default
+    count: 1
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        storageClassName: "ocs-storagecluster-ceph-rbd"
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 50Gi
+```
+
+**IBM defaults (pre-set, no changes needed):** All container images are pre-configured to pull from `icr.io/cp/fsh/nvidia/`. No NGC image-pull secret required.
+
+### Step 5: Install and monitor
+
+Click **Create**. OpenShift runs `helm install` in the background. Installation takes approximately 15–25 minutes, primarily waiting for Elasticsearch to initialize.
+
+```bash
+oc get pods -n rag -w
+```
+
+### Step 6: Verify deployment
+
+**All pods should show `Running` and `1/1`:**
+```bash
+oc get pods -n rag
+```
+
+Expected pods:
+```
+ingestor-server-<hash>                  1/1   Running
+rag-eck-elasticsearch-es-default-0      1/1   Running
+rag-frontend-<hash>                     1/1   Running
+rag-nv-ingest-<hash>                    1/1   Running
+rag-redis-master-0                      1/1   Running
+rag-redis-replicas-0                    1/1   Running
+rag-seaweedfs-all-in-one-<hash>         1/1   Running
+rag-server-<hash>                       1/1   Running
+```
+
+**Verify PVCs are bound:**
+```bash
+oc get pvc -n rag
+```
+
+Expected:
+```
+elasticsearch-data-rag-eck-elasticsearch-...   Bound   50Gi
+ingestor-server-data                           Bound   50Gi
+rag-seaweedfs-all-in-one-data                  Bound   50Gi
+```
+
+### Step 7: Access the UI
+
+```bash
+oc port-forward -n rag service/rag-frontend 3000:3000 --address 0.0.0.0
+```
+
+Open `http://localhost:3000`.
+
+---
+
+## Deployment — v1: Helm CLI *(RAG v2.3.0, Milvus-based)*
 
 ### Step 1: Download and extract the Helm chart
 
-Download the NVIDIA RAG Blueprint package locally for customization:
 ```bash
 wget https://helm.ngc.nvidia.com/nvidia/blueprint/charts/nvidia-blueprint-rag-v2.3.0.tgz
 tar xvzf nvidia-blueprint-rag-v2.3.0.tgz
@@ -146,7 +273,7 @@ cd nvidia-blueprint-rag
 
 ### Step 2: Configure pod PID limits
 
-Red Hat OpenShift requires increased PID limits for the RAG workload. Create and apply the kubelet configuration:
+Red Hat OpenShift requires increased PID limits for the RAG workload:
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: machineconfiguration.openshift.io/v1
@@ -163,53 +290,45 @@ spec:
 EOF
 ```
 
-Monitor the machine-config rollout. Worker nodes will undergo a rolling update:
+Monitor the rollout — worker nodes undergo a rolling update:
 ```bash
 oc get mcp -w
 ```
 
-Wait until all machine config pools show UPDATED=True before proceeding.
+Wait until all machine config pools show `UPDATED=True` before proceeding.
 
 ### Step 3: Modify RAG server deployment
 
-From the Helm chart root (nvidia-blueprint-rag/), edit templates/deployment.yaml as shown below:
+From the Helm chart root, edit `templates/deployment.yaml`:
 
-Become a member
-
-Locate the volumeMounts: section (around line 58) and add two new mounts:
+In the `volumeMounts:` section, add:
 ```yaml
 volumeMounts:
-            - name: prompt-volume
-              mountPath: /prompt.yaml
-              subPath: prompt.yaml
-            - name: tmp-data
-              mountPath: /workspace/tmp-data
-            - name: prom-data
-              mountPath: /tmp-data/prom_data
+  - name: prompt-volume
+    mountPath: /prompt.yaml
+    subPath: prompt.yaml
+  - name: tmp-data
+    mountPath: /workspace/tmp-data
+  - name: prom-data
+    mountPath: /tmp-data/prom_data
 ```
 
-Locate the volumes: section (around line 65) and add two new volumes:
+In the `volumes:` section, add:
 ```yaml
 volumes:
-        - name: prompt-volume
-          configMap:
-            name: {{ include "nvidia-blueprint-rag.fullname" . }}-prompt
-            defaultMode: 0555
-        - name: tmp-data
-          emptyDir: {}
-        - name: prom-data
-          emptyDir: {}
+  - name: prompt-volume
+    configMap:
+      name: {{ include "nvidia-blueprint-rag.fullname" . }}-prompt
+      defaultMode: 0555
+  - name: tmp-data
+    emptyDir: {}
+  - name: prom-data
+    emptyDir: {}
 ```
 
-The diff below shows the exact additions made to the RAG server deployment yaml:
+### Step 4: Adjust model configuration for L40S GPUs *(Optional)*
 
-Press enter or click to view image in full size
-
-### Step 4: Adjust model configuration (Optional)
-
-This step is only required if using L40S GPUs. For other GPU types, proceed to Step 5.
-
-The default configuration uses a large model requiring significant GPU memory. For L40S GPUs, switch to the lighter Nemotron Nano model:
+Only required if using L40S GPUs. Switch to the lighter Nemotron Nano model:
 ```bash
 sed -i '' 's/llama-3.3-nemotron-super-49b-v1.5/llama-3.1-nemotron-nano-8b-v1/g' values.yaml
 sed -i '' 's/tag: "1.13.1"/tag: "1.8.4"/g' values.yaml
@@ -217,196 +336,142 @@ sed -i '' 's/tag: "1.13.1"/tag: "1.8.4"/g' values.yaml
 
 ### Step 5: Configure security permissions
 
-Allow RAG pods to run as any user by granting them the anyuid SCC. Run the following commands:
 ```bash
-# Create the namespace
 oc create namespace rag
 
-# Grant the `anyuid` SCC to the required service accounts
 oc adm policy add-scc-to-user anyuid -z default -n rag
 oc adm policy add-scc-to-user anyuid -z rag-nv-ingest -n rag
 oc adm policy add-scc-to-user anyuid -z rag-server -n rag
 ```
 
-### Step 6: Deploy the RAG Blueprint
+### Step 6: Deploy
 
-Install the Helm chart with customized configurations:
 ```bash
 helm upgrade --install rag ./ \
---username '$oauthtoken' \
---password "${NGC_API_KEY}" \
---set imagePullSecret.password=$NGC_API_KEY \
---set ngcApiSecret.password=$NGC_API_KEY \
---set nv-ingest.redis.image.repository=bitnamilegacy/redis \
---set nv-ingest.redis.image.tag=8.2.1-debian-12-r0
+  --username '$oauthtoken' \
+  --password "${NGC_API_KEY}" \
+  --set imagePullSecret.password=$NGC_API_KEY \
+  --set ngcApiSecret.password=$NGC_API_KEY \
+  --set nv-ingest.redis.image.repository=bitnamilegacy/redis \
+  --set nv-ingest.redis.image.tag=8.2.1-debian-12-r0
 ```
 
-The installation process takes approximately 15–25 minutes.
-
-Verify the output as below:
-```bash
-helm upgrade --install rag ./ \                                                          
---username '$oauthtoken' \
---password "${NGC_API_KEY}" \
---set imagePullSecret.password=$NGC_API_KEY \
---set ngcApiSecret.password=$NGC_API_KEY \
---set nv-ingest.redis.image.repository=bitnamilegacy/redis \
---set nv-ingest.redis.image.tag=8.2.1-debian-12-r0
-Release "rag" does not exist. Installing it now.
-coalesce.go:237: warning: skipped value for etcd.extraVolumeMounts: Not a table.
-coalesce.go:237: warning: skipped value for etcd.extraVolumes: Not a table.
-I0106 23:00:32.999018   14427 warnings.go:110] "Warning: spec.template.spec.containers[0].env[18]: hides previous definition of \"INGEST_LOG_LEVEL\", which may be dropped when using apply"
-I0106 23:00:32.999091   14427 warnings.go:110] "Warning: spec.template.spec.containers[0].env[47]: hides previous definition of \"VLM_CAPTION_ENDPOINT\", which may be dropped when using apply"
-I0106 23:00:32.999101   14427 warnings.go:110] "Warning: spec.template.spec.containers[0].env[65]: hides previous definition of \"OTEL_EXPORTER_OTLP_ENDPOINT\", which may be dropped when using apply"
-NAME: rag
-LAST DEPLOYED: Tue Jan  6 22:59:26 2026
-NAMESPACE: rag
-STATUS: deployed
-REVISION: 1
-```
+Installation takes approximately 15–25 minutes.
 
 ### Step 7: Verify deployment
 
-Check that all pods are running successfully:
 ```bash
 oc get pods -n rag
-```
-```
-NAME                                                         READY   STATUS    RESTARTS      AGE
-ingestor-server-65b858cf4d-c2bch                             1/1     Running   0             35h
-milvus-standalone-7588f6787f-tz4fs                           1/1     Running   3 (43h ago)   43h
-nv-ingest-ocr-75bc9c7bdd-g4l9l                               1/1     Running   0             43h
-rag-etcd-0                                                   1/1     Running   0             43h
-rag-frontend-75dbf7f8d9-6kvkq                                1/1     Running   0             43h
-rag-minio-5bb67c8d9f-pj2kh                                   1/1     Running   0             43h
-rag-nemoretriever-graphic-elements-v1-68bf49c49d-8nhxg       1/1     Running   0             34h
-rag-nemoretriever-page-elements-v2-86655669f4-wdh5z          1/1     Running   0             34h
-rag-nemoretriever-table-structure-v1-6c96bb8b66-mxrsj        1/1     Running   0             43h
-rag-nim-llm-0                                                1/1     Running   0             35h
-rag-nv-ingest-7c6c84cb5c-ctgwl                               1/1     Running   0             43h
-rag-nvidia-nim-llama-32-nv-embedqa-1b-v2-569467f68b-44mjn    1/1     Running   0             34h
-rag-nvidia-nim-llama-32-nv-rerankqa-1b-v2-7f8b6b6f9c-5pght   1/1     Running   0             34h
-rag-opentelemetry-collector-65d96849fc-t6m8d                 1/1     Running   0             35h
-rag-redis-master-0                                           1/1     Running   0             43h
-rag-redis-replicas-0                                         1/1     Running   0             43h
-rag-server-69ddffbfbb-dnsrk                                  1/1     Running   0             35h
-```
-
-Verify key services are available:
-```bash
 oc get svc -n rag
 ```
-```
-NAME                                TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                   AGE
-ingestor-server                     ClusterIP   172.X.X.X    <none>        8082/TCP                                                  43h
-milvus                              ClusterIP   172.X.X.X   <none>        19530/TCP,9091/TCP                                        43h
-nemoretriever-embedding-ms          ClusterIP   172.X.X.X    <none>        8000/TCP                                                  43h
-nemoretriever-graphic-elements-v1   ClusterIP   172.X.X.X   <none>        8000/TCP,8001/TCP                                         43h
-nemoretriever-page-elements-v2      ClusterIP   172.X.X.X    <none>        8000/TCP,8001/TCP                                         43h
-nemoretriever-ranking-ms            ClusterIP   172.X.X.X   <none>        8000/TCP                                                  43h
-nemoretriever-table-structure-v1    ClusterIP   172.X.X.X    <none>        8000/TCP,8001/TCP                                         43h
-nim-llm                             ClusterIP   172.X.X.X    <none>        8000/TCP                                                  35h
-nim-llm-sts                         ClusterIP   None             <none>        8000/TCP                                                  35h
-nv-ingest-ocr                       ClusterIP   172.X.X.X    <none>        8000/TCP,8001/TCP                                         43h
-rag-etcd                            ClusterIP   172.X.X.X   <none>        2379/TCP,2380/TCP                                         43h
-rag-etcd-headless                   ClusterIP   None             <none>        2379/TCP,2380/TCP                                         43h
-rag-frontend                        NodePort    172.X.X.X    <none>        3000:31273/TCP                                            43h
-rag-minio                           ClusterIP   172.X.X.X    <none>        9000/TCP                                                  43h
-rag-nv-ingest                       ClusterIP   172.X.X.X    <none>        7670/TCP                                                  43h
-rag-opentelemetry-collector         ClusterIP   172.X.X.X    <none>        6831/UDP,14250/TCP,14268/TCP,4317/TCP,4318/TCP,9411/TCP   35h
-rag-redis-headless                  ClusterIP   None             <none>        6379/TCP                                                  43h
-rag-redis-master                    ClusterIP   172.X.X.X   <none>        6379/TCP                                                  43h
-rag-redis-replicas                  ClusterIP   172.X.X.X     <none>        6379/TCP                                                  43h
-rag-server                          ClusterIP   172.X.X.X    <none>        8081/TCP                                                  43h
-rag-zipkin                          ClusterIP   172.X.X.X   <none>        9411/TCP                                                  35h
-```
 
-The deployment is complete when all pods show Running status and 1/1 or appropriate replica counts in the READY column.
+### Step 8: Port-forward to access the UI
 
-### Step 8: Port-Forwarding to Access Web User Interface:
-
-Run the following cmd to port-forward the RAG UI service to your local machine. Then access the RAG UI at the following URL: http://localhost:3000.
 ```bash
 oc port-forward -n rag service/rag-frontend 3000:3000 --address 0.0.0.0
 ```
 
-## Validation & Testing:
+Open `http://localhost:3000`.
 
-After deployment, you can verify the RAG system is operational using the UI:
+---
 
-1. Open a web browser and navigate to the RAG frontend.
+## Air-Gapped (Disconnected) Deployment
 
-<img width="1548" height="930" alt="image" src="https://github.com/user-attachments/assets/c46cef1f-287c-47f2-8d52-c6e8be88098e" />
+### v2 Air-Gap Path
 
-2. Create a new collection by clicking "Create New Collection" at the bottom left. Provide a name and upload your documents (for example, IBM Fusion HCI and SDS PDFs).
+Mirror all RAG images from `icr.io/cp/fsh/` to your internal registry, then follow the Software Catalog steps above. Apply an `ImageTagMirrorSet` — no chart value changes needed.
 
-3. Click Create Collection and wait for ingestion to complete. Depending on the document size, this may take a few minutes.
+```bash
+DEST=<YOUR-INTERNAL-REGISTRY>
 
-<img width="1544" height="930" alt="image" src="https://github.com/user-attachments/assets/6eea4a65-c709-48e4-a616-548a72069fc4" />
-
-4. In the home tab, click the Notifications icon on the top right.
-
-<img width="1540" height="1188" alt="image" src="https://github.com/user-attachments/assets/ae175c43-feaf-4b57-87e7-babb2ef227c4" />
-
-5. Monitor the logs of the <ingestor-server-xxxxx> pod in the rag namespace to check for any errors.
-
-<img width="1532" height="1172" alt="image" src="https://github.com/user-attachments/assets/e8bcfeb0-37db-4fdd-97a3-a8d1906305a6" />
-
-6. Wait for the process to complete: ingestion may take several minutes depending on the size and number of uploaded documents.
-
-7. Once ingestion completes, click the uploaded document in the left panel. The collection will appear in the bottom right panel, ready for querying.
-
-<img width="1546" height="612" alt="image" src="https://github.com/user-attachments/assets/2b581db8-ef5f-4069-af83-7f188cd156e4" />
-
-8. Now you can ask questions related to your document.
-
-<img width="1544" height="1180" alt="image" src="https://github.com/user-attachments/assets/b61874bb-db44-40f9-9c2a-7951339959e7" />
-
-9. Monitor the logs of the <rag-nim-llm-0> pod in the rag namespace to observe AI responses.
-
-## What we accomplished:
-
-- Deployed a production RAG system that allows users to query enterprise documents and get AI-generated answers grounded in their own data.
-- Successfully ran all RAG components (LLM inference, vector database, embeddings) on IBM Fusion HCI with stable performance.
-- Validated that the NVIDIA RAG Blueprint works on Red Hat OpenShift, making it accessible to organizations using enterprise Kubernetes.
-
-## Key Observations:
-
-- Model selection directly impacts GPU requirements: Nemotron Nano 8B suits L40S GPUs while larger models need more VRAM; evaluate model capabilities against available resources before deployment
-- Use Helm version 3.19.4 or less: other versions may have compatibility issues with the NVIDIA RAG Blueprint chart.
-
-## Troubleshooting common issues:
-
-### 1. Helm deployment fails with duplicate environment variable errors
-
-**Issue:** Deployment fails during Helm install with error:
-```
-Release "rag" does not exist. Installing it now.
-Error: failed to create typed patch object (rag/rag-nv-ingest; apps/v1, Kind=Deployment): errors:
-  .spec.template.spec.containers[name="nv-ingest"].env: duplicate entries for key [name="INGEST_LOG_LEVEL"]
-  .spec.template.spec.containers[name="nv-ingest"].env: duplicate entries for key [name="VLM_CAPTION_ENDPOINT"]
+skopeo copy docker://icr.io/cp/fsh/nvidia/blueprint/rag-server:2.6.0           docker://${DEST}/nvidia/blueprint/rag-server:2.6.0
+skopeo copy docker://icr.io/cp/fsh/nvidia/blueprint/ingestor-server:2.6.0      docker://${DEST}/nvidia/blueprint/ingestor-server:2.6.0
+skopeo copy docker://icr.io/cp/fsh/nvidia/blueprint/rag-frontend:2.6.0         docker://${DEST}/nvidia/blueprint/rag-frontend:2.6.0
+skopeo copy docker://icr.io/cp/fsh/nvidia/nemo-microservices/nv-ingest:26.3.0  docker://${DEST}/nvidia/nemo-microservices/nv-ingest:26.3.0
+skopeo copy docker://icr.io/cp/fsh/nvidia/redis:8.2.1                           docker://${DEST}/nvidia/redis:8.2.1
+skopeo copy docker://icr.io/cp/fsh/nvidia/seaweedfs:3.73                        docker://${DEST}/nvidia/seaweedfs:3.73
+skopeo copy docker://icr.io/cp/fsh/nvidia/elastic/elasticsearch:9.3.0           docker://${DEST}/nvidia/elastic/elasticsearch:9.3.0
+skopeo copy docker://icr.io/cp/fsh/nvidia/elastic/eck-operator:3.4.1            docker://${DEST}/nvidia/elastic/eck-operator:3.4.1
 ```
 
-**Resolution:** Verify Helm version is exactly 3.19.4 using helm version
+```yaml
+apiVersion: config.openshift.io/v1
+kind: ImageTagMirrorSet
+metadata:
+  name: ibm-fsh-itms-rag
+spec:
+  imageTagMirrors:
+  - mirrors:
+    - <YOUR-INTERNAL-REGISTRY>
+    source: icr.io/cp/fsh
+```
 
-### 2. Pods stuck in ImagePullBackOff
+```bash
+oc apply -f ibm-fsh-itms-rag.yaml
+```
 
-**Issue:** Pods show ImagePullBackOff status
+---
 
-**Resolution:** Verify container image names match the model list in NVIDIA NIM documentation and ensure that NGC secret is configured.
+## Validation & Testing
 
-### 3. Pods in CrashLoopBackOff
+After deployment, verify the RAG system is operational via the UI.
 
-**Issue:** Pods repeatedly crash with security errors
+1. Open a browser and navigate to the RAG frontend URL
+2. Click **Create New Collection** at the bottom left — provide a name and upload your documents (IBM Fusion HCI PDFs, manuals, etc.)
+3. Click **Create Collection** and wait for ingestion to complete. Monitor progress via the notifications icon (top right) or pod logs:
+```bash
+oc logs -f deployment/ingestor-server -n rag
+```
+4. Once ingestion finishes, click the uploaded collection in the left panel
+5. Ask questions related to your documents — responses will be grounded with citations from your source documents
+6. Monitor LLM response logs:
+```bash
+oc logs -f rag-nim-llm-0 -n rag
+```
 
-**Resolution:** Verify SCC permissions are applied to the correct service account using oc get scc and oc describe pod
+---
 
-## Further reading
+## Troubleshooting
 
-- To learn more about IBM Fusion HCI, explore the [IBM Fusion documentation](https://www.ibm.com/docs/en/fusion-hci-systems/2.12.0?topic=installing)
-- For detailed Helm deployment steps, refer to the [NVIDIA RAG Blueprint deployment guide](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/deploy-helm.md)
-- Model specifications and options are available in the [NVIDIA NIM documentation](https://docs.nvidia.com/nim/large-language-models/latest/_include/models.html)
-- Common deployment issues and solutions can be found in the [NVIDIA troubleshooting guide](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/troubleshooting.md)
-- To uninstall the deployment, follow the guidance [here](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/deploy-helm.md#uninstall-a-deployment)
+### Helm deployment fails with duplicate environment variable errors *(v1)*
+
+**Issue:**
+```
+Error: failed to create typed patch object: .spec.template.spec.containers[name="nv-ingest"].env: duplicate entries for key [name="INGEST_LOG_LEVEL"]
+```
+**Resolution:** Use exactly Helm v3.19.4. Other versions have compatibility issues with this chart.
+
+### Pods stuck in ImagePullBackOff *(v1)*
+
+**Resolution:** Verify container image names match the NVIDIA NIM documentation and ensure the NGC secret is configured correctly.
+
+### Pods in CrashLoopBackOff *(v1)*
+
+**Resolution:** Verify SCC permissions are applied to the correct service accounts:
+```bash
+oc get scc
+oc describe pod <pod-name> -n rag
+```
+
+---
+
+## What We Achieved
+
+- Deployed a production RAG system where users query enterprise documents and receive AI-generated answers grounded in their own data
+- Successfully ran all RAG components (LLM inference, vector database, embeddings, document ingestion) on IBM Fusion HCI with stable performance
+- v2 eliminates all NGC dependencies, simplifies OpenShift-specific configuration to a single flag (`openshift.enabled: true`), and replaces Milvus + MinIO with Elasticsearch + SeaweedFS for a reduced operational footprint
+- Architecture runs entirely on-premises on OpenShift — fully air-gap ready from day one
+
+---
+
+## Further Reading
+
+- [IBM Fusion documentation](https://www.ibm.com/docs/en/fusion-hci-systems)
+- [NVIDIA RAG Blueprint deployment guide](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/deploy-helm.md)
+- [NVIDIA NIM documentation](https://docs.nvidia.com/nim/large-language-models/latest/_include/models.html)
+- [NVIDIA troubleshooting guide](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/troubleshooting.md)
+- [IBM Tech Exchange Blog — RAG v1](https://community.ibm.com/community/user/blogs/hasrat-ali-arzoo/2026/01/21/deploying-nvidia-rag-on-ibm-fusion-hci)
+- [IBM Tech Exchange Blog — RAG v2](https://community.ibm.com/community/user/blogs/hasrat-ali-arzoo/2026/08/30/deploying-nvidia-rag-on-fusion-hci-v2)
+- To uninstall: follow the guidance [here](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/docs/deploy-helm.md#uninstall-a-deployment)
 
 **Acknowledgments:** Thanks to Sandeep Zende for his collaboration in validating this blueprint on IBM Fusion HCI.
