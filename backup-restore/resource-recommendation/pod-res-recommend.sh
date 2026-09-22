@@ -644,6 +644,22 @@ exclude_java_pods_lits = [
     "applicationsvc","backup-location-deployment","backuppolicy-deployment",
     "backup-service","job-manager"
 ]
+
+# ---- Full exclusion: Kafka / Strimzi-managed pods never get a recommendation ----
+# These are JVM workloads with startup-burst behaviour this tool has no model
+# for (see incident on guardian-kafka-cluster-entity-operator). Skip them
+# entirely rather than age-cap them — no recommendation, no patch entry,
+# regardless of age or --force.
+KAFKA_STRIMZI_NAME_PATTERNS = ("kafka","zookeeper","entity-operator","strimzi")
+STRIMZI_LABEL_KEYS = ("strimzi.io/cluster", "strimzi.io/kind", "strimzi.io/name")
+
+def is_kafka_strimzi_pod(p, name):
+    labels = (p.get("metadata", {}) or {}).get("labels", {}) or {}
+    if any(k in labels for k in STRIMZI_LABEL_KEYS):
+        return True
+    return any(pat in name for pat in KAFKA_STRIMZI_NAME_PATTERNS)
+
+excluded_kafka_pods = set()
 allowed_pods = set()
 for p in pods.get("items", []):
     if p.get("status", {}).get("phase") != "Running": continue
@@ -651,6 +667,11 @@ for p in pods.get("items", []):
     if not name: continue
     estart = effective_start(p)
     if not estart: continue
+
+    if is_kafka_strimzi_pod(p, name):
+        excluded_kafka_pods.add(name)
+        continue
+
     is_java_pod = any(excl in name for excl in exclude_java_pods_lits)
 
     if FORCE:
@@ -1345,6 +1366,12 @@ def build_console_df(df, selected, full):
 
 
 full = os.environ.get("CONSOLE_FULL", "0").lower() in ("1","true","yes","y")
+
+if excluded_kafka_pods:
+    print(f"\n[INFO] Excluded {len(excluded_kafka_pods)} Kafka/Strimzi-managed pod(s) "
+          f"from recommendations (no JVM startup-burst model — see notes):")
+    for n in sorted(excluded_kafka_pods):
+        print(f"  - {n}")
 
 print("\n=== Recommendations ===")
 df_console = build_console_df(df_recs, selected, full)
