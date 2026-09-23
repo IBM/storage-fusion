@@ -18,10 +18,11 @@ There are **two deployment modes**:
 
 1. [Architecture — ACM Fleet vs Single-Cluster](#architecture--acm-fleet-vs-single-cluster)
 2. [Dashboards Overview](#dashboards-overview)
-3. [Prerequisites](#prerequisites)
-4. [Single-Cluster Setup Guide](#single-cluster-setup-guide)
-5. [ACM Fleet Setup Guide](#acm-fleet-setup-guide)
-6. [Adding More Clusters to the ACM Fleet](#adding-more-clusters-to-the-acm-fleet)
+3. [GrafanaDashboard CR Files — What They Are and When to Use Them](#grafanadashboard-cr-files--what-they-are-and-when-to-use-them)
+4. [Prerequisites](#prerequisites)
+5. [Single-Cluster Setup Guide](#single-cluster-setup-guide)
+6. [ACM Fleet Setup Guide](#acm-fleet-setup-guide)
+7. [Adding More Clusters to the ACM Fleet](#adding-more-clusters-to-the-acm-fleet)
 7. [Dashboard Variable Reference](#dashboard-variable-reference)
 8. [Metrics & Documentation Reference](#metrics--documentation-reference)
 
@@ -161,6 +162,106 @@ The **Cluster** dropdown at the top filters all panels. It defaults to **All** (
 #### GPU SRE Deep Dive — Predictive Analysis & Composite Health
 
 ![GPU SRE Deep Dive — Predictive Analysis & Composite Health](screenshots/gpu-sre-predictive.png)
+
+---
+
+## GrafanaDashboard CR Files — What They Are and When to Use Them
+
+The repository ships two YAML files alongside the dashboard JSON:
+
+| File | Dashboard it deploys |
+|---|---|
+| `gpu-cluster-overview-cr.yaml` | GPU Cluster Overview (`uid: gpu-cluster-overview-v8`) |
+| `gpu-sre-deep-dive-cr.yaml` | GPU SRE Deep Dive (`uid: gpu-sre-dashboard-v5`) |
+
+### What kind of resource is this?
+
+Both files are `GrafanaDashboard` custom resources defined by the
+[Grafana Operator](https://grafana-operator.github.io/) (`apiVersion: grafana.integreatly.org/v1beta1`).
+
+```yaml
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: gpu-cluster-overview
+  namespace: grafana
+  labels:
+    app: grafana
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana-a   # must match your Grafana instance label
+  json: |
+    {
+      "title": "GPU Cluster Overview",
+      "uid": "gpu-cluster-overview-v8",
+      ...
+    }
+```
+
+The `spec.json` field holds the full Grafana dashboard JSON in plain, readable form
+(pretty-printed, not escaped). The Grafana Operator watches for these CRs and
+automatically provisions the dashboard into the matching Grafana instance — no
+manual import through the Grafana UI is needed.
+
+### When to use the CR files (vs. manual JSON import)
+
+| Situation | Use |
+|---|---|
+| **Grafana Operator is installed** on your OpenShift cluster (common with IBM Storage Fusion and OCP 4.12+) | `oc apply -f gpu-cluster-overview-cr.yaml` — dashboard appears automatically |
+| **ACM Observability** is your Grafana (Hub cluster) | Use `gpu-fleet-acm-dashboard.yaml` (ConfigMap) instead — the CR approach does not apply here |
+| **Standalone Grafana** without the operator (e.g., kube-prometheus-stack, vanilla Docker) | Use manual JSON import via the Grafana UI (Steps 3–4 in the Single-Cluster Setup Guide) |
+
+### How to apply the CR files
+
+Ensure the Grafana Operator is installed and a `Grafana` instance exists in the
+`grafana` namespace with the label `dashboards: grafana-a`. Then:
+
+```bash
+# Apply both dashboards at once
+oc apply -f gpu-cluster-overview-cr.yaml
+oc apply -f gpu-sre-deep-dive-cr.yaml
+```
+
+Verify they were picked up by the operator:
+
+```bash
+oc get grafanadashboard -n grafana
+```
+
+Expected output:
+
+```
+NAME                   AGE
+gpu-cluster-overview   30s
+gpu-sre-deep-dive      30s
+```
+
+The dashboards will appear in Grafana within seconds. If your Grafana instance uses
+a different namespace or a different `dashboards:` label value, edit the
+`metadata.namespace` and `spec.instanceSelector.matchLabels.dashboards` fields in
+each CR file before applying.
+
+### Structure of the `spec.json` field
+
+The `spec.json` field in each CR is the complete Grafana dashboard JSON — identical
+in content to the corresponding `.json` file, but embedded as a YAML literal block
+scalar (`|`) so it is human-readable and diff-friendly:
+
+```yaml
+spec:
+  json: |
+    {
+      "title": "GPU Cluster Overview",
+      "uid": "gpu-cluster-overview-v8",
+      "panels": [ ... ],
+      "templating": { ... }
+    }
+```
+
+This means you can edit dashboard properties (titles, thresholds, queries) directly
+in the CR file without needing a separate JSON file, and changes take effect as soon
+as you re-apply the CR.
 
 ---
 
