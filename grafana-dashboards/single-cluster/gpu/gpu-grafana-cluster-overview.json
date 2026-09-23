@@ -139,7 +139,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count(DCGM_FI_DEV_GPU_UTIL) or vector(0)",
+          "expr": "count(DCGM_FI_DEV_GPU_TEMP) or vector(0)",
           "instant": true,
           "legendFormat": "GPUs",
           "refId": "A"
@@ -635,7 +635,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "avg(DCGM_FI_DEV_FB_USED{Hostname=~\"$hostname\"} / (DCGM_FI_DEV_FB_USED{Hostname=~\"$hostname\"} + DCGM_FI_DEV_FB_FREE{Hostname=~\"$hostname\"}) * 100)",
+          "expr": "avg(DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\"} / (DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\"} + DCGM_FI_DEV_FB_FREE{hostname=~\"$hostname\"}) * 100)",
           "instant": true,
           "legendFormat": "Avg VRAM %",
           "refId": "A"
@@ -1712,7 +1712,7 @@
             },
             {
               "title": "Drill into GPU in SRE Dashboard",
-              "url": "/d/gpu-sre-dashboard-v5?var-hostname=${__data.fields.Node}&var-UUID=${__data.fields.GPU}&var-datasource=gpu-monitoring-prometheus",
+              "url": "/d/gpu-sre-dashboard-v5?var-hostname=${__data.fields.Node}&var-UUID=${__data.fields.GPU}&var-datasource=${datasource}",
               "targetBlank": true
             }
           ]
@@ -1791,7 +1791,7 @@
                 "alertname",
                 "severity",
                 "category",
-                "Hostname",
+                "hostname",
                 "UUID",
                 "alertstate"
               ]
@@ -1805,7 +1805,7 @@
               "alertname": "Alert",
               "severity": "Severity",
               "category": "Category",
-              "Hostname": "Node",
+              "hostname": "Node",
               "UUID": "GPU",
               "alertstate": "State"
             }
@@ -1819,7 +1819,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",Hostname=~\"$hostname|\"} or ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",category=~\"operator|platform\"}",
+          "expr": "ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",hostname=~\"$hostname|\"} or ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",category=~\"operator|platform\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -1894,7 +1894,7 @@
                 "value": [
                   {
                     "title": "Open SRE Deep Dive \u2192 ${__data.fields.Node}",
-                    "url": "/d/gpu-sre-dashboard-v5?var-hostname=${__data.fields.Node}&var-UUID=${__data.fields[\"GPU UUID\"]}&var-datasource=gpu-monitoring-prometheus",
+                    "url": "/d/gpu-sre-dashboard-v5?var-hostname=${__data.fields.Node}&var-UUID=${__data.fields[\"GPU UUID\"]}&var-datasource=${datasource}",
                     "targetBlank": true
                   }
                 ]
@@ -2090,7 +2090,7 @@
               "service": true
             },
             "renameByName": {
-              "Hostname": "Node",
+              "hostname": "Node",
               "UUID": "GPU UUID",
               "modelName": "Model",
               "Value #A": "Health Score",
@@ -2098,7 +2098,7 @@
               "Value #C": "VRAM %"
             },
             "indexByName": {
-              "Hostname": 0,
+              "hostname": 0,
               "UUID": 1,
               "modelName": 2,
               "Value #A": 3,
@@ -2252,9 +2252,9 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_ROW_REMAP_FAILURE",
+          "expr": "(DCGM_FI_DEV_ROW_REMAP_FAILURE > bool 0) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
           "instant": true,
-          "legendFormat": "{{Hostname}} {{device}}",
+          "legendFormat": "{{hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2337,9 +2337,9 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS",
+          "expr": "(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
           "instant": true,
-          "legendFormat": "{{Hostname}} {{device}}",
+          "legendFormat": "{{hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2484,7 +2484,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_GPU_UTIL{pod!=\"\"}",
+          "expr": "DCGM_FI_DEV_GPU_TEMP{pod!=\"\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -2573,8 +2573,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
-          "legendFormat": "{{Hostname}} {{device}}",
+          "expr": "DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "legendFormat": "{{hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2665,8 +2665,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
-          "legendFormat": "{{Hostname}} {{device}}",
+          "expr": "DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "legendFormat": "{{hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2746,8 +2746,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
-          "legendFormat": "{{Hostname}} {{device}}",
+          "expr": "DCGM_FI_DEV_POWER_USAGE{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "legendFormat": "{{hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2849,8 +2849,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:health_score:composite{UUID=~\"$UUID\",Hostname=~\"$hostname\"}",
-          "legendFormat": "{{Hostname}} {{UUID}}",
+          "expr": "gpu:health_score:composite{UUID=~\"$UUID\",hostname=~\"$hostname\"}",
+          "legendFormat": "{{hostname}} {{UUID}}",
           "refId": "A"
         }
       ],
@@ -3431,7 +3431,7 @@
                 "severity",
                 "category",
                 "alertstate",
-                "Hostname",
+                "hostname",
                 "UUID"
               ]
             }
@@ -3445,7 +3445,7 @@
               "severity": "Severity",
               "category": "Category",
               "alertstate": "State",
-              "Hostname": "Node",
+              "hostname": "Node",
               "UUID": "GPU"
             }
           }
@@ -3481,19 +3481,22 @@
       {
         "current": {
           "selected": false,
-          "text": "",
-          "value": ""
+          "text": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com",
+          "value": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com"
         },
         "description": "OCP Console base URL \u2014 set automatically by deploy.sh",
         "hide": 2,
         "label": "OCP Console",
         "name": "ocp_console",
-        "query": "",
+        "query": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com",
         "skipUrlSync": true,
         "type": "constant"
       },
       {
-        "current": {},
+        "current": {
+          "text": "Prometheus",
+          "value": "datasource"
+        },
         "hide": 0,
         "includeAll": false,
         "label": "Datasource",
@@ -3506,12 +3509,12 @@
         "regex": ""
       },
       {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "gpu-monitoring-prometheus"
+        "current": {
+          "text": "All",
+          "value": "$__all"
         },
-        "definition": "label_values(DCGM_FI_DEV_GPU_UTIL, Hostname)",
+        "datasource": "${datasource}",
+        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP, hostname)",
         "hide": 0,
         "includeAll": true,
         "allValue": ".*",
@@ -3520,7 +3523,7 @@
         "name": "hostname",
         "options": [],
         "query": {
-          "query": "label_values(DCGM_FI_DEV_GPU_UTIL, Hostname)",
+          "query": "label_values(DCGM_FI_DEV_GPU_TEMP, hostname)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -3529,12 +3532,12 @@
         "type": "query"
       },
       {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "gpu-monitoring-prometheus"
+        "current": {
+          "text": "All",
+          "value": "$__all"
         },
-        "definition": "label_values(DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$hostname\"}, UUID)",
+        "datasource": "${datasource}",
+        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\"}, UUID)",
         "hide": 0,
         "includeAll": true,
         "allValue": ".*",
@@ -3543,7 +3546,7 @@
         "name": "UUID",
         "options": [],
         "query": {
-          "query": "label_values(DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$hostname\"}, UUID)",
+          "query": "label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\"}, UUID)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

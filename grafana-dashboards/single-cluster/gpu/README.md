@@ -1,464 +1,613 @@
 # GPU Monitoring — Grafana Dashboards
 
-Two complementary Grafana dashboards for NVIDIA GPU observability on OpenShift with DCGM Exporter.
-They share a common data pipeline and are bidirectionally cross-linked, so an operator moves
-naturally from a fleet-level alert straight into a per-GPU forensic view.
+Grafana dashboards for NVIDIA GPU observability on IBM Storage Fusion and OpenShift.
+They cover composite health scoring, predictive failure detection, ECC memory errors, power & thermal
+telemetry, and forensic SRE deep-dive analysis — all powered by standard NVIDIA DCGM metrics scraped
+through Prometheus.
+
+There are **two deployment modes**:
+
+| Mode | Best for | Dashboard file |
+|---|---|---|
+| **Single-cluster** | One OpenShift cluster, Grafana runs locally | `gpu-grafana-cluster-overview.json` / `gpu-grafana-sre-dashboard.json` |
+| **ACM Fleet (multi-cluster)** | Many OpenShift clusters, central Grafana via ACM Observability | `gpu-fleet-acm-dashboard.yaml` |
 
 ---
 
-## How the Data Flows
+## Table of Contents
 
-```
-NVIDIA GPU Hardware
-       │
-       ▼
-DCGM Exporter  (DaemonSet, port 9400)
-  Exposes 39 raw hardware metrics defined in dcgm-metrics.csv
-       │
-       ▼
-Prometheus
-  Scrapes DCGM Exporter via ServiceMonitor (job: nvidia-dcgm-exporter)
-       │
-       ├──► PrometheusRule: gpu-alert-rules   (prometheus-alert-rules.yaml)
-       │       6 recording rules  ─ pre-compute health scores, failure
-       │                            probability, blast-radius counts
-       │      27 alert rules      ─ platform → node → hardware → degradation
-       │                            → predictive → impact → operator
-       │
-       ▼
-Grafana  (datasource uid: gpu-monitoring-prometheus)
-       │
-       ├──► GPU Cluster Overview   uid: gpu-cluster-overview-v8
-       │      Fleet health · alert triage · workload attribution · trends
-       │
-       └──► GPU SRE Deep Dive      uid: gpu-sre-dashboard-v5
-              Per-GPU forensics · ECC · thermal · power · PCIe · profiling
-```
-
-The two dashboards are **bidirectionally linked**.  
-Every fleet panel in Cluster Overview carries a **"SRE Deep Dive →"** button.  
-Every section in SRE Deep Dive carries a **"← Cluster Overview"** button.
+1. [Architecture — ACM Fleet vs Single-Cluster](#architecture--acm-fleet-vs-single-cluster)
+2. [Dashboards Overview](#dashboards-overview)
+3. [Prerequisites](#prerequisites)
+4. [Single-Cluster Setup Guide](#single-cluster-setup-guide)
+5. [ACM Fleet Setup Guide](#acm-fleet-setup-guide)
+6. [Adding More Clusters to the ACM Fleet](#adding-more-clusters-to-the-acm-fleet)
+7. [Dashboard Variable Reference](#dashboard-variable-reference)
+8. [Metrics & Documentation Reference](#metrics--documentation-reference)
 
 ---
 
-## Dashboard 1 — GPU Cluster Overview
+## Architecture — ACM Fleet vs Single-Cluster
 
-**File:** `grafana-cluster-overview.json`  
-**UID:** `gpu-cluster-overview-v8`  
-**Purpose:** Answer "is my GPU fleet healthy right now?" at a glance and navigate to the affected device.
+### Single-cluster flow
 
-### Template Variables
+```
+GPU Node (DCGM Exporter)
+        │  scrapes every 30 s
+        ▼
+OpenShift Prometheus (User Workload Monitoring)
+        │  queries
+        ▼
+Grafana (local) ──► gpu-grafana-cluster-overview.json
+                └──► gpu-grafana-sre-dashboard.json
+```
 
-| Variable | Label | Populated from |
-|---|---|---|
-| `$datasource` | Datasource | Prometheus datasource picker |
-| `$hostname` | Node | `label_values(DCGM_FI_DEV_GPU_UTIL, Hostname)` |
-| `$UUID` | GPU (UUID) | `label_values(DCGM_FI_DEV_GPU_UTIL{Hostname=~"$hostname"}, UUID)` |
+### ACM Fleet flow (multi-cluster)
 
-### Panel Sections
+```
+Managed Cluster A                Managed Cluster B           Managed Cluster N
+GPU Node (DCGM Exporter)         GPU Node (DCGM Exporter)    GPU Node (DCGM Exporter)
+        │                                │                           │
+OpenShift Prometheus (UWM)       OpenShift Prometheus (UWM)  OpenShift Prometheus (UWM)
+        │                                │                           │
+        └────────────────────────────────┴───────────────────────────┘
+                                         │
+                    ACM Observability Metrics Collector
+                    (endpoint-observability-operator on each managed cluster)
+                                         │  forwards allowed metrics
+                                         ▼
+                    Thanos Receive (Hub cluster)
+                    namespace: open-cluster-management-observability
+                                         │
+                    Thanos Store + Query Frontend
+                                         │  label added: cluster="<cluster-name>"
+                                         │  datasource UID: 000000001 (Observatorium)
+                                         ▼
+                    ACM Observability Grafana (Hub cluster)
+                    namespace: open-cluster-management-observability
+                                         │
+                                         ▼
+                    gpu-fleet-acm-dashboard.yaml  (ConfigMap → auto-synced)
+                    Dashboard: "GPU Fleet Overview — All Clusters"
+```
 
-#### ╌ GPU Fleet Health Summary
+**Key points about the ACM flow:**
 
-Stat and gauge panels that aggregate across the entire fleet. Values are sourced from
-recording rules rather than raw DCGM metrics so the maths is consistent with alert thresholds.
+- Metrics flow **from each managed cluster → Hub Thanos** automatically once the cluster joins ACM Observability.
+- ACM Thanos attaches a **`cluster` label** to every metric, set to the managed cluster's name (e.g., `local-cluster`, `prod-gpu-east`). All dashboard queries use `{cluster=~"$cluster"}` to filter.
+- The ACM Grafana uses a pre-provisioned datasource named **`Observatorium`** (hardcoded UID `000000001`). There is no user-facing datasource picker — this is by design.
+- The dashboard is delivered as a **ConfigMap** and auto-synced by the `grafana-dashboard-loader` sidecar every 30 seconds. You never need to import it manually.
+- The **metrics allowlist** (`configmap-observability-metrics-custom-allowlist.yaml`) controls which DCGM metrics are forwarded from managed clusters to the Hub Thanos. If a metric is missing from the allowlist, it will not appear in the Fleet dashboard.
 
-| Panel | Backing metric / rule | What it shows |
-|---|---|---|
-| Total GPU Count | `count(DCGM_FI_DEV_GPU_TEMP)` | GPUs currently visible to DCGM |
-| Fleet Avg GPU Health Score | `avg(gpu:health_score:composite)` | Fleet mean of the 0–100 composite score |
-| Healthy GPUs (score > 80) | `gpu:health_score:composite > 80` | Count of GPUs in the safe zone |
-| Warning GPUs (60–80) | `gpu:health_score:composite` 60–79 | Count approaching degradation |
-| Critical GPUs (< 60) | `gpu:health_score:composite < 60` | Count in high-risk / replacement zone |
-| Predicted Failures 24h | `gpu:failure_probability:24h > 70` | GPUs with > 70 % 24 h failure probability |
-| VRAM Utilisation | `DCGM_FI_DEV_FB_USED / (FB_USED + FB_FREE)` | Fleet VRAM bar gauge |
-| Avg GPU Temp (°C) | `avg(DCGM_FI_DEV_GPU_TEMP)` | Fleet average die temperature |
-| Avg Power Draw (W) | `avg(DCGM_FI_DEV_POWER_USAGE)` | Fleet average power draw |
-| Total VRAM / Used VRAM (GiB) | `DCGM_FI_DEV_FB_FREE` / `FB_USED` | Aggregate framebuffer capacity vs consumption |
-| DCGM Targets Up | `count(up{job="nvidia-dcgm-exporter"} == 1)` | Observability coverage — how many exporters are alive |
+---
 
-#### ╌ Alert Summary — GPU Fleet
+## Dashboards Overview
 
-Nine stat panels backed by `ALERTS{platform="gpu-monitoring", alertstate="firing"}`,
-each filtered by `category` or `severity` label. Every panel links to the Grafana Alerting
-list pre-filtered to that category.
+### 1. GPU Fleet Overview — All Clusters (ACM) (`gpu-fleet-acm-dashboard.yaml`)
 
-| Panel | Filter applied |
+**Dashboard UID:** `gpu-fleet-acm-v1`
+**Location in Grafana:** Dashboards → Custom → GPU Fleet Overview — All Clusters
+
+**What it shows:**
+
+| Section | Panels |
 |---|---|
-| Total Firing GPU Alerts | all `platform="gpu-monitoring"` |
-| Critical Alerts | `severity="critical"` |
-| Warning Alerts | `severity="warning"` |
-| Node Alerts | `category="node"` |
-| Hardware Alerts | `category=~"hardware\|burnout\|xid\|ecc"` |
-| Thermal / Power Alerts | `category=~"thermal\|power\|pcie"` |
-| Memory Alerts | `category="memory"` |
-| Predictive Alerts | `category="predictive"` |
-| Impact Alerts | `category="impact_analysis"` |
+| Fleet Health Summary | Total GPUs across all clusters, Fleet Avg Health Score (gauge), Avg GPU Utilisation %, Avg GPU Temp (°C), Avg Power Draw (W), Active DBE ECC Errors |
+| Per-Cluster GPU Utilisation & Health | GPU Utilisation % over time per cluster, GPU Composite Health Score per cluster |
+| Framebuffer Memory (VRAM) | VRAM Used (GiB) per cluster, VRAM Utilisation % per cluster |
+| Power & Thermal | Power Draw (W) per cluster, GPU Temperature (°C) per cluster |
+| ECC Memory Health | DBE Volatile Total per cluster, SBE Volatile Total per cluster |
+| GR Engine & Tensor Core Activity | GR Engine Active (0–1) per cluster, Tensor Core Active (0–1) per cluster |
+| Predictive Failure Risk | 24h Failure Probability % per cluster, PCIe Replay Counter Rate per cluster |
 
-**All Firing GPU Alerts** — a live table below the stats showing every firing alert with
-per-row links to drill into the SRE Deep Dive for the affected node/UUID.
+The **Cluster** dropdown at the top filters all panels. It defaults to **All** (all managed clusters shown together). Select a single cluster to narrow down.
 
-#### ╌ Per-GPU Health Matrix
+#### GPU Fleet Overview — Fleet Health Summary & VRAM
 
-A table panel that renders one row per GPU across the fleet, showing:
-- `gpu:health_score:composite`
-- `gpu:failure_probability:24h`
-- Current VRAM utilisation
+![GPU Fleet Overview — Fleet Health Summary](screenshots/gpu-fleet-acm-health-summary.png)
 
-Clicking any row opens the SRE Deep Dive scoped to that node.
+#### GPU Fleet Overview — ECC, GR Engine & Predictive Failure Risk
 
-#### ╌ Hardware Failure Indicators
+![GPU Fleet Overview — ECC & Predictive Risk](screenshots/gpu-fleet-acm-ecc-predictive.png)
 
-Fleet-wide view of the two irreversible memory failure signals:
+---
 
-| Panel | Metric | Condition |
+### 2. GPU Cluster Overview (`gpu-grafana-cluster-overview.json`)
+
+**Dashboard UID:** `gpu-cluster-overview-v8`
+
+**What it shows:**
+- A fleet-wide health summary across every GPU node in your cluster
+- 24-hour predictive failure risk scores for each GPU
+- Active GPU alerts grouped by severity (critical, warning, node-level)
+- Workload blast-radius impact — which pods are running on at-risk or failed GPU nodes
+- Fleet time-series trends for utilisation, temperature, power draw, and composite health
+
+#### GPU Cluster Overview — Fleet Health & Alert Summary
+
+![GPU Cluster Overview — Fleet Health & Alert Summary](screenshots/gpu-cluster-overview-health.png)
+
+#### GPU Cluster Overview — Fleet Time-Series Trends & Workload Impact
+
+![GPU Cluster Overview — Fleet Time-Series Trends & Workload Impact](screenshots/gpu-cluster-overview-trends.png)
+
+---
+
+### 3. GPU SRE Deep Dive (`gpu-grafana-sre-dashboard.json`)
+
+**Dashboard UID:** `gpu-sre-dashboard-v5`
+
+**What it shows:**
+- Per-GPU composite health score and 24 h failure probability gauge
+- Power draw, power instability (15-minute rolling standard deviation), and thermal throttle events
+- GPU compute utilisation, GR engine activity, Tensor Core activity, and DRAM bandwidth
+- VRAM used / free / utilisation percentage over time
+- ECC memory health — row remap failures, uncorrectable/correctable remapped rows, SBE/DBE volatile counts
+- PCIe replay counter rate and TX/RX bandwidth
+- Platform health indicators: DCGM scrape success rate, exporter targets, and active alert list
+
+#### GPU SRE Deep Dive — GPU Utilisation & VRAM Panels
+
+![GPU SRE Deep Dive — GPU Utilisation & VRAM](screenshots/gpu-sre-vram-utilisation.png)
+
+#### GPU SRE Deep Dive — Power, Compute & VRAM Memory Telemetry
+
+![GPU SRE Deep Dive — Power & Memory](screenshots/gpu-sre-power-memory.png)
+
+#### GPU SRE Deep Dive — PCIe Bus, ECC Memory Health & Platform Status
+
+![GPU SRE Deep Dive — ECC & PCIe](screenshots/gpu-sre-ecc-pcie.png)
+
+#### GPU SRE Deep Dive — Predictive Analysis & Composite Health
+
+![GPU SRE Deep Dive — Predictive Analysis & Composite Health](screenshots/gpu-sre-predictive.png)
+
+---
+
+## Prerequisites
+
+### Common prerequisites (both modes)
+
+#### 1. NVIDIA GPU Operator and DCGM Exporter must be running
+
+The dashboards rely on NVIDIA DCGM (Data Center GPU Manager) metrics.
+The GPU Operator automatically installs DCGM Exporter on every GPU node,
+which exposes hundreds of GPU counters in Prometheus format.
+
+**Check on each cluster:**
+
+```bash
+oc get pods -n nvidia-gpu-operator
+```
+
+All pods should be `Running`. If not installed:
+[NVIDIA GPU Operator on OpenShift](https://docs.nvidia.com/datacenter/cloud-native/openshift/latest/index.html)
+
+---
+
+#### 2. OpenShift User Workload Monitoring must be enabled
+
+**Check:**
+
+```bash
+oc get configmap cluster-monitoring-config -n openshift-monitoring -o yaml | grep enableUserWorkload
+```
+
+**Enable if missing:**
+
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+EOF
+```
+
+---
+
+### Additional prerequisites for ACM Fleet mode
+
+#### 3. Red Hat Advanced Cluster Management (ACM) must be installed on the Hub cluster
+
+ACM is what joins managed clusters together and routes their metrics to a central Thanos store.
+
+**Check:**
+
+```bash
+oc get multiclusterhub -A
+```
+
+#### 4. ACM Observability must be enabled
+
+ACM Observability is a separate component that must be explicitly enabled. It creates the
+`open-cluster-management-observability` namespace and deploys Thanos (receive, store, query)
+and a central Grafana instance.
+
+**Check:**
+
+```bash
+oc get multiclusterobservability observability -o jsonpath='{.status.conditions[*].type}'
+```
+
+You should see `Ready`. If Observability is not enabled, follow:
+[Enabling observability](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.12/html/observability/enabling-observability-service)
+
+#### 5. The metrics allowlist ConfigMap must be applied
+
+ACM Observability only forwards metrics that are on an allowlist. The file
+`configmap-observability-metrics-custom-allowlist.yaml` in this repository adds all required
+DCGM metrics to that allowlist.
+
+**Apply it once on the Hub cluster:**
+
+```bash
+oc apply -f configmap-observability-metrics-custom-allowlist.yaml
+```
+
+**Check it was accepted:**
+
+```bash
+oc get configmap observability-metrics-custom-allowlist \
+  -n open-cluster-management-observability -o yaml
+```
+
+Without this step, Thanos will have no DCGM metrics and every panel in the Fleet dashboard
+will show "No data".
+
+---
+
+## Single-Cluster Setup Guide
+
+Follow these steps in order on the target OpenShift cluster.
+
+### Step 1 — Apply Prometheus alert and recording rules
+
+```bash
+oc apply -f gpu-rules.yaml -n openshift-monitoring
+```
+
+Wait 30 seconds then verify:
+
+```bash
+oc get prometheusrule gpu-alert-rules -n openshift-monitoring
+```
+
+### Step 2 — Configure a Prometheus datasource in Grafana
+
+1. Open Grafana → **Connections** → **Data sources** → **Add data source** → **Prometheus**.
+2. URL: `https://thanos-querier.openshift-monitoring.svc.cluster.local:9091`
+3. Under **Auth**: enable **Skip TLS verify** (or add the cluster CA) and add a Bearer token.
+4. Click **Save & test**.
+
+### Step 3 — Import the GPU Cluster Overview dashboard
+
+1. Grafana → **Dashboards** → **New** → **Import**.
+2. Upload `gpu-grafana-cluster-overview.json`.
+3. Map the `${datasource}` field to your Prometheus datasource.
+4. Click **Import**.
+
+### Step 4 — Import the GPU SRE Deep Dive dashboard
+
+1. Grafana → **Dashboards** → **New** → **Import**.
+2. Upload `gpu-grafana-sre-dashboard.json`.
+3. Map the `${datasource}` field to your Prometheus datasource.
+4. Click **Import**.
+
+### Step 5 — Set time range and verify variables
+
+- Default: **Last 3 hours**, auto-refresh **30s**.
+- Use the **Node** and **GPU (UUID)** dropdowns to filter the SRE Deep Dive dashboard.
+- If dropdowns are empty: check DCGM Exporter pods and wait 2–3 minutes for Prometheus to scrape.
+
+---
+
+## ACM Fleet Setup Guide
+
+All steps run on the **Hub cluster** unless stated otherwise.
+
+### Step 1 — Apply the metrics allowlist
+
+This tells ACM Observability which DCGM metrics to forward from every managed cluster:
+
+```bash
+oc apply -f configmap-observability-metrics-custom-allowlist.yaml
+```
+
+Verify:
+
+```bash
+oc get configmap observability-metrics-custom-allowlist \
+  -n open-cluster-management-observability
+```
+
+### Step 2 — Deploy the Fleet dashboard ConfigMap
+
+The dashboard is delivered as a Kubernetes ConfigMap. The ACM Grafana sidecar
+(`grafana-dashboard-loader`) automatically detects ConfigMaps with the label
+`grafana-custom-dashboard: "true"` in the `open-cluster-management-observability`
+namespace and syncs them into Grafana every 30 seconds.
+
+```bash
+oc apply -f gpu-fleet-acm-dashboard.yaml
+```
+
+You do **not** need to log in to Grafana or use the Import UI. The dashboard appears
+automatically under **Dashboards → Custom → GPU Fleet Overview — All Clusters**.
+
+**Verify the sync happened:**
+
+```bash
+oc -n open-cluster-management-observability logs \
+  $(oc -n open-cluster-management-observability get pods -l app=grafana \
+    -o jsonpath='{.items[0].metadata.name}') \
+  -c grafana-dashboard-loader | grep "gpu-fleet"
+```
+
+You should see:
+
+```
+"syncing dashboard" name="gpu-fleet-acm-dashboard"
+"dashboard created/updated successfully" name="gpu-fleet-acm-dashboard" uid="gpu-fleet-acm-v1"
+```
+
+### Step 3 — Verify managed clusters are sending GPU metrics
+
+Confirm GPU metrics are arriving in Thanos from your clusters:
+
+```bash
+oc -n open-cluster-management-observability exec \
+  $(oc -n open-cluster-management-observability get pods -l app.kubernetes.io/name=thanos-query \
+    -o jsonpath='{.items[0].metadata.name}') -- \
+  sh -c 'curl -s "http://localhost:9090/api/v1/query?query=count(DCGM_FI_DEV_GPU_TEMP)"'
+```
+
+A result with a non-zero count confirms metrics are flowing. Also check which clusters
+are contributing:
+
+```bash
+oc -n open-cluster-management-observability exec \
+  $(oc -n open-cluster-management-observability get pods -l app.kubernetes.io/name=thanos-query \
+    -o jsonpath='{.items[0].metadata.name}') -- \
+  sh -c 'curl -s "http://localhost:9090/api/v1/label/cluster/values"'
+```
+
+Each cluster name listed here will appear as a selectable option in the
+**Cluster** dropdown on the Fleet dashboard.
+
+### Step 4 — Open the Fleet dashboard in Grafana
+
+Navigate to the ACM Grafana instance:
+
+```
+https://grafana-open-cluster-management-observability.apps.<hub-cluster-domain>/
+```
+
+Go to **Dashboards → Custom → GPU Fleet Overview — All Clusters**.
+
+- The **Cluster** filter at the top defaults to **All** (shows data from every managed cluster).
+- Select a specific cluster to isolate its panels.
+- No datasource dropdown is shown — the dashboard is pre-wired to the `Observatorium`
+  datasource (UID `000000001`) provisioned automatically by ACM Observability.
+
+---
+
+## Adding More Clusters to the ACM Fleet
+
+When a new OpenShift cluster with GPU nodes is added to ACM, follow these steps to have
+its GPU metrics appear in the Fleet dashboard automatically.
+
+### On the new managed cluster
+
+**Step A — Install the GPU Operator and DCGM Exporter**
+
+```bash
+# On the new managed cluster
+oc get pods -n nvidia-gpu-operator
+```
+
+All pods must be `Running` before metrics will be available.
+
+**Step B — Enable User Workload Monitoring**
+
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+EOF
+```
+
+### On the Hub cluster
+
+**Step C — Import the new cluster into ACM**
+
+If the cluster is not already managed by ACM, create a `ManagedCluster` resource or use
+the ACM Console (**Infrastructure → Clusters → Import cluster**).
+
+Once the cluster status shows `Ready`, the ACM Observability endpoint agent
+(`endpoint-observability-operator`) is automatically deployed onto it.
+
+**Step D — Verify the allowlist is still in place**
+
+The allowlist ConfigMap only needs to be applied once. Confirm it is present:
+
+```bash
+oc get configmap observability-metrics-custom-allowlist \
+  -n open-cluster-management-observability
+```
+
+If it is missing (e.g., after a Hub cluster rebuild), reapply:
+
+```bash
+oc apply -f configmap-observability-metrics-custom-allowlist.yaml
+```
+
+**Step E — Confirm the new cluster's metrics are flowing**
+
+Wait 2–5 minutes after the cluster joins ACM Observability, then query Thanos:
+
+```bash
+oc -n open-cluster-management-observability exec \
+  $(oc -n open-cluster-management-observability get pods -l app.kubernetes.io/name=thanos-query \
+    -o jsonpath='{.items[0].metadata.name}') -- \
+  sh -c 'curl -s "http://localhost:9090/api/v1/label/cluster/values"'
+```
+
+The new cluster name should appear in the returned list. As soon as it does, the
+**Cluster** dropdown in the Fleet dashboard will include it — **no dashboard changes
+are needed**.
+
+### How the `cluster` label works
+
+ACM Observability's metrics collector on each managed cluster attaches a `cluster` label
+(set to the ACM cluster name) to every forwarded metric before shipping it to Hub Thanos.
+The Fleet dashboard's `cluster` template variable runs:
+
+```promql
+label_values(DCGM_FI_DEV_GPU_TEMP, cluster)
+```
+
+This dynamically discovers all cluster names at dashboard load time. New clusters appear
+automatically without any modification to the dashboard ConfigMap.
+
+---
+
+## What Was Done — Summary of Changes
+
+This section documents the fixes applied to make the ACM Fleet dashboard work, for
+anyone troubleshooting a similar "No data" issue in the future.
+
+### Problem 1 — Wrong cluster label (`_id` instead of `cluster`)
+
+**Symptom:** Every panel showed "No data". The `Cluster` variable dropdown was empty.
+
+**Root cause:** ACM Observability attaches the label `cluster` (not `_id`) to all
+forwarded metrics. The original dashboard used `{cluster=~"$cluster"}` correctly, but
+an incorrect fix changed it to `{_id=~"$cluster"}`. The label `_id` does not exist on
+DCGM metrics in this environment — confirmed by directly querying Thanos:
+
+```bash
+# Returns empty — _id label does not exist
+curl "http://localhost:9090/api/v1/label/_id/values"
+# {"status":"success","data":[]}
+
+# Returns "local-cluster" — this is the correct label
+curl "http://localhost:9090/api/v1/label/cluster/values"
+# {"status":"success","data":["local-cluster"]}
+```
+
+**Fix:** All 19 queries in the dashboard use `{cluster=~"$cluster"}` and `by (cluster)`.
+
+---
+
+### Problem 2 — `${datasource}` variable not resolved (primary "No data" cause)
+
+**Symptom:** Even with the correct `cluster` label, all panels showed "No data" and no
+datasource dropdown appeared in the Grafana toolbar.
+
+**Root cause:** The original dashboard defined a `"type": "datasource"` template variable
+that generated a `${datasource}` picker. ACM Observability's Grafana deployment **suppresses
+this variable type** — it never renders the dropdown and the variable value stays blank.
+With `"uid": "${datasource}"` unresolved, every panel query and the `cluster` variable query
+all targeted a blank datasource, returning nothing.
+
+ACM Grafana pre-provisions exactly one datasource via the `grafana-datasources` secret:
+
+```yaml
+name: Observatorium
+type: prometheus
+uid: "000000001"
+url: http://rbac-query-proxy.open-cluster-management-observability.svc.cluster.local:8080
+isDefault: true
+```
+
+**Fix:** Removed the `datasource` template variable entirely. Every panel and the `cluster`
+query variable now use `"uid": "000000001"` directly. The dashboard works immediately on
+load with no user interaction.
+
+---
+
+### Problem 3 — Non-existent recording rules
+
+**Symptom:** Panels for "Fleet Avg GPU Health Score", "GPU Composite Health Score", and
+"24h Failure Probability %" were empty even when other panels had data.
+
+**Root cause:** Those panels referenced recording rules (`gpu:health_score:composite`,
+`gpu:failure_probability:24h`) that exist in `gpu-rules.yaml` for the single-cluster
+deployment but are **not deployed in the ACM Observability environment**.
+
+**Fix:** Both recording rules were replaced with equivalent inline PromQL expressions
+using only base DCGM metrics that are confirmed present in Thanos:
+
+```promql
+# Health score (0–100): starts at 100, deducted by temperature excess and ECC errors
+clamp_max(
+  100
+  - clamp_max(avg by (cluster) (DCGM_FI_DEV_GPU_TEMP) - 30, 70)
+  - clamp_min(avg by (cluster) (DCGM_FI_DEV_ECC_DBE_VOL_TOTAL), 0) * 10
+, 100)
+
+# Failure probability (0–100%): weighted score from over-temp, ECC DBE increases, PCIe replays
+clamp_max(clamp_min(
+  clamp_min(avg by (cluster) (DCGM_FI_DEV_GPU_TEMP) - 80, 0) * 2
+  + clamp_min(avg by (cluster) (increase(DCGM_FI_DEV_ECC_DBE_VOL_TOTAL[24h])), 0) * 5
+  + clamp_min(avg by (cluster) (rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[1h])) * 3600, 0)
+, 0), 100)
+```
+
+---
+
+## Dashboard Variable Reference
+
+### ACM Fleet dashboard variables
+
+| Variable | Type | Purpose |
 |---|---|---|
-| Row Remap Failure Flag — All GPUs | `DCGM_FI_DEV_ROW_REMAP_FAILURE` | `= 1` → spare DRAM rows exhausted, GPU producing corrupted output **now** |
-| Uncorrectable Remapped Rows — All GPUs | `DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS` | `> 0` → permanent DRAM damage, GPU replacement required |
+| `cluster` | Query | Lists all cluster names from `label_values(DCGM_FI_DEV_GPU_TEMP, cluster)`. Populated automatically as clusters join ACM. Multi-select with **All** default. |
 
-#### ╌ Workload Attribution — GPU Utilisation by Pod
+The datasource is **not** a variable — it is hardcoded to UID `000000001` (`Observatorium`).
 
-A table of `DCGM_FI_DEV_GPU_UTIL` joined with Kubernetes metadata (`namespace`, `pod`, `device`).
-Identifies exactly which workloads are consuming GPU resources at the time of an incident.
+### Single-cluster dashboard variables
 
-#### ╌ Fleet Time-Series Trends
+| Variable | Type | Purpose |
+|---|---|---|
+| `datasource` | Datasource picker | Selects the Prometheus source for all queries |
+| `hostname` | Query | Lists all GPU node hostnames scraped by DCGM |
+| `UUID` | Query | Lists all GPU UUIDs on the selected node |
+| `ocp_console` | Constant | Base URL of the OpenShift Console (used for deep-link icons) |
 
-Four time-series panels drawing all GPUs simultaneously — useful for distinguishing a
-cluster-wide event from a single-device fault:
+To set `ocp_console`: Dashboard **Settings** → **Variables** → **ocp_console** → set to
+`https://console-openshift-console.apps.<your-cluster-domain>` → **Update** → **Save dashboard**.
 
-| Panel | Metric |
+---
+
+## Metrics & Documentation Reference
+
+All telemetry is collected from standard NVIDIA DCGM metrics (`DCGM_FI_DEV_*` and `DCGM_FI_PROF_*`).
+
+| Metric | What it measures |
 |---|---|
-| GPU Utilisation — All Devices | `DCGM_FI_DEV_GPU_UTIL` |
-| GPU Temperature — All Devices | `DCGM_FI_DEV_GPU_TEMP` |
-| Power Draw — All Devices | `DCGM_FI_DEV_POWER_USAGE` |
-| Composite Health Score Trend | `gpu:health_score:composite` |
-
-#### ╌ Workload Impact
-
-Derived from recording rules; shows the blast-radius of hardware failures on running pods.
-
-| Panel | Recording rule | Linked alert |
-|---|---|---|
-| Pods on Failed GPU Nodes | `gpu:impact:pod_count_on_failed_nodes` | `WorkloadsOnFailedGPUNodes` |
-| Pods on At-Risk GPU Nodes (> 30 % 24 h fail prob) | `gpu:impact:pod_count_on_at_risk_nodes` | `WorkloadsOnAtRiskGPUNodes` |
-| DCGM Scrape Success | `up{job="nvidia-dcgm-exporter"}` | `GPUDCGMScrapeDegraded` |
-
-#### ╌ Fusion Gap Analysis
-
-A comparison section showing how many custom-field alerts (ECC / XID / PCIe / Memory / Thermal)
-are firing versus baseline platform/operator alerts. Used to validate observability coverage
-beyond a default NVIDIA out-of-box setup.
-
-#### All GPU Alerts — Live State
-
-Full table of every alert in any state (`firing`, `pending`, `inactive`) with links to
-filter the Grafana Alerting UI to the exact rule or firing subset.
-
----
-
-## Dashboard 2 — GPU SRE Deep Dive
-
-**File:** `grafana-sre-dashboard.json`  
-**UID:** `gpu-sre-dashboard-v5`  
-**Purpose:** Root-cause analysis for a single GPU. Scoped to one node + UUID via template
-variables. Always reached from the Cluster Overview via a drill-down link.
-
-### Template Variables
-
-| Variable | Label | Populated from |
-|---|---|---|
-| `$datasource` | Datasource | Prometheus datasource picker |
-| `$hostname` | Node | `label_values(DCGM_FI_DEV_GPU_UTIL, Hostname)` |
-| `$UUID` | GPU (UUID) | `label_values(DCGM_FI_DEV_GPU_UTIL{Hostname=~"$hostname"}, UUID)` |
-
-### Panel Sections
-
-#### ╌ Predictive Analysis & Composite Health
-
-The top row surfaces the computed risk scores before any raw metric, so an operator gets
-an immediate severity read the moment they land on the dashboard.
-
-| Panel | Type | Metric / rule | Threshold colours |
-|---|---|---|---|
-| Composite Health Score | Gauge | `gpu:health_score:composite` | Red < 60 · Orange 60–79 · Yellow 80–94 · Green ≥ 95 |
-| 24 h Failure Probability % | Gauge | `gpu:failure_probability:24h` | Green < 20 · Orange ≥ 20 · Red ≥ 50 |
-| Throttle Pressure Score | Stat | `gpu:throttle:pressure_score` | Green = No Throttle · Orange = Moderate · Red = High |
-| SM Clock (MHz) | Time-series | `DCGM_FI_DEV_SM_CLOCK` | Sudden drops indicate active clock throttling |
-| Memory Clock (MHz) | Time-series | `DCGM_FI_DEV_MEM_CLOCK` | Memory clock frequency trend |
-| Health Score Trend | Time-series | `gpu:health_score:composite` | Historical score trajectory |
-| Failure Probability Trend | Time-series | `gpu:failure_probability:24h` | Rising curve = proactive drain signal |
-| Clock Throttle Reasons (bitmask) | Time-series | `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS` | Non-zero = throttle reason active |
-
-**Health score formula** (recording rule `gpu:health_score:composite`):
-
-```
-score = 100
-  − thermal_penalty    × 0.25   (die temp ramp 65–95 °C + 15 m rising trend)
-  − ecc_memory_penalty × 0.30   (row remap failure + uncorrectable rows + DBE errors)
-  − power_penalty      × 0.18   (15 m stddev instability + rolling avg delta)
-  − pcie_penalty       × 0.12   (PCIe replay rate + 15 m vs 1 h trend)
-  − xid_penalty        × 0.15   (XID errors in last 1 h and last 30 m)
-```
-
-**24 h failure probability formula** (recording rule `gpu:failure_probability:24h`):
-
-```
-probability = 0
-  + thermal_trend  up to 30   (30 m avg temp − 2 h avg temp, normalised over 8 °C)
-  + pcie_replay    up to 25   (30 m replay rate / 10 × 25)
-  + memory_remap   up to 15   (uncorrectable rows × 12 + remap failure flag × 15)
-  + power_instab   up to 10   (15 m stddev − 20 W, normalised over 80 W)
-  + ecc_errors     up to 20   (SBE rate × 5 + DBE volatile total × 20)
-```
-
-#### ╌ Active Alerts — This GPU / Node
-
-A table of `ALERTS{Hostname=~"$hostname", platform="gpu-monitoring"}` with per-row links to:
-- The firing alert in Grafana Alerting
-- The alert rule definition
-
-**Firing GPU Alerts — All (fleet-level)**: A second table for alerts that have no `Hostname`
-label (e.g. `WorkloadsOnFailedGPUNodes`, `GPUPlatformRecordingRulesDown`).
-
-#### ╌ Temperature
-
-| Panel | Metric | Linked alert | Fires when |
-|---|---|---|---|
-| GPU Core Temperature (°C) | `DCGM_FI_DEV_GPU_TEMP` | `GPUOverheating` | > 85 °C for 5 m |
-| Memory (HBM) Temperature (°C) | `DCGM_FI_DEV_MEMORY_TEMP` | — | Reference only |
-
-#### ╌ Power & Energy
-
-| Panel | Metric | Linked alert | Fires when |
-|---|---|---|---|
-| Power Draw (W) | `DCGM_FI_DEV_POWER_USAGE` | `GPUPowerAnomaly` | > 350 W or 10 m stddev > 50 W |
-| Power Instability — 15 m Rolling Stddev | `stddev_over_time(DCGM_FI_DEV_POWER_USAGE[15m])` | feeds health score | — |
-
-#### ╌ GPU Utilisation & Profiling
-
-| Panel | Metric | Description |
-|---|---|---|
-| GPU Compute Utilisation (%) | `DCGM_FI_DEV_GPU_UTIL` | SM occupancy — workload intensity |
-| GR Engine Active & Tensor Core Active (0–1) | `DCGM_FI_PROF_GR_ENGINE_ACTIVE` / `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` | Profiling counters for AI / HPC workload characterisation |
-| DRAM Bandwidth Active (0–1) | `DCGM_FI_PROF_DRAM_ACTIVE` | Memory bus saturation |
-
-#### ╌ Framebuffer Memory (VRAM)
-
-| Panel | Metric | Unit |
-|---|---|---|
-| VRAM Used (GiB) | `DCGM_FI_DEV_FB_USED / 1024` | GiB |
-| VRAM Free (GiB) | `DCGM_FI_DEV_FB_FREE / 1024` | GiB |
-| VRAM Utilisation % | `FB_USED / (FB_USED + FB_FREE) × 100` | % |
-
-#### ╌ PCIe Bus
-
-| Panel | Metric | Linked alert | Fires when |
-|---|---|---|---|
-| PCIe Replay Counter Rate (/s) | `rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[30m])` | `GPUPCIeReplayRateHigh` | > 5 /s sustained 30 m |
-| PCIe TX / RX Bandwidth (bytes/s) | `DCGM_FI_PROF_PCIE_TX_BYTES` / `PCIE_RX_BYTES` | — | Throughput reference |
-| Clock Throttle Reasons Over Time | `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS` | `GPUThermalThrottlingSustained` | Bitmask non-zero |
-
-#### ╌ ECC Errors & Memory Health
-
-The most critical section for hardware failure diagnosis. Each panel is directly linked to its
-alert rule so an operator can jump from a visual spike straight to the firing alert.
-
-| Panel | Metric | Linked alert | Meaning |
-|---|---|---|---|
-| Row Remap Failure (0 = OK · 1 = Failed) | `DCGM_FI_DEV_ROW_REMAP_FAILURE` | `GPURowRemapFailure` | **Spare DRAM rows exhausted — GPU producing corrupted output now** |
-| Uncorrectable Remapped Rows | `DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS` | `GPUUncorrectableRemappedRows` | Permanently damaged DRAM row count — replacement required |
-| Correctable Remapped Rows | `DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS` | `GPUCorrectableRemapAccelerating` | Accelerating rate predicts future `ROW_REMAP_FAILURE` |
-| ECC SBE Volatile Total | `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL` | `GPUMemoryDegradationCritical` | Single-bit ECC errors since last driver reset |
-| ECC DBE Volatile Total | `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL` | `GPUDoubleBitECCDetected` | **Uncorrectable double-bit errors — workload outputs may be wrong** |
-| XID Errors (counter) | `DCGM_FI_DEV_XID_ERRORS` | `GPUXIDErrorsDetected` / `GPUXIDFatalCritical` | NVIDIA driver fault codes (XID 48/79/94 = fatal) |
-| Row Remap Count Over Time | `DCGM_FI_DEV_ROW_REMAP_*` | `GPURowRemapFailure` · `GPUCorrectableRemapAccelerating` | Remap trajectory — watch for accelerating slope |
-| ECC Aggregate Errors Over Time | `DCGM_FI_DEV_ECC_DBE_AGG_TOTAL` | `GPUDoubleBitECCDetected` · `GPUMemoryDegradationCritical` | Long-term ECC trend |
-
-#### ╌ Platform Health
-
-| Panel | Metric | Linked alert |
-|---|---|---|
-| VRAM Utilisation | `FB_USED / (FB_USED + FB_FREE)` | — (links back to VRAM section) |
-| DCGM Exporter Targets | `up{job="nvidia-dcgm-exporter"}` | `GPUDCGMScrapeDegraded` · `GPUNodeDCGMDarkout` |
-| DCGM Scrape Success Rate | `count(up == 1) / count(up)` | `GPUDCGMScrapeDegraded` |
-| Firing GPU Alerts | `count(ALERTS{platform="gpu-monitoring", alertstate="firing"})` | All active GPU alerts |
-
----
-
-## Alert Rules Reference
-
-Defined in `../alert-rules/prometheus-alert-rules.yaml` as a single `PrometheusRule` object
-named `gpu-alert-rules` in the `openshift-monitoring` namespace.
-
-Every alert carries:
-- `platform: gpu-monitoring` — used by the dashboard `ALERTS{}` queries to scope results
-- `fusion_enhanced: "true"` — distinguishes custom-field alerts from NVIDIA baseline
-
-### Recording Rules (group: `gpu.recording.core`, interval 60 s)
-
-Evaluated before any alert rule. Dashboards and alerts consume these derived metrics,
-not the raw DCGM counters.
-
-| Rule | Inputs from `dcgm-metrics.csv` | What it computes |
-|---|---|---|
-| `gpu:platform:heartbeat` | — | `vector(1)` liveness signal; absence fires `GPUPlatformRecordingRulesDown` |
-| `gpu:health_score:composite` | `GPU_TEMP`, `ROW_REMAP_FAILURE`, `UNCORRECTABLE_REMAPPED_ROWS`, `CORRECTABLE_REMAPPED_ROWS`, `ECC_DBE_VOL_TOTAL`, `POWER_USAGE`, `PCIE_REPLAY_COUNTER`, `XID_ERRORS` | 0–100 composite GPU health weighted across 5 subsystems |
-| `gpu:failure_probability:24h` | `GPU_TEMP`, `PCIE_REPLAY_COUNTER`, `UNCORRECTABLE_REMAPPED_ROWS`, `ROW_REMAP_FAILURE`, `POWER_USAGE`, `ECC_SBE_VOL_TOTAL`, `ECC_DBE_VOL_TOTAL` | 0–100 predicted probability of hardware failure within 24 h |
-| `gpu:impact:pod_count_on_failed_nodes` | `ROW_REMAP_FAILURE`, `kube_pod_info` | Pod count on nodes where `ROW_REMAP_FAILURE = 1` |
-| `gpu:throttle:pressure_score` | `CLOCK_THROTTLE_REASONS`, `THERMAL_VIOLATION`, `POWER_VIOLATION` | Composite throttle pressure score (0 = none) |
-| `gpu:impact:pod_count_on_at_risk_nodes` | `gpu:failure_probability:24h`, `kube_pod_info` | Pod count on nodes with failure probability > 30 % |
-
-### Alert Groups
-
-#### Group A — Platform liveness (`gpu.alerts.platform`)
-
-| Alert | Sev | Condition | `for` |
-|---|---|---|---|
-| `GPUPlatformRecordingRulesDown` | critical | `absent(gpu:platform:heartbeat)` | 5 m |
-| `GPUDCGMScrapeDegraded` | warning | `count(up == 1) / count(up) < 0.9` for `job="nvidia-dcgm-exporter"` | 5 m |
-
-> If `GPUPlatformRecordingRulesDown` fires, **no predictive or impact alerts will fire** — health scores and failure probabilities are all dark.
-
-#### Group B — Node failure path (`gpu.alerts.node`)
-
-| Alert | Sev | Condition | `for` |
-|---|---|---|---|
-| `GPUNodeNotReady` | critical | Node `NotReady` and was carrying GPU workloads 10 m ago | 2 m |
-| `GPUNodeUnreachable` | critical | `node_exporter` absent or `up == 0` on GPU node | 5 m |
-| `GPUNodeDCGMDarkout` | critical | Node `Ready` but DCGM metrics (`DCGM_FI_DEV_GPU_TEMP`) absent | 10 m |
-| `GPUNodePressure` | warning | `MemoryPressure`, `DiskPressure`, or `PIDPressure` condition active on GPU node | 5 m |
-| `GPUDevicePluginFailure` | critical | NVIDIA Device Plugin pods not `Ready` or absent | 5 m |
-
-#### Group C — Confirmed hardware failures (`gpu.alerts.hardware`)
-
-| Alert | Sev | Condition | `for` |
-|---|---|---|---|
-| `GPUDeviceUnreachable` | critical | GPU UUID had metrics 30 m ago, now absent from DCGM | 5 m |
-| `GPUBurnoutPermanentFailure` | critical | GPU UUID absent from DCGM > 10 m, node still `Ready` | 10 m |
-| `GPURowRemapFailure` | critical | `DCGM_FI_DEV_ROW_REMAP_FAILURE > 0` | immediate |
-| `GPUDoubleBitECCDetected` | critical | `increase(DCGM_FI_DEV_ECC_DBE_VOL_TOTAL[5m]) > 0` | 5 m |
-| `GPUXIDErrorsDetected` | critical | `increase(DCGM_FI_DEV_XID_ERRORS[1h]) > 0` | 5 m |
-| `GPUXIDFatalCritical` | critical | Fatal XID 48 / 79 / 94 detected in last 30 m | immediate |
-| `GPUPowerAnomaly` | warning | Power > 350 W **or** 10 m stddev > 50 W | 5 m |
-| `GPUPCIeReplayRateHigh` | warning | `rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[30m]) > 5` | 30 m |
-
-#### Group D — Progressive hardware degradation (`gpu.alerts.degradation`)
-
-| Alert | Sev | Condition | `for` |
-|---|---|---|---|
-| `GPUOverheating` | critical | `DCGM_FI_DEV_GPU_TEMP > 85` | 5 m |
-| `GPUUncorrectableRemappedRows` | critical | `DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS > 0` | 5 m |
-| `GPUCorrectableRemapAccelerating` | warning | `increase(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS[6h]) > 5` | 10 m |
-| `GPUMemoryDegradationCritical` | critical | ≥ 2 simultaneous signals: SBE > 10/h, correctable remap > 3/6h, uncorrectable rows present | 10 m |
-| `GPUThermalThrottlingSustained` | warning | ≥ 2 of: thermal violation > 1 s/30 m, temp > 82 °C, clock throttle reasons non-zero | 15 m |
-
-#### Group E — Predictive / composite early warning (`gpu.alerts.predictive`)
-
-| Alert | Sev | Condition | `for` |
-|---|---|---|---|
-| `GPUHealthScoreCritical` | critical | `gpu:health_score:composite` 40–59 | 10 m |
-| `GPUHealthScoreHigh` | warning | `gpu:health_score:composite` 60–79 | 15 m |
-| `GPUPredictiveFailure` | critical | Failure prob > 70 % **and** health score < 60 | 10 m |
-
-#### Group F — Workload blast-radius impact (`gpu.alerts.impact`)
-
-| Alert | Sev | Condition | `for` |
-|---|---|---|---|
-| `WorkloadsOnFailedGPUNodes` | critical | `gpu:impact:pod_count_on_failed_nodes > 0` | 2 m |
-| `WorkloadsOnAtRiskGPUNodes` | warning | `gpu:impact:pod_count_on_at_risk_nodes > 0` | 5 m |
-
-#### Group G — GPU Operator health (`gpu.alerts.operator`)
-
-| Alert | Sev | Condition | `for` |
-|---|---|---|---|
-| `GPUOperatorReconciliationFailed` | warning | No successful reconciliation in > 1 h | immediate |
-| `GPUOperatorDriverAutoUpgradeFailures` | warning | Auto-upgrade enabled and `nodes_upgrades_failed > 0` | immediate |
-
----
-
-## DCGM Metrics (39 total)
-
-Collected by DCGM Exporter and defined in `../configmap/dcgm-metrics.csv`.
-These are the raw inputs consumed by the recording rules and surfaced directly in dashboard panels.
-
-| Category | Metric name | Type | Description |
-|---|---|---|---|
-| **Compute** | `DCGM_FI_DEV_GPU_UTIL` | gauge | GPU utilisation (%) |
-| | `DCGM_FI_DEV_MEM_COPY_UTIL` | gauge | Memory copy engine utilisation (%) |
-| | `DCGM_FI_DEV_ENC_UTIL` | gauge | Encoder utilisation (%) |
-| | `DCGM_FI_DEV_DEC_UTIL` | gauge | Decoder utilisation (%) |
-| **Temperature** | `DCGM_FI_DEV_GPU_TEMP` | gauge | GPU die temperature (°C) |
-| | `DCGM_FI_DEV_MEMORY_TEMP` | gauge | VRAM temperature (°C) |
-| | `DCGM_FI_DEV_THERMAL_VIOLATION` | counter | Cumulative thermal throttle microseconds |
-| **Clocks & throttle** | `DCGM_FI_DEV_SM_CLOCK` | gauge | SM clock frequency (MHz) |
-| | `DCGM_FI_DEV_MEM_CLOCK` | gauge | Memory clock frequency (MHz) |
-| | `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS` | gauge | Active clock throttle reason bitmask |
-| **Power & energy** | `DCGM_FI_DEV_POWER_USAGE` | gauge | GPU power draw (W) |
-| | `DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION` | counter | Total energy consumed (mJ) |
-| | `DCGM_FI_DEV_POWER_VIOLATION` | counter | Cumulative power-cap throttle microseconds |
-| **Framebuffer (VRAM)** | `DCGM_FI_DEV_FB_FREE` | gauge | Framebuffer free memory (MiB) |
-| | `DCGM_FI_DEV_FB_USED` | gauge | Framebuffer used memory (MiB) |
-| | `DCGM_FI_DEV_FB_RESERVED` | gauge | Framebuffer reserved memory (MiB) |
-| **PCIe bus** | `DCGM_FI_DEV_PCIE_REPLAY_COUNTER` | counter | PCIe replay / retry counter |
-| | `DCGM_FI_PROF_PCIE_TX_BYTES` | counter | PCIe transmit bytes |
-| | `DCGM_FI_PROF_PCIE_RX_BYTES` | counter | PCIe receive bytes |
-| **NVLink** | `DCGM_FI_DEV_NVLINK_CRC_FLIT_ERROR_COUNT_TOTAL` | counter | NVLink CRC FLIT error count (all links) |
-| | `DCGM_FI_DEV_NVLINK_CRC_DATA_ERROR_COUNT_TOTAL` | counter | NVLink CRC data error count (all links) |
-| | `DCGM_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_TOTAL` | counter | NVLink replay error count (all links) |
-| | `DCGM_FI_DEV_NVLINK_RECOVERY_ERROR_COUNT_TOTAL` | counter | NVLink recovery error count (all links) |
-| | `DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL` | gauge | NVLink aggregate bandwidth (MB/s) |
-| **XID faults** | `DCGM_FI_DEV_XID_ERRORS` | counter | XID driver-reported GPU fault counter |
-| **ECC errors** | `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL` | counter | Volatile single-bit ECC errors (total) |
-| | `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL` | counter | Volatile double-bit ECC errors (total) |
-| | `DCGM_FI_DEV_ECC_SBE_AGG_TOTAL` | counter | Aggregate single-bit ECC errors |
-| | `DCGM_FI_DEV_ECC_DBE_AGG_TOTAL` | counter | Aggregate double-bit ECC errors |
-| **Row remap & retirement** | `DCGM_FI_DEV_ROW_REMAP_FAILURE` | gauge | Row remap failure (1 = spare rows exhausted) |
-| | `DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS` | counter | Uncorrectable remapped DRAM rows |
-| | `DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS` | counter | Correctable remapped DRAM rows |
-| | `DCGM_FI_DEV_ROW_REMAP_PENDING` | gauge | Row remap pending flag |
-| | `DCGM_FI_DEV_RETIRED_DBE` | counter | Pages retired by DBE errors |
-| | `DCGM_FI_DEV_RETIRED_SBE` | counter | Pages retired by SBE errors |
-| | `DCGM_FI_DEV_RETIRED_PENDING` | gauge | Pages pending retirement |
-| **Profiling** | `DCGM_FI_PROF_DRAM_ACTIVE` | gauge | DRAM bandwidth utilisation (0–1) |
-| | `DCGM_FI_PROF_GR_ENGINE_ACTIVE` | gauge | Graphics engine active fraction (0–1) |
-| | `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` | gauge | Tensor core active fraction (0–1) |
-
----
-
-## Typical Operator Workflow
-
-```
-GPU Cluster Overview
-  │
-  ├─ Alert Summary: Critical Alerts > 0 ?
-  │     └─ "All Firing GPU Alerts" table  →  identify Hostname + UUID
-  │
-  ├─ Per-GPU Health Matrix: Health Score < 60 or Failure Prob > 70 % ?
-  │     └─ Click row  →  opens SRE Deep Dive scoped to that GPU
-  │
-  └─ Hardware Failure Indicators: ROW_REMAP_FAILURE = 1 anywhere ?
-        └─ Cordon node immediately (compute results are corrupted)
-
-        ↓  drill-down link
-
-GPU SRE Deep Dive  ($hostname + $UUID)
-  │
-  ├─ Predictive row
-  │     Health Score gauge  +  24 h Failure Probability gauge
-  │     → both red?  proceed to ECC section without delay
-  │
-  ├─ Active Alerts table
-  │     → check which alert groups (B/C/D/E/F) are firing for this GPU
-  │
-  ├─ ECC Errors & Memory Health
-  │     ROW_REMAP_FAILURE = 1  →  oc adm cordon <node>   (output corrupted NOW)
-  │     DBE Volatile > 0       →  oc adm cordon <node>   (uncorrectable errors)
-  │     Correctable rows ↑     →  schedule replacement window
-  │     XID 48 / 79 / 94       →  oc adm cordon + escalate to hardware team
-  │
-  ├─ Temperature / Power
-  │     Temp > 85 °C sustained  →  check cooling, reduce workload
-  │     Power stddev > 50 W     →  check PSU, may indicate failing GPU
-  │
-  └─ PCIe Bus
-        Replay rate > 5 /s      →  check riser / slot / cable integrity
-```
+| `DCGM_FI_DEV_GPU_UTIL` | GPU compute utilisation (%) |
+| `DCGM_FI_DEV_GPU_TEMP` | GPU die temperature (°C) |
+| `DCGM_FI_DEV_POWER_USAGE` | Instantaneous power draw (W) |
+| `DCGM_FI_DEV_FB_USED` | Framebuffer (VRAM) used (MiB) |
+| `DCGM_FI_DEV_FB_TOTAL` | Total framebuffer capacity (MiB) |
+| `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL` | Double-bit ECC errors (volatile, since last reset) |
+| `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL` | Single-bit ECC errors (volatile, since last reset) |
+| `DCGM_FI_DEV_PCIE_REPLAY_COUNTER` | PCIe replay counter (indicates bus errors) |
+| `DCGM_FI_PROF_GR_ENGINE_ACTIVE` | Graphics/compute engine activity (0–1) |
+| `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` | Tensor core pipeline activity (0–1) |
+| `DCGM_FI_PROF_DRAM_ACTIVE` | DRAM memory interface activity (0–1) |
+
+For full metric descriptions and IBM Storage Fusion runbooks, refer to the
+[IBM Storage Fusion Documentation](https://www.ibm.com/docs/en/storage-fusion).

@@ -1,0 +1,1159 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  labels:
+    app: grafana
+  name: gpu-sre-deep-dive
+  namespace: grafana
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana-a
+  json: "{\n  \"__inputs\": [],\n  \"__requires\": [\n    {\n      \"type\": \"grafana\"\
+    ,\n      \"id\": \"grafana\",\n      \"name\": \"Grafana\",\n      \"version\"\
+    : \"10.0.0\"\n    },\n    {\n      \"type\": \"datasource\",\n      \"id\": \"\
+    prometheus\",\n      \"name\": \"Prometheus\",\n      \"version\": \"1.0.0\"\n\
+    \    }\n  ],\n  \"annotations\": {\n    \"list\": [\n      {\n        \"builtIn\"\
+    : 1,\n        \"datasource\": {\n          \"type\": \"grafana\",\n          \"\
+    uid\": \"-- Grafana --\"\n        },\n        \"enable\": true,\n        \"hide\"\
+    : true,\n        \"iconColor\": \"rgba(0, 211, 255, 1)\",\n        \"name\": \"\
+    Annotations & Alerts\",\n        \"type\": \"dashboard\"\n      }\n    ]\n  },\n\
+    \  \"description\": \"GPU SRE Deep Dive \\u2014 Predictive analysis, composite\
+    \ health, ECC, thermal, power, PCIe, and platform health for NVIDIA GPUs on OpenShift\
+    \ + DCGM Exporter.\",\n  \"editable\": true,\n  \"fiscalYearStartMonth\": 0,\n\
+    \  \"graphTooltip\": 1,\n  \"id\": null,\n  \"links\": [\n    {\n      \"asDropdown\"\
+    : false,\n      \"icon\": \"external link\",\n      \"includeVars\": false,\n\
+    \      \"keepTime\": true,\n      \"tags\": [],\n      \"targetBlank\": false,\n\
+    \      \"title\": \"\\u2190 Cluster Overview\",\n      \"type\": \"link\",\n \
+    \     \"url\": \"/d/gpu-cluster-overview-v8\"\n    },\n    {\n      \"asDropdown\"\
+    : false,\n      \"icon\": \"external link\",\n      \"includeVars\": false,\n\
+    \      \"keepTime\": false,\n      \"tags\": [],\n      \"targetBlank\": true,\n\
+    \      \"title\": \"All Firing GPU Alerts\",\n      \"type\": \"link\",\n    \
+    \  \"url\": \"/alerting/list?state=firing&search=platform%3Dgpu-monitoring\"\n\
+    \    },\n    {\n      \"asDropdown\": false,\n      \"icon\": \"external link\"\
+    ,\n      \"includeVars\": false,\n      \"keepTime\": false,\n      \"tags\":\
+    \ [],\n      \"targetBlank\": true,\n      \"title\": \"GPU Alert Rules\",\n \
+    \     \"type\": \"link\",\n      \"url\": \"/alerting/list?search=gpu\"\n    }\n\
+    \  ],\n  \"liveNow\": false,\n  \"panels\": [\n    {\n      \"collapsed\": false,\n\
+    \      \"gridPos\": {\n        \"h\": 1,\n        \"w\": 24,\n        \"x\": 0,\n\
+    \        \"y\": 0\n      },\n      \"id\": 100,\n      \"title\": \"\\u254c Predictive\
+    \ Analysis & Composite Health\",\n      \"type\": \"row\"\n    },\n    {\n   \
+    \   \"datasource\": {\n        \"type\": \"prometheus\",\n        \"uid\": \"\
+    ${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\": {\n\
+    \          \"color\": {\n            \"mode\": \"thresholds\"\n          },\n\
+    \          \"mappings\": [],\n          \"min\": 0,\n          \"max\": 100,\n\
+    \          \"thresholds\": {\n            \"mode\": \"absolute\",\n          \
+    \  \"steps\": [\n              {\n                \"color\": \"red\",\n      \
+    \          \"value\": null\n              },\n              {\n              \
+    \  \"color\": \"orange\",\n                \"value\": 60\n              },\n \
+    \             {\n                \"color\": \"yellow\",\n                \"value\"\
+    : 80\n              },\n              {\n                \"color\": \"green\"\
+    ,\n                \"value\": 95\n              }\n            ]\n          },\n\
+    \          \"unit\": \"none\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 8,\n        \"w\": 6,\n        \"x\": 0,\n\
+    \        \"y\": 1\n      },\n      \"id\": 1,\n      \"links\": [\n        {\n\
+    \          \"title\": \"GPUHealthScoreCritical \\u2014 firing\",\n          \"\
+    url\": \"/alerting/list?state=firing&search=GPUHealthScoreCritical\",\n      \
+    \    \"targetBlank\": true\n        },\n        {\n          \"title\": \"GPUHealthScoreHigh\
+    \ \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUHealthScoreHigh\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"\\u2190 Cluster Overview\",\n          \"url\": \"/d/gpu-cluster-overview-v8\"\
+    ,\n          \"targetBlank\": false,\n          \"keepTime\": true\n        }\n\
+    \      ],\n      \"options\": {\n        \"orientation\": \"auto\",\n        \"\
+    reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\n    \
+    \      ],\n          \"fields\": \"\",\n          \"values\": false\n        },\n\
+    \        \"showThresholdLabels\": false,\n        \"showThresholdMarkers\": true,\n\
+    \        \"text\": {}\n      },\n      \"pluginVersion\": \"12.1.0\",\n      \"\
+    targets\": [\n        {\n          \"datasource\": {\n            \"type\": \"\
+    prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n        \
+    \  \"expr\": \"gpu:health_score:composite{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"}\",\n          \"instant\": true,\n          \"legendFormat\": \"\
+    {{hostname}} {{UUID}}\",\n          \"refId\": \"A\"\n        }\n      ],\n  \
+    \    \"title\": \"Composite Health Score\",\n      \"type\": \"gauge\"\n    },\n\
+    \    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"\
+    uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\"\
+    : {\n          \"color\": {\n            \"mode\": \"thresholds\"\n          },\n\
+    \          \"mappings\": [],\n          \"min\": 0,\n          \"max\": 100,\n\
+    \          \"thresholds\": {\n            \"mode\": \"absolute\",\n          \
+    \  \"steps\": [\n              {\n                \"color\": \"green\",\n    \
+    \            \"value\": null\n              },\n              {\n            \
+    \    \"color\": \"orange\",\n                \"value\": 20\n              },\n\
+    \              {\n                \"color\": \"red\",\n                \"value\"\
+    : 50\n              }\n            ]\n          },\n          \"unit\": \"none\"\
+    \n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n    \
+    \    \"h\": 8,\n        \"w\": 6,\n        \"x\": 6,\n        \"y\": 1\n     \
+    \ },\n      \"id\": 2,\n      \"links\": [\n        {\n          \"title\": \"\
+    GPUPredictiveFailure \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUPredictiveFailure\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"WorkloadsOnAtRiskGPUNodes \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=WorkloadsOnAtRiskGPUNodes\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"\\u2190 Cluster Overview\",\n          \"url\": \"/d/gpu-cluster-overview-v8\"\
+    ,\n          \"targetBlank\": false,\n          \"keepTime\": true\n        }\n\
+    \      ],\n      \"options\": {\n        \"orientation\": \"auto\",\n        \"\
+    reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\n    \
+    \      ],\n          \"fields\": \"\",\n          \"values\": false\n        },\n\
+    \        \"showThresholdLabels\": false,\n        \"showThresholdMarkers\": true,\n\
+    \        \"text\": {}\n      },\n      \"pluginVersion\": \"12.1.0\",\n      \"\
+    targets\": [\n        {\n          \"datasource\": {\n            \"type\": \"\
+    prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n        \
+    \  \"expr\": \"gpu:failure_probability:24h{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"}\",\n          \"instant\": true,\n          \"legendFormat\": \"\
+    Fail Prob 24h %\",\n          \"refId\": \"A\"\n        }\n      ],\n      \"\
+    title\": \"24h Failure Probability %\",\n      \"type\": \"gauge\"\n    },\n \
+    \   {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"\
+    uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\"\
+    : {\n          \"color\": {\n            \"mode\": \"thresholds\"\n          },\n\
+    \          \"mappings\": [\n            {\n              \"options\": {\n    \
+    \            \"0\": {\n                  \"color\": \"green\",\n             \
+    \     \"index\": 0,\n                  \"text\": \"No Throttle\"\n           \
+    \     }\n              },\n              \"type\": \"value\"\n            },\n\
+    \            {\n              \"options\": {\n                \"from\": 1,\n \
+    \               \"to\": 9,\n                \"result\": {\n                  \"\
+    color\": \"green\",\n                  \"index\": 1,\n                  \"text\"\
+    : \"Low\"\n                }\n              },\n              \"type\": \"range\"\
+    \n            },\n            {\n              \"options\": {\n              \
+    \  \"from\": 10,\n                \"to\": 49,\n                \"result\": {\n\
+    \                  \"color\": \"orange\",\n                  \"index\": 2,\n \
+    \                 \"text\": \"Moderate\"\n                }\n              },\n\
+    \              \"type\": \"range\"\n            },\n            {\n          \
+    \    \"options\": {\n                \"from\": 50,\n                \"to\": 9999,\n\
+    \                \"result\": {\n                  \"color\": \"red\",\n      \
+    \            \"index\": 3,\n                  \"text\": \"High\"\n           \
+    \     }\n              },\n              \"type\": \"range\"\n            }\n\
+    \          ],\n          \"thresholds\": {\n            \"mode\": \"absolute\"\
+    ,\n            \"steps\": [\n              {\n                \"color\": \"green\"\
+    ,\n                \"value\": null\n              },\n              {\n      \
+    \          \"color\": \"orange\",\n                \"value\": 10\n           \
+    \   },\n              {\n                \"color\": \"red\",\n               \
+    \ \"value\": 50\n              }\n            ]\n          },\n          \"unit\"\
+    : \"none\",\n          \"noValue\": \"0\"\n        },\n        \"overrides\":\
+    \ []\n      },\n      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 6,\n \
+    \       \"x\": 12,\n        \"y\": 1\n      },\n      \"id\": 3,\n      \"description\"\
+    : \"Composite throttle signal (0 = no throttle). Turns orange \\u226510, red \\\
+    u226550. Triggers GPUThermalThrottlingSustained at sustained pressure.\",\n  \
+    \    \"links\": [\n        {\n          \"title\": \"GPUThermalThrottlingSustained\
+    \ \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUThermalThrottlingSustained\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"area\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"value_and_name\",\n \
+    \       \"wideLayout\": true,\n        \"showPercentChange\": false,\n       \
+    \ \"percentChangeColorMode\": \"standard\"\n      },\n      \"pluginVersion\"\
+    : \"12.1.0\",\n      \"targets\": [\n        {\n          \"datasource\": {\n\
+    \            \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\
+    \n          },\n          \"expr\": \"gpu:throttle:pressure_score{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"}\",\n          \"instant\": true,\n      \
+    \    \"legendFormat\": \"Throttle Pressure\",\n          \"refId\": \"A\"\n  \
+    \      }\n      ],\n      \"title\": \"Throttle Pressure Score\",\n      \"type\"\
+    : \"stat\"\n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\"\
+    ,\n        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n  \
+    \      \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"mappings\": [],\n          \"thresholds\": {\n   \
+    \         \"mode\": \"absolute\",\n            \"steps\": [\n              {\n\
+    \                \"color\": \"blue\",\n                \"value\": null\n     \
+    \         }\n            ]\n          },\n          \"unit\": \"none\",\n    \
+    \      \"noValue\": \"N/A\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 6,\n        \"x\": 18,\n\
+    \        \"y\": 1\n      },\n      \"id\": 4,\n      \"links\": [],\n      \"\
+    options\": {\n        \"colorMode\": \"value\",\n        \"graphMode\": \"none\"\
+    ,\n        \"justifyMode\": \"auto\",\n        \"orientation\": \"auto\",\n  \
+    \      \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n  \
+    \    \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n       \
+    \   \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"DCGM_FI_DEV_SM_CLOCK{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"}\",\n          \"instant\": true,\n      \
+    \    \"legendFormat\": \"SM Clock\",\n          \"refId\": \"A\"\n        }\n\
+    \      ],\n      \"title\": \"SM Clock (MHz)\",\n      \"type\": \"stat\"\n  \
+    \  },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n   \
+    \     \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n       \
+    \ \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"mappings\": [\n            {\n              \"options\"\
+    : {\n                \"0\": {\n                  \"text\": \"No Throttle\"\n \
+    \               }\n              },\n              \"type\": \"value\"\n     \
+    \       }\n          ],\n          \"thresholds\": {\n            \"mode\": \"\
+    absolute\",\n            \"steps\": [\n              {\n                \"color\"\
+    : \"green\",\n                \"value\": null\n              },\n            \
+    \  {\n                \"color\": \"orange\",\n                \"value\": 1\n \
+    \             }\n            ]\n          },\n          \"unit\": \"none\",\n\
+    \          \"noValue\": \"0\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 6,\n        \"x\": 12,\n\
+    \        \"y\": 5\n      },\n      \"id\": 5,\n      \"links\": [\n        {\n\
+    \          \"title\": \"GPUThermalThrottlingSustained \\u2014 firing\",\n    \
+    \      \"url\": \"/alerting/list?state=firing&search=GPUThermalThrottlingSustained\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUOverheating \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUOverheating\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"auto\",\n        \"orientation\": \"auto\",\n      \
+    \  \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\n\
+    \          ],\n          \"fields\": \"\",\n          \"values\": false\n    \
+    \    },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n   \
+    \   \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n        \
+    \  \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\"} * 0\",\n          \"instant\": true,\n          \"legendFormat\"\
+    : \"Throttle Reasons\",\n          \"refId\": \"A\"\n        }\n      ],\n   \
+    \   \"title\": \"Clock Throttle Reasons (bitmask)\",\n      \"type\": \"stat\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n    \
+    \    \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"mappings\": [],\n          \"thresholds\": {\n   \
+    \         \"mode\": \"absolute\",\n            \"steps\": [\n              {\n\
+    \                \"color\": \"blue\",\n                \"value\": null\n     \
+    \         }\n            ]\n          },\n          \"unit\": \"none\",\n    \
+    \      \"noValue\": \"N/A\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 6,\n        \"x\": 18,\n\
+    \        \"y\": 5\n      },\n      \"id\": 6,\n      \"links\": [],\n      \"\
+    options\": {\n        \"colorMode\": \"value\",\n        \"graphMode\": \"none\"\
+    ,\n        \"justifyMode\": \"auto\",\n        \"orientation\": \"auto\",\n  \
+    \      \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n  \
+    \    \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n       \
+    \   \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"DCGM_FI_DEV_MEM_CLOCK{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"}\",\n          \"instant\": true,\n      \
+    \    \"legendFormat\": \"Mem Clock\",\n          \"refId\": \"A\"\n        }\n\
+    \      ],\n      \"title\": \"Memory Clock (MHz)\",\n      \"type\": \"stat\"\n\
+    \    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n \
+    \       \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n     \
+    \   \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"custom\": {\n            \"lineInterpolation\": \"\
+    smooth\",\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n \
+    \           \"showPoints\": \"never\",\n            \"spanNulls\": false\n   \
+    \       },\n          \"mappings\": [],\n          \"min\": 0,\n          \"max\"\
+    : 100,\n          \"thresholds\": {\n            \"mode\": \"absolute\",\n   \
+    \         \"steps\": [\n              {\n                \"color\": \"red\",\n\
+    \                \"value\": null\n              },\n              {\n        \
+    \        \"color\": \"orange\",\n                \"value\": 60\n             \
+    \ },\n              {\n                \"color\": \"yellow\",\n              \
+    \  \"value\": 80\n              },\n              {\n                \"color\"\
+    : \"green\",\n                \"value\": 95\n              }\n            ]\n\
+    \          },\n          \"unit\": \"none\"\n        },\n        \"overrides\"\
+    : []\n      },\n      \"gridPos\": {\n        \"h\": 7,\n        \"w\": 12,\n\
+    \        \"x\": 0,\n        \"y\": 9\n      },\n      \"id\": 7,\n      \"links\"\
+    : [\n        {\n          \"title\": \"GPUHealthScoreCritical \\u2014 firing\"\
+    ,\n          \"url\": \"/alerting/list?state=firing&search=GPUHealthScoreCritical\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUHealthScoreHigh \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUHealthScoreHigh\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"\\u2190 Cluster Overview\",\n          \"url\": \"/d/gpu-cluster-overview-v8\"\
+    ,\n          \"targetBlank\": false,\n          \"keepTime\": true\n        }\n\
+    \      ],\n      \"options\": {\n        \"legend\": {\n          \"calcs\": [\n\
+    \            \"lastNotNull\",\n            \"min\",\n            \"max\"\n   \
+    \       ],\n          \"displayMode\": \"table\",\n          \"placement\": \"\
+    bottom\"\n        },\n        \"tooltip\": {\n          \"mode\": \"multi\",\n\
+    \          \"sort\": \"none\"\n        }\n      },\n      \"targets\": [\n   \
+    \     {\n          \"datasource\": {\n            \"type\": \"prometheus\",\n\
+    \            \"uid\": \"${datasource}\"\n          },\n          \"expr\": \"\
+    gpu:health_score:composite{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\"}\"\
+    ,\n          \"legendFormat\": \"{{hostname}} {{UUID}}\",\n          \"refId\"\
+    : \"A\"\n        }\n      ],\n      \"title\": \"Health Score Trend\",\n     \
+    \ \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n   \
+    \ {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"uid\"\
+    : \"${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\"\
+    : {\n          \"color\": {\n            \"mode\": \"palette-classic\"\n     \
+    \     },\n          \"custom\": {\n            \"lineInterpolation\": \"smooth\"\
+    ,\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n         \
+    \   \"showPoints\": \"never\",\n            \"spanNulls\": false\n          },\n\
+    \          \"mappings\": [],\n          \"min\": 0,\n          \"max\": 100,\n\
+    \          \"thresholds\": {\n            \"mode\": \"absolute\",\n          \
+    \  \"steps\": [\n              {\n                \"color\": \"green\",\n    \
+    \            \"value\": null\n              },\n              {\n            \
+    \    \"color\": \"orange\",\n                \"value\": 20\n              },\n\
+    \              {\n                \"color\": \"red\",\n                \"value\"\
+    : 50\n              }\n            ]\n          },\n          \"unit\": \"none\"\
+    \n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n    \
+    \    \"h\": 7,\n        \"w\": 12,\n        \"x\": 12,\n        \"y\": 9\n   \
+    \   },\n      \"id\": 8,\n      \"links\": [\n        {\n          \"title\":\
+    \ \"GPUPredictiveFailure \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUPredictiveFailure\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"min\",\n            \"max\"\n          ],\n          \"displayMode\"\
+    : \"table\",\n          \"placement\": \"bottom\"\n        },\n        \"tooltip\"\
+    : {\n          \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n\
+    \      },\n      \"targets\": [\n        {\n          \"datasource\": {\n    \
+    \        \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n \
+    \         },\n          \"expr\": \"gpu:failure_probability:24h{hostname=~\\\"\
+    $hostname\\\",UUID=~\\\"$UUID\\\"}\",\n          \"legendFormat\": \"Fail Prob\
+    \ 24h %\",\n          \"refId\": \"A\"\n        }\n      ],\n      \"title\":\
+    \ \"Failure Probability Trend\",\n      \"type\": \"timeseries\",\n      \"pluginVersion\"\
+    : \"12.1.0\"\n    },\n    {\n      \"collapsed\": false,\n      \"gridPos\": {\n\
+    \        \"h\": 1,\n        \"w\": 24,\n        \"x\": 0,\n        \"y\": 16\n\
+    \      },\n      \"id\": 101,\n      \"title\": \"\\u254c Active Alerts \\u2014\
+    \ This GPU / Node\",\n      \"type\": \"row\"\n    },\n    {\n      \"datasource\"\
+    : {\n        \"type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n \
+    \     },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\"\
+    : {\n            \"mode\": \"thresholds\"\n          },\n          \"custom\"\
+    : {\n            \"align\": \"auto\",\n            \"cellOptions\": {\n      \
+    \        \"type\": \"auto\"\n            },\n            \"filterable\": true,\n\
+    \            \"inspect\": false\n          },\n          \"mappings\": [],\n \
+    \         \"thresholds\": {\n            \"mode\": \"absolute\",\n           \
+    \ \"steps\": [\n              {\n                \"color\": \"green\",\n     \
+    \           \"value\": null\n              },\n              {\n             \
+    \   \"color\": \"red\",\n                \"value\": 80\n              }\n    \
+    \        ]\n          },\n          \"noValue\": \"No alerts firing\",\n     \
+    \     \"links\": [\n            {\n              \"title\": \"View ${__data.fields.Alert}\
+    \ \\u2014 all firing\",\n              \"url\": \"/alerting/list?state=firing&search=${__data.fields.Alert}\"\
+    ,\n              \"targetBlank\": true\n            },\n            {\n      \
+    \        \"title\": \"View ${__data.fields.Alert} \\u2014 rule definition\",\n\
+    \              \"url\": \"/alerting/list?search=${__data.fields.Alert}\",\n  \
+    \            \"targetBlank\": true\n            },\n            {\n          \
+    \    \"title\": \"Drill into GPU in SRE Dashboard\",\n              \"url\": \"\
+    /d/gpu-sre-dashboard-v5?var-hostname=${__data.fields.Node}&var-UUID=${__data.fields.GPU}&var-datasource=${datasource}\"\
+    ,\n              \"targetBlank\": true\n            }\n          ]\n        },\n\
+    \        \"overrides\": [\n          {\n            \"matcher\": {\n         \
+    \     \"id\": \"byName\",\n              \"options\": \"Severity\"\n         \
+    \   },\n            \"properties\": [\n              {\n                \"id\"\
+    : \"custom.cellOptions\",\n                \"value\": {\n                  \"\
+    type\": \"color-background\"\n                }\n              },\n          \
+    \    {\n                \"id\": \"mappings\",\n                \"value\": [\n\
+    \                  {\n                    \"options\": {\n                   \
+    \   \"critical\": {\n                        \"color\": \"red\",\n           \
+    \             \"index\": 0,\n                        \"text\": \"critical\"\n\
+    \                      },\n                      \"warning\": {\n            \
+    \            \"color\": \"orange\",\n                        \"index\": 1,\n \
+    \                       \"text\": \"warning\"\n                      }\n     \
+    \               },\n                    \"type\": \"value\"\n                \
+    \  }\n                ]\n              }\n            ]\n          }\n       \
+    \ ]\n      },\n      \"gridPos\": {\n        \"h\": 7,\n        \"w\": 24,\n \
+    \       \"x\": 0,\n        \"y\": 17\n      },\n      \"id\": 9,\n      \"links\"\
+    : [\n        {\n          \"title\": \"Open Grafana Alerting \\u2014 all GPU alerts\"\
+    ,\n          \"url\": \"/alerting/list?state=firing&search=platform%3Dgpu-monitoring\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"cellHeight\": \"sm\",\n        \"footer\": {\n          \"show\": false\n\
+    \        },\n        \"showHeader\": true,\n        \"sortBy\": [\n          {\n\
+    \            \"desc\": true,\n            \"displayName\": \"Severity\"\n    \
+    \      }\n        ]\n      },\n      \"pluginVersion\": \"12.1.0\",\n      \"\
+    targets\": [\n        {\n          \"datasource\": {\n            \"type\": \"\
+    prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n        \
+    \  \"expr\": \"ALERTS{alertstate=\\\"firing\\\",platform=\\\"gpu-monitoring\\\"\
+    }\",\n          \"format\": \"table\",\n          \"instant\": true,\n       \
+    \   \"legendFormat\": \"\",\n          \"refId\": \"A\"\n        }\n      ],\n\
+    \      \"title\": \"Firing GPU Alerts \\u2014 All (fleet-level alerts have no\
+    \ hostname/UUID)\",\n      \"transformations\": [\n        {\n          \"id\"\
+    : \"filterFieldsByName\",\n          \"options\": {\n            \"include\":\
+    \ {\n              \"names\": [\n                \"alertname\",\n            \
+    \    \"severity\",\n                \"category\",\n                \"hostname\"\
+    ,\n                \"UUID\",\n                \"alertstate\"\n              ]\n\
+    \            }\n          }\n        },\n        {\n          \"id\": \"organize\"\
+    ,\n          \"options\": {\n            \"renameByName\": {\n              \"\
+    alertname\": \"Alert\",\n              \"severity\": \"Severity\",\n         \
+    \     \"category\": \"Category\",\n              \"hostname\": \"Node\",\n   \
+    \           \"UUID\": \"GPU\",\n              \"alertstate\": \"State\"\n    \
+    \        }\n          }\n        }\n      ],\n      \"type\": \"table\"\n    },\n\
+    \    {\n      \"collapsed\": false,\n      \"gridPos\": {\n        \"h\": 1,\n\
+    \        \"w\": 24,\n        \"x\": 0,\n        \"y\": 24\n      },\n      \"\
+    id\": 102,\n      \"title\": \"\\u254c Temperature\",\n      \"type\": \"row\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n    \
+    \    \"defaults\": {\n          \"color\": {\n            \"mode\": \"palette-classic\"\
+    \n          },\n          \"custom\": {\n            \"lineInterpolation\": \"\
+    smooth\",\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n \
+    \           \"showPoints\": \"never\",\n            \"spanNulls\": false\n   \
+    \       },\n          \"mappings\": [],\n          \"thresholds\": {\n       \
+    \     \"mode\": \"absolute\",\n            \"steps\": [\n              {\n   \
+    \             \"color\": \"green\",\n                \"value\": null\n       \
+    \       },\n              {\n                \"color\": \"orange\",\n        \
+    \        \"value\": 80\n              },\n              {\n                \"\
+    color\": \"red\",\n                \"value\": 90\n              }\n          \
+    \  ]\n          },\n          \"unit\": \"celsius\"\n        },\n        \"overrides\"\
+    : []\n      },\n      \"gridPos\": {\n        \"h\": 7,\n        \"w\": 12,\n\
+    \        \"x\": 0,\n        \"y\": 25\n      },\n      \"id\": 10,\n      \"links\"\
+    : [\n        {\n          \"title\": \"GPUOverheating \\u2014 firing\",\n    \
+    \      \"url\": \"/alerting/list?state=firing&search=GPUOverheating\",\n     \
+    \     \"targetBlank\": true\n        },\n        {\n          \"title\": \"GPUOverheating\
+    \ \\u2014 rule\",\n          \"url\": \"/alerting/list?search=GPUOverheating\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"max\"\n          ],\n          \"displayMode\": \"table\",\n  \
+    \        \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n     \
+    \     \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n\
+    \      \"targets\": [\n        {\n          \"datasource\": {\n            \"\
+    type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n\
+    \          \"expr\": \"DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"}\",\n          \"legendFormat\": \"{{UUID}}\",\n          \"refId\"\
+    : \"A\"\n        }\n      ],\n      \"title\": \"GPU Core Temperature (\\u00b0C)\"\
+    ,\n      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n\
+    \    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"\
+    uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\"\
+    : {\n          \"color\": {\n            \"mode\": \"palette-classic\"\n     \
+    \     },\n          \"custom\": {\n            \"lineInterpolation\": \"smooth\"\
+    ,\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n         \
+    \   \"showPoints\": \"never\",\n            \"spanNulls\": false\n          },\n\
+    \          \"mappings\": [\n            {\n              \"options\": {\n    \
+    \            \"0\": {\n                  \"color\": \"text\",\n              \
+    \    \"index\": 0,\n                  \"text\": \"N/A\"\n                }\n \
+    \             },\n              \"type\": \"value\"\n            }\n         \
+    \ ],\n          \"thresholds\": {\n            \"mode\": \"absolute\",\n     \
+    \       \"steps\": [\n              {\n                \"color\": \"green\",\n\
+    \                \"value\": null\n              },\n              {\n        \
+    \        \"color\": \"orange\",\n                \"value\": 85\n             \
+    \ },\n              {\n                \"color\": \"red\",\n                \"\
+    value\": 95\n              }\n            ]\n          },\n          \"unit\"\
+    : \"celsius\",\n          \"noValue\": \"N/A\"\n        },\n        \"overrides\"\
+    : []\n      },\n      \"gridPos\": {\n        \"h\": 7,\n        \"w\": 12,\n\
+    \        \"x\": 12,\n        \"y\": 25\n      },\n      \"id\": 11,\n      \"\
+    links\": [\n        {\n          \"title\": \"GPUOverheating \\u2014 firing\"\
+    ,\n          \"url\": \"/alerting/list?state=firing&search=GPUOverheating\",\n\
+    \          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"max\"\n          ],\n          \"displayMode\": \"table\",\n  \
+    \        \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n     \
+    \     \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n\
+    \      \"targets\": [\n        {\n          \"datasource\": {\n            \"\
+    type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n\
+    \          \"expr\": \"DCGM_FI_DEV_MEMORY_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"}\",\n          \"legendFormat\": \"{{UUID}}\",\n          \"refId\"\
+    : \"A\"\n        }\n      ],\n      \"title\": \"Memory (HBM) Temperature (\\\
+    u00b0C)\",\n      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\
+    \n    },\n    {\n      \"collapsed\": false,\n      \"gridPos\": {\n        \"\
+    h\": 1,\n        \"w\": 24,\n        \"x\": 0,\n        \"y\": 32\n      },\n\
+    \      \"id\": 103,\n      \"title\": \"\\u254c Power & Energy\",\n      \"type\"\
+    : \"row\"\n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\"\
+    ,\n        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n  \
+    \      \"defaults\": {\n          \"color\": {\n            \"mode\": \"palette-classic\"\
+    \n          },\n          \"custom\": {\n            \"lineInterpolation\": \"\
+    smooth\",\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n \
+    \           \"showPoints\": \"never\",\n            \"spanNulls\": false\n   \
+    \       },\n          \"mappings\": [],\n          \"thresholds\": {\n       \
+    \     \"mode\": \"absolute\",\n            \"steps\": [\n              {\n   \
+    \             \"color\": \"green\",\n                \"value\": null\n       \
+    \       }\n            ]\n          },\n          \"unit\": \"watt\"\n       \
+    \ },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n        \"h\"\
+    : 7,\n        \"w\": 12,\n        \"x\": 0,\n        \"y\": 33\n      },\n   \
+    \   \"id\": 12,\n      \"links\": [\n        {\n          \"title\": \"GPUPowerAnomaly\
+    \ \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUPowerAnomaly\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUPowerAnomaly \\u2014 rule\",\n          \"url\": \"/alerting/list?search=GPUPowerAnomaly\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"mean\",\n            \"max\"\n          ],\n          \"displayMode\"\
+    : \"table\",\n          \"placement\": \"bottom\"\n        },\n        \"tooltip\"\
+    : {\n          \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n\
+    \      },\n      \"targets\": [\n        {\n          \"datasource\": {\n    \
+    \        \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n \
+    \         },\n          \"expr\": \"DCGM_FI_DEV_POWER_USAGE{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\"}\",\n          \"legendFormat\": \"{{UUID}}\",\n      \
+    \    \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Power Draw (W)\"\
+    ,\n      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n\
+    \    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"\
+    uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\"\
+    : {\n          \"color\": {\n            \"mode\": \"palette-classic\"\n     \
+    \     },\n          \"custom\": {\n            \"lineInterpolation\": \"smooth\"\
+    ,\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n         \
+    \   \"showPoints\": \"never\",\n            \"spanNulls\": false\n          },\n\
+    \          \"mappings\": [],\n          \"thresholds\": {\n            \"mode\"\
+    : \"absolute\",\n            \"steps\": [\n              {\n                \"\
+    color\": \"green\",\n                \"value\": null\n              },\n     \
+    \         {\n                \"color\": \"orange\",\n                \"value\"\
+    : 20\n              }\n            ]\n          },\n          \"unit\": \"watt\"\
+    \n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n    \
+    \    \"h\": 7,\n        \"w\": 12,\n        \"x\": 12,\n        \"y\": 33\n  \
+    \    },\n      \"id\": 13,\n      \"links\": [\n        {\n          \"title\"\
+    : \"GPUPowerAnomaly \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUPowerAnomaly\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"max\"\n          ],\n          \"displayMode\": \"table\",\n  \
+    \        \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n     \
+    \     \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n\
+    \      \"targets\": [\n        {\n          \"datasource\": {\n            \"\
+    type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n\
+    \          \"expr\": \"avg by(UUID, hostname, gpu, modelName, device, pci_bus_id)\
+    \ (\\n  stddev_over_time(DCGM_FI_DEV_POWER_USAGE{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"}[15m])\\n)\",\n          \"legendFormat\": \"{{hostname}} / GPU{{gpu}}\"\
+    ,\n          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Power Instability\
+    \ \\u2014 15m Rolling Stddev\",\n      \"type\": \"timeseries\",\n      \"pluginVersion\"\
+    : \"12.1.0\"\n    },\n    {\n      \"collapsed\": false,\n      \"gridPos\": {\n\
+    \        \"h\": 1,\n        \"w\": 24,\n        \"x\": 0,\n        \"y\": 40\n\
+    \      },\n      \"id\": 104,\n      \"title\": \"\\u254c GPU Utilisation & Profiling\"\
+    ,\n      \"type\": \"row\"\n    },\n    {\n      \"datasource\": {\n        \"\
+    type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n      },\n      \"\
+    fieldConfig\": {\n        \"defaults\": {\n          \"color\": {\n          \
+    \  \"mode\": \"palette-classic\"\n          },\n          \"custom\": {\n    \
+    \        \"lineInterpolation\": \"smooth\",\n            \"lineWidth\": 2,\n \
+    \           \"fillOpacity\": 10,\n            \"showPoints\": \"never\",\n   \
+    \         \"spanNulls\": false\n          },\n          \"mappings\": [],\n  \
+    \        \"min\": 0,\n          \"max\": 100,\n          \"thresholds\": {\n \
+    \           \"mode\": \"absolute\",\n            \"steps\": [\n              {\n\
+    \                \"color\": \"green\",\n                \"value\": null\n    \
+    \          }\n            ]\n          },\n          \"unit\": \"percent\"\n \
+    \       },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n      \
+    \  \"h\": 7,\n        \"w\": 8,\n        \"x\": 0,\n        \"y\": 41\n      },\n\
+    \      \"id\": 14,\n      \"links\": [],\n      \"options\": {\n        \"legend\"\
+    : {\n          \"calcs\": [\n            \"lastNotNull\",\n            \"mean\"\
+    ,\n            \"max\"\n          ],\n          \"displayMode\": \"table\",\n\
+    \          \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n   \
+    \       \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n\
+    \      \"targets\": [\n        {\n          \"datasource\": {\n            \"\
+    type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n\
+    \          \"expr\": \"DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"}\",\n          \"legendFormat\": \"{{UUID}}\",\n          \"refId\"\
+    : \"A\"\n        }\n      ],\n      \"title\": \"GPU Compute Utilisation (%)\"\
+    ,\n      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n\
+    \    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"\
+    uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\"\
+    : {\n          \"color\": {\n            \"mode\": \"palette-classic\"\n     \
+    \     },\n          \"custom\": {\n            \"lineInterpolation\": \"smooth\"\
+    ,\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n         \
+    \   \"showPoints\": \"never\",\n            \"spanNulls\": false\n          },\n\
+    \          \"mappings\": [],\n          \"min\": 0,\n          \"max\": 1,\n \
+    \         \"thresholds\": {\n            \"mode\": \"absolute\",\n           \
+    \ \"steps\": [\n              {\n                \"color\": \"green\",\n     \
+    \           \"value\": null\n              }\n            ]\n          },\n  \
+    \        \"unit\": \"percentunit\"\n        },\n        \"overrides\": []\n  \
+    \    },\n      \"gridPos\": {\n        \"h\": 7,\n        \"w\": 8,\n        \"\
+    x\": 8,\n        \"y\": 41\n      },\n      \"id\": 15,\n      \"links\": [],\n\
+    \      \"options\": {\n        \"legend\": {\n          \"calcs\": [\n       \
+    \     \"lastNotNull\",\n            \"mean\",\n            \"max\"\n         \
+    \ ],\n          \"displayMode\": \"table\",\n          \"placement\": \"bottom\"\
+    \n        },\n        \"tooltip\": {\n          \"mode\": \"multi\",\n       \
+    \   \"sort\": \"none\"\n        }\n      },\n      \"targets\": [\n        {\n\
+    \          \"datasource\": {\n            \"type\": \"prometheus\",\n        \
+    \    \"uid\": \"${datasource}\"\n          },\n          \"expr\": \"(DCGM_FI_PROF_GR_ENGINE_ACTIVE{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"\
+    $hostname\\\",UUID=~\\\"$UUID\\\"} * 0)\",\n          \"legendFormat\": \"GR Engine\"\
+    ,\n          \"refId\": \"A\"\n        },\n        {\n          \"datasource\"\
+    : {\n            \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\
+    \n          },\n          \"expr\": \"(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"\
+    $hostname\\\",UUID=~\\\"$UUID\\\"} * 0)\",\n          \"legendFormat\": \"Tensor\
+    \ Core\",\n          \"refId\": \"B\"\n        }\n      ],\n      \"title\": \"\
+    GR Engine Active & Tensor Core Active (0\\u20131)\",\n      \"type\": \"timeseries\"\
+    ,\n      \"pluginVersion\": \"12.1.0\"\n    },\n    {\n      \"datasource\": {\n\
+    \        \"type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n     \
+    \ },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\":\
+    \ {\n            \"mode\": \"palette-classic\"\n          },\n          \"custom\"\
+    : {\n            \"lineInterpolation\": \"smooth\",\n            \"lineWidth\"\
+    : 2,\n            \"fillOpacity\": 10,\n            \"showPoints\": \"never\"\
+    ,\n            \"spanNulls\": false\n          },\n          \"mappings\": [],\n\
+    \          \"min\": 0,\n          \"max\": 1,\n          \"thresholds\": {\n \
+    \           \"mode\": \"absolute\",\n            \"steps\": [\n              {\n\
+    \                \"color\": \"green\",\n                \"value\": null\n    \
+    \          }\n            ]\n          },\n          \"unit\": \"percentunit\"\
+    \n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n    \
+    \    \"h\": 7,\n        \"w\": 8,\n        \"x\": 16,\n        \"y\": 41\n   \
+    \   },\n      \"id\": 16,\n      \"links\": [],\n      \"options\": {\n      \
+    \  \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n     \
+    \       \"mean\",\n            \"max\"\n          ],\n          \"displayMode\"\
+    : \"table\",\n          \"placement\": \"bottom\"\n        },\n        \"tooltip\"\
+    : {\n          \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n\
+    \      },\n      \"targets\": [\n        {\n          \"datasource\": {\n    \
+    \        \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n \
+    \         },\n          \"expr\": \"(DCGM_FI_PROF_DRAM_ACTIVE{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\"\
+    ,UUID=~\\\"$UUID\\\"} * 0)\",\n          \"legendFormat\": \"{{UUID}}\",\n   \
+    \       \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"DRAM Bandwidth\
+    \ Active (0\\u20131)\",\n      \"type\": \"timeseries\",\n      \"pluginVersion\"\
+    : \"12.1.0\"\n    },\n    {\n      \"collapsed\": false,\n      \"gridPos\": {\n\
+    \        \"h\": 1,\n        \"w\": 24,\n        \"x\": 0,\n        \"y\": 48\n\
+    \      },\n      \"id\": 105,\n      \"title\": \"\\u254c Framebuffer Memory (VRAM)\"\
+    ,\n      \"type\": \"row\"\n    },\n    {\n      \"datasource\": {\n        \"\
+    type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n      },\n      \"\
+    fieldConfig\": {\n        \"defaults\": {\n          \"color\": {\n          \
+    \  \"mode\": \"palette-classic\"\n          },\n          \"custom\": {\n    \
+    \        \"lineInterpolation\": \"smooth\",\n            \"lineWidth\": 2,\n \
+    \           \"fillOpacity\": 10,\n            \"showPoints\": \"never\",\n   \
+    \         \"spanNulls\": false\n          },\n          \"mappings\": [],\n  \
+    \        \"min\": 0,\n          \"thresholds\": {\n            \"mode\": \"absolute\"\
+    ,\n            \"steps\": [\n              {\n                \"color\": \"green\"\
+    ,\n                \"value\": null\n              }\n            ]\n         \
+    \ },\n          \"unit\": \"decgbytes\"\n        },\n        \"overrides\": []\n\
+    \      },\n      \"gridPos\": {\n        \"h\": 7,\n        \"w\": 8,\n      \
+    \  \"x\": 0,\n        \"y\": 49\n      },\n      \"id\": 17,\n      \"links\"\
+    : [],\n      \"options\": {\n        \"legend\": {\n          \"calcs\": [\n \
+    \           \"lastNotNull\",\n            \"max\"\n          ],\n          \"\
+    displayMode\": \"table\",\n          \"placement\": \"bottom\"\n        },\n \
+    \       \"tooltip\": {\n          \"mode\": \"multi\",\n          \"sort\": \"\
+    none\"\n        }\n      },\n      \"targets\": [\n        {\n          \"datasource\"\
+    : {\n            \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\
+    \n          },\n          \"expr\": \"DCGM_FI_DEV_FB_USED{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\"} / 1024\",\n          \"legendFormat\": \"{{UUID}}\",\n\
+    \          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"VRAM Used\
+    \ (GiB)\",\n      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n    \
+    \    \"defaults\": {\n          \"color\": {\n            \"mode\": \"palette-classic\"\
+    \n          },\n          \"custom\": {\n            \"lineInterpolation\": \"\
+    smooth\",\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n \
+    \           \"showPoints\": \"never\",\n            \"spanNulls\": false\n   \
+    \       },\n          \"mappings\": [],\n          \"min\": 0,\n          \"thresholds\"\
+    : {\n            \"mode\": \"absolute\",\n            \"steps\": [\n         \
+    \     {\n                \"color\": \"green\",\n                \"value\": null\n\
+    \              }\n            ]\n          },\n          \"unit\": \"decgbytes\"\
+    \n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n    \
+    \    \"h\": 7,\n        \"w\": 8,\n        \"x\": 8,\n        \"y\": 49\n    \
+    \  },\n      \"id\": 18,\n      \"links\": [],\n      \"options\": {\n       \
+    \ \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n      \
+    \      \"min\"\n          ],\n          \"displayMode\": \"table\",\n        \
+    \  \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n          \"\
+    mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n      \"\
+    targets\": [\n        {\n          \"datasource\": {\n            \"type\": \"\
+    prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n        \
+    \  \"expr\": \"DCGM_FI_DEV_FB_FREE{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\
+    \"} / 1024\",\n          \"legendFormat\": \"{{UUID}}\",\n          \"refId\"\
+    : \"A\"\n        }\n      ],\n      \"title\": \"VRAM Free (GiB)\",\n      \"\
+    type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n    {\n\
+    \      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"uid\":\
+    \ \"${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\"\
+    : {\n          \"color\": {\n            \"mode\": \"thresholds\"\n          },\n\
+    \          \"custom\": {\n            \"lineInterpolation\": \"smooth\",\n   \
+    \         \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n            \"\
+    showPoints\": \"never\",\n            \"spanNulls\": false\n          },\n   \
+    \       \"mappings\": [],\n          \"min\": 0,\n          \"max\": 100,\n  \
+    \        \"thresholds\": {\n            \"mode\": \"absolute\",\n            \"\
+    steps\": [\n              {\n                \"color\": \"green\",\n         \
+    \       \"value\": null\n              },\n              {\n                \"\
+    color\": \"orange\",\n                \"value\": 80\n              },\n      \
+    \        {\n                \"color\": \"red\",\n                \"value\": 95\n\
+    \              }\n            ]\n          },\n          \"unit\": \"percent\"\
+    \n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n    \
+    \    \"h\": 7,\n        \"w\": 8,\n        \"x\": 16,\n        \"y\": 49\n   \
+    \   },\n      \"id\": 19,\n      \"links\": [],\n      \"options\": {\n      \
+    \  \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n     \
+    \       \"max\"\n          ],\n          \"displayMode\": \"table\",\n       \
+    \   \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n          \"\
+    mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n      \"\
+    targets\": [\n        {\n          \"datasource\": {\n            \"type\": \"\
+    prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n        \
+    \  \"expr\": \"DCGM_FI_DEV_FB_USED{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\
+    \"} / (DCGM_FI_DEV_FB_USED{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\"} +\
+    \ DCGM_FI_DEV_FB_FREE{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\"} + 1) *\
+    \ 100\",\n          \"legendFormat\": \"{{UUID}}\",\n          \"refId\": \"A\"\
+    \n        }\n      ],\n      \"title\": \"VRAM Utilisation %\",\n      \"type\"\
+    : \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n    {\n      \"\
+    collapsed\": false,\n      \"gridPos\": {\n        \"h\": 1,\n        \"w\": 24,\n\
+    \        \"x\": 0,\n        \"y\": 56\n      },\n      \"id\": 106,\n      \"\
+    title\": \"\\u254c PCIe Bus\",\n      \"type\": \"row\"\n    },\n    {\n     \
+    \ \"datasource\": {\n        \"type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\
+    \n      },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\"\
+    : {\n            \"mode\": \"thresholds\"\n          },\n          \"custom\"\
+    : {\n            \"lineInterpolation\": \"smooth\",\n            \"lineWidth\"\
+    : 2,\n            \"fillOpacity\": 10,\n            \"showPoints\": \"never\"\
+    ,\n            \"spanNulls\": false\n          },\n          \"mappings\": [],\n\
+    \          \"min\": 0,\n          \"thresholds\": {\n            \"mode\": \"\
+    absolute\",\n            \"steps\": [\n              {\n                \"color\"\
+    : \"green\",\n                \"value\": null\n              },\n            \
+    \  {\n                \"color\": \"orange\",\n                \"value\": 5\n \
+    \             }\n            ]\n          },\n          \"unit\": \"ops\"\n  \
+    \      },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n       \
+    \ \"h\": 7,\n        \"w\": 8,\n        \"x\": 0,\n        \"y\": 57\n      },\n\
+    \      \"id\": 20,\n      \"links\": [\n        {\n          \"title\": \"GPUPCIeReplayRateHigh\
+    \ \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUPCIeReplayRateHigh\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUPCIeReplayRateHigh \\u2014 rule\",\n          \"url\": \"/alerting/list?search=GPUPCIeReplayRateHigh\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"max\"\n          ],\n          \"displayMode\": \"table\",\n  \
+    \        \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n     \
+    \     \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n\
+    \      \"targets\": [\n        {\n          \"datasource\": {\n            \"\
+    type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n\
+    \          \"expr\": \"avg by(UUID, hostname, gpu, modelName, device, pci_bus_id)\
+    \ (\\n  rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"}[5m])\\n)\",\n          \"legendFormat\": \"{{UUID}}\",\n        \
+    \  \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"PCIe Replay Counter\
+    \ Rate (/s)\",\n      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n    \
+    \    \"defaults\": {\n          \"color\": {\n            \"mode\": \"palette-classic\"\
+    \n          },\n          \"custom\": {\n            \"lineInterpolation\": \"\
+    smooth\",\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n \
+    \           \"showPoints\": \"never\",\n            \"spanNulls\": false\n   \
+    \       },\n          \"mappings\": [],\n          \"min\": 0,\n          \"thresholds\"\
+    : {\n            \"mode\": \"absolute\",\n            \"steps\": [\n         \
+    \     {\n                \"color\": \"green\",\n                \"value\": null\n\
+    \              }\n            ]\n          },\n          \"unit\": \"binBps\"\n\
+    \        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n     \
+    \   \"h\": 7,\n        \"w\": 8,\n        \"x\": 8,\n        \"y\": 57\n     \
+    \ },\n      \"id\": 21,\n      \"links\": [\n        {\n          \"title\": \"\
+    GPUPCIeReplayRateHigh \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUPCIeReplayRateHigh\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"mean\",\n            \"max\"\n          ],\n          \"displayMode\"\
+    : \"table\",\n          \"placement\": \"bottom\"\n        },\n        \"tooltip\"\
+    : {\n          \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n\
+    \      },\n      \"targets\": [\n        {\n          \"datasource\": {\n    \
+    \        \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n \
+    \         },\n          \"expr\": \"(avg by(UUID, hostname, gpu, modelName, device,\
+    \ pci_bus_id) (\\n  rate(DCGM_FI_PROF_PCIE_TX_BYTES{hostname=~\\\"$hostname\\\"\
+    ,UUID=~\\\"$UUID\\\"}[5m])\\n)) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\"} * 0)\",\n          \"legendFormat\": \"TX\",\n       \
+    \   \"refId\": \"A\"\n        },\n        {\n          \"datasource\": {\n   \
+    \         \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n\
+    \          },\n          \"expr\": \"(avg by(UUID, hostname, gpu, modelName, device,\
+    \ pci_bus_id) (\\n  rate(DCGM_FI_PROF_PCIE_RX_BYTES{hostname=~\\\"$hostname\\\"\
+    ,UUID=~\\\"$UUID\\\"}[5m])\\n)) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\"} * 0)\",\n          \"legendFormat\": \"RX\",\n       \
+    \   \"refId\": \"B\"\n        }\n      ],\n      \"title\": \"PCIe TX/RX Bandwidth\
+    \ (bytes/s)\",\n      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n    \
+    \    \"defaults\": {\n          \"color\": {\n            \"mode\": \"palette-classic\"\
+    \n          },\n          \"custom\": {\n            \"lineInterpolation\": \"\
+    stepAfter\",\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n\
+    \            \"showPoints\": \"never\",\n            \"spanNulls\": false\n  \
+    \        },\n          \"mappings\": [],\n          \"min\": 0,\n          \"\
+    thresholds\": {\n            \"mode\": \"absolute\",\n            \"steps\": [\n\
+    \              {\n                \"color\": \"green\",\n                \"value\"\
+    : null\n              },\n              {\n                \"color\": \"orange\"\
+    ,\n                \"value\": 1\n              }\n            ]\n          },\n\
+    \          \"unit\": \"none\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 7,\n        \"w\": 8,\n        \"x\": 16,\n\
+    \        \"y\": 57\n      },\n      \"id\": 22,\n      \"links\": [\n        {\n\
+    \          \"title\": \"GPUThermalThrottlingSustained \\u2014 firing\",\n    \
+    \      \"url\": \"/alerting/list?state=firing&search=GPUThermalThrottlingSustained\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUOverheating \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUOverheating\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\"\n\
+    \          ],\n          \"displayMode\": \"table\",\n          \"placement\"\
+    : \"bottom\"\n        },\n        \"tooltip\": {\n          \"mode\": \"multi\"\
+    ,\n          \"sort\": \"none\"\n        }\n      },\n      \"targets\": [\n \
+    \       {\n          \"datasource\": {\n            \"type\": \"prometheus\",\n\
+    \            \"uid\": \"${datasource}\"\n          },\n          \"expr\": \"\
+    DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\
+    \"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\"} *\
+    \ 0\",\n          \"legendFormat\": \"{{UUID}}\",\n          \"refId\": \"A\"\n\
+    \        }\n      ],\n      \"title\": \"Clock Throttle Reasons Over Time\",\n\
+    \      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n\
+    \    {\n      \"collapsed\": false,\n      \"gridPos\": {\n        \"h\": 1,\n\
+    \        \"w\": 24,\n        \"x\": 0,\n        \"y\": 64\n      },\n      \"\
+    id\": 107,\n      \"title\": \"\\u254c ECC Errors & Memory Health\",\n      \"\
+    type\": \"row\"\n    },\n    {\n      \"datasource\": {\n        \"type\": \"\
+    prometheus\",\n        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\"\
+    : {\n        \"defaults\": {\n          \"color\": {\n            \"mode\": \"\
+    thresholds\"\n          },\n          \"mappings\": [\n            {\n       \
+    \       \"options\": {\n                \"0\": {\n                  \"color\"\
+    : \"green\",\n                  \"index\": 0,\n                  \"text\": \"\
+    OK\"\n                },\n                \"1\": {\n                  \"color\"\
+    : \"red\",\n                  \"index\": 1,\n                  \"text\": \"FAILED\"\
+    \n                }\n              },\n              \"type\": \"value\"\n   \
+    \         }\n          ],\n          \"thresholds\": {\n            \"mode\":\
+    \ \"absolute\",\n            \"steps\": [\n              {\n                \"\
+    color\": \"green\",\n                \"value\": null\n              },\n     \
+    \         {\n                \"color\": \"red\",\n                \"value\": 1\n\
+    \              }\n            ]\n          },\n          \"unit\": \"none\",\n\
+    \          \"noValue\": \"0\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 4,\n        \"x\": 0,\n\
+    \        \"y\": 65\n      },\n      \"id\": 23,\n      \"links\": [\n        {\n\
+    \          \"title\": \"GPURowRemapFailure \\u2014 firing\",\n          \"url\"\
+    : \"/alerting/list?state=firing&search=GPURowRemapFailure\",\n          \"targetBlank\"\
+    : true\n        },\n        {\n          \"title\": \"GPUBurnoutPermanentFailure\
+    \ \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUBurnoutPermanentFailure\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n  \
+    \    \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n       \
+    \   \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"(DCGM_FI_DEV_ROW_REMAP_FAILURE{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\",container=\\\"nvidia-dcgm-exporter\\\"} >\
+    \ bool 0) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\
+    \"} * 0)\",\n          \"instant\": true,\n          \"legendFormat\": \"Row Remap\
+    \ Failure\",\n          \"refId\": \"A\"\n        }\n      ],\n      \"title\"\
+    : \"Row Remap Failure (0=OK \\u00b7 1=Failed)\",\n      \"type\": \"stat\"\n \
+    \   },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n  \
+    \      \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n      \
+    \  \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"mappings\": [],\n          \"thresholds\": {\n   \
+    \         \"mode\": \"absolute\",\n            \"steps\": [\n              {\n\
+    \                \"color\": \"green\",\n                \"value\": null\n    \
+    \          },\n              {\n                \"color\": \"red\",\n        \
+    \        \"value\": 1\n              }\n            ]\n          },\n        \
+    \  \"unit\": \"none\",\n          \"noValue\": \"0\"\n        },\n        \"overrides\"\
+    : []\n      },\n      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 4,\n \
+    \       \"x\": 4,\n        \"y\": 65\n      },\n      \"id\": 24,\n      \"links\"\
+    : [\n        {\n          \"title\": \"GPUUncorrectableRemappedRows \\u2014 firing\"\
+    ,\n          \"url\": \"/alerting/list?state=firing&search=GPUUncorrectableRemappedRows\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUMemoryDegradationCritical \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUMemoryDegradationCritical\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n  \
+    \    \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n       \
+    \   \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\",container=\\\"nvidia-dcgm-exporter\\\"}) or\
+    \ (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\"} * 0)\"\
+    ,\n          \"instant\": true,\n          \"legendFormat\": \"Uncorrectable Remapped\"\
+    ,\n          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Uncorrectable\
+    \ Remapped Rows\",\n      \"type\": \"stat\"\n    },\n    {\n      \"datasource\"\
+    : {\n        \"type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n \
+    \     },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\"\
+    : {\n            \"mode\": \"thresholds\"\n          },\n          \"mappings\"\
+    : [],\n          \"thresholds\": {\n            \"mode\": \"absolute\",\n    \
+    \        \"steps\": [\n              {\n                \"color\": \"green\",\n\
+    \                \"value\": null\n              },\n              {\n        \
+    \        \"color\": \"orange\",\n                \"value\": 10\n             \
+    \ }\n            ]\n          },\n          \"unit\": \"none\",\n          \"\
+    noValue\": \"0\"\n        },\n        \"overrides\": []\n      },\n      \"gridPos\"\
+    : {\n        \"h\": 4,\n        \"w\": 4,\n        \"x\": 8,\n        \"y\": 65\n\
+    \      },\n      \"id\": 25,\n      \"links\": [\n        {\n          \"title\"\
+    : \"GPUCorrectableRemapAccelerating \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUCorrectableRemapAccelerating\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n  \
+    \    \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n       \
+    \   \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\",container=\\\"nvidia-dcgm-exporter\\\"}) or\
+    \ (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\"} * 0)\"\
+    ,\n          \"instant\": true,\n          \"legendFormat\": \"Correctable Remapped\"\
+    ,\n          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Correctable\
+    \ Remapped Rows\",\n      \"type\": \"stat\"\n    },\n    {\n      \"datasource\"\
+    : {\n        \"type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n \
+    \     },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\"\
+    : {\n            \"mode\": \"thresholds\"\n          },\n          \"mappings\"\
+    : [],\n          \"thresholds\": {\n            \"mode\": \"absolute\",\n    \
+    \        \"steps\": [\n              {\n                \"color\": \"green\",\n\
+    \                \"value\": null\n              },\n              {\n        \
+    \        \"color\": \"orange\",\n                \"value\": 1\n              }\n\
+    \            ]\n          },\n          \"unit\": \"none\",\n          \"noValue\"\
+    : \"0\"\n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n\
+    \        \"h\": 4,\n        \"w\": 4,\n        \"x\": 12,\n        \"y\": 65\n\
+    \      },\n      \"id\": 26,\n      \"links\": [\n        {\n          \"title\"\
+    : \"GPUDoubleBitECCDetected \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUDoubleBitECCDetected\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n  \
+    \    \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n       \
+    \   \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"DCGM_FI_DEV_ECC_SBE_VOL_TOTAL{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\",container=\\\"nvidia-dcgm-exporter\\\"} * 0\",\n      \
+    \    \"instant\": true,\n          \"legendFormat\": \"SBE Volatile\",\n     \
+    \     \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"ECC SBE Volatile\
+    \ Total\",\n      \"type\": \"stat\"\n    },\n    {\n      \"datasource\": {\n\
+    \        \"type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n     \
+    \ },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\":\
+    \ {\n            \"mode\": \"thresholds\"\n          },\n          \"mappings\"\
+    : [],\n          \"thresholds\": {\n            \"mode\": \"absolute\",\n    \
+    \        \"steps\": [\n              {\n                \"color\": \"green\",\n\
+    \                \"value\": null\n              },\n              {\n        \
+    \        \"color\": \"red\",\n                \"value\": 1\n              }\n\
+    \            ]\n          },\n          \"unit\": \"none\",\n          \"noValue\"\
+    : \"0\"\n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n\
+    \        \"h\": 4,\n        \"w\": 4,\n        \"x\": 16,\n        \"y\": 65\n\
+    \      },\n      \"id\": 27,\n      \"links\": [\n        {\n          \"title\"\
+    : \"GPUDoubleBitECCDetected \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUDoubleBitECCDetected\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUMemoryDegradationCritical \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUMemoryDegradationCritical\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n  \
+    \    \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n       \
+    \   \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"DCGM_FI_DEV_ECC_DBE_VOL_TOTAL{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\",container=\\\"nvidia-dcgm-exporter\\\"} * 0\",\n      \
+    \    \"instant\": true,\n          \"legendFormat\": \"DBE Volatile\",\n     \
+    \     \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"ECC DBE Volatile\
+    \ Total\",\n      \"type\": \"stat\"\n    },\n    {\n      \"datasource\": {\n\
+    \        \"type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n     \
+    \ },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\":\
+    \ {\n            \"mode\": \"thresholds\"\n          },\n          \"mappings\"\
+    : [\n            {\n              \"options\": {\n                \"0\": {\n \
+    \                 \"color\": \"green\",\n                  \"index\": 0,\n   \
+    \               \"text\": \"0 (No XID)\"\n                }\n              },\n\
+    \              \"type\": \"value\"\n            }\n          ],\n          \"\
+    thresholds\": {\n            \"mode\": \"absolute\",\n            \"steps\": [\n\
+    \              {\n                \"color\": \"green\",\n                \"value\"\
+    : null\n              },\n              {\n                \"color\": \"red\"\
+    ,\n                \"value\": 1\n              }\n            ]\n          },\n\
+    \          \"unit\": \"none\",\n          \"noValue\": \"0\"\n        },\n   \
+    \     \"overrides\": []\n      },\n      \"gridPos\": {\n        \"h\": 4,\n \
+    \       \"w\": 4,\n        \"x\": 20,\n        \"y\": 65\n      },\n      \"id\"\
+    : 28,\n      \"links\": [\n        {\n          \"title\": \"GPUXIDErrorsDetected\
+    \ \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUXIDErrorsDetected\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUXIDFatalCritical \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUXIDFatalCritical\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"auto\"\n      },\n  \
+    \    \"pluginVersion\": \"12.1.0\",\n      \"targets\": [\n        {\n       \
+    \   \"datasource\": {\n            \"type\": \"prometheus\",\n            \"uid\"\
+    : \"${datasource}\"\n          },\n          \"expr\": \"DCGM_FI_DEV_XID_ERRORS{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\",container=\\\"nvidia-dcgm-exporter\\\"} * 0\",\n      \
+    \    \"instant\": true,\n          \"legendFormat\": \"XID Errors\",\n       \
+    \   \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"XID Errors (counter)\"\
+    ,\n      \"type\": \"stat\"\n    },\n    {\n      \"datasource\": {\n        \"\
+    type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n      },\n      \"\
+    fieldConfig\": {\n        \"defaults\": {\n          \"color\": {\n          \
+    \  \"mode\": \"palette-classic\"\n          },\n          \"custom\": {\n    \
+    \        \"lineInterpolation\": \"smooth\",\n            \"lineWidth\": 2,\n \
+    \           \"fillOpacity\": 10,\n            \"showPoints\": \"never\",\n   \
+    \         \"spanNulls\": false\n          },\n          \"mappings\": [],\n  \
+    \        \"min\": 0,\n          \"thresholds\": {\n            \"mode\": \"absolute\"\
+    ,\n            \"steps\": [\n              {\n                \"color\": \"green\"\
+    ,\n                \"value\": null\n              }\n            ]\n         \
+    \ },\n          \"unit\": \"none\"\n        },\n        \"overrides\": []\n  \
+    \    },\n      \"gridPos\": {\n        \"h\": 6,\n        \"w\": 12,\n       \
+    \ \"x\": 0,\n        \"y\": 69\n      },\n      \"id\": 29,\n      \"links\":\
+    \ [\n        {\n          \"title\": \"GPURowRemapFailure \\u2014 firing\",\n\
+    \          \"url\": \"/alerting/list?state=firing&search=GPURowRemapFailure\"\
+    ,\n          \"targetBlank\": true\n        },\n        {\n          \"title\"\
+    : \"GPUCorrectableRemapAccelerating \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUCorrectableRemapAccelerating\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"max\"\n          ],\n          \"displayMode\": \"table\",\n  \
+    \        \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n     \
+    \     \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n\
+    \      \"targets\": [\n        {\n          \"datasource\": {\n            \"\
+    type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n\
+    \          \"expr\": \"(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\",container=\\\"nvidia-dcgm-exporter\\\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\"} * 0)\",\n          \"legendFormat\": \"Correctable\"\
+    ,\n          \"refId\": \"A\"\n        },\n        {\n          \"datasource\"\
+    : {\n            \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\
+    \n          },\n          \"expr\": \"(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{hostname=~\\\
+    \"$hostname\\\",UUID=~\\\"$UUID\\\",container=\\\"nvidia-dcgm-exporter\\\"}) or\
+    \ (DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\"} * 0)\"\
+    ,\n          \"legendFormat\": \"Uncorrectable\",\n          \"refId\": \"B\"\n\
+    \        }\n      ],\n      \"title\": \"Row Remap Count Over Time\",\n      \"\
+    type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n    {\n\
+    \      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"uid\":\
+    \ \"${datasource}\"\n      },\n      \"fieldConfig\": {\n        \"defaults\"\
+    : {\n          \"color\": {\n            \"mode\": \"palette-classic\"\n     \
+    \     },\n          \"custom\": {\n            \"lineInterpolation\": \"smooth\"\
+    ,\n            \"lineWidth\": 2,\n            \"fillOpacity\": 10,\n         \
+    \   \"showPoints\": \"never\",\n            \"spanNulls\": false\n          },\n\
+    \          \"mappings\": [],\n          \"min\": 0,\n          \"thresholds\"\
+    : {\n            \"mode\": \"absolute\",\n            \"steps\": [\n         \
+    \     {\n                \"color\": \"green\",\n                \"value\": null\n\
+    \              },\n              {\n                \"color\": \"orange\",\n \
+    \               \"value\": 1\n              }\n            ]\n          },\n \
+    \         \"unit\": \"none\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 6,\n        \"w\": 12,\n        \"x\": 12,\n\
+    \        \"y\": 69\n      },\n      \"id\": 30,\n      \"links\": [\n        {\n\
+    \          \"title\": \"GPUDoubleBitECCDetected \\u2014 firing\",\n          \"\
+    url\": \"/alerting/list?state=firing&search=GPUDoubleBitECCDetected\",\n     \
+    \     \"targetBlank\": true\n        },\n        {\n          \"title\": \"GPUMemoryDegradationCritical\
+    \ \\u2014 firing\",\n          \"url\": \"/alerting/list?state=firing&search=GPUMemoryDegradationCritical\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"legend\": {\n          \"calcs\": [\n            \"lastNotNull\",\n\
+    \            \"max\"\n          ],\n          \"displayMode\": \"table\",\n  \
+    \        \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n     \
+    \     \"mode\": \"multi\",\n          \"sort\": \"none\"\n        }\n      },\n\
+    \      \"targets\": [\n        {\n          \"datasource\": {\n            \"\
+    type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n\
+    \          \"expr\": \"DCGM_FI_DEV_ECC_SBE_AGG_TOTAL{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"} * 0\",\n          \"legendFormat\": \"SBE Agg\",\n          \"refId\"\
+    : \"A\"\n        },\n        {\n          \"datasource\": {\n            \"type\"\
+    : \"prometheus\",\n            \"uid\": \"${datasource}\"\n          },\n    \
+    \      \"expr\": \"DCGM_FI_DEV_ECC_DBE_AGG_TOTAL{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\
+    \"} * 0\",\n          \"legendFormat\": \"DBE Agg\",\n          \"refId\": \"\
+    B\"\n        }\n      ],\n      \"title\": \"ECC Aggregate Errors Over Time\"\
+    ,\n      \"type\": \"timeseries\",\n      \"pluginVersion\": \"12.1.0\"\n    },\n\
+    \    {\n      \"collapsed\": false,\n      \"gridPos\": {\n        \"h\": 1,\n\
+    \        \"w\": 24,\n        \"x\": 0,\n        \"y\": 75\n      },\n      \"\
+    id\": 108,\n      \"title\": \"\\u254c Platform Health\",\n      \"type\": \"\
+    row\"\n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\"\
+    ,\n        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n  \
+    \      \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"mappings\": [],\n          \"thresholds\": {\n   \
+    \         \"mode\": \"absolute\",\n            \"steps\": [\n              {\n\
+    \                \"color\": \"green\",\n                \"value\": null\n    \
+    \          },\n              {\n                \"color\": \"orange\",\n     \
+    \           \"value\": 80\n              },\n              {\n               \
+    \ \"color\": \"red\",\n                \"value\": 95\n              }\n      \
+    \      ]\n          },\n          \"unit\": \"percent\",\n          \"min\": 0,\n\
+    \          \"max\": 100,\n          \"decimals\": 1,\n          \"noValue\": \"\
+    N/A\"\n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n\
+    \        \"h\": 4,\n        \"w\": 6,\n        \"x\": 0,\n        \"y\": 76\n\
+    \      },\n      \"id\": 31,\n      \"title\": \"VRAM Utilisation\",\n      \"\
+    description\": \"GPU framebuffer memory in use as % of total (used \\u00f7 (used\
+    \ + free) \\u00d7 100). Orange \\u226580%, red \\u226595%. High VRAM pressure\
+    \ causes workload OOM kills and accelerates thermal/power degradation.\",\n  \
+    \    \"links\": [\n        {\n          \"title\": \"GPU memory panels \\u2014\
+    \ SRE Deep Dive\",\n          \"url\": \"/d/gpu-sre-dashboard-v5?var-hostname=${hostname}&var-UUID=${UUID}\"\
+    ,\n          \"targetBlank\": false,\n          \"keepTime\": true\n        }\n\
+    \      ],\n      \"options\": {\n        \"colorMode\": \"background\",\n    \
+    \    \"graphMode\": \"area\",\n        \"justifyMode\": \"center\",\n        \"\
+    orientation\": \"auto\",\n        \"reduceOptions\": {\n          \"calcs\": [\n\
+    \            \"lastNotNull\"\n          ],\n          \"fields\": \"\",\n    \
+    \      \"values\": false\n        },\n        \"text\": {},\n        \"textMode\"\
+    : \"auto\",\n        \"wideLayout\": true,\n        \"showPercentChange\": false,\n\
+    \        \"percentChangeColorMode\": \"standard\"\n      },\n      \"pluginVersion\"\
+    : \"12.1.0\",\n      \"targets\": [\n        {\n          \"datasource\": {\n\
+    \            \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\
+    \n          },\n          \"expr\": \"DCGM_FI_DEV_FB_USED{hostname=~\\\"$hostname\\\
+    \",UUID=~\\\"$UUID\\\"} / (DCGM_FI_DEV_FB_USED{hostname=~\\\"$hostname\\\",UUID=~\\\
+    \"$UUID\\\"} + DCGM_FI_DEV_FB_FREE{hostname=~\\\"$hostname\\\",UUID=~\\\"$UUID\\\
+    \"}) * 100\",\n          \"instant\": true,\n          \"legendFormat\": \"VRAM\
+    \ %\",\n          \"refId\": \"A\"\n        }\n      ],\n      \"type\": \"stat\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n    \
+    \    \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"mappings\": [\n            {\n              \"options\"\
+    : {\n                \"0\": {\n                  \"color\": \"red\",\n       \
+    \           \"index\": 0,\n                  \"text\": \"0 \\u2014 no GPU metrics\
+    \ ingested\"\n                }\n              },\n              \"type\": \"\
+    value\"\n            }\n          ],\n          \"thresholds\": {\n          \
+    \  \"mode\": \"absolute\",\n            \"steps\": [\n              {\n      \
+    \          \"color\": \"red\",\n                \"value\": null\n            \
+    \  },\n              {\n                \"color\": \"green\",\n              \
+    \  \"value\": 1\n              }\n            ]\n          },\n          \"unit\"\
+    : \"none\",\n          \"noValue\": \"0\"\n        },\n        \"overrides\":\
+    \ []\n      },\n      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 6,\n \
+    \       \"x\": 6,\n        \"y\": 76\n      },\n      \"id\": 32,\n      \"title\"\
+    : \"DCGM Exporter Targets\",\n      \"description\": \"Number of nvidia-dcgm-exporter\
+    \ pods Prometheus is successfully scraping. Zero means no GPU hardware metrics\
+    \ are flowing \\u2014 all DCGM panels will show No data.\",\n      \"links\":\
+    \ [\n        {\n          \"title\": \"GPUDCGMScrapeDegraded alert\",\n      \
+    \    \"url\": \"/alerting/list?state=firing&search=GPUDCGMScrapeDegraded\",\n\
+    \          \"targetBlank\": true\n        },\n        {\n          \"title\":\
+    \ \"GPUNodeDCGMDarkout alert\",\n          \"url\": \"/alerting/list?state=firing&search=GPUNodeDCGMDarkout\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"value\",\n        \"\
+    wideLayout\": true,\n        \"showPercentChange\": false,\n        \"percentChangeColorMode\"\
+    : \"standard\"\n      },\n      \"pluginVersion\": \"12.1.0\",\n      \"targets\"\
+    : [\n        {\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"${datasource}\"\n          },\n          \"expr\": \"\
+    count(up{job=\\\"nvidia-dcgm-exporter\\\"} == 1) or vector(0)\",\n          \"\
+    instant\": true,\n          \"legendFormat\": \"\",\n          \"refId\": \"A\"\
+    \n        }\n      ],\n      \"type\": \"stat\"\n    },\n    {\n      \"datasource\"\
+    : {\n        \"type\": \"prometheus\",\n        \"uid\": \"${datasource}\"\n \
+    \     },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\"\
+    : {\n            \"mode\": \"thresholds\"\n          },\n          \"mappings\"\
+    : [\n            {\n              \"options\": {\n                \"0\": {\n \
+    \                 \"color\": \"red\",\n                  \"index\": 2,\n     \
+    \             \"text\": \"0% \\u2014 all DCGM targets failing\"\n            \
+    \    }\n              },\n              \"type\": \"value\"\n            },\n\
+    \            {\n              \"options\": {\n                \"from\": 0.001,\n\
+    \                \"to\": 0.899,\n                \"result\": {\n             \
+    \     \"color\": \"orange\",\n                  \"index\": 1,\n              \
+    \    \"text\": \"Degraded \\u2014 <90% targets scraping\"\n                }\n\
+    \              },\n              \"type\": \"range\"\n            },\n       \
+    \     {\n              \"options\": {\n                \"from\": 0.9,\n      \
+    \          \"to\": 1,\n                \"result\": {\n                  \"color\"\
+    : \"green\",\n                  \"index\": 0,\n                  \"text\": \"\
+    Healthy \\u2014 \\u226590% targets scraping\"\n                }\n           \
+    \   },\n              \"type\": \"range\"\n            }\n          ],\n     \
+    \     \"min\": 0,\n          \"max\": 1,\n          \"thresholds\": {\n      \
+    \      \"mode\": \"absolute\",\n            \"steps\": [\n              {\n  \
+    \              \"color\": \"red\",\n                \"value\": null\n        \
+    \      },\n              {\n                \"color\": \"orange\",\n         \
+    \       \"value\": 0.01\n              },\n              {\n                \"\
+    color\": \"orange\",\n                \"value\": 0.9\n              },\n     \
+    \         {\n                \"color\": \"green\",\n                \"value\"\
+    : 1\n              }\n            ]\n          },\n          \"unit\": \"percentunit\"\
+    ,\n          \"noValue\": \"0\"\n        },\n        \"overrides\": []\n     \
+    \ },\n      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 6,\n        \"x\"\
+    : 12,\n        \"y\": 76\n      },\n      \"id\": 33,\n      \"title\": \"DCGM\
+    \ Scrape Success Rate\",\n      \"description\": \"Fraction of nvidia-dcgm-exporter\
+    \ targets Prometheus scraped successfully in the last interval. Below 90% triggers\
+    \ GPUDCGMScrapeDegraded (warning). Below 100% means some GPU nodes are producing\
+    \ no metrics.\",\n      \"links\": [\n        {\n          \"title\": \"GPUDCGMScrapeDegraded\
+    \ alert\",\n          \"url\": \"/alerting/list?state=firing&search=GPUDCGMScrapeDegraded\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"value\",\n        \"\
+    wideLayout\": true,\n        \"showPercentChange\": false,\n        \"percentChangeColorMode\"\
+    : \"standard\"\n      },\n      \"pluginVersion\": \"12.1.0\",\n      \"targets\"\
+    : [\n        {\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"${datasource}\"\n          },\n          \"expr\": \"\
+    (count(up{job=\\\"nvidia-dcgm-exporter\\\"} == 1) / count(up{job=\\\"nvidia-dcgm-exporter\\\
+    \"})) or vector(0)\",\n          \"instant\": true,\n          \"legendFormat\"\
+    : \"\",\n          \"refId\": \"A\"\n        }\n      ],\n      \"type\": \"stat\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"${datasource}\"\n      },\n      \"fieldConfig\": {\n    \
+    \    \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"mappings\": [\n            {\n              \"options\"\
+    : {\n                \"0\": {\n                  \"color\": \"green\",\n     \
+    \             \"index\": 0,\n                  \"text\": \"0 \\u2014 no alerts\
+    \ firing\"\n                }\n              },\n              \"type\": \"value\"\
+    \n            }\n          ],\n          \"thresholds\": {\n            \"mode\"\
+    : \"absolute\",\n            \"steps\": [\n              {\n                \"\
+    color\": \"green\",\n                \"value\": null\n              },\n     \
+    \         {\n                \"color\": \"red\",\n                \"value\": 1\n\
+    \              }\n            ]\n          },\n          \"unit\": \"none\",\n\
+    \          \"noValue\": \"0\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 4,\n        \"w\": 6,\n        \"x\": 18,\n\
+    \        \"y\": 76\n      },\n      \"id\": 34,\n      \"title\": \"Firing GPU\
+    \ Alerts\",\n      \"description\": \"Count of ALERTS{platform=gpu-monitoring,\
+    \ alertstate=firing}. Any value above 0 means at least one GPU alert rule has\
+    \ triggered. Green = no active incidents.\",\n      \"links\": [\n        {\n\
+    \          \"title\": \"View all firing GPU alerts\",\n          \"url\": \"/alerting/list?state=firing&search=platform%3Dgpu-monitoring\"\
+    ,\n          \"targetBlank\": true\n        }\n      ],\n      \"options\": {\n\
+    \        \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n  \
+    \      \"justifyMode\": \"center\",\n        \"orientation\": \"auto\",\n    \
+    \    \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"text\": {},\n        \"textMode\": \"value\",\n        \"\
+    wideLayout\": true,\n        \"showPercentChange\": false,\n        \"percentChangeColorMode\"\
+    : \"standard\"\n      },\n      \"pluginVersion\": \"12.1.0\",\n      \"targets\"\
+    : [\n        {\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"${datasource}\"\n          },\n          \"expr\": \"\
+    count(ALERTS{platform=\\\"gpu-monitoring\\\",alertstate=\\\"firing\\\"}) or vector(0)\"\
+    ,\n          \"instant\": true,\n          \"legendFormat\": \"\",\n         \
+    \ \"refId\": \"A\"\n        }\n      ],\n      \"type\": \"stat\"\n    }\n  ],\n\
+    \  \"refresh\": \"30s\",\n  \"schemaVersion\": 41,\n  \"style\": \"dark\",\n \
+    \ \"tags\": [\n    \"gpu\",\n    \"nvidia\",\n    \"dcgm\",\n    \"sre\",\n  \
+    \  \"openshift\"\n  ],\n  \"templating\": {\n    \"list\": [\n      {\n      \
+    \  \"current\": {\n          \"selected\": false,\n          \"text\": \"\",\n\
+    \          \"value\": \"\"\n        },\n        \"description\": \"OCP Console\
+    \ base URL \\u2014 set automatically by deploy.sh\",\n        \"hide\": 2,\n \
+    \       \"label\": \"OCP Console\",\n        \"name\": \"ocp_console\",\n    \
+    \    \"query\": \"\",\n        \"skipUrlSync\": true,\n        \"type\": \"constant\"\
+    \n      },\n      {\n        \"current\": {\n          \"text\": \"Prometheus\"\
+    ,\n          \"value\": \"datasource\"\n        },\n        \"hide\": 0,\n   \
+    \     \"includeAll\": false,\n        \"label\": \"Datasource\",\n        \"multi\"\
+    : false,\n        \"name\": \"datasource\",\n        \"options\": [],\n      \
+    \  \"query\": \"prometheus\",\n        \"refresh\": 1,\n        \"skipUrlSync\"\
+    : false,\n        \"type\": \"datasource\",\n        \"regex\": \"\"\n      },\n\
+    \      {\n        \"current\": {\n          \"text\": \"All\",\n          \"value\"\
+    : \"$__all\"\n        },\n        \"datasource\": \"${datasource}\",\n       \
+    \ \"definition\": \"label_values(DCGM_FI_DEV_GPU_TEMP, hostname)\",\n        \"\
+    hide\": 0,\n        \"includeAll\": true,\n        \"label\": \"Node\",\n    \
+    \    \"multi\": false,\n        \"name\": \"hostname\",\n        \"options\":\
+    \ [],\n        \"query\": {\n          \"query\": \"label_values(DCGM_FI_DEV_GPU_TEMP,\
+    \ hostname)\",\n          \"refId\": \"StandardVariableQuery\"\n        },\n \
+    \       \"refresh\": 2,\n        \"regex\": \"\",\n        \"skipUrlSync\": false,\n\
+    \        \"sort\": 1,\n        \"type\": \"query\",\n        \"allValue\": \"\
+    .*\"\n      },\n      {\n        \"current\": {\n          \"text\": \"All\",\n\
+    \          \"value\": \"$__all\"\n        },\n        \"datasource\": \"${datasource}\"\
+    ,\n        \"definition\": \"label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"\
+    $hostname\\\"}, UUID)\",\n        \"hide\": 0,\n        \"includeAll\": true,\n\
+    \        \"label\": \"GPU (UUID)\",\n        \"multi\": false,\n        \"name\"\
+    : \"UUID\",\n        \"options\": [],\n        \"query\": {\n          \"query\"\
+    : \"label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\\\"$hostname\\\"}, UUID)\",\n\
+    \          \"refId\": \"StandardVariableQuery\"\n        },\n        \"refresh\"\
+    : 2,\n        \"regex\": \"\",\n        \"skipUrlSync\": false,\n        \"sort\"\
+    : 1,\n        \"type\": \"query\",\n        \"allValue\": \".*\"\n      }\n  \
+    \  ]\n  },\n  \"time\": {\n    \"from\": \"now-3h\",\n    \"to\": \"now\"\n  },\n\
+    \  \"timepicker\": {},\n  \"timezone\": \"browser\",\n  \"title\": \"GPU SRE Deep\
+    \ Dive\",\n  \"uid\": \"gpu-sre-dashboard-v5\",\n  \"weekStart\": \"\",\n  \"\
+    preload\": false\n}"
