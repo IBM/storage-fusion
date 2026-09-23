@@ -167,31 +167,60 @@ The **Cluster** dropdown at the top filters all panels. It defaults to **All** (
 
 ## GrafanaDashboard CR Files — What They Are and When to Use Them
 
-The repository ships two YAML files alongside the dashboard JSON:
+The repository ships **two delivery formats** for the single-cluster dashboards:
 
-| File | Dashboard it deploys |
+| Format | File(s) | Used when |
+|---|---|---|
+| **GrafanaDashboard CR** | `gpu-cluster-overview-cr.yaml` · `gpu-sre-deep-dive-cr.yaml` | Grafana Operator is installed on your OpenShift cluster |
+| **Plain JSON** | `gpu-grafana-cluster-overview.json` · `gpu-grafana-sre-dashboard.json` | Standalone Grafana — manual import via the UI |
+
+Both formats carry **identical dashboard content** — same UID, same panels, same
+queries. They are two packaging forms of the same thing, not two different dashboards.
+
+---
+
+### CR vs JSON — what is actually the same, what differs
+
+Running a field-by-field comparison of each pair:
+
+| | `gpu-sre-deep-dive-cr.yaml` vs `gpu-grafana-sre-dashboard.json` |
 |---|---|
-| `gpu-cluster-overview-cr.yaml` | GPU Cluster Overview (`uid: gpu-cluster-overview-v8`) |
-| `gpu-sre-deep-dive-cr.yaml` | GPU SRE Deep Dive (`uid: gpu-sre-dashboard-v5`) |
+| UID | `gpu-sre-dashboard-v5` — **identical** |
+| Schema version | `41` — **identical** |
+| Panel count | `43` — **identical** |
+| All panel queries | **identical** |
+| All template variables | **identical** (`datasource`, `hostname`, `UUID`) |
+| `ocp_console` variable value | **differs** — CR ships blank `""` · JSON has `https://grafana-a-route-grafana.apps.f80l034...` |
 
-### What kind of resource is this?
+The only difference is the `ocp_console` constant variable:
 
-Both files are `GrafanaDashboard` custom resources defined by the
+- The **CR ships it blank** — intentional, so it works on any cluster. You set the URL once after applying (see [Set the ocp_console URL](#set-the-ocp_console-url) below).
+- The **JSON file has the cluster URL baked in** — this is the URL that was present when the dashboard was last exported from Grafana on `f80l034.fusion.tadn.ibm.com`. If you import it on a different cluster, update the variable to match your console URL.
+
+The same relationship holds for the cluster overview pair (`gpu-cluster-overview-cr.yaml` vs `gpu-grafana-cluster-overview.json`).
+
+---
+
+### What is a GrafanaDashboard CR?
+
+A `GrafanaDashboard` is a Kubernetes custom resource defined by the
 [Grafana Operator](https://grafana-operator.github.io/) (`apiVersion: grafana.integreatly.org/v1beta1`).
+When you apply one, the operator automatically provisions the embedded dashboard JSON
+into the matching Grafana instance — no browser, no UI import, no copy-paste needed.
 
 ```yaml
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
   name: gpu-cluster-overview
-  namespace: grafana
+  namespace: grafana          # namespace where Grafana Operator is running
   labels:
     app: grafana
 spec:
   instanceSelector:
     matchLabels:
-      dashboards: grafana-a   # must match your Grafana instance label
-  json: |
+      dashboards: grafana-a   # must match the label on your Grafana instance CR
+  json: |                     # full dashboard JSON — pretty-printed, not escaped
     {
       "title": "GPU Cluster Overview",
       "uid": "gpu-cluster-overview-v8",
@@ -199,37 +228,83 @@ spec:
     }
 ```
 
-The `spec.json` field holds the full Grafana dashboard JSON in plain, readable form
-(pretty-printed, not escaped). The Grafana Operator watches for these CRs and
-automatically provisions the dashboard into the matching Grafana instance — no
-manual import through the Grafana UI is needed.
+The `spec.json` field is a YAML literal block scalar (`|`) containing
+the complete Grafana dashboard JSON in human-readable, pretty-printed form.
+You can edit panel titles, thresholds, or PromQL queries directly in this file
+and `oc apply` it — changes appear in Grafana within seconds.
 
-### When to use the CR files (vs. manual JSON import)
+---
 
-| Situation | Use |
-|---|---|
-| **Grafana Operator is installed** on your OpenShift cluster (common with IBM Storage Fusion and OCP 4.12+) | `oc apply -f gpu-cluster-overview-cr.yaml` — dashboard appears automatically |
-| **ACM Observability** is your Grafana (Hub cluster) | Use `gpu-fleet-acm-dashboard.yaml` (ConfigMap) instead — the CR approach does not apply here |
-| **Standalone Grafana** without the operator (e.g., kube-prometheus-stack, vanilla Docker) | Use manual JSON import via the Grafana UI (Steps 3–4 in the Single-Cluster Setup Guide) |
+### Which file is actually being used in Grafana?
 
-### How to apply the CR files
+```
+Is the Grafana Operator installed on your cluster?
+          │
+         YES ──► The CR file is the source of truth.
+                 Grafana Operator watches for GrafanaDashboard CRs
+                 and provisions them automatically.
+                 The .json file is a portable backup — not actively used.
+          │
+          NO ──► The .json file is the source of truth.
+                 You imported it manually through the Grafana UI.
+                 The CR file is not used.
+          │
+     ACM Hub ──► Neither CR nor .json applies to the fleet dashboard.
+                 Use gpu-fleet-acm-dashboard.yaml (ConfigMap) instead.
+```
 
-Ensure the Grafana Operator is installed and a `Grafana` instance exists in the
-`grafana` namespace with the label `dashboards: grafana-a`. Then:
+On the `f80l034.fusion.tadn.ibm.com` cluster **the CR files are being used** —
+the `ocp_console` URL embedded in the JSON file (`grafana-a-route-grafana.apps.f80l034...`)
+is the route created by the Grafana Operator, confirming it was provisioned via the CR.
+
+---
+
+### Choosing the right deployment method
+
+| Your environment | Deploy with | Command |
+|---|---|---|
+| OpenShift + Grafana Operator (IBM Storage Fusion, OCP 4.12+) | CR YAML | `oc apply -f gpu-cluster-overview-cr.yaml` |
+| OpenShift + ACM Observability (multi-cluster Hub) | ConfigMap | `oc apply -f gpu-fleet-acm-dashboard.yaml` |
+| Standalone / kube-prometheus-stack / Docker Grafana | JSON import | Grafana UI → Dashboards → New → Import |
+
+---
+
+### Applying the CR files (Grafana Operator path)
+
+**Step 1 — Confirm the Grafana Operator and instance are ready**
 
 ```bash
-# Apply both dashboards at once
+# Check the operator pod
+oc get pods -n grafana -l app.kubernetes.io/name=grafana-operator
+
+# Check the Grafana instance and its label
+oc get grafana -n grafana -o jsonpath='{.items[0].metadata.labels}'
+```
+
+The label value under `dashboards:` must match `spec.instanceSelector.matchLabels.dashboards`
+in the CR (default: `grafana-a`). If yours differs, edit both CR files before applying:
+
+```yaml
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: <your-label-here>   # change this to match your Grafana instance
+```
+
+**Step 2 — Apply both CRs**
+
+```bash
 oc apply -f gpu-cluster-overview-cr.yaml
 oc apply -f gpu-sre-deep-dive-cr.yaml
 ```
 
-Verify they were picked up by the operator:
+**Step 3 — Verify the operator picked them up**
 
 ```bash
 oc get grafanadashboard -n grafana
 ```
 
-Expected output:
+Expected:
 
 ```
 NAME                   AGE
@@ -237,31 +312,42 @@ gpu-cluster-overview   30s
 gpu-sre-deep-dive      30s
 ```
 
-The dashboards will appear in Grafana within seconds. If your Grafana instance uses
-a different namespace or a different `dashboards:` label value, edit the
-`metadata.namespace` and `spec.instanceSelector.matchLabels.dashboards` fields in
-each CR file before applying.
+Both dashboards appear in Grafana within seconds under the folder matching your instance.
 
-### Structure of the `spec.json` field
+---
 
-The `spec.json` field in each CR is the complete Grafana dashboard JSON — identical
-in content to the corresponding `.json` file, but embedded as a YAML literal block
-scalar (`|`) so it is human-readable and diff-friendly:
+### Set the `ocp_console` URL
 
-```yaml
-spec:
-  json: |
-    {
-      "title": "GPU Cluster Overview",
-      "uid": "gpu-cluster-overview-v8",
-      "panels": [ ... ],
-      "templating": { ... }
-    }
+The `ocp_console` variable drives the deep-link icons (↗) on panel titles that open
+the corresponding node or pod page in the OpenShift Console. It ships blank in the CR
+and must be set once per cluster.
+
+**Option A — Edit the CR before applying (recommended)**
+
+Open `gpu-cluster-overview-cr.yaml` and `gpu-sre-deep-dive-cr.yaml`, find the
+`ocp_console` variable block, and set `"query"` and `"current.value"` to your console URL:
+
+```json
+{
+  "name": "ocp_console",
+  "type": "constant",
+  "query": "https://console-openshift-console.apps.<your-cluster-domain>",
+  "current": {
+    "value": "https://console-openshift-console.apps.<your-cluster-domain>"
+  }
+}
 ```
 
-This means you can edit dashboard properties (titles, thresholds, queries) directly
-in the CR file without needing a separate JSON file, and changes take effect as soon
-as you re-apply the CR.
+Then `oc apply` both files.
+
+**Option B — Set it in the Grafana UI after applying**
+
+1. Open the dashboard → ⚙ Settings → Variables → `ocp_console`.
+2. Set **Constant value** to `https://console-openshift-console.apps.<your-cluster-domain>`.
+3. Click **Update** → **Save dashboard**.
+
+> Note: changes saved through the UI will be overwritten the next time the Grafana
+> Operator reconciles the CR. Use Option A to make the change permanent.
 
 ---
 
