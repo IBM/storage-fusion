@@ -65,10 +65,18 @@ Provides granular per-GPU forensic telemetry: power instability (15-min rolling 
 Before deploying the dashboards, ensure the following components are configured:
 
 ### 1. NVIDIA GPU Operator & DCGM Exporter
-The NVIDIA GPU Operator must be installed and running on GPU-equipped worker nodes.
+The **NVIDIA GPU Operator** (e.g., `gpu-operator-certified` v26.7.1+) must be installed on the cluster to manage NVIDIA drivers, device plugins, and the DCGM Exporter.
 
-Verify:
+For installation and configuration instructions, refer to:
+- [NVIDIA GPU Operator on Red Hat OpenShift Documentation](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/openshift/contents.html)
+- [NVIDIA DCGM Exporter Documentation](https://github.com/NVIDIA/dcgm-exporter)
+
+Verify operator and DCGM Exporter status on the cluster:
 ```bash
+# Check GPU Operator CSV installation
+oc get csv -n nvidia-gpu-operator -l operators.coreos.com/gpu-operator-certified.nvidia-gpu-operator
+
+# Check GPU Operator pods and DCGM Exporter daemons
 oc get pods -n nvidia-gpu-operator
 ```
 *(All pods including `nvidia-dcgm-exporter` must be in `Running` status.)*
@@ -177,3 +185,12 @@ Both dashboards support direct links (↗) to OpenShift node and pod console pag
 | `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` | Tensor Core pipeline utilization ratio (0–1). |
 | `gpu:health_score:composite` | Composite health score (0–100) computed from temperature, throttling, and ECC events. |
 | `gpu:failure_probability:24h` | 24-hour predictive failure risk score (0–100%). |
+
+---
+
+## Reference Documentation
+- [NVIDIA GPU Operator on Red Hat OpenShift](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/openshift/contents.html)
+- [NVIDIA DCGM Metrics & Architecture Documentation](https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-user-guide/feature-overview.html)
+- [OpenShift User Workload Monitoring Documentation](https://docs.openshift.com/container-platform/latest/monitoring/enabling-monitoring-for-user-defined-projects.html)
+- [Grafana Operator on OpenShift](https://grafana-operator.github.io/grafana-operator/)
+- [IBM Storage Fusion Documentation](https://www.ibm.com/docs/en/storage-fusion)
