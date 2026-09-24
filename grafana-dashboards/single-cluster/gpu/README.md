@@ -16,8 +16,6 @@ GPU Node (NVIDIA DCGM Exporter)
 OpenShift User Workload Monitoring (UWM / Thanos Querier)
 Namespace: openshift-user-workload-monitoring / openshift-monitoring
         │
-        ├── Prometheus Alert & Recording Rules (gpu-rules.yaml)
-        │
         ▼
 Grafana (Local OpenShift Instance)
         ├── GPU Cluster Overview (gpu-cluster-overview-cr.yaml / .json)
@@ -106,22 +104,7 @@ Ensure either:
 
 ## Step-by-Step Setup Guide
 
-### Step 1: Apply Prometheus Alert and Recording Rules
-
-Apply the recording rules for composite health scoring, failure probability, and GPU alerting:
-
-```bash
-oc apply -f gpu-rules.yaml -n openshift-monitoring
-```
-
-Verify that the `PrometheusRule` resource is loaded:
-```bash
-oc get prometheusrule gpu-alert-rules -n openshift-monitoring
-```
-
----
-
-### Step 2: Deploy Dashboards
+### Step 1: Deploy Dashboards
 
 Choose **Option A** (Grafana Operator CR) or **Option B** (Manual JSON Import).
 
@@ -156,7 +139,7 @@ Choose **Option A** (Grafana Operator CR) or **Option B** (Manual JSON Import).
 
 ---
 
-### Step 3: Configure OpenShift Console Deep-Links (Optional)
+### Step 2: Configure OpenShift Console Deep-Links (Optional)
 
 Both dashboards support direct links (↗) to OpenShift node and pod console pages:
 
