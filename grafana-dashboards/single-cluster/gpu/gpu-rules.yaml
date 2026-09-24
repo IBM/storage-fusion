@@ -1,0 +1,577 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gpu-alert-rules
+  namespace: openshift-monitoring
+  labels:
+    openshift.io/cluster-monitoring: "true"
+    app.kubernetes.io/managed-by: gpu-monitoring
+spec:
+  groups:
+
+    # =========================================================================
+    # Group 0: Core Recording Rules (Health Scoring, Predictive Risk & Impact)
+    # Fully resilient with null-safe fallbacks & automatic 'node'/'Hostname' label propagation
+    # =========================================================================
+    - name: gpu.recording.core
+      interval: 60s
+      rules:
+
+        # R1 — Platform liveness heartbeat
+        - record: gpu:platform:heartbeat
+          expr: vector(1)
+          labels:
+            platform: gpu-monitoring
+
+        # R2 — GPU Health Score Composite (0–100)
+        # Weights: Thermal 25% | Memory & Remapping 30% | Power 18% | PCIe 12% | XID 15%
+        - record: gpu:health_score:composite
+          expr: |
+            label_replace(
+              label_replace(
+                avg by(Hostname, hostname, UUID, gpu, modelName, device, pci_bus_id) (
+                  clamp_min(clamp_max(
+                    100
+                    # 1. Thermal Degradation Penalty (25%)
+                    - (clamp_min(clamp_max(
+                          (DCGM_FI_DEV_GPU_TEMP - 65) / (95 - 65) * 60
+                          + clamp_min(clamp_max(
+                              (avg_over_time(DCGM_FI_DEV_GPU_TEMP[15m])
+                               - (avg_over_time(DCGM_FI_DEV_GPU_TEMP[1h]) or avg_over_time(DCGM_FI_DEV_GPU_TEMP[15m]))) / 5 * 40,
+                             40), 0),
+                        100), 0) * 0.25)
+                    # 2. Memory, ECC & Row Remapping Penalty (30%)
+                    - (clamp_min(clamp_max(
+                          ((DCGM_FI_DEV_ROW_REMAP_FAILURE > bool 0) or (DCGM_FI_DEV_GPU_TEMP * 0)) * 50
+                          + clamp_max((DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS or (DCGM_FI_DEV_GPU_TEMP * 0)) * 15, 30)
+                          + clamp_max((increase(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS[6h]) or (DCGM_FI_DEV_GPU_TEMP * 0)) / 10 * 10, 10)
+                          + clamp_max((DCGM_FI_DEV_ECC_DBE_VOL_TOTAL or (DCGM_FI_DEV_GPU_TEMP * 0)) * 10, 10),
+                        100), 0) * 0.30)
+                    # 3. Power Instability Penalty (18%)
+                    - (clamp_min(clamp_max(
+                          ((stddev_over_time(DCGM_FI_DEV_POWER_USAGE[15m]) or (DCGM_FI_DEV_GPU_TEMP * 0)) - 15) / 85 * 50
+                          + clamp_min(clamp_max(
+                              ((avg_over_time(DCGM_FI_DEV_POWER_USAGE[15m]) or (DCGM_FI_DEV_GPU_TEMP * 0))
+                               - (avg_over_time(DCGM_FI_DEV_POWER_USAGE[1h]) or avg_over_time(DCGM_FI_DEV_POWER_USAGE[15m]) or (DCGM_FI_DEV_GPU_TEMP * 0)))
+                              / clamp_min(avg_over_time(DCGM_FI_DEV_POWER_USAGE[1h]) or avg_over_time(DCGM_FI_DEV_POWER_USAGE[15m]) or (DCGM_FI_DEV_GPU_TEMP * 0) + 1, 1) * 50,
+                             50), 0),
+                        100), 0) * 0.18)
+                    # 4. PCIe Bus Integrity Penalty (12%)
+                    - (clamp_min(clamp_max(
+                          (rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[30m]) or (DCGM_FI_DEV_GPU_TEMP * 0)) / 10 * 50
+                          + clamp_min(clamp_max(
+                              ((avg_over_time(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[15m]) or (DCGM_FI_DEV_GPU_TEMP * 0))
+                               - (avg_over_time(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[1h]) or avg_over_time(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[15m]) or (DCGM_FI_DEV_GPU_TEMP * 0)))
+                              / clamp_min(avg_over_time(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[1h]) or avg_over_time(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[15m]) or (DCGM_FI_DEV_GPU_TEMP * 0) + 1, 1) * 50,
+                             50), 0),
+                        100), 0) * 0.12)
+                    # 5. XID Hardware Error Penalty (15%)
+                    - (clamp_min(clamp_max(
+                          (clamp_min(increase(DCGM_FI_DEV_XID_ERRORS[1h]) or (DCGM_FI_DEV_GPU_TEMP * 0), 0)) * 20
+                          + (clamp_min(increase(DCGM_FI_DEV_XID_ERRORS[30m]) or (DCGM_FI_DEV_GPU_TEMP * 0), 0)) * 20,
+                        100), 0) * 0.15),
+                  100), 0)
+                ),
+                "node", "$1", "hostname", "(.*)"
+              ),
+              "Hostname", "$1", "hostname", "(.*)"
+            )
+
+        # R3 — 24h Failure Probability (0–100%)
+        - record: gpu:failure_probability:24h
+          expr: |
+            label_replace(
+              label_replace(
+                avg by(Hostname, hostname, UUID, gpu, modelName, device, pci_bus_id) (
+                  clamp_min(clamp_max(
+                    clamp_min(clamp_max(
+                      ((avg_over_time(DCGM_FI_DEV_GPU_TEMP[30m])
+                       - (avg_over_time(DCGM_FI_DEV_GPU_TEMP[2h]) or avg_over_time(DCGM_FI_DEV_GPU_TEMP[30m])))) / 8 * 30,
+                    30), 0)
+                    + clamp_min(clamp_max(
+                        (rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[30m]) or (DCGM_FI_DEV_GPU_TEMP * 0)) / 10 * 25,
+                      25), 0)
+                    + clamp_min(clamp_max(
+                        ((DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS or (DCGM_FI_DEV_GPU_TEMP * 0)) * 12)
+                        + (((DCGM_FI_DEV_ROW_REMAP_FAILURE > bool 0) or (DCGM_FI_DEV_GPU_TEMP * 0)) * 15),
+                      15), 0)
+                    + clamp_min(clamp_max(
+                        (((stddev_over_time(DCGM_FI_DEV_POWER_USAGE[15m]) or (DCGM_FI_DEV_GPU_TEMP * 0)) - 20) / 80 * 10),
+                      10), 0)
+                    + clamp_min(clamp_max(
+                        ((rate(DCGM_FI_DEV_ECC_SBE_VOL_TOTAL[1h]) or (DCGM_FI_DEV_GPU_TEMP * 0)) * 5)
+                        + ((DCGM_FI_DEV_ECC_DBE_VOL_TOTAL or (DCGM_FI_DEV_GPU_TEMP * 0)) * 20),
+                      20), 0),
+                  100), 0)
+                ),
+                "node", "$1", "hostname", "(.*)"
+              ),
+              "Hostname", "$1", "hostname", "(.*)"
+            )
+
+        # R4 — Blast Radius: Pod count on nodes with active ROW_REMAP_FAILURE
+        - record: gpu:impact:pod_count_on_failed_nodes
+          expr: |
+            count(
+              kube_pod_info * on(node) group_left()
+              (
+                count by(node) (
+                  label_replace(
+                    label_replace(
+                      DCGM_FI_DEV_ROW_REMAP_FAILURE > 0,
+                      "node", "$1", "Hostname", "(.*)"
+                    ),
+                    "node", "$1", "hostname", "(.*)"
+                  )
+                )
+              )
+            ) or vector(0)
+
+        # R5 — Throttle Pressure Score
+        - record: gpu:throttle:pressure_score
+          expr: |
+            label_replace(
+              label_replace(
+                avg by(Hostname, hostname, UUID, gpu, modelName, device, pci_bus_id) (
+                  clamp_min(
+                    ((rate(DCGM_FI_DEV_CLOCK_THROTTLE_REASONS[5m]) or (DCGM_FI_DEV_GPU_TEMP * 0)) * 100)
+                    + ((rate(DCGM_FI_DEV_THERMAL_VIOLATION[5m])    or (DCGM_FI_DEV_GPU_TEMP * 0)) * 50)
+                    + ((rate(DCGM_FI_DEV_POWER_VIOLATION[5m])      or (DCGM_FI_DEV_GPU_TEMP * 0)) * 50),
+                  0)
+                ),
+                "node", "$1", "hostname", "(.*)"
+              ),
+              "Hostname", "$1", "hostname", "(.*)"
+            )
+
+        # R6 — Blast Radius: Pod count on at-risk nodes (>30% failure probability)
+        - record: gpu:impact:pod_count_on_at_risk_nodes
+          expr: |
+            count(
+              kube_pod_info * on(node) group_left()
+              (
+                count by(node) (
+                  label_replace(
+                    gpu:failure_probability:24h > 30,
+                    "node", "$1", "Hostname", "(.*)"
+                  )
+                )
+              )
+            ) or vector(0)
+
+    # =========================================================================
+    # Group 1: ECC Error Growth (Reference: Prometheus rules (2).md § 1)
+    # =========================================================================
+    - name: gpu-ecc-alerts
+      interval: 60s
+      rules:
+        - alert: GPUHighSingleBitECCRate
+          expr: rate(DCGM_FI_DEV_ECC_SBE_VOL_TOTAL[15m]) > 10
+          for: 30m
+          labels:
+            severity: warning
+            category: ecc
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} high ECC SBE rate"
+            description: "Sustained increase in single-bit ECC errors detected. Potential memory degradation."
+            runbook: "nvidia-smi --query-gpu=ecc.errors.corrected.aggregate.total --format=csv"
+
+        - alert: GPUDoubleBitECCDetected
+          expr: increase(DCGM_FI_DEV_ECC_DBE_VOL_TOTAL[5m]) > 0
+          for: 5m
+          labels:
+            severity: critical
+            category: ecc
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} double-bit ECC error detected"
+            description: "Uncorrectable ECC errors observed. High risk of imminent failure."
+            runbook: "oc adm cordon {{ $labels.Hostname }}{{ $labels.hostname }}"
+
+        - alert: GPUIncreasingECCTrend
+          expr: rate(DCGM_FI_DEV_ECC_SBE_VOL_TOTAL[1h]) > 2 * rate(DCGM_FI_DEV_ECC_SBE_VOL_TOTAL[6h])
+          for: 1h
+          labels:
+            severity: warning
+            category: ecc
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} ECC error trend increasing"
+            description: "ECC errors accelerating compared to historical baseline."
+            runbook: "nvidia-smi --query-gpu=ecc.errors.corrected.aggregate.total --format=csv"
+
+    # =========================================================================
+    # Group 2: Thermal Stress & Cooling Degradation (Reference § 2)
+    # =========================================================================
+    - name: gpu-thermal-alerts
+      interval: 60s
+      rules:
+        - alert: GPUHighTemperatureSustained
+          expr: DCGM_FI_DEV_GPU_TEMP > 85
+          for: 15m
+          labels:
+            severity: warning
+            category: thermal
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} high temperature"
+            description: "Sustained high temperature (>85°C) may lead to hardware degradation."
+            runbook: "nvidia-smi -q -d TEMPERATURE,PERFORMANCE"
+
+        - alert: GPUFrequentThermalThrottling
+          expr: increase(DCGM_FI_DEV_THERMAL_VIOLATION[30m]) > 5
+          for: 15m
+          labels:
+            severity: warning
+            category: thermal
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} thermal throttling"
+            description: "Frequent thermal violations detected in the last 30 minutes."
+            runbook: "nvidia-smi -q -d PERFORMANCE"
+
+        - alert: GPUIncreasingThermalBaseline
+          expr: avg_over_time(DCGM_FI_DEV_GPU_TEMP[1h]) > avg_over_time(DCGM_FI_DEV_GPU_TEMP[24h]) + 10
+          for: 30m
+          labels:
+            severity: warning
+            category: thermal
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} rising temperature baseline"
+            description: "Cooling degradation suspected. 1h temperature is 10°C higher than 24h baseline."
+            runbook: "nvidia-smi -q -d TEMPERATURE"
+
+    # =========================================================================
+    # Group 3: Power Instability (Reference § 3)
+    # =========================================================================
+    - name: gpu-power-alerts
+      interval: 60s
+      rules:
+        - alert: GPUPowerFluctuation
+          expr: stddev_over_time(DCGM_FI_DEV_POWER_USAGE[15m]) > 50
+          for: 15m
+          labels:
+            severity: warning
+            category: power
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} unstable power usage"
+            description: "Unexpected power fluctuations under load (stddev > 50W in 15m)."
+            runbook: "nvidia-smi -q -d POWER"
+
+        - alert: GPUPowerViolationsFrequent
+          expr: increase(DCGM_FI_DEV_POWER_VIOLATION[30m]) > 3
+          for: 15m
+          labels:
+            severity: warning
+            category: power
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} power violations"
+            description: "Frequent power capping indicates hardware or PSU stress."
+            runbook: "nvidia-smi -q -d POWER"
+
+    # =========================================================================
+    # Group 4: XID Errors (Reference § 4)
+    # =========================================================================
+    - name: gpu-xid-alerts
+      interval: 60s
+      rules:
+        - alert: GPUXIDErrorDetected
+          expr: increase(DCGM_FI_DEV_XID_ERRORS[5m]) > 0
+          for: 5m
+          labels:
+            severity: critical
+            category: xid
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} XID error detected"
+            description: "Driver-reported GPU hardware error detected in last 5m."
+            runbook: "journalctl -k --since '1 hour ago' | grep -i 'NVRM.*Xid'"
+
+        - alert: GPUFrequentXIDErrors
+          expr: increase(DCGM_FI_DEV_XID_ERRORS[1h]) > 5
+          for: 10m
+          labels:
+            severity: critical
+            category: xid
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} repeated XID errors"
+            description: "Multiple XID errors (>5 in 1h) indicate impending hardware failure."
+            runbook: "journalctl -k --since '1 hour ago' | grep -i 'NVRM.*Xid'"
+
+        - alert: GPUXIDFatalCritical
+          expr: increase(DCGM_FI_DEV_XID_ERRORS{xid=~"48|79|94"}[30m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+            category: burnout
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} FATAL XID {{ $labels.xid }}"
+            description: "Fatal XID {{ $labels.xid }} indicates severe memory corruption, bus fallout, or unrecoverable reset."
+            runbook: "oc adm cordon {{ $labels.Hostname }}{{ $labels.hostname }}"
+
+    # =========================================================================
+    # Group 5: Memory Page Retirement & Row Remapping (Reference § 5)
+    # =========================================================================
+    - name: gpu-memory-health
+      interval: 60s
+      rules:
+        - alert: GPUPageRetirementIncreasing
+          expr: (increase(DCGM_FI_DEV_RETIRED_SBE[6h]) > 10) or (increase(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS[6h]) > 5)
+          for: 30m
+          labels:
+            severity: warning
+            category: memory
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} memory page retirement / remap increasing"
+            description: "Memory degradation likely. SBE retired pages >10 or correctable row remaps >5 in 6h."
+            runbook: "nvidia-smi --query-gpu=ecc.errors.corrected.aggregate.total --format=csv"
+
+        - alert: GPUDBERetiredPages
+          expr: (increase(DCGM_FI_DEV_RETIRED_DBE[1h]) > 0) or (DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS > 0)
+          for: 10m
+          labels:
+            severity: critical
+            category: memory
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} uncorrectable DBE retired pages / remapped rows"
+            description: "Severe memory failure indicators detected. Replacement recommended."
+            runbook: "nvidia-smi --query-gpu=ecc.errors.uncorrected.aggregate.total --format=csv"
+
+        - alert: GPURowRemapFailure
+          expr: (DCGM_FI_DEV_ROW_REMAP_FAILURE > 0)
+          for: 0m
+          labels:
+            severity: critical
+            category: memory
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} ROW REMAP FAILURE — silent corruption risk"
+            description: "Spare DRAM rows exhausted. Compute outputs on this GPU are actively corrupted."
+            runbook: "oc adm cordon {{ $labels.Hostname }}{{ $labels.hostname }}"
+
+    # =========================================================================
+    # Group 6: PCIe / Interconnect Errors (Reference § 6)
+    # =========================================================================
+    - name: gpu-pcie-alerts
+      interval: 60s
+      rules:
+        - alert: GPUPCIeReplayErrorsIncreasing
+          expr: rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER[30m]) > 5
+          for: 30m
+          labels:
+            severity: warning
+            category: pcie
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} PCIe replay errors high"
+            description: "PCIe replay rate >5/s sustained for 30m. Possible bus or hardware instability."
+            runbook: "nvidia-smi --query-gpu=pcie.link.gen.current,pcie.link.width.current --format=csv"
+
+        - alert: GPULinkThroughputDrop
+          expr: rate(DCGM_FI_DEV_PCIE_TX_BYTES[5m]) < 0.5 * rate(DCGM_FI_DEV_PCIE_TX_BYTES[1h])
+          for: 15m
+          labels:
+            severity: warning
+            category: pcie
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} PCIe throughput drop"
+            description: "PCIe transmit throughput dropped >50% compared to 1h baseline."
+            runbook: "nvidia-smi -q -d PERFORMANCE"
+
+    # =========================================================================
+    # Group 7: Performance Degradation (Reference § 7)
+    # =========================================================================
+    - name: gpu-performance-alerts
+      interval: 60s
+      rules:
+        - alert: GPUUtilizationDropAnomaly
+          expr: avg_over_time(DCGM_FI_DEV_GPU_UTIL[10m]) < 0.5 * avg_over_time(DCGM_FI_DEV_GPU_UTIL[1h])
+          for: 15m
+          labels:
+            severity: warning
+            category: performance
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} utilization drop"
+            description: "Unexpected performance drop: 10m utilization is <50% of 1h average."
+            runbook: "nvidia-smi -q -d UTILIZATION"
+
+        - alert: GPUSMClockThrottling
+          expr: increase(DCGM_FI_DEV_CLOCK_THROTTLE_REASONS[30m]) > 10
+          for: 15m
+          labels:
+            severity: warning
+            category: performance
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} clock throttling"
+            description: "Frequent SM clock throttling events (>10 in 30m) indicate hardware stress."
+            runbook: "nvidia-smi -q -d PERFORMANCE"
+
+    # =========================================================================
+    # Group 8: Composite Failure & Predictive Alerts (Reference § 8 & SRE Dash)
+    # =========================================================================
+    - name: gpu-composite-alerts
+      interval: 60s
+      rules:
+        - alert: GPUFailurePredictionHigh
+          expr: |
+            (
+              (rate(DCGM_FI_DEV_ECC_SBE_VOL_TOTAL[30m]) > 5) * 1
+            )
+            + (
+              (increase(DCGM_FI_DEV_XID_ERRORS[30m]) > 0) * 1
+            )
+            + (
+              (increase(DCGM_FI_DEV_THERMAL_VIOLATION[30m]) > 2) * 1
+            ) >= 2
+          for: 15m
+          labels:
+            severity: critical
+            category: predictive
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} likely to fail soon"
+            description: "Multiple degradation signals detected simultaneously (ECC, XID, thermal)."
+            runbook: "oc adm cordon {{ $labels.Hostname }}{{ $labels.hostname }}"
+
+        - alert: GPUHealthScoreCritical
+          expr: gpu:health_score:composite < 60 and gpu:health_score:composite >= 40
+          for: 10m
+          labels:
+            severity: critical
+            category: predictive
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} health score HIGH RISK {{ $value | humanize }}/100"
+            description: "Composite health score is critical (40–59). Schedule proactive maintenance."
+            runbook: "Open GPU SRE Deep Dive dashboard"
+
+        - alert: GPUHealthScoreHigh
+          expr: gpu:health_score:composite < 80 and gpu:health_score:composite >= 60
+          for: 15m
+          labels:
+            severity: warning
+            category: predictive
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} health score WARNING {{ $value | humanize }}/100"
+            description: "Composite health score is degrading (60–79)."
+            runbook: "Open GPU SRE Deep Dive dashboard"
+
+        - alert: GPUPredictiveFailure24h
+          expr: (gpu:failure_probability:24h > 70) and (gpu:health_score:composite < 60)
+          for: 10m
+          labels:
+            severity: critical
+            category: predictive
+            platform: gpu-monitoring
+            horizon: 24h
+          annotations:
+            summary: "GPU {{ $labels.gpu }} on {{ $labels.Hostname }}{{ $labels.hostname }} PREDICTIVE FAILURE (24h horizon)"
+            description: "24h failure probability >70% with critical health score. Cordon and drain node."
+            runbook: "oc adm cordon {{ $labels.Hostname }}{{ $labels.hostname }}"
+
+    # =========================================================================
+    # Group 9: Workload Blast-Radius & Impact Analysis
+    # =========================================================================
+    - name: gpu-impact-alerts
+      interval: 60s
+      rules:
+        - alert: WorkloadsOnFailedGPUNodes
+          expr: gpu:impact:pod_count_on_failed_nodes > 0
+          for: 2m
+          labels:
+            severity: critical
+            category: impact_analysis
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU Impact | {{ $value }} pod(s) on failed GPU node"
+            description: "Active workloads running on GPU nodes where ROW_REMAP_FAILURE=1."
+            runbook: "oc get pods -A -o wide | grep <node>"
+
+        - alert: WorkloadsOnAtRiskGPUNodes
+          expr: gpu:impact:pod_count_on_at_risk_nodes > 0
+          for: 5m
+          labels:
+            severity: warning
+            category: impact_analysis
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU Impact | {{ $value }} pod(s) on at-risk GPU nodes"
+            description: "Pods running on nodes with >30% 24h failure probability."
+            runbook: "Open GPU Cluster Overview dashboard"
+
+    # =========================================================================
+    # Group 10: Platform & Node Infrastructure
+    # =========================================================================
+    - name: gpu-platform-node-alerts
+      interval: 60s
+      rules:
+        - alert: GPUPlatformRecordingRulesDown
+          expr: absent(gpu:platform:heartbeat)
+          for: 5m
+          labels:
+            severity: critical
+            category: platform
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU Platform | Recording rules absent"
+            description: "gpu:platform:heartbeat absent for >5m. PrometheusRule is not evaluated."
+            runbook: "oc get prometheusrule gpu-alert-rules -n openshift-monitoring"
+
+        - alert: GPUDCGMScrapeDegraded
+          expr: |
+            (count(up{job=~".*dcgm.*"} == 1) / count(up{job=~".*dcgm.*"}) < 0.9)
+            or
+            (count(up{job=~".*dcgm.*"} == 1) == 0)
+          for: 5m
+          labels:
+            severity: warning
+            category: platform
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU Platform | DCGM scrape ratio degraded"
+            description: "Fewer than 90% of DCGM exporter targets are scraping successfully."
+            runbook: "oc get pods -n nvidia-gpu-operator -l app=nvidia-dcgm-exporter"
+
+        - alert: GPUNodeNotReady
+          expr: |
+            (kube_node_status_condition{condition="Ready", status="true"} == 0)
+            * on(node) group_left()
+            (count by(node) (label_replace(DCGM_FI_DEV_GPU_TEMP offset 10m, "node", "$1", "hostname", "(.*)")))
+          for: 2m
+          labels:
+            severity: critical
+            category: node
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU Node | {{ $labels.node }} NotReady"
+            description: "Kubernetes node {{ $labels.node }} has been NotReady for >2m with active GPU workloads."
+            runbook: "oc describe node {{ $labels.node }}"
+
+        - alert: GPUNodeDCGMDarkout
+          expr: |
+            (kube_node_status_condition{condition="Ready", status="true"} == 1)
+            * on(node) group_left()
+            (count by(node) (label_replace(DCGM_FI_DEV_GPU_TEMP offset 15m, "node", "$1", "hostname", "(.*)")))
+            unless on(node)
+            (count by(node) (label_replace(DCGM_FI_DEV_GPU_TEMP, "node", "$1", "hostname", "(.*)")))
+          for: 10m
+          labels:
+            severity: critical
+            category: node
+            platform: gpu-monitoring
+          annotations:
+            summary: "GPU Node | {{ $labels.node }} Ready but DCGM dark"
+            description: "Node {{ $labels.node }} is Ready but DCGM metrics disappeared for >10m."
+            runbook: "oc get pods -n nvidia-gpu-operator --field-selector spec.nodeName={{ $labels.node }}"

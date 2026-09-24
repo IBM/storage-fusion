@@ -6,7 +6,40 @@ metadata:
 data:
   metrics_list.yaml: |
     names:
-      # NVIDIA DCGM GPU Metrics — fleet-wide GPU observability
+      # Fusion Metrics
+      - isf_cluster_details
+      - isf_service
+      - isf_switches_info
+      - isf_nodes_info
+      - isf_environment_risk
+      - isf_service_upgrade_risk_count
+      - isf_node_upgrade_risk_count
+      - isf_switch_upgrade_risk_count
+      
+      # ODF Health
+      - ceph_health_status
+      - NooBaa_health_status
+
+      # SNMP Network Switch Monitoring Metrics
+      # Temperature Sensors
+      - asicTempSensor
+      - mainBoardAmbientSensor
+      - portAmbientSensor
+      - psu2Temp
+      - psu1TempOrAmbientTemp
+      
+      # CPU Sensors and Usage
+      - cpuCoreSensor0
+      - cpuCoreSensor1
+      - ssCpuIdle
+      - ifInOctets
+      - ifOperStatus
+      
+      # Memory Metrics
+      - memAvailReal
+      - memTotalReal
+
+      # NVIDIA DCGM GPU Metrics — fleet-wide GPU observability (for gpu-fleet-acm-dashboard)
       - DCGM_FI_DEV_GPU_UTIL
       - DCGM_FI_DEV_MEM_COPY_UTIL
       - DCGM_FI_DEV_ENC_UTIL
@@ -51,6 +84,13 @@ data:
 
   uwl_metrics_list.yaml: |
     names:
+      # Fusion Event Metrics
+      - fusion_events_total
+      - fusion_hardware_events_total
+      
+      # GDP Remote Mount Health
+      - gpfs_health_status
+
       # NVIDIA DCGM UWL metrics (user-workload namespace scraped)
       - DCGM_FI_DEV_GPU_UTIL
       - DCGM_FI_DEV_FB_USED
