@@ -130,6 +130,8 @@ if [ "$OADP_VER" == "1.4.11" ]; then
     if [ -z "$DRY_RUN" ]; then
         NEW_OADP_CSV=$(oc -n "$BR_NS" get csv -l "operators.coreos.com/redhat-oadp-operator.$BR_NS" -o name)
         while [ -z "$NEW_OADP_CSV" ]; do
+            UIP=$(oc -n "$BR_NS" get installplan -o custom-columns=:.metadata.name,:.spec.approved -l operators.coreos.com/redhat-oadp-operator."$BR_NS" | awk '/ false/ {print $1}')
+            [ -n "$UIP" ] && oc -n "$BR_NS" patch installplan "$UIP" --type merge --patch '{"spec":{"approved":true}}'
             echo "Waiting for new OADP to be installed..."
             sleep 5
             NEW_OADP_CSV=$(oc -n "$BR_NS" get csv -l "operators.coreos.com/redhat-oadp-operator.$BR_NS" -o name)
