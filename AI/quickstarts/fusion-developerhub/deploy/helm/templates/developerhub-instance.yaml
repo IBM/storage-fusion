@@ -587,7 +587,21 @@ data:
                     - label: Tokyo
                       timeZone: Asia/Tokyo
     {{- end }}
-    
+
+    {{- $lpEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.learningPaths .Values.developerHub.config.homepage.learningPaths.enabled }}
+    {{- if $lpEnabled }}
+    # Learning Paths proxy — must be declared BEFORE the broader /developer-hub
+    # (homepage) rewrite to prevent pathRewrite shadowing.
+    proxy:
+      endpoints:
+        '/developer-hub':
+          target: {{ .Values.developerHub.config.homepage.learningPaths.githubRawBaseUrl | quote }}
+          pathRewrite:
+            '^/api/proxy/developer-hub/learning-paths': {{ .Values.developerHub.config.homepage.learningPaths.dataJsonPath | quote }}
+          changeOrigin: true
+          secure: true
+    {{- end }}
+
     {{- if .Values.developerHub.catalog.enabled }}
     catalog:
       import:
@@ -824,18 +838,24 @@ spec:
         {{- /* They go into extraFiles.configMaps below — mounted as files, not loaded as config */}}
         - name: app-config-fusion-services
         {{- end }}
-        {{- if and .Values.developerHub.enabled .Values.developerHub.fusionServices.enabled }}
-        {{- /* Fusion AI Services — app-config ONLY (catalog locations, rules, k8s, proxy) */}}
-        {{- /* NOTE: catalog entity files (multi-doc YAML) must NOT be in appConfig.configMaps */}}
-        {{- /* They go into extraFiles.configMaps below — mounted as files, not loaded as config */}}
-        - name: app-config-fusion-services
-        {{- end }}
         {{- if .Values.templates.naas }}
         - name: app-config-naas
         {{- end }}
+        # ── Single source of truth for all catalog.locations ──────────────
+        # Must be last — loaded after all other configs so it owns catalog.locations.
+        # Never add catalog.locations to any other ConfigMap.
+        - name: app-config-catalog-locations
     
-    # Dynamic plugins ConfigMap — always set; fusion-dynamic-plugins is always created
+    # Dynamic plugins ConfigMap
+    # When fusionServices + dynamicPlugins are both enabled, use the fuller
+    # fusion-ai-dynamic-plugins ConfigMap (TechDocs, API Docs, Search, etc.)
+    # Otherwise fall back to the standard fusion-dynamic-plugins.
+    {{- $fusionDynPlugins := and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled .Values.developerHub.fusionServices.dynamicPlugins .Values.developerHub.fusionServices.dynamicPlugins.enabled }}
+    {{- if $fusionDynPlugins }}
+    dynamicPluginsConfigMapName: fusion-ai-dynamic-plugins
+    {{- else }}
     dynamicPluginsConfigMapName: fusion-dynamic-plugins
+    {{- end }}
     
     {{- if or .Values.developerHub.database.useOperator (and .Values.developerHub.extraEnvs .Values.developerHub.extraEnvs.secrets (gt (len .Values.developerHub.extraEnvs.secrets) 0)) }}
     extraEnvs:
@@ -888,6 +908,11 @@ spec:
               - name: homepage-data
                 configMap:
                   name: {{ .Values.developerHub.instanceName }}-home-quick-access
+              # ── WXO template ConfigMap — always-on (no fusionServices guard) ──
+              - name: wxo-template
+                configMap:
+                  name: wxo-template
+                  defaultMode: 0444
               {{- if and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled }}
               # ── Fusion AI Services entity ConfigMaps ─────────────────────────
               # Mounted as directories (no subPath) so Kubernetes auto-refreshes
@@ -999,11 +1024,27 @@ spec:
                   - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/nvidia-green.svg
                     subPath: nvidia-green.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/naas-guide-icon.svg
+                    subPath: naas-guide-icon.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/naas-template-icon.svg
+                    subPath: naas-template-icon.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/maas-cap-icon.svg
+                    subPath: maas-cap-icon.svg
                   # Backward-compat mount: community-icon.png path resolves to ai-models-icon.png
                   # to avoid 404s from any existing iconUrl references.
                   - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/community-icon.png
                     subPath: ai-models-icon.png
+                  # Fusion AI Services section icons
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/mcp-icon.svg
+                    subPath: mcp-icon.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/watsonx-icon.svg
+                    subPath: watsonx-icon.svg
                   {{- if and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled }}
                   # ── Fusion AI entity files ────────────────────────────────────
                   # Platform entities: single file, subPath is fine (static key).
@@ -1023,6 +1064,10 @@ spec:
                     mountPath: /opt/app-root/src/add-dcs-cluster-template.yaml
                     subPath: add-dcs-cluster-template.yaml
                   {{- end }}
+                  # ── WXO template — always-on (outside fusionServices block) ──
+                  - name: wxo-template
+                    mountPath: /opt/app-root/src/wxo-template.yaml
+                    subPath: wxo-template.yaml
         {{- end }}
   
   {{- if .Values.developerHub.database.useOperator }}

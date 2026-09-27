@@ -4,7 +4,54 @@ All notable changes to the Fusion Developer Hub environment configurations will 
 
 ---
 
-## v2 (July 2026) - CAS/DCS Integration — CURRENT
+## v4 (October 2026) - watsonx Orchestrate Discovery — CURRENT
+**Date:** 2026-10-01
+
+### Added
+- **WXO (watsonx Orchestrate) self-service template** (`wxo-template` ConfigMap)
+  - Always-on — no `fusionServices.enabled` dependency, no `github-auth-secret` dependency
+  - Platform engineer fills 4 fields (clusterName, wxoUrl, namespace, version) → entity appears instantly via `catalog:write`
+  - Entity is ephemeral (lost on pod restart); template output page shows the Tier 2 `values.yaml` snippet
+- **WXO Helm-driven catalog entity (Tier 2)** — permanent, survives pod restarts
+  - Add `services.wxo` block to any `fusionServices.clusters[]` entry in `values.yaml`
+  - Generates a `Component` entity in the `fusion-ai-clusters` ConfigMap
+  - No proxy endpoint, no ServiceAccount, no RBAC — zero infrastructure prerequisites
+- **Conditional WXO quick-access tile** on the Developer Hub homepage
+  - Appears only when at least one cluster has `services.wxo.enabled: true`
+  - Links to the catalog filtered by `type=ai-service&tags=wxo`
+- **`wxo` schema documented** in base `values.yaml` and `environments/prod/values.yaml` comments (consistent)
+
+### Migration from v3 to v4
+
+No breaking changes. All additions are additive. Existing deployments are unaffected until `services.wxo.enabled: true` is set.
+
+#### Archived
+- `prod/values-v3-sept2026.yaml` — prod snapshot before WXO discovery addition (create before upgrading)
+
+---
+
+## v3 (September 2026) - Learning Paths & NaaS Catalog
+**Date:** 2026-09-01
+
+### Added
+- **Learning Paths** feature enabled in prod (`developerHub.config.learningPaths`)
+  - `enabled: true` — activates the Learning Paths UI panel in Developer Hub
+  - `githubRawBaseUrl` — base URL used to fetch learning path assets from GitHub
+  - `dataJsonPath` — path to the `data.json` file that drives the learning paths content
+- **Namespace-as-a-Service (NaaS) Quickstart** catalog location registered under `developerHub.catalog.locations`
+  - Points to `templates/naas/backstage/catalog-info.yaml` in the IBM/storage-fusion repository
+  - Allows the NaaS `Component` entity to be discovered automatically by the Backstage catalog
+
+### Migration from v2 to v3
+
+No breaking changes. Both additions are additive and safe to apply to existing clusters.
+
+#### Archived
+- `prod/values-v2-aug2026.yaml` — prod snapshot before Learning Paths and NaaS catalog addition
+
+---
+
+## v2 (July 2026) - CAS/DCS Integration
 **Date:** 2026-07-01
 
 ### Added
@@ -79,7 +126,8 @@ fusion-developer-hub/
     └── prod/
         ├── values.yaml                  # Production overrides (current)
         ├── value-v0-may2026.yaml        # Initial baseline snapshot
-        └── values-v1-july2026.yaml      # Pre-NaaS snapshot
+        ├── values-v1-july2026.yaml      # Pre-NaaS snapshot
+        └── values-v2-aug2026.yaml       # Pre-Learning Paths / NaaS catalog snapshot
 ```
 
 **How it works:**
@@ -101,7 +149,23 @@ Edit `environments/{env}/values.yaml` for environment-specific changes.
 
 ## Version History
 
-### v2 (August 2026) - CURRENT
+### v3 (September 2026) - CURRENT
+**Date:** 2026-09-01
+
+#### Added
+- **Learning Paths** feature enabled in prod (`developerHub.config.learningPaths`)
+  - `enabled: true` — activates the Learning Paths UI panel in Developer Hub
+  - `githubRawBaseUrl` — base URL used to fetch learning path assets from GitHub
+  - `dataJsonPath` — path to the `data.json` file that drives the learning paths content
+- **Namespace-as-a-Service (NaaS) Quickstart** catalog location registered under `developerHub.catalog.locations`
+  - Points to `templates/naas/backstage/catalog-info.yaml` in the IBM/storage-fusion repository
+
+#### Archived
+- `prod/values-v2-aug2026.yaml` — prod snapshot before Learning Paths and NaaS catalog addition
+
+---
+
+### v2 (August 2026)
 **Date:** 2026-08-31
 
 #### Added
