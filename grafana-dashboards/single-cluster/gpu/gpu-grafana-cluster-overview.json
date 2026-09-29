@@ -145,7 +145,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Total number of NVIDIA GPUs detected across all nodes via DCGM Exporter."
     },
     {
       "datasource": {
@@ -236,7 +237,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Composite health score (0–100) averaged across all GPUs, derived from temperature, ECC errors and throttle pressure. Green ≥80, yellow 60–80, red <60."
     },
     {
       "datasource": {
@@ -307,7 +309,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "GPUs with a composite health score above 80 — operating normally."
     },
     {
       "datasource": {
@@ -385,7 +388,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "GPUs in the warning band (60–80). Investigate temperature, ECC or clock throttle."
     },
     {
       "datasource": {
@@ -468,7 +472,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "GPUs below health score 60 or with active predictive-failure alerts — require immediate attention."
     },
     {
       "datasource": {
@@ -556,7 +561,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Number of GPUs where the 24 h failure-probability model exceeds 30%, based on temperature trend, ECC rate and PCIe replay rate."
     },
     {
       "datasource": {
@@ -718,7 +724,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Average GPU core-die temperature across all devices. Yellow ≥75 °C, red ≥85 °C."
     },
     {
       "datasource": {
@@ -788,7 +795,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Average instantaneous power draw in Watts across all GPUs."
     },
     {
       "datasource": {
@@ -853,7 +861,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Total installed VRAM (framebuffer) across all GPUs in GiB."
     },
     {
       "datasource": {
@@ -917,7 +926,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Total VRAM currently in use across all GPUs in GiB."
     },
     {
       "datasource": {
@@ -995,7 +1005,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Number of DCGM Exporter targets currently being scraped successfully by Prometheus."
     },
     {
       "collapsed": false,
@@ -1084,7 +1095,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Total number of GPU alert rules currently in the Firing state."
     },
     {
       "datasource": {
@@ -1157,7 +1169,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Alerts at Severity=Critical — require immediate action."
     },
     {
       "datasource": {
@@ -1230,7 +1243,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Alerts at Severity=Warning — should be investigated promptly."
     },
     {
       "datasource": {
@@ -1303,7 +1317,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Alerts scoped to a GPU worker node (e.g. node unreachable, DCGM darkout)."
     },
     {
       "datasource": {
@@ -1376,7 +1391,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Alerts scoped to a specific GPU device (e.g. row-remap failure, XID errors)."
     },
     {
       "datasource": {
@@ -1449,7 +1465,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Thermal and power alerts: overheating, sustained throttling, power anomaly."
     },
     {
       "datasource": {
@@ -1522,7 +1539,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Memory alerts: ECC double-bit errors, row-remap failures, VRAM degradation."
     },
     {
       "datasource": {
@@ -1595,7 +1613,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Predictive alerts: 24 h failure probability exceeded, composite health score low."
     },
     {
       "datasource": {
@@ -1668,7 +1687,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Workload-impact alerts: pods running on failed or at-risk GPU nodes."
     },
     {
       "datasource": {
@@ -1826,7 +1846,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Live table of all firing GPU alerts with rule name, severity, and labels."
     },
     {
       "collapsed": false,
@@ -2258,7 +2279,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Per-GPU row-remap failure flag. 1 = at least one uncorrectable row has been remapped — GPU may need replacement."
     },
     {
       "datasource": {
@@ -2343,7 +2365,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Count of uncorrectable (DBE-triggered) row remaps per GPU. Non-zero values indicate permanent DRAM cell damage."
     },
     {
       "collapsed": false,
@@ -2491,7 +2514,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Workload breakdown showing GPU compute utilisation per namespace and pod, attributed via DCGM container labels."
     },
     {
       "collapsed": false,
@@ -2578,7 +2602,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "GPU compute utilisation (%) time-series for every device. Hover for per-GPU breakdown."
     },
     {
       "datasource": {
@@ -2670,7 +2695,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "GPU core-die temperature (°C) per device over time. Sustained values above 85 °C trigger GPUOverheating alert."
     },
     {
       "datasource": {
@@ -2751,7 +2777,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Instantaneous power draw (W) per device. Spikes or sustained drops may indicate power anomalies."
     },
     {
       "datasource": {
@@ -2854,7 +2881,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Composite health score trend (0–100) per device over the selected time range."
     },
     {
       "collapsed": false,
@@ -2948,7 +2976,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Pods currently scheduled on GPU nodes where the health score has dropped to critical (< 60)."
     },
     {
       "datasource": {
@@ -3108,7 +3137,8 @@
           "refId": "A"
         }
       ],
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Proportion of DCGM scrape attempts that returned valid data in the last 5 minutes."
     },
     {
       "collapsed": false,

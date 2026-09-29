@@ -30,7 +30,7 @@
       }
     ]
   },
-  "description": "GPU SRE Deep Dive \u2014 Predictive analysis, composite health, ECC, thermal, power, PCIe, and platform health for NVIDIA GPUs on OpenShift + DCGM Exporter.",
+  "description": "GPU SRE Deep Dive — Predictive analysis, composite health, ECC, thermal, power, PCIe, and platform health for NVIDIA GPUs on OpenShift + DCGM Exporter.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -43,7 +43,7 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "\u2190 Cluster Overview",
+      "title": "← Cluster Overview",
       "type": "link",
       "url": "/d/gpu-cluster-overview-v8"
     },
@@ -81,7 +81,7 @@
         "y": 0
       },
       "id": 100,
-      "title": "\u254c Predictive Analysis & Composite Health",
+      "title": "╌ Predictive Analysis & Composite Health",
       "type": "row"
     },
     {
@@ -131,17 +131,17 @@
       "id": 1,
       "links": [
         {
-          "title": "GPUHealthScoreCritical \u2014 firing",
+          "title": "GPUHealthScoreCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUHealthScoreCritical",
           "targetBlank": true
         },
         {
-          "title": "GPUHealthScoreHigh \u2014 firing",
+          "title": "GPUHealthScoreHigh — firing",
           "url": "/alerting/list?state=firing&search=GPUHealthScoreHigh",
           "targetBlank": true
         },
         {
-          "title": "\u2190 Cluster Overview",
+          "title": "← Cluster Overview",
           "url": "/d/gpu-cluster-overview-v8",
           "targetBlank": false,
           "keepTime": true
@@ -174,7 +174,8 @@
         }
       ],
       "title": "Composite Health Score",
-      "type": "gauge"
+      "type": "gauge",
+      "description": "Composite health score (0–100) for the selected GPU, derived from temperature deviation, ECC error rate and throttle pressure. Green ≥80, yellow 60–80, red <60."
     },
     {
       "datasource": {
@@ -219,17 +220,17 @@
       "id": 2,
       "links": [
         {
-          "title": "GPUPredictiveFailure \u2014 firing",
+          "title": "GPUPredictiveFailure — firing",
           "url": "/alerting/list?state=firing&search=GPUPredictiveFailure",
           "targetBlank": true
         },
         {
-          "title": "WorkloadsOnAtRiskGPUNodes \u2014 firing",
+          "title": "WorkloadsOnAtRiskGPUNodes — firing",
           "url": "/alerting/list?state=firing&search=WorkloadsOnAtRiskGPUNodes",
           "targetBlank": true
         },
         {
-          "title": "\u2190 Cluster Overview",
+          "title": "← Cluster Overview",
           "url": "/d/gpu-cluster-overview-v8",
           "targetBlank": false,
           "keepTime": true
@@ -262,7 +263,8 @@
         }
       ],
       "title": "24h Failure Probability %",
-      "type": "gauge"
+      "type": "gauge",
+      "description": "Model-derived probability (0–100%) that this GPU will experience a failure event within the next 24 hours, based on temperature trend, ECC rate and PCIe replay rate."
     },
     {
       "datasource": {
@@ -351,10 +353,10 @@
         "y": 1
       },
       "id": 3,
-      "description": "Composite throttle signal (0 = no throttle). Turns orange \u226510, red \u226550. Triggers GPUThermalThrottlingSustained at sustained pressure.",
+      "description": "Composite throttle signal (0 = no throttle). Turns orange ≥10, red ≥50. Triggers GPUThermalThrottlingSustained at sustained pressure.",
       "links": [
         {
-          "title": "GPUThermalThrottlingSustained \u2014 firing",
+          "title": "GPUThermalThrottlingSustained — firing",
           "url": "/alerting/list?state=firing&search=GPUThermalThrottlingSustained",
           "targetBlank": true
         }
@@ -455,7 +457,8 @@
         }
       ],
       "title": "SM Clock (MHz)",
-      "type": "stat"
+      "type": "stat",
+      "description": "Current SM (streaming multiprocessor) clock frequency in MHz. Drops below base clock indicate active throttling."
     },
     {
       "datasource": {
@@ -504,12 +507,12 @@
       "id": 5,
       "links": [
         {
-          "title": "GPUThermalThrottlingSustained \u2014 firing",
+          "title": "GPUThermalThrottlingSustained — firing",
           "url": "/alerting/list?state=firing&search=GPUThermalThrottlingSustained",
           "targetBlank": true
         },
         {
-          "title": "GPUOverheating \u2014 firing",
+          "title": "GPUOverheating — firing",
           "url": "/alerting/list?state=firing&search=GPUOverheating",
           "targetBlank": true
         }
@@ -543,7 +546,8 @@
         }
       ],
       "title": "Clock Throttle Reasons (bitmask)",
-      "type": "stat"
+      "type": "stat",
+      "description": "DCGM clock-throttle bitmask. Non-zero bits indicate active throttle reasons: thermal (bit 2), power (bit 3), sync boost (bit 5)."
     },
     {
       "datasource": {
@@ -607,7 +611,8 @@
         }
       ],
       "title": "Memory Clock (MHz)",
-      "type": "stat"
+      "type": "stat",
+      "description": "Current memory clock frequency in MHz. Drops indicate memory bandwidth throttling, often correlated with thermal events."
     },
     {
       "datasource": {
@@ -663,17 +668,17 @@
       "id": 7,
       "links": [
         {
-          "title": "GPUHealthScoreCritical \u2014 firing",
+          "title": "GPUHealthScoreCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUHealthScoreCritical",
           "targetBlank": true
         },
         {
-          "title": "GPUHealthScoreHigh \u2014 firing",
+          "title": "GPUHealthScoreHigh — firing",
           "url": "/alerting/list?state=firing&search=GPUHealthScoreHigh",
           "targetBlank": true
         },
         {
-          "title": "\u2190 Cluster Overview",
+          "title": "← Cluster Overview",
           "url": "/d/gpu-cluster-overview-v8",
           "targetBlank": false,
           "keepTime": true
@@ -707,7 +712,8 @@
       ],
       "title": "Health Score Trend",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Composite health score trend over the selected time window. Downward trend warrants proactive investigation."
     },
     {
       "datasource": {
@@ -759,7 +765,7 @@
       "id": 8,
       "links": [
         {
-          "title": "GPUPredictiveFailure \u2014 firing",
+          "title": "GPUPredictiveFailure — firing",
           "url": "/alerting/list?state=firing&search=GPUPredictiveFailure",
           "targetBlank": true
         }
@@ -792,7 +798,8 @@
       ],
       "title": "Failure Probability Trend",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "24 h failure-probability trend. Rising curve indicates worsening GPU condition."
     },
     {
       "collapsed": false,
@@ -803,7 +810,7 @@
         "y": 16
       },
       "id": 101,
-      "title": "\u254c Active Alerts \u2014 This GPU / Node",
+      "title": "╌ Active Alerts — This GPU / Node",
       "type": "row"
     },
     {
@@ -841,12 +848,12 @@
           "noValue": "No alerts firing",
           "links": [
             {
-              "title": "View ${__data.fields.Alert} \u2014 all firing",
+              "title": "View ${__data.fields.Alert} — all firing",
               "url": "/alerting/list?state=firing&search=${__data.fields.Alert}",
               "targetBlank": true
             },
             {
-              "title": "View ${__data.fields.Alert} \u2014 rule definition",
+              "title": "View ${__data.fields.Alert} — rule definition",
               "url": "/alerting/list?search=${__data.fields.Alert}",
               "targetBlank": true
             },
@@ -903,7 +910,7 @@
       "id": 9,
       "links": [
         {
-          "title": "Open Grafana Alerting \u2014 all GPU alerts",
+          "title": "Open Grafana Alerting — all GPU alerts",
           "url": "/alerting/list?state=firing&search=platform%3Dgpu-monitoring",
           "targetBlank": true
         }
@@ -935,7 +942,7 @@
           "refId": "A"
         }
       ],
-      "title": "Firing GPU Alerts \u2014 All (fleet-level alerts have no hostname/UUID)",
+      "title": "Firing GPU Alerts — All (cluster-level alerts have no hostname/UUID)",
       "transformations": [
         {
           "id": "filterFieldsByName",
@@ -966,7 +973,8 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "description": "All GPU alert rules currently in Firing state for the selected node and GPU."
     },
     {
       "collapsed": false,
@@ -977,7 +985,7 @@
         "y": 24
       },
       "id": 102,
-      "title": "\u254c Temperature",
+      "title": "╌ Temperature",
       "type": "row"
     },
     {
@@ -1028,12 +1036,12 @@
       "id": 10,
       "links": [
         {
-          "title": "GPUOverheating \u2014 firing",
+          "title": "GPUOverheating — firing",
           "url": "/alerting/list?state=firing&search=GPUOverheating",
           "targetBlank": true
         },
         {
-          "title": "GPUOverheating \u2014 rule",
+          "title": "GPUOverheating — rule",
           "url": "/alerting/list?search=GPUOverheating",
           "targetBlank": true
         }
@@ -1063,9 +1071,10 @@
           "refId": "A"
         }
       ],
-      "title": "GPU Core Temperature (\u00b0C)",
+      "title": "GPU Core Temperature (°C)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "GPU core-die temperature (°C) over time. Sustained readings above 85 °C trigger the GPUOverheating alert."
     },
     {
       "datasource": {
@@ -1127,7 +1136,7 @@
       "id": 11,
       "links": [
         {
-          "title": "GPUOverheating \u2014 firing",
+          "title": "GPUOverheating — firing",
           "url": "/alerting/list?state=firing&search=GPUOverheating",
           "targetBlank": true
         }
@@ -1157,9 +1166,10 @@
           "refId": "A"
         }
       ],
-      "title": "Memory (HBM) Temperature (\u00b0C)",
+      "title": "Memory (HBM) Temperature (°C)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "HBM/memory die temperature (°C) over time. Elevated values alongside ECC errors indicate thermal-induced memory degradation."
     },
     {
       "collapsed": false,
@@ -1170,7 +1180,7 @@
         "y": 32
       },
       "id": 103,
-      "title": "\u254c Power & Energy",
+      "title": "╌ Power & Energy",
       "type": "row"
     },
     {
@@ -1213,12 +1223,12 @@
       "id": 12,
       "links": [
         {
-          "title": "GPUPowerAnomaly \u2014 firing",
+          "title": "GPUPowerAnomaly — firing",
           "url": "/alerting/list?state=firing&search=GPUPowerAnomaly",
           "targetBlank": true
         },
         {
-          "title": "GPUPowerAnomaly \u2014 rule",
+          "title": "GPUPowerAnomaly — rule",
           "url": "/alerting/list?search=GPUPowerAnomaly",
           "targetBlank": true
         }
@@ -1251,7 +1261,8 @@
       ],
       "title": "Power Draw (W)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Instantaneous power draw (W) over time. Spikes or sustained drops from TDP may indicate power-rail anomalies."
     },
     {
       "datasource": {
@@ -1297,7 +1308,7 @@
       "id": 13,
       "links": [
         {
-          "title": "GPUPowerAnomaly \u2014 firing",
+          "title": "GPUPowerAnomaly — firing",
           "url": "/alerting/list?state=firing&search=GPUPowerAnomaly",
           "targetBlank": true
         }
@@ -1327,9 +1338,10 @@
           "refId": "A"
         }
       ],
-      "title": "Power Instability \u2014 15m Rolling Stddev",
+      "title": "Power Instability — 15m Rolling Stddev",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "15-minute rolling standard deviation of power draw. High variance (>15 W) indicates power instability — triggers GPUPowerAnomaly."
     },
     {
       "collapsed": false,
@@ -1340,7 +1352,7 @@
         "y": 40
       },
       "id": 104,
-      "title": "\u254c GPU Utilisation & Profiling",
+      "title": "╌ GPU Utilisation & Profiling",
       "type": "row"
     },
     {
@@ -1412,7 +1424,8 @@
       ],
       "title": "GPU Compute Utilisation (%)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "GPU compute utilisation (%) — percentage of SMs actively executing CUDA kernels."
     },
     {
       "datasource": {
@@ -1490,9 +1503,10 @@
           "refId": "B"
         }
       ],
-      "title": "GR Engine Active & Tensor Core Active (0\u20131)",
+      "title": "GR Engine Active & Tensor Core Active (0–1)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "GR Engine Active (graphics/compute pipeline) and Tensor Core Active ratios (0–1). Tensor values near 1 indicate AI/ML workload saturation."
     },
     {
       "datasource": {
@@ -1561,9 +1575,10 @@
           "refId": "A"
         }
       ],
-      "title": "DRAM Bandwidth Active (0\u20131)",
+      "title": "DRAM Bandwidth Active (0–1)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "DRAM bandwidth active ratio (0–1). Values near 1 indicate memory-bandwidth-bound workloads."
     },
     {
       "collapsed": false,
@@ -1574,7 +1589,7 @@
         "y": 48
       },
       "id": 105,
-      "title": "\u254c Framebuffer Memory (VRAM)",
+      "title": "╌ Framebuffer Memory (VRAM)",
       "type": "row"
     },
     {
@@ -1644,7 +1659,8 @@
       ],
       "title": "VRAM Used (GiB)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Framebuffer (VRAM) memory used in GiB over time."
     },
     {
       "datasource": {
@@ -1713,7 +1729,8 @@
       ],
       "title": "VRAM Free (GiB)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Framebuffer (VRAM) memory free in GiB over time. Approaching zero triggers workload OOM risks."
     },
     {
       "datasource": {
@@ -1791,7 +1808,8 @@
       ],
       "title": "VRAM Utilisation %",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "VRAM utilisation as a percentage of total framebuffer capacity. Orange ≥80%, red ≥95%."
     },
     {
       "collapsed": false,
@@ -1802,7 +1820,7 @@
         "y": 56
       },
       "id": 106,
-      "title": "\u254c PCIe Bus",
+      "title": "╌ PCIe Bus",
       "type": "row"
     },
     {
@@ -1850,12 +1868,12 @@
       "id": 20,
       "links": [
         {
-          "title": "GPUPCIeReplayRateHigh \u2014 firing",
+          "title": "GPUPCIeReplayRateHigh — firing",
           "url": "/alerting/list?state=firing&search=GPUPCIeReplayRateHigh",
           "targetBlank": true
         },
         {
-          "title": "GPUPCIeReplayRateHigh \u2014 rule",
+          "title": "GPUPCIeReplayRateHigh — rule",
           "url": "/alerting/list?search=GPUPCIeReplayRateHigh",
           "targetBlank": true
         }
@@ -1887,7 +1905,8 @@
       ],
       "title": "PCIe Replay Counter Rate (/s)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Rate of PCIe replay events per second. Non-zero values indicate PCIe bus errors — triggers GPUPCIeReplayRateHigh."
     },
     {
       "datasource": {
@@ -1930,7 +1949,7 @@
       "id": 21,
       "links": [
         {
-          "title": "GPUPCIeReplayRateHigh \u2014 firing",
+          "title": "GPUPCIeReplayRateHigh — firing",
           "url": "/alerting/list?state=firing&search=GPUPCIeReplayRateHigh",
           "targetBlank": true
         }
@@ -1972,7 +1991,8 @@
       ],
       "title": "PCIe TX/RX Bandwidth (bytes/s)",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "PCIe transmit and receive bandwidth in bytes/s. Useful for diagnosing data-transfer bottlenecks."
     },
     {
       "datasource": {
@@ -2019,12 +2039,12 @@
       "id": 22,
       "links": [
         {
-          "title": "GPUThermalThrottlingSustained \u2014 firing",
+          "title": "GPUThermalThrottlingSustained — firing",
           "url": "/alerting/list?state=firing&search=GPUThermalThrottlingSustained",
           "targetBlank": true
         },
         {
-          "title": "GPUOverheating \u2014 firing",
+          "title": "GPUOverheating — firing",
           "url": "/alerting/list?state=firing&search=GPUOverheating",
           "targetBlank": true
         }
@@ -2055,7 +2075,8 @@
       ],
       "title": "Clock Throttle Reasons Over Time",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Clock throttle reason bitmask over time, showing which throttle condition was active at each point."
     },
     {
       "collapsed": false,
@@ -2066,7 +2087,7 @@
         "y": 64
       },
       "id": 107,
-      "title": "\u254c ECC Errors & Memory Health",
+      "title": "╌ ECC Errors & Memory Health",
       "type": "row"
     },
     {
@@ -2123,12 +2144,12 @@
       "id": 23,
       "links": [
         {
-          "title": "GPURowRemapFailure \u2014 firing",
+          "title": "GPURowRemapFailure — firing",
           "url": "/alerting/list?state=firing&search=GPURowRemapFailure",
           "targetBlank": true
         },
         {
-          "title": "GPUBurnoutPermanentFailure \u2014 firing",
+          "title": "GPUBurnoutPermanentFailure — firing",
           "url": "/alerting/list?state=firing&search=GPUBurnoutPermanentFailure",
           "targetBlank": true
         }
@@ -2161,8 +2182,9 @@
           "refId": "A"
         }
       ],
-      "title": "Row Remap Failure (0=OK \u00b7 1=Failed)",
-      "type": "stat"
+      "title": "Row Remap Failure (0=OK · 1=Failed)",
+      "type": "stat",
+      "description": "Row-remap failure flag per GPU. 1 = an uncorrectable DRAM row has been permanently remapped — GPU may require replacement."
     },
     {
       "datasource": {
@@ -2202,12 +2224,12 @@
       "id": 24,
       "links": [
         {
-          "title": "GPUUncorrectableRemappedRows \u2014 firing",
+          "title": "GPUUncorrectableRemappedRows — firing",
           "url": "/alerting/list?state=firing&search=GPUUncorrectableRemappedRows",
           "targetBlank": true
         },
         {
-          "title": "GPUMemoryDegradationCritical \u2014 firing",
+          "title": "GPUMemoryDegradationCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUMemoryDegradationCritical",
           "targetBlank": true
         }
@@ -2241,7 +2263,8 @@
         }
       ],
       "title": "Uncorrectable Remapped Rows",
-      "type": "stat"
+      "type": "stat",
+      "description": "Count of uncorrectable (DBE-driven) remapped DRAM rows. Non-zero means permanent cell damage has occurred."
     },
     {
       "datasource": {
@@ -2281,7 +2304,7 @@
       "id": 25,
       "links": [
         {
-          "title": "GPUCorrectableRemapAccelerating \u2014 firing",
+          "title": "GPUCorrectableRemapAccelerating — firing",
           "url": "/alerting/list?state=firing&search=GPUCorrectableRemapAccelerating",
           "targetBlank": true
         }
@@ -2315,7 +2338,8 @@
         }
       ],
       "title": "Correctable Remapped Rows",
-      "type": "stat"
+      "type": "stat",
+      "description": "Count of correctable (SBE-driven) remapped DRAM rows. Rapid growth triggers GPUCorrectableRemapAccelerating alert."
     },
     {
       "datasource": {
@@ -2355,7 +2379,7 @@
       "id": 26,
       "links": [
         {
-          "title": "GPUDoubleBitECCDetected \u2014 firing",
+          "title": "GPUDoubleBitECCDetected — firing",
           "url": "/alerting/list?state=firing&search=GPUDoubleBitECCDetected",
           "targetBlank": true
         }
@@ -2389,7 +2413,8 @@
         }
       ],
       "title": "ECC SBE Volatile Total",
-      "type": "stat"
+      "type": "stat",
+      "description": "Single-bit ECC (correctable) volatile error count since last driver reset. Increasing values indicate DRAM degradation."
     },
     {
       "datasource": {
@@ -2429,12 +2454,12 @@
       "id": 27,
       "links": [
         {
-          "title": "GPUDoubleBitECCDetected \u2014 firing",
+          "title": "GPUDoubleBitECCDetected — firing",
           "url": "/alerting/list?state=firing&search=GPUDoubleBitECCDetected",
           "targetBlank": true
         },
         {
-          "title": "GPUMemoryDegradationCritical \u2014 firing",
+          "title": "GPUMemoryDegradationCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUMemoryDegradationCritical",
           "targetBlank": true
         }
@@ -2468,7 +2493,8 @@
         }
       ],
       "title": "ECC DBE Volatile Total",
-      "type": "stat"
+      "type": "stat",
+      "description": "Double-bit ECC (uncorrectable) volatile error count. Any non-zero value triggers GPUDoubleBitECCDetected — immediate action required."
     },
     {
       "datasource": {
@@ -2519,12 +2545,12 @@
       "id": 28,
       "links": [
         {
-          "title": "GPUXIDErrorsDetected \u2014 firing",
+          "title": "GPUXIDErrorsDetected — firing",
           "url": "/alerting/list?state=firing&search=GPUXIDErrorsDetected",
           "targetBlank": true
         },
         {
-          "title": "GPUXIDFatalCritical \u2014 firing",
+          "title": "GPUXIDFatalCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUXIDFatalCritical",
           "targetBlank": true
         }
@@ -2558,7 +2584,8 @@
         }
       ],
       "title": "XID Errors (counter)",
-      "type": "stat"
+      "type": "stat",
+      "description": "XID error counter. XID codes indicate GPU hardware faults; specific codes (e.g. 79, 94, 95) indicate fatal errors."
     },
     {
       "datasource": {
@@ -2601,12 +2628,12 @@
       "id": 29,
       "links": [
         {
-          "title": "GPURowRemapFailure \u2014 firing",
+          "title": "GPURowRemapFailure — firing",
           "url": "/alerting/list?state=firing&search=GPURowRemapFailure",
           "targetBlank": true
         },
         {
-          "title": "GPUCorrectableRemapAccelerating \u2014 firing",
+          "title": "GPUCorrectableRemapAccelerating — firing",
           "url": "/alerting/list?state=firing&search=GPUCorrectableRemapAccelerating",
           "targetBlank": true
         }
@@ -2647,7 +2674,8 @@
       ],
       "title": "Row Remap Count Over Time",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "Row-remap count over time — both correctable and uncorrectable. Accelerating slope indicates active DRAM degradation."
     },
     {
       "datasource": {
@@ -2694,12 +2722,12 @@
       "id": 30,
       "links": [
         {
-          "title": "GPUDoubleBitECCDetected \u2014 firing",
+          "title": "GPUDoubleBitECCDetected — firing",
           "url": "/alerting/list?state=firing&search=GPUDoubleBitECCDetected",
           "targetBlank": true
         },
         {
-          "title": "GPUMemoryDegradationCritical \u2014 firing",
+          "title": "GPUMemoryDegradationCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUMemoryDegradationCritical",
           "targetBlank": true
         }
@@ -2740,7 +2768,8 @@
       ],
       "title": "ECC Aggregate Errors Over Time",
       "type": "timeseries",
-      "pluginVersion": "12.1.0"
+      "pluginVersion": "12.1.0",
+      "description": "ECC aggregate error time-series showing accumulated SBE and DBE counts."
     },
     {
       "collapsed": false,
@@ -2751,7 +2780,7 @@
         "y": 75
       },
       "id": 108,
-      "title": "\u254c Platform Health",
+      "title": "╌ Platform Health",
       "type": "row"
     },
     {
@@ -2798,10 +2827,10 @@
       },
       "id": 31,
       "title": "VRAM Utilisation",
-      "description": "GPU framebuffer memory in use as % of total (used \u00f7 (used + free) \u00d7 100). Orange \u226580%, red \u226595%. High VRAM pressure causes workload OOM kills and accelerates thermal/power degradation.",
+      "description": "GPU framebuffer memory in use as % of total (used ÷ (used + free) × 100). Orange ≥80%, red ≥95%. High VRAM pressure causes workload OOM kills and accelerates thermal/power degradation.",
       "links": [
         {
-          "title": "GPU memory panels \u2014 SRE Deep Dive",
+          "title": "GPU memory panels — SRE Deep Dive",
           "url": "/d/gpu-sre-dashboard-v5?var-hostname=${hostname}&var-UUID=${UUID}",
           "targetBlank": false,
           "keepTime": true
@@ -2856,7 +2885,7 @@
                 "0": {
                   "color": "red",
                   "index": 0,
-                  "text": "0 \u2014 no GPU metrics ingested"
+                  "text": "0 — no GPU metrics ingested"
                 }
               },
               "type": "value"
@@ -2888,7 +2917,7 @@
       },
       "id": 32,
       "title": "DCGM Exporter Targets",
-      "description": "Number of nvidia-dcgm-exporter pods Prometheus is successfully scraping. Zero means no GPU hardware metrics are flowing \u2014 all DCGM panels will show No data.",
+      "description": "Number of nvidia-dcgm-exporter pods Prometheus is successfully scraping. Zero means no GPU hardware metrics are flowing — all DCGM panels will show No data.",
       "links": [
         {
           "title": "GPUDCGMScrapeDegraded alert",
@@ -2950,7 +2979,7 @@
                 "0": {
                   "color": "red",
                   "index": 2,
-                  "text": "0% \u2014 all DCGM targets failing"
+                  "text": "0% — all DCGM targets failing"
                 }
               },
               "type": "value"
@@ -2962,7 +2991,7 @@
                 "result": {
                   "color": "orange",
                   "index": 1,
-                  "text": "Degraded \u2014 <90% targets scraping"
+                  "text": "Degraded — <90% targets scraping"
                 }
               },
               "type": "range"
@@ -2974,7 +3003,7 @@
                 "result": {
                   "color": "green",
                   "index": 0,
-                  "text": "Healthy \u2014 \u226590% targets scraping"
+                  "text": "Healthy — ≥90% targets scraping"
                 }
               },
               "type": "range"
@@ -3073,7 +3102,7 @@
                 "0": {
                   "color": "green",
                   "index": 0,
-                  "text": "0 \u2014 no alerts firing"
+                  "text": "0 — no alerts firing"
                 }
               },
               "type": "value"
@@ -3165,7 +3194,7 @@
           "text": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com",
           "value": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com"
         },
-        "description": "OCP Console base URL \u2014 set automatically by deploy.sh",
+        "description": "OCP Console base URL — set automatically by deploy.sh",
         "hide": 2,
         "label": "OCP Console",
         "name": "ocp_console",
