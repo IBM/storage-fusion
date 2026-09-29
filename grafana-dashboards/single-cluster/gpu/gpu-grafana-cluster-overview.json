@@ -30,7 +30,7 @@
       }
     ]
   },
-  "description": "GPU Cluster Fleet Overview \u2014 total GPU health, alert summary, workload attribution and trend analysis for OpenShift + NVIDIA GPU Operator + DCGM Exporter",
+  "description": "GPU Cluster Overview — total GPU health, alert summary, workload attribution and trend analysis for OpenShift + NVIDIA GPU Operator + DCGM Exporter",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -43,7 +43,7 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": true,
-      "title": "SRE Deep Dive \u2192",
+      "title": "SRE Deep Dive →",
       "type": "link",
       "url": "/d/gpu-sre-dashboard-v5"
     },
@@ -80,7 +80,7 @@
         "y": 0
       },
       "id": 100,
-      "title": "\u254c GPU Fleet Health Summary",
+      "title": "╌ GPU Health Summary",
       "type": "row"
     },
     {
@@ -194,12 +194,12 @@
       "id": 2,
       "links": [
         {
-          "title": "GPUHealthScoreCritical \u2014 rule",
+          "title": "GPUHealthScoreCritical — rule",
           "url": "/alerting/list?search=GPUHealthScoreCritical",
           "targetBlank": true
         },
         {
-          "title": "GPUHealthScoreHigh \u2014 rule",
+          "title": "GPUHealthScoreHigh — rule",
           "url": "/alerting/list?search=GPUHealthScoreHigh",
           "targetBlank": true
         },
@@ -222,7 +222,7 @@
         "showThresholdLabels": true,
         "showThresholdMarkers": true
       },
-      "title": "Fleet Avg GPU Health Score",
+      "title": "Avg GPU Health Score",
       "type": "gauge",
       "targets": [
         {
@@ -347,12 +347,12 @@
       "id": 4,
       "links": [
         {
-          "title": "GPUHealthScoreHigh \u2014 firing",
+          "title": "GPUHealthScoreHigh — firing",
           "url": "/alerting/list?state=firing&search=GPUHealthScoreHigh",
           "targetBlank": true
         },
         {
-          "title": "GPUHealthScoreHigh \u2014 rule",
+          "title": "GPUHealthScoreHigh — rule",
           "url": "/alerting/list?search=GPUHealthScoreHigh",
           "targetBlank": true
         }
@@ -371,7 +371,7 @@
         },
         "textMode": "auto"
       },
-      "title": "Warning GPUs (60\u201380)",
+      "title": "Warning GPUs (60–80)",
       "type": "stat",
       "targets": [
         {
@@ -425,17 +425,17 @@
       "id": 5,
       "links": [
         {
-          "title": "GPUHealthScoreCritical \u2014 firing",
+          "title": "GPUHealthScoreCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUHealthScoreCritical",
           "targetBlank": true
         },
         {
-          "title": "GPUPredictiveFailure \u2014 firing",
+          "title": "GPUPredictiveFailure — firing",
           "url": "/alerting/list?state=firing&search=GPUPredictiveFailure",
           "targetBlank": true
         },
         {
-          "title": "GPUHealthScoreCritical \u2014 rule",
+          "title": "GPUHealthScoreCritical — rule",
           "url": "/alerting/list?search=GPUHealthScoreCritical",
           "targetBlank": true
         }
@@ -512,12 +512,12 @@
       "id": 6,
       "links": [
         {
-          "title": "GPUPredictiveFailure \u2014 firing",
+          "title": "GPUPredictiveFailure — firing",
           "url": "/alerting/list?state=firing&search=GPUPredictiveFailure",
           "targetBlank": true
         },
         {
-          "title": "WorkloadsOnAtRiskGPUNodes \u2014 firing",
+          "title": "WorkloadsOnAtRiskGPUNodes — firing",
           "url": "/alerting/list?state=firing&search=WorkloadsOnAtRiskGPUNodes",
           "targetBlank": true
         },
@@ -602,10 +602,10 @@
       },
       "id": 7,
       "title": "VRAM Utilisation",
-      "description": "Fleet avg GPU framebuffer memory used as % of total. Orange \u226580%, red \u226595%. High VRAM pressure causes workload OOM kills.",
+      "description": "Avg GPU framebuffer memory used as % of total. Orange ≥80%, red ≥95%. High VRAM pressure causes workload OOM kills.",
       "links": [
         {
-          "title": "GPU SRE Deep Dive \u2014 memory panels",
+          "title": "GPU SRE Deep Dive — memory panels",
           "url": "/d/gpu-sre-dashboard-v5?var-hostname=${hostname}&var-UUID=${UUID}",
           "targetBlank": false,
           "keepTime": true
@@ -685,7 +685,7 @@
       "id": 8,
       "links": [
         {
-          "title": "GPUOverheating \u2014 firing",
+          "title": "GPUOverheating — firing",
           "url": "/alerting/list?state=firing&search=GPUOverheating",
           "targetBlank": true
         }
@@ -704,7 +704,7 @@
         },
         "textMode": "auto"
       },
-      "title": "Avg GPU Temp (\u00b0C)",
+      "title": "Avg GPU Temp (°C)",
       "type": "stat",
       "targets": [
         {
@@ -755,7 +755,7 @@
       "id": 9,
       "links": [
         {
-          "title": "GPUPowerAnomaly \u2014 firing",
+          "title": "GPUPowerAnomaly — firing",
           "url": "/alerting/list?state=firing&search=GPUPowerAnomaly",
           "targetBlank": true
         }
@@ -957,12 +957,12 @@
       "id": 12,
       "links": [
         {
-          "title": "GPUDCGMScrapeDegraded \u2014 firing",
+          "title": "GPUDCGMScrapeDegraded — firing",
           "url": "/alerting/list?state=firing&search=GPUDCGMScrapeDegraded",
           "targetBlank": true
         },
         {
-          "title": "GPUDCGMScrapeDegraded \u2014 rule",
+          "title": "GPUDCGMScrapeDegraded — rule",
           "url": "/alerting/list?search=GPUDCGMScrapeDegraded",
           "targetBlank": true
         }
@@ -1006,7 +1006,7 @@
         "y": 9
       },
       "id": 101,
-      "title": "\u254c Alert Summary \u2014 GPU Fleet",
+      "title": "╌ Alert Summary — GPU",
       "type": "row"
     },
     {
@@ -1051,7 +1051,7 @@
       "id": 107,
       "links": [
         {
-          "title": "All GPU Alerts \u2014 view all firing",
+          "title": "All GPU Alerts — view all firing",
           "url": "/alerting/list?state=firing&search=platform%3Dgpu-monitoring",
           "targetBlank": true
         }
@@ -1124,7 +1124,7 @@
       "id": 13,
       "links": [
         {
-          "title": "All Critical GPU Alerts \u2014 firing",
+          "title": "All Critical GPU Alerts — firing",
           "url": "/alerting/list?state=firing&search=platform%3Dgpu-monitoring",
           "targetBlank": true
         }
@@ -1197,7 +1197,7 @@
       "id": 14,
       "links": [
         {
-          "title": "All Warning GPU Alerts \u2014 firing",
+          "title": "All Warning GPU Alerts — firing",
           "url": "/alerting/list?state=firing&search=platform%3Dgpu-monitoring",
           "targetBlank": true
         }
@@ -1270,7 +1270,7 @@
       "id": 15,
       "links": [
         {
-          "title": "Node Alerts \u2014 firing",
+          "title": "Node Alerts — firing",
           "url": "/alerting/list?state=firing&search=GPUNode",
           "targetBlank": true
         }
@@ -1343,7 +1343,7 @@
       "id": 16,
       "links": [
         {
-          "title": "Hardware Alerts \u2014 firing",
+          "title": "Hardware Alerts — firing",
           "url": "/alerting/list?state=firing&search=GPUDevice",
           "targetBlank": true
         }
@@ -1416,7 +1416,7 @@
       "id": 17,
       "links": [
         {
-          "title": "Thermal/Power Alerts \u2014 firing",
+          "title": "Thermal/Power Alerts — firing",
           "url": "/alerting/list?state=firing&search=GPUOverheating",
           "targetBlank": true
         }
@@ -1489,7 +1489,7 @@
       "id": 18,
       "links": [
         {
-          "title": "Memory Alerts \u2014 firing",
+          "title": "Memory Alerts — firing",
           "url": "/alerting/list?state=firing&search=GPUMemory",
           "targetBlank": true
         }
@@ -1562,7 +1562,7 @@
       "id": 19,
       "links": [
         {
-          "title": "Predictive Alerts \u2014 firing",
+          "title": "Predictive Alerts — firing",
           "url": "/alerting/list?state=firing&search=GPUHealth",
           "targetBlank": true
         }
@@ -1635,7 +1635,7 @@
       "id": 20,
       "links": [
         {
-          "title": "Impact Alerts \u2014 firing",
+          "title": "Impact Alerts — firing",
           "url": "/alerting/list?state=firing&search=Workloads",
           "targetBlank": true
         }
@@ -1701,12 +1701,12 @@
           "noValue": "No alerts firing",
           "links": [
             {
-              "title": "View ${__data.fields.Alert} \u2014 firing",
+              "title": "View ${__data.fields.Alert} — firing",
               "url": "/alerting/list?state=firing&search=${__data.fields.Alert}",
               "targetBlank": true
             },
             {
-              "title": "View ${__data.fields.Alert} \u2014 rule",
+              "title": "View ${__data.fields.Alert} — rule",
               "url": "/alerting/list?search=${__data.fields.Alert}",
               "targetBlank": true
             },
@@ -1763,7 +1763,7 @@
       "id": 21,
       "links": [
         {
-          "title": "Open Grafana Alerting \u2014 all GPU alerts",
+          "title": "Open Grafana Alerting — all GPU alerts",
           "url": "/alerting/list?state=firing&search=platform%3Dgpu-monitoring",
           "targetBlank": true
         }
@@ -1837,7 +1837,7 @@
         "y": 21
       },
       "id": 102,
-      "title": "\u254c Per-GPU Health Matrix",
+      "title": "╌ Per-GPU Health Matrix",
       "type": "row"
     },
     {
@@ -1893,7 +1893,7 @@
                 "id": "links",
                 "value": [
                   {
-                    "title": "Open SRE Deep Dive \u2192 ${__data.fields.Node}",
+                    "title": "Open SRE Deep Dive → ${__data.fields.Node}",
                     "url": "/d/gpu-sre-dashboard-v5?var-hostname=${__data.fields.Node}&var-UUID=${__data.fields[\"GPU UUID\"]}&var-datasource=${datasource}",
                     "targetBlank": true
                   }
@@ -2046,7 +2046,7 @@
       "description": "Click any Node name (blue) to open the SRE Deep Dive dashboard scoped to that GPU. Sorted worst health first.",
       "links": [
         {
-          "title": "SRE Deep Dive \u2014 GPU forensics",
+          "title": "SRE Deep Dive — GPU forensics",
           "url": "/d/gpu-sre-dashboard-v5",
           "targetBlank": true,
           "keepTime": true
@@ -2155,7 +2155,7 @@
         "y": 30
       },
       "id": 103,
-      "title": "\u254c Hardware Failure Indicators",
+      "title": "╌ Hardware Failure Indicators",
       "type": "row"
     },
     {
@@ -2213,12 +2213,12 @@
       "id": 23,
       "links": [
         {
-          "title": "GPURowRemapFailure \u2014 firing",
+          "title": "GPURowRemapFailure — firing",
           "url": "/alerting/list?state=firing&search=GPURowRemapFailure",
           "targetBlank": true
         },
         {
-          "title": "GPUBurnoutPermanentFailure \u2014 firing",
+          "title": "GPUBurnoutPermanentFailure — firing",
           "url": "/alerting/list?state=firing&search=GPUBurnoutPermanentFailure",
           "targetBlank": true
         },
@@ -2244,7 +2244,7 @@
         "showUnfilled": true,
         "valueMode": "color"
       },
-      "title": "Row Remap Failure Flag \u2014 All GPUs (0=OK \u00b7 1=Failed)",
+      "title": "Row Remap Failure Flag — All GPUs (0=OK · 1=Failed)",
       "type": "bargauge",
       "targets": [
         {
@@ -2298,12 +2298,12 @@
       "id": 24,
       "links": [
         {
-          "title": "GPUUncorrectableRemappedRows \u2014 firing",
+          "title": "GPUUncorrectableRemappedRows — firing",
           "url": "/alerting/list?state=firing&search=GPUUncorrectableRemappedRows",
           "targetBlank": true
         },
         {
-          "title": "GPUMemoryDegradationCritical \u2014 firing",
+          "title": "GPUMemoryDegradationCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUMemoryDegradationCritical",
           "targetBlank": true
         },
@@ -2329,7 +2329,7 @@
         "showUnfilled": true,
         "valueMode": "color"
       },
-      "title": "Uncorrectable Remapped Rows \u2014 All GPUs",
+      "title": "Uncorrectable Remapped Rows — All GPUs",
       "type": "bargauge",
       "targets": [
         {
@@ -2354,7 +2354,7 @@
         "y": 39
       },
       "id": 104,
-      "title": "\u254c Workload Attribution \u2014 GPU Utilisation by Pod",
+      "title": "╌ Workload Attribution — GPU Utilisation by Pod",
       "type": "row"
     },
     {
@@ -2457,7 +2457,7 @@
           }
         ]
       },
-      "title": "GPU Utilisation by Workload \u2014 Namespace \u00b7 Pod \u00b7 Device",
+      "title": "GPU Utilisation by Workload — Namespace · Pod · Device",
       "transformations": [
         {
           "id": "organize",
@@ -2502,7 +2502,7 @@
         "y": 49
       },
       "id": 105,
-      "title": "\u254c Fleet Time-Series Trends",
+      "title": "╌ Time-Series Trends",
       "type": "row"
     },
     {
@@ -2565,7 +2565,7 @@
           "sort": "desc"
         }
       },
-      "title": "GPU Utilisation \u2014 All Devices",
+      "title": "GPU Utilisation — All Devices",
       "type": "timeseries",
       "targets": [
         {
@@ -2637,7 +2637,7 @@
       "id": 27,
       "links": [
         {
-          "title": "GPUOverheating \u2014 firing",
+          "title": "GPUOverheating — firing",
           "url": "/alerting/list?state=firing&search=GPUOverheating",
           "targetBlank": true
         }
@@ -2657,7 +2657,7 @@
           "sort": "desc"
         }
       },
-      "title": "GPU Temperature \u2014 All Devices",
+      "title": "GPU Temperature — All Devices",
       "type": "timeseries",
       "targets": [
         {
@@ -2718,7 +2718,7 @@
       "id": 28,
       "links": [
         {
-          "title": "GPUPowerAnomaly \u2014 firing",
+          "title": "GPUPowerAnomaly — firing",
           "url": "/alerting/list?state=firing&search=GPUPowerAnomaly",
           "targetBlank": true
         }
@@ -2738,7 +2738,7 @@
           "sort": "desc"
         }
       },
-      "title": "Power Draw \u2014 All Devices",
+      "title": "Power Draw — All Devices",
       "type": "timeseries",
       "targets": [
         {
@@ -2816,12 +2816,12 @@
       "id": 29,
       "links": [
         {
-          "title": "GPUHealthScoreCritical \u2014 firing",
+          "title": "GPUHealthScoreCritical — firing",
           "url": "/alerting/list?state=firing&search=GPUHealthScoreCritical",
           "targetBlank": true
         },
         {
-          "title": "GPUHealthScoreHigh \u2014 firing",
+          "title": "GPUHealthScoreHigh — firing",
           "url": "/alerting/list?state=firing&search=GPUHealthScoreHigh",
           "targetBlank": true
         }
@@ -2865,7 +2865,7 @@
         "y": 64
       },
       "id": 106,
-      "title": "\u254c Workload Impact",
+      "title": "╌ Workload Impact",
       "type": "row"
     },
     {
@@ -2910,12 +2910,12 @@
       "id": 30,
       "links": [
         {
-          "title": "WorkloadsOnFailedGPUNodes \u2014 firing",
+          "title": "WorkloadsOnFailedGPUNodes — firing",
           "url": "/alerting/list?state=firing&search=WorkloadsOnFailedGPUNodes",
           "targetBlank": true
         },
         {
-          "title": "WorkloadsOnFailedGPUNodes \u2014 rule",
+          "title": "WorkloadsOnFailedGPUNodes — rule",
           "url": "/alerting/list?search=WorkloadsOnFailedGPUNodes",
           "targetBlank": true
         }
@@ -2992,12 +2992,12 @@
       "id": 32,
       "links": [
         {
-          "title": "WorkloadsOnAtRiskGPUNodes \u2014 firing",
+          "title": "WorkloadsOnAtRiskGPUNodes — firing",
           "url": "/alerting/list?state=firing&search=WorkloadsOnAtRiskGPUNodes",
           "targetBlank": true
         },
         {
-          "title": "WorkloadsOnAtRiskGPUNodes \u2014 rule",
+          "title": "WorkloadsOnAtRiskGPUNodes — rule",
           "url": "/alerting/list?search=WorkloadsOnAtRiskGPUNodes",
           "targetBlank": true
         }
@@ -3075,7 +3075,7 @@
       "id": 31,
       "links": [
         {
-          "title": "GPUDCGMScrapeDegraded \u2014 firing",
+          "title": "GPUDCGMScrapeDegraded — firing",
           "url": "/alerting/list?state=firing&search=GPUDCGMScrapeDegraded",
           "targetBlank": true
         }
@@ -3119,7 +3119,7 @@
         "y": 70
       },
       "id": 200,
-      "title": "\u254c Fusion Gap Analysis \u2014 Enhanced Indicators vs NVIDIA Out-of-Box",
+      "title": "╌ Fusion Gap Analysis — Enhanced Indicators vs NVIDIA Out-of-Box",
       "type": "row"
     },
     {
@@ -3299,7 +3299,7 @@
             ]
           },
           "unit": "none",
-          "noValue": "\u2014"
+          "noValue": "—"
         },
         "overrides": [
           {
@@ -3317,17 +3317,17 @@
                       "firing": {
                         "color": "red",
                         "index": 0,
-                        "text": "\ud83d\udd34 FIRING"
+                        "text": "🔴 FIRING"
                       },
                       "pending": {
                         "color": "yellow",
                         "index": 1,
-                        "text": "\ud83d\udfe1 PENDING"
+                        "text": "🟡 PENDING"
                       },
                       "inactive": {
                         "color": "green",
                         "index": 2,
-                        "text": "\u2705 OK"
+                        "text": "✅ OK"
                       }
                     }
                   }
@@ -3405,7 +3405,7 @@
           }
         ]
       },
-      "title": "All GPU Alerts \u2014 Live State",
+      "title": "All GPU Alerts — Live State",
       "description": "Every GPU alert rule with its live state.",
       "type": "table",
       "targets": [
@@ -3473,8 +3473,7 @@
     "gpu",
     "nvidia",
     "dcgm",
-    "openshift",
-    "fleet"
+    "openshift"
   ],
   "templating": {
     "list": [
@@ -3484,7 +3483,7 @@
           "text": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com",
           "value": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com"
         },
-        "description": "OCP Console base URL \u2014 set automatically by deploy.sh",
+        "description": "OCP Console base URL — set automatically by deploy.sh",
         "hide": 2,
         "label": "OCP Console",
         "name": "ocp_console",

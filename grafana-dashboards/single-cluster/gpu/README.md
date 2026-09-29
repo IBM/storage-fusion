@@ -81,6 +81,3 @@ Per-GPU forensic telemetry: power instability, thermal throttle, Tensor/GR engin
 - [IBM Storage Fusion documentation](https://www.ibm.com/docs/en/storage-fusion)
 - [NVIDIA GPU Operator on OpenShift](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/openshift/contents.html)
 - [NVIDIA DCGM Exporter](https://github.com/NVIDIA/dcgm-exporter)
-- [NVIDIA DCGM Metrics & Architecture](https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-user-guide/feature-overview.html)
-- [Grafana Operator on OpenShift](https://grafana-operator.github.io/grafana-operator/)
-- [OpenShift User Workload Monitoring](https://docs.openshift.com/container-platform/latest/monitoring/enabling-monitoring-for-user-defined-projects.html)
