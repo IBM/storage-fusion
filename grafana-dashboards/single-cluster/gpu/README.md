@@ -32,12 +32,24 @@ Per-GPU forensic telemetry: power instability, thermal throttle, Tensor/GR engin
 
 ## Prerequisites
 
-1. **NVIDIA GPU Operator** installed and running on GPU-equipped worker nodes, with `nvidia-dcgm-exporter` pods `Running`. See [NVIDIA GPU Operator on OpenShift](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/openshift/contents.html).
+1. **NVIDIA GPU Operator** (`gpu-operator-certified` v26.7.1+) installed and running on GPU-equipped worker nodes to manage NVIDIA drivers, device plugins, and the DCGM Exporter. See [NVIDIA GPU Operator on OpenShift](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/openshift/contents.html).
    ```bash
+   # Check GPU Operator CSV installation
+   oc get csv -n nvidia-gpu-operator -l operators.coreos.com/gpu-operator-certified.nvidia-gpu-operator
+
+   # Check GPU Operator pods and DCGM Exporter daemons
    oc get pods -n nvidia-gpu-operator
    ```
+   *(All pods including `nvidia-dcgm-exporter` must be in `Running` status.)*
 
-2. **User Workload Monitoring** enabled:
+2. **User Workload Monitoring** enabled to allow Prometheus to scrape DCGM metrics.
+
+   Verify:
+   ```bash
+   oc get configmap cluster-monitoring-config -n openshift-monitoring -o yaml | grep enableUserWorkload
+   ```
+
+   Enable if not present:
    ```bash
    cat <<EOF | oc apply -f -
    apiVersion: v1
@@ -69,4 +81,6 @@ Per-GPU forensic telemetry: power instability, thermal throttle, Tensor/GR engin
 - [IBM Storage Fusion documentation](https://www.ibm.com/docs/en/storage-fusion)
 - [NVIDIA GPU Operator on OpenShift](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/openshift/contents.html)
 - [NVIDIA DCGM Exporter](https://github.com/NVIDIA/dcgm-exporter)
+- [NVIDIA DCGM Metrics & Architecture](https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-user-guide/feature-overview.html)
+- [Grafana Operator on OpenShift](https://grafana-operator.github.io/grafana-operator/)
 - [OpenShift User Workload Monitoring](https://docs.openshift.com/container-platform/latest/monitoring/enabling-monitoring-for-user-defined-projects.html)
