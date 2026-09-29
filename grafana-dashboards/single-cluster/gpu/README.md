@@ -32,7 +32,7 @@ Per-GPU forensic telemetry: power instability, thermal throttle, Tensor/GR engin
 
 ## Prerequisites
 
-1. **NVIDIA GPU Operator** installed with `nvidia-dcgm-exporter` pods `Running`. See [NVIDIA GPU Operator on OpenShift](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/openshift/contents.html).
+1. **NVIDIA GPU Operator** installed and running on GPU-equipped worker nodes, with `nvidia-dcgm-exporter` pods `Running`. See [NVIDIA GPU Operator on OpenShift](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/openshift/contents.html).
    ```bash
    oc get pods -n nvidia-gpu-operator
    ```
@@ -51,7 +51,7 @@ Per-GPU forensic telemetry: power instability, thermal throttle, Tensor/GR engin
    EOF
    ```
 
-3. **Grafana** accessible with a Prometheus data source pointed at the Thanos Querier:
+3. **Grafana Operator** installed with an active `Grafana` CR instance, or a standalone Grafana instance accessible with a Prometheus data source pointed at the Thanos Querier:
    - URL: `https://thanos-querier.openshift-monitoring.svc.cluster.local:9091`
 
 ---
