@@ -10,9 +10,9 @@ metadata:
 data:
   gpu-fleet-acm-dashboard.json: |
     {
-      "title": "GPU Fleet Overview — All Clusters",
+      "title": "GPU Overview — All Clusters",
       "uid": "gpu-fleet-acm-v1",
-      "tags": ["GPU", "DCGM", "Fleet", "ACM"],
+      "tags": ["GPU", "DCGM", "ACM"],
       "timezone": "browser",
       "schemaVersion": 38,
       "time": { "from": "now-3h", "to": "now" },
@@ -22,14 +22,19 @@ data:
           {
             "name": "cluster",
             "type": "query",
-            "datasource": { "type": "prometheus", "uid": "000000001" },
-            "query": "label_values(DCGM_FI_DEV_GPU_TEMP, cluster)",
             "label": "Cluster",
+            "datasource": { "type": "prometheus", "uid": "000000001" },
+            "query": {
+              "query": "label_values(DCGM_FI_DEV_GPU_TEMP{cluster!=\"\"}, cluster)",
+              "refId": "StandardVariableQuery"
+            },
             "multi": true,
             "includeAll": true,
             "allValue": ".*",
+            "sort": 1,
             "hide": 0,
-            "refresh": 2
+            "refresh": 2,
+            "current": { "text": "All", "value": "$__all" }
           }
         ]
       },
@@ -37,13 +42,13 @@ data:
         {
           "id": 1,
           "type": "row",
-          "title": "── Fleet Health Summary",
+          "title": "── Health Summary",
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
           "collapsed": false
         },
         {
           "id": 2,
-          "title": "Total GPUs (Fleet)",
+          "title": "Total GPUs",
           "type": "stat",
           "datasource": { "type": "prometheus", "uid": "000000001" },
           "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
@@ -53,7 +58,7 @@ data:
         },
         {
           "id": 3,
-          "title": "Fleet Avg GPU Health Score",
+          "title": "Avg GPU Health Score",
           "type": "gauge",
           "datasource": { "type": "prometheus", "uid": "000000001" },
           "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
@@ -130,7 +135,7 @@ data:
         },
         {
           "id": 11,
-          "title": "GPU Utilisation % — All Clusters Over Time",
+          "title": "GPU Utilisation % — Per Cluster Over Time",
           "type": "timeseries",
           "datasource": { "type": "prometheus", "uid": "000000001" },
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
@@ -144,7 +149,7 @@ data:
         },
         {
           "id": 12,
-          "title": "GPU Composite Health Score — All Clusters",
+          "title": "GPU Composite Health Score — Per Cluster",
           "type": "timeseries",
           "datasource": { "type": "prometheus", "uid": "000000001" },
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
