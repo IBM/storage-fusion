@@ -1,0 +1,131 @@
+{{- if and .Values.developerHub.enabled .Values.developerHub.fusionServices.enabled }}
+---
+# =============================================================================
+# fusion-ai-platform-entities ConfigMap
+#
+# Static Backstage catalog entities for the IBM Fusion AI Services platform.
+# These are the shared structural entities that all cluster-specific components
+# (CAS, DCS, WXO) reference via spec.system and spec.owner.
+#
+# Entities defined here:
+#   • Domain:    fusion-ai-services   — top-level grouping domain
+#   • System:    fusion-ai-services   — system all cluster services belong to
+#   • Group:     fusion-platform-team — platform admins (owners of templates)
+#   • Group:     fusion-team          — developers consuming MCP/AI services
+#   • Component: fusion-ai-services-guide — the Developer Handbook (TechDocs)
+#
+# Guard: developerHub.fusionServices.enabled
+#   These entities are only meaningful when Fusion AI Services is active.
+#
+# To add a new static entity (e.g. a new team group or documentation component):
+#   Add a new YAML document (---) to the fusion-ai-platform-entities.yaml key below.
+#   The location entry in app-config-catalog-locations.yaml already covers this file.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fusion-ai-platform-entities
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fusion-platform-entities
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  fusion-ai-platform-entities.yaml: |
+    apiVersion: backstage.io/v1alpha1
+    kind: Domain
+    metadata:
+      name: fusion-ai-services
+      title: IBM Fusion AI Services
+      description: |
+        All IBM Fusion AI Services — Data Catalog (DCS), Content Aware Storage
+        (CAS), and future services — discoverable from Developer Hub without
+        requiring access to any OpenShift cluster.
+      tags: [fusion, ibm, ai, mcp, dcs, cas, multi-cluster]
+      links:
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+          title: IBM Docs — Data Cataloging (DCS)
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+          title: IBM Docs — Content Aware Storage (CAS)
+          icon: article
+    spec:
+      owner: group:default/fusion-platform-team
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: System
+    metadata:
+      name: fusion-ai-services
+      title: "IBM Fusion AI Services"
+      description: |
+        Shared system grouping all self-service registered IBM Fusion CAS and DCS
+        instances across every cluster. Use "Add IBM Fusion CAS Cluster" or
+        "Add IBM Fusion DCS Cluster" templates to onboard a new cluster — it
+        will appear here automatically.
+      tags: [fusion, ibm, ai, mcp, dcs, cas, multi-cluster, self-service]
+      links:
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+          title: "IBM Docs — Content Aware Storage (CAS)"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+          title: "IBM Docs — Data Cataloging Service (DCS)"
+          icon: article
+    spec:
+      owner: group:default/fusion-platform-team
+      domain: fusion-ai-services
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Group
+    metadata:
+      name: fusion-platform-team
+      title: IBM Fusion Platform Team
+      description: Platform administrators for Fusion HCI clusters and Developer Hub.
+      tags: [fusion, platform-admin]
+    spec:
+      type: team
+      children: [fusion-team]
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Group
+    metadata:
+      name: fusion-team
+      title: IBM Fusion Developer Team
+      description: Developers building AI applications on IBM Fusion DCS and CAS via MCP.
+      tags: [fusion, developers, mcp]
+    spec:
+      type: team
+      parent: fusion-platform-team
+      children: []
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Component
+    metadata:
+      name: fusion-ai-services-guide
+      title: "IBM Fusion Developer Hub — Handbook"
+      description: |
+        Developer Hub handbook — explore the portal, use Fusion AI Services
+        (CAS, DCS, watsonx Orchestrate), and manage the catalog.
+        Three sections: Explore the Hub, Using Fusion AI Services, Managing the Catalog.
+      tags: [fusion, ibm, ai, handbook, guide, onboarding, developer-hub]
+      annotations:
+        backstage.io/techdocs-ref: "url:https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/fusion-developerhub/fusion-ai-discovery/techdocs/fusion-ai-services"
+      links:
+        - url: https://www.ibm.com/docs/en/fusion-software
+          title: "IBM Fusion Knowledge Center"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-content-aware-storage-cas
+          title: "IBM Docs — CAS"
+          icon: article
+        - url: https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=services-data-cataloging
+          title: "IBM Docs — DCS"
+          icon: article
+        - url: https://www.ibm.com/docs/en/watsonx/watson-orchestrate
+          title: "IBM Docs — watsonx Orchestrate"
+          icon: article
+    spec:
+      type: documentation
+      lifecycle: production
+      owner: group:default/fusion-platform-team
+      system: fusion-ai-services
+{{- end }}

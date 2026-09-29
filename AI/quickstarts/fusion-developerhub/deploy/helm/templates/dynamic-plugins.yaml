@@ -99,14 +99,77 @@ data:
         ]
       },
       {
-        "title": "Deployed AI Models",
+        "title": "AI & Platform Services",
         "isExpanded": true,
         "links": [
           {
+            "label": "Deploy a Model on Fusion",
+            "url": "https://community.ibm.com/community/user/blogs/harichandana-kotha/2026/06/29/quickstart-maas-ibm-fusion-gitops",
+            "iconUrl": "/homepage/icons/naas-guide-icon.svg"
+          },
+          {
             "label": "View Deployed Models",
-            "url": "/catalog?filters%5Bkind%5D=component&filters%5Btype%5D=model-server&limit=20",
+            "url": "/catalog?filters%5Bkind%5D=resource&filters%5Btype%5D=ai-model&limit=20",
             "iconUrl": "/homepage/icons/ai-models-icon.png"
+          },
+          {
+            "label": "Explore All MaaS Tutorials",
+            "url": "/learning-paths",
+            "iconUrl": "/homepage/icons/maas-cap-icon.svg"
+          },
+          {
+            "label": "Explore Self-Service Namespace",
+            "url": "https://community.ibm.com/community/user/blogs/christo-abraham2/2026/08/31/quick-start-fusion-namespace-as-a-service",
+            "iconUrl": "/homepage/icons/naas-template-icon.svg"
           }
+        ]
+      },
+      {{- $wxoClusters := list }}
+      {{- $casClusters := list }}
+      {{- $dcsClusters := list }}
+      {{- if and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled .Values.developerHub.fusionServices.clusters }}
+      {{- range .Values.developerHub.fusionServices.clusters }}
+      {{- if and .services .services.wxo (eq (toString .services.wxo.enabled) "true") }}
+      {{- $wxoClusters = append $wxoClusters .name }}
+      {{- end }}
+      {{- if and .services .services.cas (eq (toString .services.cas.enabled) "true") }}
+      {{- $casClusters = append $casClusters .name }}
+      {{- end }}
+      {{- if and .services .services.dcs (eq (toString .services.dcs.enabled) "true") }}
+      {{- $dcsClusters = append $dcsClusters .name }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+      {
+        "title": "Fusion AI Services",
+        "isExpanded": true,
+        "links": [
+          {
+            "label": "Developer Handbook",
+            "url": "/docs/default/component/fusion-ai-services-guide",
+            "iconUrl": "/homepage/icons/naas-guide-icon.svg"
+          }
+          {{- if $casClusters }},
+          {
+            "label": "Access CAS MCP",
+            "url": "/catalog?filters%5Bkind%5D=api&filters%5Btype%5D=openapi&filters%5Btags%5D%5B0%5D=cas&limit=20",
+            "iconUrl": "/homepage/icons/mcp-icon.svg"
+          }
+          {{- end }}
+          {{- if $dcsClusters }},
+          {
+            "label": "Access DCS MCP",
+            "url": "/catalog?filters%5Bkind%5D=api&filters%5Btype%5D=openapi&filters%5Btags%5D%5B0%5D=dcs&limit=20",
+            "iconUrl": "/homepage/icons/mcp-icon.svg"
+          }
+          {{- end }}
+          {{- if $wxoClusters }},
+          {
+            "label": "Watsonx Orchestrate",
+            "url": "/catalog?filters%5Bkind%5D=component&filters%5Btype%5D=ai-service&filters%5Btags%5D%5B0%5D=wxo&limit=20",
+            "iconUrl": "/homepage/icons/watsonx-icon.svg"
+          }
+          {{- end }}
         ]
       },
       {
@@ -143,6 +206,16 @@ data:
       }
       {{- end }}
     ]
+  naas-guide-icon.svg: |
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="90" fill="#1F70C1"/><path d="M100 58 C 80 45, 50 45, 40 52 L 40 140 C 50 133, 80 133, 100 146 Z" fill="white"/><path d="M100 58 C 120 45, 150 45, 160 52 L 160 140 C 150 133, 120 133, 100 146 Z" fill="white"/><line x1="100" y1="58" x2="100" y2="146" stroke="#1F70C1" stroke-width="4"/><rect x="53" y="80" width="35" height="5" rx="2" fill="#1F70C1"/><rect x="53" y="95" width="35" height="5" rx="2" fill="#1F70C1"/><rect x="112" y="80" width="35" height="5" rx="2" fill="#1F70C1"/><rect x="112" y="95" width="35" height="5" rx="2" fill="#1F70C1"/></svg>
+  naas-template-icon.svg: |
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="90" fill="#1F70C1"/><rect x="55" y="45" width="70" height="90" rx="5" fill="white"/><rect x="67" y="62" width="46" height="6" rx="2" fill="#1F70C1"/><rect x="67" y="76" width="46" height="6" rx="2" fill="#1F70C1"/><rect x="67" y="90" width="30" height="6" rx="2" fill="#1F70C1"/><circle cx="125" cy="130" r="26" fill="#0050a0" stroke="#1F70C1" stroke-width="4"/><rect x="115" y="128" width="20" height="5" rx="2" fill="white"/><rect x="122" y="120" width="5" height="20" rx="2" fill="white"/></svg>
+  maas-cap-icon.svg: |
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="90" fill="#1F70C1"/><polygon points="100,62 155,85 100,108 45,85" fill="white"/><polygon points="70,93 70,120 100,133 130,120 130,93" fill="white"/><line x1="138" y1="90" x2="138" y2="128" stroke="white" stroke-width="4"/><circle cx="138" cy="132" r="5" fill="white"/></svg>
+  mcp-icon.svg: |-
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="100" fill="#1F70C1"/><rect x="55" y="80" width="60" height="30" rx="15" fill="none" stroke="white" stroke-width="10" transform="rotate(-45 85 95)"/><rect x="85" y="90" width="60" height="30" rx="15" fill="none" stroke="white" stroke-width="10" transform="rotate(-45 115 105)"/></svg>
+  watsonx-icon.svg: |-
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="100" fill="#1F70C1"/><text x="100" y="115" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="34" fill="white" letter-spacing="-1">watson<tspan fill="#82CFFF">x</tspan></text></svg>
   ibm-blue.svg: |
     <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="100" fill="#1F70C1"/><text x="100" y="115" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="52" fill="white" letter-spacing="-2">IBM</text></svg>
   redhat-red.svg: |

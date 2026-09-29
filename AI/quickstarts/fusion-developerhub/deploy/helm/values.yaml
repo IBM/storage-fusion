@@ -194,6 +194,16 @@ developerHub:
       #       - text: "Link 1"
       #         url: "/path1"
 
+      # Learning Paths customisation
+      # Hosts the learning-paths data.json on GitHub and serves it via the RHDH proxy.
+      # IMPORTANT: the /developer-hub/learning-paths pathRewrite must be declared
+      # before /developer-hub (homepage) in the proxy config — this is handled automatically.
+      learningPaths:
+        enabled: true
+        # Raw URL base for the hosted data.json.
+        githubRawBaseUrl: "https://raw.githubusercontent.com"
+        dataJsonPath: "/IBM/storage-fusion/main/AI/quickstarts/fusion-developerhub/assets/learning-paths/data.json"
+
       # OpenShift AI Model Connector (KEY FEATURE)
       plugins:
         - name: openshift-ai-connector
@@ -349,6 +359,12 @@ developerHub:
         # Model-as-a-Service Quickstart
         - type: url
           target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
+          rules:
+            - allow: [Component]
+        
+        # Namespace-as-a-Service Quickstart
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/templates/naas/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
 
@@ -589,6 +605,12 @@ developerHub:
     #         enabled: true
     #         version: "<dcs-version>"
     #         namespace: ibm-data-cataloging
+    #       # ── watsonx Orchestrate (optional — add when WXO is installed) ──────
+    #       # wxo:
+    #       #   enabled: true
+    #       #   wxoUrl: "https://wxo.apps.<cluster-domain>"  # required — no auto-derivation
+    #       #   namespace: watson-orchestrate                # default shown
+    #       #   version: ""                                  # optional
 
     # ── RHDH proxy endpoints — auto-generated from clusters[] ────────────────
     # Each cluster's services generate proxy entries automatically when

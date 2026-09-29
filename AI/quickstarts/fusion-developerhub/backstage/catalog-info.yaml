@@ -1,0 +1,49 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fusion-developerhub-quickstart
+  title: "Quickstart: IBM Fusion Developer Hub"
+  description: |
+    The Fusion Developer Hub Quickstart deploys a fully configured Red Hat Developer Hub (RHDH) instance on IBM Fusion HCI — giving your platform team a production-ready internal developer portal in under an hour. It ships with Fusion-specific plugins, a custom homepage, self-service templates, and AI model discovery built in from day one.
+
+    What gets deployed:
+    - Red Hat Developer Hub (RHDH 1.10+) — Backstage-based IDP with OpenShift SSO, PostgreSQL HA backend, and TechDocs
+    - Fusion Homepage — custom quick-access cards for NaaS, MaaS, AI Blueprints, and GitOps workflows
+    - Software Catalog — pre-wired with NVIDIA Blueprint cards (RAG, AIQ, VSS), quickstart components, and platform entities
+    - Learning Paths — curated IBM Fusion knowledge-base courses and community content
+    - Self-Service Templates — Namespace-as-a-Service, CAS/DCS cluster registration, and AI pipeline scaffolding
+    - AI Model Discovery — live RHOAI model inventory via OpenShift AI connector
+
+    Why this quickstart:
+    - Zero-friction deployment — single Helm command or ArgoCD application; all operators installed automatically
+    - GitOps-native — ArgoCD manages the full lifecycle; every config change is a git commit
+    - Multi-environment support — dev, staging, and production values files included out of the box
+    - Extensible — add custom catalog locations, learning paths, homepage cards, and plugins via values overrides
+
+    Ideal for:
+    - Platform engineering teams standing up an IDP on IBM Fusion HCI
+    - AI/ML teams that need a single pane of glass across models, blueprints, and clusters
+    - Enterprises adopting self-service developer workflows with GitOps guardrails
+  tags:
+    - fusion
+    - developer-hub
+    - platform-engineering
+    - quickstart
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+  links:
+    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops
+      title: Read the IBM Tech Exchange Blog
+      icon: article
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
+      title: Explore on Fusion Tech Community
+      icon: web
+    - url: https://access.redhat.com/documentation/en-us/red_hat_developer_hub
+      title: Red Hat Developer Hub Documentation
+      icon: docs
+spec:
+  type: quickstart
+  lifecycle: production
+  owner: group:default/fusion-platform-team
+  system: fusion-ai-services

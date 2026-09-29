@@ -49,9 +49,9 @@ data:
   {{- if or (contains "<" $name) (contains ">" $name) }}{{- continue }}{{- end }}
   {{- $domain     := .ocpApiUrl | trimPrefix "https://api." | trimSuffix ":6443" }}
   {{- $selfHosted := eq (.clusterType | default "proxy-only") "self-hosted" }}
-  {{- /* DCS/CAS enabled by default — only disabled when explicitly set false */}}
-  {{- $dcsEnabled := not (and .services .services.dcs (eq (toString .services.dcs.enabled) "false")) }}
-  {{- $casEnabled := not (and .services .services.cas (eq (toString .services.cas.enabled) "false")) }}
+  {{- /* DCS/CAS only enabled when explicitly set to true */}}
+  {{- $dcsEnabled := and .services .services.dcs (eq (toString .services.dcs.enabled) "true") }}
+  {{- $casEnabled := and .services .services.cas (eq (toString .services.cas.enabled) "true") }}
   {{- $dcs        := dict "version" "" "namespace" "ibm-data-cataloging" }}
   {{- if and .services .services.dcs }}{{- $dcs = .services.dcs }}{{- end }}
   {{- $cas        := dict "version" "" "namespace" "ibm-cas" }}
@@ -484,7 +484,57 @@ data:
               tags: [Health]
               responses:
                 "200": {description: Service healthy}
-    {{- end }}
+    {{- end }}{{- /* end if $casEnabled */}}
+
+    {{- $wxoEnabled := and .services .services.wxo (eq (toString .services.wxo.enabled) "true") }}
+    {{- if $wxoEnabled }}
+    {{- $wxo := .services.wxo }}
+    ---
+    # ── WXO Component ────────────────────────────────────────────────────────
+    apiVersion: backstage.io/v1alpha1
+    kind: Component
+    metadata:
+      name: wxo-{{ $name }}
+      title: "watsonx Orchestrate — {{ $name }}"
+      description: >
+        IBM watsonx Orchestrate on {{ $name }}
+        (namespace: {{ $wxo.namespace | default "watson-orchestrate" }}{{ if $wxo.version }}, version: {{ $wxo.version }}{{ end }}).
+      tags:
+        - watsonx
+        - orchestrate
+        - wxo
+        - ai
+        - {{ $name }}
+        - {{ $wxo.namespace | default "watson-orchestrate" }}
+      annotations:
+        ibm.com/service-type: watsonx-orchestrate
+        ibm.com/cluster-id: "{{ $name }}"
+        ibm.com/wxo-url: "{{ $wxo.wxoUrl }}"
+        ibm.com/wxo-namespace: "{{ $wxo.namespace | default "watson-orchestrate" }}"
+        ibm.com/wxo-version: "{{ $wxo.version | default "" }}"
+        backstage.io/source-location: "dir:."
+      links:
+        - url: {{ $wxo.wxoUrl }}
+          title: "Open watsonx Orchestrate"
+          icon: dashboard
+        - url: https://developer.watson-orchestrate.ibm.com
+          title: "ADK Documentation"
+          icon: docs
+        - url: https://developer.watson-orchestrate.ibm.com/ai_builder/creating_agent
+          title: "AI Builder — Create an Agent"
+          icon: docs
+        - url: https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=agents-deploying-agent
+          title: "IBM Docs — Deploy Agents"
+          icon: article
+        - url: https://www.ibm.com/docs/en/watsonx/watson-orchestrate
+          title: "IBM Docs — watsonx Orchestrate"
+          icon: article
+    spec:
+      type: ai-service
+      lifecycle: production
+      owner: group:default/fusion-platform-team
+      system: fusion-ai-services
+    {{- end }}{{- /* end if $wxoEnabled */}}
 
   {{- end }}{{- /* end range clusters */}}
 {{- end }}{{- /* end if clusters — no data block when empty, CM still created */}}

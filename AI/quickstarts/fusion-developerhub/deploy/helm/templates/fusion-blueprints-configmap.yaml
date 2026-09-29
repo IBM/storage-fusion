@@ -1,9 +1,9 @@
 {{- if and .Values.developerHub.enabled .Values.developerHub.createInstance .Values.developerHub.catalog.blueprints.enabled }}
 ---
 # Fusion Blueprints ConfigMap
-# This ConfigMap provides catalog locations for IBM Fusion AI blueprints and components
-# Each blueprint can have its own catalog-info.yaml with TechDocs support
-# Configure blueprint locations in values.yaml under developerHub.catalog.blueprints.locations
+# Blueprint-specific app-config (catalog rules, providers, etc.)
+# catalog.locations have been moved to app-config-catalog-locations.yaml
+# which is the single source of truth for all location entries.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -17,27 +17,7 @@ metadata:
 data:
   app-config-fusion-blueprints.yaml: |
     catalog:
-      locations:
-        # NaaS (Namespace-as-a-Service) Software Template
-        # Kept here because this ConfigMap is loaded last and redefines catalog.locations,
-        # which replaces any prior catalog.locations arrays (Backstage array-replace semantics).
-        {{- $naasHost := .Values.developerHub.catalog.github.enterpriseHost | default "github.com" }}
-        {{- $naasOrg := .Values.developerHub.catalog.github.target | trimSuffix "/" | trimPrefix (printf "https://%s/" $naasHost) }}
-        {{- $naasBranch := .Values.developerHub.catalog.naas.templateBranch }}
-        {{- $naasPath := .Values.developerHub.catalog.naas.templatePath }}
-        - type: url
-          target: https://{{ $naasHost }}/{{ $naasOrg }}/Fusion-AI/blob/{{ $naasBranch }}/{{ $naasPath }}
-          rules:
-            - allow: ["Template"]
-        {{- range .Values.developerHub.catalog.blueprints.locations }}
-        - type: {{ .type }}
-          target: {{ .target }}
-          {{- if .rules }}
-          rules:
-            {{- range .rules }}
-            - allow: {{ .allow | toJson }}
-            {{- end }}
-          {{- end }}
-        {{- end }}
+      rules:
+        - allow: [Component, Template, Location]
 
 {{- end }}

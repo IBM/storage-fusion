@@ -1,0 +1,11 @@
+site_name: IBM Fusion Developer Hub — Handbook
+site_description: Developer Hub handbook — explore the portal, use Fusion AI Services (CAS, DCS, WXO), and manage the catalog.
+docs_dir: docs
+
+nav:
+  - Explore the Developer Hub: index.md
+  - Using Fusion AI Services: using-fusion-ai-services.md
+  - Managing the Catalog: managing-the-catalog.md
+
+plugins:
+  - techdocs-core

@@ -1,0 +1,96 @@
+{{- if and .Values.developerHub.enabled .Values.developerHub.createInstance }}
+---
+# =============================================================================
+# app-config-catalog-locations ConfigMap
+#
+# THE SINGLE SOURCE OF TRUTH for all catalog.locations entries.
+#
+# Backstage uses array-replace semantics for catalog.locations — the last
+# loaded app-config file replaces the entire array. To avoid duplication
+# and silent drops, ALL catalog location entries live here and ONLY here.
+# This ConfigMap is always loaded last in developerhub-instance.yaml.
+#
+# Rule for contributors:
+#   Need to add a catalog location? Add it here. Never add catalog.locations
+#   to any other ConfigMap.
+#
+# Conditions used inside this file:
+#   .Values.developerHub.fusionServices.enabled  — Fusion AI Services (CAS/DCS/WXO)
+#   .Values.developerHub.catalog.blueprints.enabled — blueprint + WXO + NaaS locations
+#   .Values.developerHub.catalog.naas.enabled    — NaaS template URL
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-catalog-locations
+  namespace: {{ include "fusion-developer-hub.namespace" . }}
+  labels:
+    {{- include "fusion-developer-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: catalog-locations
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+data:
+  app-config-catalog-locations.yaml: |
+    catalog:
+      locations:
+
+        # ── Always-on templates (no fusionServices dependency) ────────────────
+        # WXO self-service snippet generator
+        - type: file
+          target: /opt/app-root/src/wxo-template.yaml
+          rules:
+            - allow: [Template]
+        {{- if .Values.developerHub.fusionServices.enabled }}
+        # ── Fusion AI Services locations (fusionServices.enabled = true) ──────
+        # Platform entities: Domain, System, Groups
+        - type: file
+          target: /opt/app-root/src/fusion-ai-platform-entities.yaml
+          rules:
+            - allow: [Domain, System, Group, Component]
+        # Per-cluster catalog entities (one entry per cluster in values.yaml)
+        {{- range .Values.developerHub.fusionServices.clusters }}
+        - type: file
+          target: /opt/app-root/src/fusion-clusters/fusion-{{ .name }}-catalog-info.yaml
+          rules:
+            - allow: [Component, System, API, Resource]
+        {{- end }}
+        # Self-service scaffold templates for CAS and DCS
+        - type: file
+          target: /opt/app-root/src/add-cas-cluster-template.yaml
+          rules:
+            - allow: [Template]
+        - type: file
+          target: /opt/app-root/src/add-dcs-cluster-template.yaml
+          rules:
+            - allow: [Template]
+        {{- end }}
+
+        {{- if .Values.developerHub.catalog.blueprints.enabled }}
+        # ── Blueprint locations (catalog.blueprints.enabled = true) ───────────
+        # NaaS Software Template (type: url — requires GitHub access)
+        {{- if .Values.developerHub.catalog.naas.enabled }}
+        {{- $naasHost := .Values.developerHub.catalog.github.enterpriseHost | default "github.com" }}
+        {{- $naasOrg := .Values.developerHub.catalog.github.target | trimSuffix "/" | trimPrefix (printf "https://%s/" $naasHost) }}
+        {{- $naasBranch := .Values.developerHub.catalog.naas.templateBranch }}
+        {{- $naasPath := .Values.developerHub.catalog.naas.templatePath }}
+        - type: url
+          target: https://{{ $naasHost }}/{{ $naasOrg }}/Fusion-AI/blob/{{ $naasBranch }}/{{ $naasPath }}
+          rules:
+            - allow: [Template]
+        {{- end }}
+        # Blueprint catalog entries from values.yaml (NVIDIA, quickstarts, etc.)
+        # NOTE: type:url entries require outbound GitHub access.
+        # Air-gapped deployments: move these to ConfigMaps and use type:file instead.
+        {{- range .Values.developerHub.catalog.blueprints.locations }}
+        - type: {{ .type }}
+          target: {{ .target }}
+          {{- if .rules }}
+          rules:
+            {{- range .rules }}
+            - allow: {{ .allow | toJson }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+
+{{- end }}
