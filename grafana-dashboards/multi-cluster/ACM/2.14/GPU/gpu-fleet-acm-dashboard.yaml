@@ -190,7 +190,7 @@ data:
             }
           },
           "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] } },
-          "targets": [{ "datasource": { "type": "prometheus", "uid": "000000001" }, "expr": "sum by (cluster) (DCGM_FI_DEV_FB_USED{cluster=~\"$cluster\"}) / sum by (cluster) (DCGM_FI_DEV_FB_TOTAL{cluster=~\"$cluster\"}) * 100", "legendFormat": "{{cluster}}" }]
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "000000001" }, "expr": "sum by (cluster) (DCGM_FI_DEV_FB_USED{cluster=~\"$cluster\"}) / (sum by (cluster) (DCGM_FI_DEV_FB_USED{cluster=~\"$cluster\"}) + sum by (cluster) (DCGM_FI_DEV_FB_FREE{cluster=~\"$cluster\"})) * 100", "legendFormat": "{{cluster}}" }]
         },
         {
           "id": 30,
