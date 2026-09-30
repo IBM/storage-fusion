@@ -13,7 +13,7 @@
   "scripts": {
     "build": "backstage-cli package build",
     "export-dynamic": "npx --yes @red-hat-developer-hub/cli@1.10.3 plugin export --clean",
-    "package-oci": "npx --yes @red-hat-developer-hub/cli@1.10.3 plugin package --tag docker-na-public.artifactory.swg-devops.com/hyc-abell-devops-team-dev-docker-local/christo/namespace-validator-backend:latest",
+    "package-oci": "npx --yes @red-hat-developer-hub/cli@latest plugin package --tag <your-registry>/<your-org>/namespace-validator-backend:<tag>",
     "tsc": "tsc"
   },
   "dependencies": {
