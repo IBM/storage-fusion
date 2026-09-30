@@ -1,11 +1,10 @@
-# MaaS Operators - Staging Environment
-# Environment-specific operator configuration for staging
+# MaaS Operators - Development Environment
+# Environment-specific operator configuration for dev
 
 operators:
   openshiftAI:
     enabled: true
     channel: stable-3.x
-    startingCSV: rhods-operator.3.5.0
     namespace: redhat-ods-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace

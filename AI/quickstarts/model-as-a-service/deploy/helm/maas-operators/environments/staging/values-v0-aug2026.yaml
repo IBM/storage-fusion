@@ -5,7 +5,6 @@ operators:
   openshiftAI:
     enabled: true
     channel: stable-3.x
-    startingCSV: rhods-operator.3.5.0
     namespace: redhat-ods-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace

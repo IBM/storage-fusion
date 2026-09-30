@@ -33,7 +33,22 @@ Edit `environments/{env}/values.yaml` for environment-specific changes.
 
 ## Version History
 
-### v1 (June 2026) - CURRENT
+### v2 (September 2026) - CURRENT
+**Date:** 2026-09-30
+
+#### Changed
+- OpenShift AI channel: `beta` → `stable-3.x`
+- OpenShift AI startingCSV: `rhods-operator.3.5.0-ea.x` → `rhods-operator.3.5.0` (GA release)
+- `maas-operators` Helm chart `version` and `appVersion`: `2.0.0` → `2.1.0` (`Chart.yaml`)
+
+#### Archived
+- `environments/dev/values-v1-aug2026.yaml`
+- `environments/staging/values-v1-aug2026.yaml`
+- `environments/prod/values-v1-aug2026.yaml`
+
+---
+
+### v1 (June 2026)
 **Date:** 2026-06-24
 
 #### Added
