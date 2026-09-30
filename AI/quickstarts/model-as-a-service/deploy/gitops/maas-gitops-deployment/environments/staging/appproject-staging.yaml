@@ -29,7 +29,7 @@ spec:
     - name: admin
       description: Admin role for MaaS staging environment
       policies:
-        - p, proj:fusion- fusion-maas-platform-staging:admin, applications, *, fusion- fusion-maas-platform-staging/*, allow
+        - p, proj:fusion-maas-platform-staging:admin, applications, *, fusion-maas-platform-staging/*, allow
       groups:
         - maas-admins
         - maas-staging-admins
@@ -37,15 +37,15 @@ spec:
     - name: developer
       description: Developer role for MaaS staging environment (read-only + sync)
       policies:
-        - p, proj:fusion- fusion-maas-platform-staging:developer, applications, get, fusion- fusion-maas-platform-staging/*, allow
-        - p, proj:fusion- fusion-maas-platform-staging:developer, applications, sync, fusion- fusion-maas-platform-staging/*, allow
+        - p, proj:fusion-maas-platform-staging:developer, applications, get, fusion-maas-platform-staging/*, allow
+        - p, proj:fusion-maas-platform-staging:developer, applications, sync, fusion-maas-platform-staging/*, allow
       groups:
         - maas-developers
     
     - name: viewer
       description: Read-only role for MaaS staging environment
       policies:
-        - p, proj:fusion- fusion-maas-platform-staging:viewer, applications, get, fusion- fusion-maas-platform-staging/*, allow
+        - p, proj:fusion-maas-platform-staging:viewer, applications, get, fusion-maas-platform-staging/*, allow
       groups:
         - maas-viewers
         - maas-qa

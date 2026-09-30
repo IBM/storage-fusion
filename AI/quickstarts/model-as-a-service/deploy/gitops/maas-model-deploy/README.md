@@ -75,7 +75,7 @@ Every Application manifest contains a `source` block that tells ArgoCD where to 
 | Field | Purpose | Default |
 |---|---|---|
 | `repoURL` | Git repository that contains the Helm chart | `https://github.com/IBM/storage-fusion.git` |
-| `targetRevision` | Branch, tag, or commit SHA ArgoCD tracks | `main` |
+| `targetRevision` | Branch, tag, or commit SHA ArgoCD tracks | `master` |
 
 #### Files to update
 
