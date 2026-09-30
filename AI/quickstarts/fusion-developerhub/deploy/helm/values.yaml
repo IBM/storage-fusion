@@ -130,7 +130,7 @@ developerHub:
     # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
     # - If using NFS: use "nfs-client" or your NFS storage class
     # - Other filesystem storage classes that support RWX
-    storageClassName: "" # Uses cluster default
+    storageClassName: "ocs-storagecluster-cephfs"
     # Storage size for dynamic plugins
     size: 5Gi
   # High Availability - 3 replicas
@@ -314,12 +314,21 @@ developerHub:
       repoName: "your-gitops-repo"
       # Branch in the GitOps repo that holds the NaaS template
       templateBranch: "main"
-      # Path to the template.yaml within the repo
-      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
+      # Paths to the individual NaaS template files within the repo
+      requestTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
+      updateTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
+      deleteTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
       # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
       gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
       # Directory inside the GitOps repo where provisioned namespace manifests land
       namespacesPath: "namespaces"
+      # Namespace validator plugins — loaded whenever naas.enabled is true.
+      # The referenced OCI artifacts must be built for the deployed RHDH release.
+      namespaceValidator:
+        ociRepository: "your-registry.example.com"
+        frontendPackage: "namespace-validator-frontend"
+        backendPackage: "namespace-validator-backend"
+        version: "latest"
     # Fusion Blueprints Configuration
     # Define catalog locations for IBM Fusion AI blueprints and components
     # Each blueprint can have its own catalog-info.yaml with TechDocs support

@@ -1,0 +1,155 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: openshift-naas-delete-template
+  title: Delete OpenShift Namespace (NaaS)
+  description: >
+    Raise a GitOps PR to remove an existing OpenShift namespace and all its
+    managed manifests. ArgoCD will deprovision the namespace on merge.
+  tags:
+    - openshift
+    - naas
+    - platform-engineering
+spec:
+  owner: platform-team
+  type: service
+
+  # ──────────────────────────────────────────────
+  # 1. Parameters
+  # ──────────────────────────────────────────────
+  parameters:
+
+    # ── Step 1: Select namespace + confirm deletion ───────────────────────────
+    # The NaaSDeleteField compound field fetches only NaaS-provisioned projects
+    # and their associated environments. It also renders the confirmation input
+    # (validated to match {projectName}-{environment}) in this same step so the
+    # potentially-destructive confirmation stays on its own dedicated page before
+    # the review summary is shown.
+    - title: Namespace to Delete
+      required:
+        - naasDeleteSelection
+      properties:
+        # Platform settings
+        # Set these defaults to match your deployment before registering this template.
+        githubHost:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoOrg:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoName:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        targetBranch:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'main'
+        prReviewers:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        namespacesPath:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'namespaces'
+        # ── Visible compound field ────────────────────────────────────────────
+        # Emits a flat object; reference sub-keys downstream as
+        # ${{ parameters.naasDeleteSelection.projectName }} etc.
+        naasDeleteSelection:
+          type: object
+          description: >
+            Select the NaaS-provisioned project and environment to delete.
+            Only namespaces managed through NaaS are shown.
+          ui:field: NaaSDeleteField
+          ui:autofocus: true
+          properties:
+            projectName:
+              title: Project Name
+              type: string
+            environment:
+              title: Environment
+              type: string
+            confirmDelete:
+              title: Confirm Deletion
+              type: string
+              # Hide the typed confirmation string from the review summary —
+              # it is a safety gate only and adds no value for reviewers.
+              ui:backstage:
+                review:
+                  show: false
+
+  # ──────────────────────────────────────────────
+  # 2. Actions triggered on form submit
+  # ──────────────────────────────────────────────
+  steps:
+    - id: publish-gitops
+      name: Publish Deletion to GitOps Repository
+      action: publish:github:pull-request
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        title: 'NaaS: delete ${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}'
+        description: |
+          Namespace deletion request from Fusion Developer Hub.
+
+          | Field | Value |
+          |---|---|
+          | Project | `${{ parameters.naasDeleteSelection.projectName }}` |
+          | Environment | `${{ parameters.naasDeleteSelection.environment }}` |
+          | Namespace | `${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}` |
+
+          ⚠️ **Merging this PR will permanently remove the namespace manifests.**
+          ArgoCD will deprovision the namespace and all resources within it.
+        branchName: naas-delete-${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}
+        targetBranchName: ${{ parameters.targetBranch }}
+        reviewers: ${{ parameters.prReviewers.split(",") | reject("equalto", "") | list if parameters.prReviewers else [] }}
+        filesToDelete:
+          - ${{ parameters.namespacesPath }}/${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}/argocd-application.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}/catalog-info.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}/limit-range.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}/namespace.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}/network-policy.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}/rbac-role.yaml
+          - ${{ parameters.namespacesPath }}/${{ parameters.naasDeleteSelection.projectName }}-${{ parameters.naasDeleteSelection.environment }}/resource-quota.yaml
+
+    - id: tag-pr-metadata
+      name: Tag Pull Request Metadata Labels
+      action: github:issues:label
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        number: ${{ steps['publish-gitops'].output.pullRequestNumber }}
+        labels:
+          - 'Project Name: ${{ parameters.naasDeleteSelection.projectName }}'
+          - 'Environment: ${{ parameters.naasDeleteSelection.environment }}'
+          - 'NaaS - Delete'
+
+  # ──────────────────────────────────────────────
+  # 3. Output links shown to the requester
+  # ──────────────────────────────────────────────
+  output:
+    links:
+      - title: View Pull Request
+        url: ${{ steps['publish-gitops'].output.remoteUrl }}
+        icon: github

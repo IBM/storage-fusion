@@ -1,0 +1,372 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: openshift-naas-update-template
+  title: Update OpenShift Namespace (NaaS)
+  description: >
+    Update resource sizing, access control, or labels for an existing
+    OpenShift namespace managed via GitOps.
+  tags:
+    - openshift
+    - naas
+    - platform-engineering
+spec:
+  owner: platform-team
+  type: service
+
+  # ──────────────────────────────────────────────
+  # 1. Parameters
+  # ──────────────────────────────────────────────
+  parameters:
+
+    # ── Step 1: Namespace to update ──────────────────────────────────────────
+    # The NaaSProjectField compound field covers project/environment selection,
+    # business unit, resource sizing, and access control in a single step,
+    # with all fields pre-populated from the existing namespace and editable.
+    - title: Namespace Details
+      required:
+        - naasSelection
+      properties:
+        # Platform settings
+        # Set these defaults to match your deployment before registering this template.
+        githubHost:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoOrg:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoName:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        targetBranch:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'main'
+        prReviewers:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        namespacesPath:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'namespaces'
+        argoCdInstance:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'openshift-gitops'
+        acmReplicate:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'false'
+        podSecurityStandard:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'baseline'
+        catalogOwner:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'platform-team'
+        catalogSystem:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'naas-platform'
+        consoleBaseUrl:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        argocdBaseUrl:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        # ── Visible field — compound field covering the full namespace identity
+        # and all editable attributes. Emits a flat object; reference sub-keys
+        # downstream as ${{ parameters.naasSelection.projectName }} etc.
+        naasSelection:
+          title: Namespace Selection
+          type: object
+          description: >
+            Select the NaaS-provisioned project and environment to update.
+            Business Unit, sizing, and access control fields will be
+            pre-populated from the existing namespace and can be edited below.
+          ui:field: NaaSProjectField
+          ui:autofocus: true
+          properties:
+            projectName:
+              title: Project Name
+              type: string
+            environment:
+              title: Environment
+              type: string
+            businessUnit:
+              title: Business Unit / Cost Center
+              type: string
+            size:
+              title: Namespace Size Tier
+              type: string
+            ownerGroup:
+              title: Owner Group
+              type: string
+            developerGroup:
+              title: Developer Group
+              type: string
+            viewerGroup:
+              title: Viewer Group
+              type: string
+
+    # ── Step 2: ArgoCD Application (optional) ────────────────────────────────
+    # Structure is identical to the Request template — native createArgoApp
+    # radio toggle + allOf/if/then for visibility and required-ness.
+    # ArgoAppField is used only for the five sub-fields; when the toggle is Yes
+    # it fetches GET /naas/namespaces/{name} and pre-fills from stored annotations.
+    - title: ArgoCD Application (Optional)
+      description: >
+        Optionally add or update ArgoCD Application wiring for this namespace.
+        Set the toggle to Yes and fill in the repository details below.
+        When an ArgoCD application was previously configured the fields will be
+        pre-filled automatically. Leave the toggle as No to leave existing
+        ArgoCD wiring unchanged.
+      required:
+        - createArgoApp
+      properties:
+        createArgoApp:
+          title: Create or update an ArgoCD Application?
+          type: boolean
+          default: false
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+      # When the user opts in, the sub-fields become required and visible.
+      # ArgoAppField handles pre-filling from stored namespace annotations.
+      allOf:
+        - if:
+            properties:
+              createArgoApp:
+                const: true
+          then:
+            required:
+              - argoAppDetails
+            properties:
+              argoAppDetails:
+                type: object
+                ui:field: ArgoAppField
+                ui:options:
+                  label: false
+                required:
+                  - applicationRepoURL
+                  - applicationName
+                  - applicationTargetRevision
+                  - applicationPath
+                  - applicationSourceType
+                properties:
+                  applicationRepoURL:
+                    title: Repository URL
+                    type: string
+                    minLength: 1
+                    pattern: '^https://.+'
+                    errorMessage:
+                      minLength: 'Repository URL is required.'
+                      pattern: 'Must be a valid HTTPS URL (e.g. https://github.com/org/repo).'
+                    description: >
+                      HTTPS URL of the application repository.
+                  applicationName:
+                    title: Application Name
+                    type: string
+                    minLength: 1
+                    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                    errorMessage:
+                      minLength: 'Application Name is required.'
+                      pattern: 'Must contain only lowercase alphanumeric characters or hyphens, starting and ending with an alphanumeric character.'
+                    description: >
+                      A short name for the application (lowercase, alphanumeric, hyphens only).
+                      Used as the ArgoCD Application name.
+                  applicationTargetRevision:
+                    title: Target Revision
+                    type: string
+                    minLength: 1
+                    pattern: '^[a-zA-Z0-9_./+-]+$'
+                    errorMessage:
+                      minLength: 'Target Revision is required.'
+                      pattern: 'Must be a valid Git branch, tag, or commit SHA (no whitespace).'
+                    description: >
+                      Branch, tag, or commit SHA to track (e.g. main, v1.2.0).
+                  applicationPath:
+                    title: Path
+                    type: string
+                    minLength: 1
+                    pattern: '^(\.|[a-zA-Z0-9_.-]+(\/[a-zA-Z0-9_.-]+)*\/?)$'
+                    errorMessage:
+                      minLength: 'Path is required.'
+                      pattern: "Must be '.' for repo root or a valid relative directory path (e.g. deploy, charts/my-app)."
+                    description: >
+                      Path within the repository where the manifests or Helm chart live
+                      (e.g. deploy/, chart/, k8s/overlays/dev).
+                      Use `.` for the repo root.
+                  applicationSourceType:
+                    title: Source Type
+                    type: string
+                    minLength: 1
+                    errorMessage:
+                      minLength: 'Source Type is required.'
+                    description: >
+                      How ArgoCD should interpret the contents at the given path:
+                      Directory — raw Kubernetes YAML/JSON (including Kustomize);
+                      Helm — a Helm chart (Chart.yaml must exist at the path).
+                    enum:
+                      - Directory
+                      - Helm
+                    enumNames:
+                      - 'Directory (raw manifests / Kustomize)'
+                      - 'Helm chart'
+
+  # ──────────────────────────────────────────────
+  # 2. Actions triggered on form submit
+  # ──────────────────────────────────────────────
+  steps:
+    - id: fetch-base
+      name: Fetch Updated Manifest Skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        targetPath: ${{ parameters.namespacesPath }}/${{ parameters.naasSelection.projectName }}-${{ parameters.naasSelection.environment }}
+        values:
+          projectName: ${{ parameters.naasSelection.projectName }}
+          environment: ${{ parameters.naasSelection.environment }}
+          businessUnit: ${{ parameters.naasSelection.businessUnit }}
+          size: ${{ parameters.naasSelection.size }}
+          ownerGroup: ${{ parameters.naasSelection.ownerGroup }}
+          developerGroup: ${{ parameters.naasSelection.developerGroup }}
+          viewerGroup: ${{ parameters.naasSelection.viewerGroup }}
+          argoCdInstance: ${{ parameters.argoCdInstance }}
+          acmReplicate: ${{ parameters.acmReplicate }}
+          podSecurityStandard: ${{ parameters.podSecurityStandard }}
+          catalogOwner: ${{ parameters.catalogOwner }}
+          catalogSystem: ${{ parameters.catalogSystem }}
+          consoleBaseUrl: ${{ parameters.consoleBaseUrl }}
+          argocdBaseUrl: ${{ parameters.argocdBaseUrl }}
+          githubBaseUrl: ${{ ("https://" + parameters.githubHost) if parameters.githubHost else "https://github.com" }}
+          repoOrg: ${{ parameters.repoOrg }}
+          repoName: ${{ parameters.repoName }}
+          targetBranch: ${{ parameters.targetBranch }}
+          # ArgoCD values come from the ArgoAppField compound field.
+          applicationName: ${{ parameters.argoAppDetails.applicationName or '' }}
+          applicationRepoURL: ${{ parameters.argoAppDetails.applicationRepoURL or '' }}
+          applicationTargetRevision: ${{ parameters.argoAppDetails.applicationTargetRevision or '' }}
+          applicationPath: ${{ parameters.argoAppDetails.applicationPath or '' }}
+          applicationSourceType: ${{ parameters.argoAppDetails.applicationSourceType or '' }}
+
+    - id: fetch-argocd-app
+      name: Fetch ArgoCD Application Skeleton
+      # Only runs when the developer has opted in to ArgoCD wiring.
+      if: ${{ parameters.createArgoApp }}
+      action: fetch:template
+      input:
+        url: ./argocd
+        targetPath: ${{ parameters.namespacesPath }}/${{ parameters.naasSelection.projectName }}-${{ parameters.naasSelection.environment }}
+        values:
+          projectName: ${{ parameters.naasSelection.projectName }}
+          environment: ${{ parameters.naasSelection.environment }}
+          argoCdInstance: ${{ parameters.argoCdInstance }}
+          applicationName: ${{ parameters.argoAppDetails.applicationName }}
+          applicationRepoURL: ${{ parameters.argoAppDetails.applicationRepoURL }}
+          applicationTargetRevision: ${{ parameters.argoAppDetails.applicationTargetRevision or 'main' }}
+          applicationPath: ${{ parameters.argoAppDetails.applicationPath or '.' }}
+          applicationSourceType: ${{ parameters.argoAppDetails.applicationSourceType or 'Directory' }}
+
+    - id: publish-gitops
+      name: Publish Update to GitOps Repository
+      action: publish:github:pull-request
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        title: 'NaaS: update ${{ parameters.naasSelection.projectName }}-${{ parameters.naasSelection.environment }}'
+        description: |
+          Namespace update request from Fusion Developer Hub.
+
+          | Field | Value |
+          |---|---|
+          | Project | `${{ parameters.naasSelection.projectName }}` |
+          | Environment | `${{ parameters.naasSelection.environment }}` |
+          | Business Unit | `${{ parameters.naasSelection.businessUnit }}` |
+          | Size | `${{ parameters.naasSelection.size }}` |
+          | Owner Group | `${{ parameters.naasSelection.ownerGroup }}` |
+          | Developer Group | `${{ parameters.naasSelection.developerGroup or '-' }}` |
+          | Viewer Group | `${{ parameters.naasSelection.viewerGroup or '-' }}` |
+          | Application Name | `${{ parameters.argoAppDetails.applicationName or '-' }}` |
+          | Application Repo | `${{ parameters.argoAppDetails.applicationRepoURL or '-' }}` |
+          | App Path | `${{ parameters.argoAppDetails.applicationPath or '-' }}` |
+          | App Revision | `${{ parameters.argoAppDetails.applicationTargetRevision or '-' }}` |
+          | Source Type | `${{ parameters.argoAppDetails.applicationSourceType or '-' }}` |
+
+          **Merge this PR** to trigger ArgoCD sync and apply the namespace changes.
+        branchName: naas-update-${{ parameters.naasSelection.projectName }}-${{ parameters.naasSelection.environment }}
+        targetBranchName: ${{ parameters.targetBranch }}
+        reviewers: ${{ parameters.prReviewers.split(",") | reject("equalto", "") | list if parameters.prReviewers else [] }}
+
+    - id: tag-pr-metadata
+      name: Tag Pull Request Metadata Labels
+      action: github:issues:label
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        number: ${{ steps['publish-gitops'].output.pullRequestNumber }}
+        labels:
+          - 'Project Name: ${{ parameters.naasSelection.projectName }}'
+          - 'Environment: ${{ parameters.naasSelection.environment }}'
+          - 'Business Unit: ${{ parameters.naasSelection.businessUnit }}'
+          - 'Size: ${{ parameters.naasSelection.size }}'
+          - 'NaaS - Update'
+
+  # ──────────────────────────────────────────────
+  # 3. Output links shown to the requester
+  # ──────────────────────────────────────────────
+  output:
+    links:
+      - title: View Pull Request
+        url: ${{ steps['publish-gitops'].output.remoteUrl }}
+        icon: github

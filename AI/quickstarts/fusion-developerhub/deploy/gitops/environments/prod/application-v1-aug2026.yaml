@@ -34,7 +34,7 @@ spec:
             # REQUIRED: RWX StorageClass — leave empty ("") to use the cluster default.
             # Only set this if your cluster default does not support ReadWriteMany (RWX).
             # Common RWX classes: ocs-storagecluster-cephfs (ODF), nfs-client (NFS)
-            storageClassName: "ocs-storagecluster-cephfs"
+            storageClassName: ""
           catalog:
             # ── Namespace-as-a-Service (NaaS) ──────────────────────────────────────
             # Set enabled: true to register the NaaS Software Template in the catalog
@@ -77,10 +77,6 @@ spec:
         maxDuration: 3m
 
   ignoreDifferences:
-    - group: ""
-      kind: PersistentVolumeClaim
-      jsonPointers:
-        - /spec/volumeName
     - group: operators.coreos.com
       kind: Subscription
       jsonPointers:
