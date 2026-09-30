@@ -15,9 +15,9 @@
 #   to any other ConfigMap.
 #
 # Conditions used inside this file:
-#   .Values.developerHub.fusionServices.enabled  — Fusion AI Services (CAS/DCS/WXO)
-#   .Values.developerHub.catalog.blueprints.enabled — blueprint + WXO + NaaS locations
-#   .Values.developerHub.catalog.naas.enabled    — NaaS template URL
+#   .Values.developerHub.fusionServices.enabled      — Fusion AI Services (CAS/DCS/WXO)
+#   .Values.developerHub.catalog.naas.enabled        — NaaS request/update/delete templates
+#   .Values.developerHub.catalog.blueprints.enabled  — blueprint locations
 # =============================================================================
 apiVersion: v1
 kind: ConfigMap
@@ -65,19 +65,28 @@ data:
             - allow: [Template]
         {{- end }}
 
-        {{- if .Values.developerHub.catalog.blueprints.enabled }}
-        # ── Blueprint locations (catalog.blueprints.enabled = true) ───────────
-        # NaaS Software Template (type: url — requires GitHub access)
         {{- if .Values.developerHub.catalog.naas.enabled }}
+        # ── NaaS Software Templates (type: url — requires GitHub access) ──────
         {{- $naasHost := .Values.developerHub.catalog.github.enterpriseHost | default "github.com" }}
         {{- $naasOrg := .Values.developerHub.catalog.github.target | trimSuffix "/" | trimPrefix (printf "https://%s/" $naasHost) }}
+        {{- $naasRepo := .Values.developerHub.catalog.naas.repoName }}
         {{- $naasBranch := .Values.developerHub.catalog.naas.templateBranch }}
-        {{- $naasPath := .Values.developerHub.catalog.naas.templatePath }}
         - type: url
-          target: https://{{ $naasHost }}/{{ $naasOrg }}/Fusion-AI/blob/{{ $naasBranch }}/{{ $naasPath }}
+          target: https://{{ $naasHost }}/{{ $naasOrg }}/{{ $naasRepo }}/blob/{{ $naasBranch }}/{{ .Values.developerHub.catalog.naas.requestTemplatePath }}
+          rules:
+            - allow: [Template]
+        - type: url
+          target: https://{{ $naasHost }}/{{ $naasOrg }}/{{ $naasRepo }}/blob/{{ $naasBranch }}/{{ .Values.developerHub.catalog.naas.updateTemplatePath }}
+          rules:
+            - allow: [Template]
+        - type: url
+          target: https://{{ $naasHost }}/{{ $naasOrg }}/{{ $naasRepo }}/blob/{{ $naasBranch }}/{{ .Values.developerHub.catalog.naas.deleteTemplatePath }}
           rules:
             - allow: [Template]
         {{- end }}
+
+        {{- if .Values.developerHub.catalog.blueprints.enabled }}
+        # ── Blueprint locations (catalog.blueprints.enabled = true) ───────────
         # Blueprint catalog entries from values.yaml (NVIDIA, quickstarts, etc.)
         # NOTE: type:url entries require outbound GitHub access.
         # Air-gapped deployments: move these to ConfigMaps and use type:file instead.

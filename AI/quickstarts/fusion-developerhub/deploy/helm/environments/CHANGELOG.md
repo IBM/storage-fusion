@@ -41,13 +41,47 @@ No breaking changes. All additions are additive. Existing deployments are unaffe
 - **Namespace-as-a-Service (NaaS) Quickstart** catalog location registered under `developerHub.catalog.locations`
   - Points to `templates/naas/backstage/catalog-info.yaml` in the IBM/storage-fusion repository
   - Allows the NaaS `Component` entity to be discovered automatically by the Backstage catalog
+- **NaaS templates split into three separate catalog locations** — replacing the single `templatePath` with explicit per-template path values:
+  - `catalog.naas.requestTemplatePath` — provision (Request Namespace) template
+  - `catalog.naas.updateTemplatePath` — reconfiguration (Update Namespace) template
+  - `catalog.naas.deleteTemplatePath` — decommission (Delete Namespace) template
+- **`namespace-validator` dynamic plugin** — new required plugin pair loaded automatically when `catalog.naas.enabled: true`
+  - Frontend plugin provides custom scaffolder field extensions: `NamespaceName` (live availability indicator), `OcGroupField` (OpenShift group picker), `NaaSProjectField` (pre-populates Update template), `NaaSDeleteField` (renders Delete selection/confirmation), and `ArgoAppField` (ArgoCD wiring)
+  - Backend plugin exposes the `naas:namespace:available` scaffolder action that blocks PR creation when the requested namespace already exists
+  - Configured via the new `catalog.naas.namespaceValidator` values block:
+    ```yaml
+    developerHub:
+      catalog:
+        naas:
+          namespaceValidator:
+            ociRepository: "<your-registry>/<your-org>"
+            frontendPackage: "namespace-validator-frontend"
+            backendPackage: "namespace-validator-backend"
+            version: "<tag>"
+    ```
+  - Both OCI artifacts must be built from source (`plugins/namespace-validator/`) and pushed to your private registry before enabling NaaS
 
 ### Migration from v2 to v3
 
-No breaking changes. Both additions are additive and safe to apply to existing clusters.
+> **ACTION REQUIRED if NaaS was already enabled**
+
+1. **Replace `catalog.naas.templatePath`** with the three explicit fields:
+   ```yaml
+   developerHub:
+     catalog:
+       naas:
+         requestTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
+         updateTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
+         deleteTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
+   ```
+2. **Add the `namespaceValidator` block** — build and push both plugin OCI images, then populate `catalog.naas.namespaceValidator` (see `docs/namespace-as-a-service.md` section 1.3 for the full build guide).
+
+No action required for deployments where `catalog.naas.enabled: false`. Learning Paths addition is fully additive.
 
 #### Archived
 - `prod/values-v2-aug2026.yaml` — prod snapshot before Learning Paths and NaaS catalog addition
+- `dev/values-v1-aug2026.yaml` — dev snapshot before NaaS template split and namespace-validator addition
+- `staging/values-v1-aug2026.yaml` — staging snapshot before NaaS template split and namespace-validator addition
 
 ---
 
@@ -149,7 +183,7 @@ Edit `environments/{env}/values.yaml` for environment-specific changes.
 
 ## Version History
 
-### v3 (September 2026) - CURRENT
+### v3 (September 2026)
 **Date:** 2026-09-01
 
 #### Added
@@ -157,11 +191,15 @@ Edit `environments/{env}/values.yaml` for environment-specific changes.
   - `enabled: true` — activates the Learning Paths UI panel in Developer Hub
   - `githubRawBaseUrl` — base URL used to fetch learning path assets from GitHub
   - `dataJsonPath` — path to the `data.json` file that drives the learning paths content
-- **Namespace-as-a-Service (NaaS) Quickstart** catalog location registered under `developerHub.catalog.locations`
-  - Points to `templates/naas/backstage/catalog-info.yaml` in the IBM/storage-fusion repository
+- **Namespace-as-a-Service (NaaS) Quickstart**
+  - catalog location registered under `developerHub.catalog.locations` points to `templates/naas/backstage/catalog-info.yaml` in the IBM/storage-fusion repository
+  - NaaS templates split into three paths (`requestTemplatePath`, `updateTemplatePath`, `deleteTemplatePath`)
+  - `namespace-validator` dynamic plugin pair (frontend + backend) — loaded when `catalog.naas.enabled: true`
 
 #### Archived
 - `prod/values-v2-aug2026.yaml` — prod snapshot before Learning Paths and NaaS catalog addition
+- `dev/values-v1-aug2026.yaml` — dev snapshot before NaaS template split and namespace-validator addition
+- `staging/values-v1-aug2026.yaml` — staging snapshot before NaaS template split and namespace-validator addition
 
 ---
 

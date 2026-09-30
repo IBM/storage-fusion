@@ -3,6 +3,10 @@ kind: Namespace
 metadata:
   name: ${{ values.projectName }}-${{ values.environment }}
   labels:
+    # NaaS ownership marker — used by the Update/Delete templates to identify
+    # namespaces that were provisioned through Fusion NaaS (never acted on by
+    # Helm, ArgoCD, or any other cluster tool).
+    naas.fusion.ibm.com/provisioned-by: namespace-as-a-service
     # IBM Fusion / ACM replication — set to "true" to replicate to managed clusters
     apps.openclustermanagement.io/replicate: "${{ values.acmReplicate }}"
     # ArgoCD management label — value is the namespace of the ArgoCD instance
@@ -11,9 +15,29 @@ metadata:
     business-unit: ${{ values.businessUnit }}
     environment: ${{ values.environment }}
     project: ${{ values.projectName }}
+    # NaaS request metadata — stored here so the Update template can recover the
+    # full original request from a single Namespace API call.
+    naas.fusion.ibm.com/size: ${{ values.size }}
+    naas.fusion.ibm.com/owner-group: ${{ values.ownerGroup }}
+    {%- if values.developerGroup %}
+    naas.fusion.ibm.com/developer-group: ${{ values.developerGroup }}
+    {%- endif %}
+    {%- if values.viewerGroup %}
+    naas.fusion.ibm.com/viewer-group: ${{ values.viewerGroup }}
+    {%- endif %}
     # Pod Security Standards admission labels
     # Options: privileged | baseline | restricted
     pod-security.kubernetes.io/enforce: ${{ values.podSecurityStandard }}
     pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/warn: restricted
     pod-security.kubernetes.io/warn-version: latest
+  {%- if values.applicationName %}
+  annotations:
+    # ArgoCD Application details — stored so the Update template can pre-populate
+    # the ArgoCD step when the namespace already has an application wired up.
+    naas.fusion.ibm.com/argo-app-name: ${{ values.applicationName }}
+    naas.fusion.ibm.com/argo-repo-url: ${{ values.applicationRepoURL }}
+    naas.fusion.ibm.com/argo-target-revision: ${{ values.applicationTargetRevision or 'main' }}
+    naas.fusion.ibm.com/argo-path: ${{ values.applicationPath or '.' }}
+    naas.fusion.ibm.com/argo-source-type: ${{ values.applicationSourceType or 'Directory' }}
+  {%- endif %}
