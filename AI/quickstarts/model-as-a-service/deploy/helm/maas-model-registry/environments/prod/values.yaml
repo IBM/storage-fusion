@@ -53,7 +53,7 @@ reconciler:
 buildConfig:
   # Git repository configuration
   git:
-    ref: main
+    ref: master
 
 # CronJob for Git sync
 cronJob:

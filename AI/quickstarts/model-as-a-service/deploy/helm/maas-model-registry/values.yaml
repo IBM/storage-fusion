@@ -133,7 +133,7 @@ buildConfig:
   # Git repository configuration
   git:
     uri: https://github.com/IBM/storage-fusion.git
-    ref: main
+    ref: master
     contextDir: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/reconciler
   
   # Git credentials for private repos.
@@ -210,8 +210,8 @@ cronJob:
   # Git repository to sync from
   git:
     repo: https://github.com/IBM/storage-fusion.git
-    branch: main
-    host: github.ibm.com
+    branch: master
+    host: github.com
   
   # Resources for sync job
   resources:

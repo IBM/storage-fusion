@@ -86,12 +86,12 @@ Every Application includes an `ignoreDifferences` block that suppresses `ServerS
 
 ## Prerequisites
 
-> **OpenShift AI is required.** This guide relies on Red Hat OpenShift AI (RHOAI) for model lifecycle management, KServe model serving, and `ServingRuntime`/`InferenceService` resources. RHOAI must be installed and in a `Ready` state before proceeding. See the [MaaS Quickstart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-serviceREADME.md) for installation steps.
+> **OpenShift AI is required.** This guide relies on Red Hat OpenShift AI (RHOAI) for model lifecycle management, KServe model serving, and `ServingRuntime`/`InferenceService` resources. RHOAI must be installed and in a `Ready` state before proceeding. See the [MaaS Quickstart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service/README.md) for installation steps.
 
 
 ### Required
 
-- **Completed MaaS Platform Quickstart**: The following must already be in place before proceeding — complete **Steps 1–4** of the [MaaS Quickstart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-serviceREADME.md) if you have not done so:
+- **Completed MaaS Platform Quickstart**: The following must already be in place before proceeding — complete **Steps 1–4** of the [MaaS Quickstart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service/README.md) if you have not done so:
   - ODF storage configured and an `ObjectBucketClaim` provisioned
   - Red Hat OpenShift AI (RHOAI) installed and in a `Ready` state
   - At least one model uploaded to ODF storage and registered in the Model Registry (its S3 artifact path becomes the `s3.modelPath` value in the Helm values file). The three example models (`Qwen2.5-1.5B-Instruct`, `Qwen2.5-Coder-1.5B-Instruct`, `SmolLM2-1.7B-Instruct`) are pre-uploaded and registered; no action needed if you are using those.
@@ -123,7 +123,7 @@ ESO with Vault is the default credential mode used in this guide. S3 credentials
 - **HashiCorp Vault**: stores S3 credentials outside Git. See [Deploying Vault Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-vault-guide.md)
 - **External Secrets Operator (ESO)**: syncs secrets from Vault into the cluster at sync time. See [Deploying External Secrets Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-external-secrets-guide.md)
 
-> **If Vault and ESO are not available**, you can disable ESO in the model values files and pass credentials manually at sync time instead. See the [Helm chart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-servicedeploy/helm/model-deploy-vllm-cpu/README.md) for how to switch modes. Manual credentials are acceptable for development and evaluation environments.
+> **If Vault and ESO are not available**, you can disable ESO in the model values files and pass credentials manually at sync time instead. See the [Helm chart README](https://github.ibm.com/ProjectAbell/Fusion-AI/blob/main/quickstarts/model-as-a-service/deploy/helm/model-deploy-vllm-cpu/README.md) for how to switch modes. Manual credentials are acceptable for development and evaluation environments.
 
 ### Verify Your Environment
 
