@@ -1,6 +1,6 @@
 # MaaS Platform - Environment-Specific Deployment Guide
 
-> See [`../README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/README.md) for the directory structure overview and quick-start commands.
+> See [`../README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/README.md) for the directory structure overview and quick-start commands.
 
 This guide is the full operational runbook for deploying, syncing, monitoring, and troubleshooting the MaaS platform across all environments.
 
@@ -405,9 +405,9 @@ argocd app rollback fusion-maas-platform-prod <revision>
 ### 1. Secrets Management
 
 - Use External Secrets Operator (ESO) — per-chart setup guides:
-  - `maas-platform` (DB credentials): [`deploy/helm/maas-platform/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md)
-  - `maas-model-deploy` (S3 credentials per model): [`deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md)
-  - `maas-model-registry` (Git + Hugging Face): [`deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md)
+  - `maas-platform` (DB credentials): [`deploy/helm/maas-platform/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md)
+  - `maas-model-deploy` (S3 credentials per model): [`deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md)
+  - `maas-model-registry` (Git + Hugging Face): [`deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md)
 - Populate Vault secrets **before** the first ArgoCD sync — ESO resolves `ExternalSecret` CRs at sync time
 - Rotate secrets regularly (force ESO refresh with `oc annotate externalsecret ... force-sync=$(date +%s) --overwrite`)
 - Never commit secrets to Git
@@ -457,9 +457,9 @@ oc get applications -n openshift-gitops -l environment=dev
 - **Operators Guide:** `../../../docs/01-setup/MAAS_OPERATORS_GUIDE.md`
 - **Platform Guide:** `../../../docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md`
 - **Runtime Guide:** `../../../docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md`
-- **Post-sync manual steps:** [`../../../deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md) — required after every `maas-platform` sync (UWM, Authorino TLS, OdhDashboardConfig)
-- **Deployment verification:** [`../../../deploy/helm/maas-platform/VERIFICATION.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VERIFICATION.md) — confirm MaaS is fully healthy
-- **ESO / Vault setup:** [`../../../deploy/helm/maas-platform/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — manage `maas-db-config` and `maas-postgres-creds` via External Secrets Operator; secrets must exist in Vault **before** the first ArgoCD sync
+- **Post-sync manual steps:** [`../../../deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md) — required after every `maas-platform` sync (UWM, Authorino TLS, OdhDashboardConfig)
+- **Deployment verification:** [`../../../deploy/helm/maas-platform/VERIFICATION.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VERIFICATION.md) — confirm MaaS is fully healthy
+- **ESO / Vault setup:** [`../../../deploy/helm/maas-platform/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — manage `maas-db-config` and `maas-postgres-creds` via External Secrets Operator; secrets must exist in Vault **before** the first ArgoCD sync
 
 ## Next Steps
 

@@ -101,7 +101,7 @@ The `source` block looks like this in every file:
 source:
   repoURL: https://github.com/IBM/storage-fusion.git   # change this
   targetRevision: master                                           # change this
-  path: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config
+  path: AI/quickstarts/model-as-a-service/deploy/helm/maas-config
 ```
 
 **Bulk update across all environments at once:**
@@ -192,7 +192,7 @@ authPolicies:
 
 Then commit, push, and sync:
 ```bash
-git add AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/environments/prod/values-prod.yaml
+git add AI/quickstarts/model-as-a-service/deploy/helm/maas-config/environments/prod/values-prod.yaml
 git commit -m "Add governance for my-new-model to maas-prod-subscription and maas-prod-auth-policy"
 git push
 argocd app sync fusion-maas-governance-config-prod
@@ -237,7 +237,7 @@ oc get events -n models-as-a-service --sort-by='.lastTimestamp'
 | Resource | Location |
 |---|---|
 | Helm chart | [`../../helm/maas-config/`](../../helm/maas-config/) |
-| Helm chart README | [`../../helm/maas-config/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/README.md) |
-| Values file changelog | [`../../helm/maas-config/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/environments/CHANGELOG.md) |
+| Helm chart README | [`../../helm/maas-config/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/README.md) |
+| Values file changelog | [`../../helm/maas-config/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/environments/CHANGELOG.md) |
 | Model deploy GitOps | [`../maas-model-deploy/`](../maas-model-deploy/) |
 | Platform GitOps | [`../maas-gitops-deployment/`](../maas-gitops-deployment/) |

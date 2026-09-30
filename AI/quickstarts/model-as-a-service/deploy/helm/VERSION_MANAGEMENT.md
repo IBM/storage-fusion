@@ -56,7 +56,7 @@ Before making any changes, archive the current `values.yaml`:
 
 ```bash
 # Navigate to component directory
-cd AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/maas-operators
+cd AI/quickstarts/model-as-a-service/deploy/maas-operators
 
 # Archive current version with date
 cp values.yaml versions/values-v1-june2026.yaml
@@ -245,7 +245,7 @@ if [ -z "$VERSION" ] || [ -z "$DATE" ]; then
     exit 1
 fi
 
-cd AI/quickstarts/model-as-a-service-rhoai-3.5/deploy
+cd AI/quickstarts/model-as-a-service/deploy
 
 for component in maas-operators maas-platform maas-runtime; do
     echo "Archiving $component..."
@@ -283,7 +283,7 @@ For questions or issues with version management:
 
 ## 📚 Related Documentation
 
-- [MaaS Operators Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_OPERATORS_GUIDE.md)
-- [MaaS Platform Customization](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md)
-- [MaaS Runtime Customization](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md)
-- [Deployment Order](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/DEPLOYMENT_ORDER.md)
+- [MaaS Operators Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_OPERATORS_GUIDE.md)
+- [MaaS Platform Customization](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md)
+- [MaaS Runtime Customization](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md)
+- [Deployment Order](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/DEPLOYMENT_ORDER.md)

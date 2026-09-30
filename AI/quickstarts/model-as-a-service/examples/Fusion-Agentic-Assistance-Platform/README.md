@@ -300,6 +300,6 @@ oc delete namespace maas-models keycloak grafana
 ## Next Steps
 
 - Explore other [use case examples](../)
-- Read the [Model Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md)
-- Learn about [Runtime Configuration](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md)
-- Check the [Architecture Documentation](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/README.md)
+- Read the [Model Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md)
+- Learn about [Runtime Configuration](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md)
+- Check the [Architecture Documentation](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/README.md)

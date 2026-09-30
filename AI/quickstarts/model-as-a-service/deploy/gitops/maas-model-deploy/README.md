@@ -2,7 +2,7 @@
 
 ArgoCD manifests for deploying LLM models on Red Hat OpenShift AI via the [`maas-model-deploy`](../../helm/maas-model-deploy) Helm chart.
 
-Each environment has one `AppProject` and one `Application` manifest **per model**. For values file conventions, naming rules, and add/remove procedures see [`../../helm/maas-model-deploy/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/CHANGELOG.md).
+Each environment has one `AppProject` and one `Application` manifest **per model**. For values file conventions, naming rules, and add/remove procedures see [`../../helm/maas-model-deploy/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/CHANGELOG.md).
 
 ---
 
@@ -57,7 +57,7 @@ Shared resources (Namespace, connection Secret, ServiceAccount, `storage-config`
    oc get application fusion-maas-runtime-prod -n openshift-gitops
    ```
 2. **S3 credentials** — choose one:
-   - **ESO / Vault (production):** Store S3 credentials in Vault at `secret/maas/model-deploy/<model-name>/s3` and set `s3.externalSecret.enabled: true` in the environment values file. Vault secrets must exist **before** the first ArgoCD sync. See [`../../helm/maas-model-deploy/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md).
+   - **ESO / Vault (production):** Store S3 credentials in Vault at `secret/maas/model-deploy/<model-name>/s3` and set `s3.externalSecret.enabled: true` in the environment values file. Vault secrets must exist **before** the first ArgoCD sync. See [`../../helm/maas-model-deploy/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md).
    - **Manual (dev/quick-start):** Set `s3.accessKeyId` and `s3.secretAccessKey` in the values file or supply via `--set` at sync time.
 3. **ArgoCD is running:**
    ```bash
@@ -92,7 +92,7 @@ The `source` block looks like this in every file:
 source:
   repoURL: https://github.com/IBM/storage-fusion.git   # change this
   targetRevision: master                                          # change this
-  path: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy
+  path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy
 ```
 
 **1. Decide the new values before editing any file.**
@@ -106,7 +106,7 @@ source:
 source:
   repoURL: https://github.com/my-org/storage-fusion.git
   targetRevision: v1.2.0
-  path: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy
+  path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy
 ```
 
 > **Tip — bulk update across all environments at once:**
@@ -202,9 +202,9 @@ oc get events -n deploy-models --sort-by='.lastTimestamp'
 
 | Resource | Location |
 |---|---|
-| **Testing guide** | [`TEST_MODELS.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/TEST_MODELS.md) |
-| Helm chart README | [`../../helm/maas-model-deploy/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/README.md) |
-| **ESO / Vault setup** | [`../../helm/maas-model-deploy/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) |
+| **Testing guide** | [`TEST_MODELS.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/TEST_MODELS.md) |
+| Helm chart README | [`../../helm/maas-model-deploy/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/README.md) |
+| **ESO / Vault setup** | [`../../helm/maas-model-deploy/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) |
 | Helm chart | [`../../helm/maas-model-deploy/`](../../helm/maas-model-deploy/) |
-| Values file conventions | [`../../helm/maas-model-deploy/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) |
+| Values file conventions | [`../../helm/maas-model-deploy/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) |
 

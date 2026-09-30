@@ -92,7 +92,7 @@ spec:
                   
                   # Find all .yaml files and filter out schema.yaml and the models/examples subdirectory
                   # Use || true to prevent grep from causing script failure when no matches
-                  MODEL_FILES=$(find AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/models -type f -name "*.yaml" 2>/dev/null | grep -v "schema.yaml" | grep -v "/models/examples/" || true)
+                  MODEL_FILES=$(find AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models -type f -name "*.yaml" 2>/dev/null | grep -v "schema.yaml" | grep -v "/models/examples/" || true)
                   
                   echo "Model files found:"
                   echo "$MODEL_FILES"

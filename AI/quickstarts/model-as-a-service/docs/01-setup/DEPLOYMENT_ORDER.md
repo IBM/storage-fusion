@@ -591,7 +591,7 @@ Located in `examples/model-registry-deployment/`:
 - Connection secret management
 - Monitoring and rate limiting support
 
-See [Model Registry Deployment README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/examples/model-registry-deployment/README.md) for detailed documentation.
+See [Model Registry Deployment README](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/examples/model-registry-deployment/README.md) for detailed documentation.
 
 ### Code Assistant Examples
 
@@ -606,14 +606,14 @@ Located in `examples/Fusion-Agentic-Assistance-Platform/models/`:
 
 ## Related Documentation
 
-- [Getting Started Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/GETTING_STARTED.md) - Complete installation guide
-- [MaaS Operators Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_OPERATORS_GUIDE.md) - Operator installation and configuration
-- [Platform Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md) - Platform configuration
-- [Runtime Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) - Runtime configuration
-- [**Post-Sync Manual Steps**](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md) - Required manual actions after every ArgoCD sync
-- [Deploying Model Services](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md) - Detailed model deployment
-- [Model Registry Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md) - Registry configuration
-- [Model Registry Deployment Examples](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/examples/model-registry-deployment/README.md) - Deploy from registry
+- [Getting Started Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/GETTING_STARTED.md) - Complete installation guide
+- [MaaS Operators Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_OPERATORS_GUIDE.md) - Operator installation and configuration
+- [Platform Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md) - Platform configuration
+- [Runtime Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) - Runtime configuration
+- [**Post-Sync Manual Steps**](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md) - Required manual actions after every ArgoCD sync
+- [Deploying Model Services](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md) - Detailed model deployment
+- [Model Registry Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md) - Registry configuration
+- [Model Registry Deployment Examples](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/examples/model-registry-deployment/README.md) - Deploy from registry
 
 ---
 

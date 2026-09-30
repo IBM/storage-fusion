@@ -342,7 +342,7 @@ if [ "$EXPOSE_GATEWAY" = "true" ] && [ -n "$GATEWAY_HOST" ]; then
 else
     echo -e "${YELLOW}Gateway not exposed externally.${NC}"
     echo "To expose the gateway, set 'gateway.exposeExternally: true' in your values file"
-    echo "Or see: AI/quickstarts/model-as-a-service-rhoai-3.5/docs/GETTING_STARTED.md"
+    echo "Or see: AI/quickstarts/model-as-a-service/docs/GETTING_STARTED.md"
 fi
 
 echo ""

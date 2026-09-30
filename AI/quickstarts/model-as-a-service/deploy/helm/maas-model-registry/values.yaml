@@ -134,7 +134,7 @@ buildConfig:
   git:
     uri: https://github.com/IBM/storage-fusion.git
     ref: main
-    contextDir: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/reconciler
+    contextDir: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/reconciler
   
   # Git credentials for private repos.
   #

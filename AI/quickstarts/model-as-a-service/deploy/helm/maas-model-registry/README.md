@@ -5,7 +5,7 @@ Deploys the Model Registry GitOps reconciler on OpenShift. The reconciler watche
 ## Chart Location
 
 ```
-AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/
+AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/
 ├── Chart.yaml
 ├── values.yaml                      # Base defaults (all environments)
 ├── VAULT-SECRET-SETUP.md            # Step-by-step Vault + ESO setup guide
@@ -42,7 +42,7 @@ helm:
     - environments/<env>/values.yaml     # environment overrides
 ```
 
-To add further customisation, create an additional file and append it to `valueFiles` in the relevant `application.yaml`. See the [ArgoCD Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md) for details.
+To add further customisation, create an additional file and append it to `valueFiles` in the relevant `application.yaml`. See the [ArgoCD Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md) for details.
 
 ---
 
@@ -205,7 +205,7 @@ buildConfig:
   git:
     uri: https://github.com/IBM/storage-fusion.git
     ref: main                    # branch / tag / commit
-    contextDir: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/reconciler
+    contextDir: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/reconciler
 
   gitCredentials:
     enabled: true
@@ -394,7 +394,7 @@ The chart supports ESO for managing two secrets that must not be committed to Gi
 
 1. External Secrets Operator installed (via `external-secrets-operator` Helm chart or OLM).
 2. A `ClusterSecretStore` named `vault-backend` (or the name set in `secretStoreRef.name`) exists and is `Ready`.
-3. Vault paths populated **before** the first ArgoCD sync — see [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md).
+3. Vault paths populated **before** the first ArgoCD sync — see [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md).
 
 ### Templates rendered when ESO is enabled
 
@@ -609,7 +609,7 @@ oc create job --from=cronjob/model-sync manual-test-$(date +%s) \
 
 ## Related Documents
 
-- [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) — step-by-step guide for populating Vault and enabling ESO for this chart
-- [VAULT-SECRET-SETUP.md (maas-runtime)](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-runtime/VAULT-SECRET-SETUP.md) — equivalent guide for object storage + database secrets
-- [VAULT-SECRET-SETUP.md (maas-platform)](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — equivalent guide for maas-platform secrets
-- [ArgoCD Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md) — how to create and manage ArgoCD Applications for this chart
+- [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) — step-by-step guide for populating Vault and enabling ESO for this chart
+- [VAULT-SECRET-SETUP.md (maas-runtime)](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-runtime/VAULT-SECRET-SETUP.md) — equivalent guide for object storage + database secrets
+- [VAULT-SECRET-SETUP.md (maas-platform)](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — equivalent guide for maas-platform secrets
+- [ArgoCD Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md) — how to create and manage ArgoCD Applications for this chart

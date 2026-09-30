@@ -15,7 +15,7 @@ spec:
   source:
     repoURL: https://github.com/IBM/storage-fusion.git
     targetRevision: master
-    path: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy
+    path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy
     helm:
       valueFiles:
         - values.yaml

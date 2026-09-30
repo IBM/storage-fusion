@@ -1,6 +1,6 @@
 # Model Registry GitOps — Environment Deployment Guide
 
-> See [`../../README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/README.md) for the full architecture overview and prerequisites.
+> See [`../../README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/README.md) for the full architecture overview and prerequisites.
 
 This is the operational runbook for deploying, syncing, monitoring, and troubleshooting the Model Registry GitOps pipeline across all three environments.
 
@@ -306,7 +306,7 @@ The resolved value chain per environment:
 | 2 — Override | `environments/staging/values.yaml` | Staging-specific overrides |
 | 2 — Override | `environments/prod/values.yaml` | Production-specific overrides |
 
-All three files live inside the Helm chart path (`AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/`), so ArgoCD resolves them relative to that path automatically.
+All three files live inside the Helm chart path (`AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/`), so ArgoCD resolves them relative to that path automatically.
 
 ### Adding a custom values file
 
@@ -321,7 +321,7 @@ helm:
     - environments/prod/values-custom.yaml   # ← add your file here
 ```
 
-Then create `AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/environments/prod/values-custom.yaml` with only the keys you want to override:
+Then create `AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/environments/prod/values-custom.yaml` with only the keys you want to override:
 
 ```yaml
 # environments/prod/values-custom.yaml — only override what you need
@@ -339,7 +339,7 @@ huggingface:
 
 ### Key values to customise per environment
 
-See [`../../../../deploy/helm/maas-model-registry/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/README.md) for the full values reference. The most commonly changed keys per environment are:
+See [`../../../../deploy/helm/maas-model-registry/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/README.md) for the full values reference. The most commonly changed keys per environment are:
 
 | Key | Dev | Staging | Prod |
 |-----|-----|---------|------|

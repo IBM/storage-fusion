@@ -77,6 +77,6 @@ Once registered, the model can be deployed using:
 
 ## Related Documentation
 
-- [Model Registry GitOps Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/README.md)
+- [Model Registry GitOps Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/README.md)
 - [Red Hat OpenShift AI Documentation](https://access.redhat.com/documentation/en-us/red_hat_openshift_ai)
 - [IBM Granite Models](https://www.ibm.com/granite)

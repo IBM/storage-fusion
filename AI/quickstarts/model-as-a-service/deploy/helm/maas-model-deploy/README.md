@@ -9,7 +9,7 @@ Multiple models can be deployed into the **same namespace** by running this char
 ## Chart Location
 
 ```text
-AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/
+AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/
 ├── Chart.yaml
 ├── README.md
 ├── VAULT-SECRET-SETUP.md                    # ESO / Vault setup walkthrough
@@ -160,7 +160,7 @@ vault kv put secret/maas/model-deploy/gpt-oss-20b/s3 \
   bucket="<bucket-name>"
 ```
 
-> **Full walkthrough:** See [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md).
+> **Full walkthrough:** See [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md).
 
 #### Full `s3.externalSecret` schema
 
@@ -287,7 +287,7 @@ Both secrets are controlled by the **same single flag** and sourced from the **s
 
 1. External Secrets Operator installed (via `external-secrets-operator` Helm chart or OLM).
 2. A `ClusterSecretStore` named `vault-backend` (or the name set in `s3.externalSecret.secretStoreRef.name`) exists and is `Ready`.
-3. Vault path populated **before** the first ArgoCD sync — see [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md).
+3. Vault path populated **before** the first ArgoCD sync — see [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md).
 
 ### Templates rendered when ESO is enabled
 
@@ -431,10 +431,10 @@ See [`environments/CHANGELOG.md`](environments/CHANGELOG.md#add-a-new-model-to-p
 
 ```bash
 helm template fusion-maas-model-deploy-prod-tiny-llama \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy \
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy \
   --namespace deploy-models \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/values.yaml \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/prod/values-tiny-llama.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/values.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values-tiny-llama.yaml \
   --set s3.accessKeyId=<key> \
   --set s3.secretAccessKey=<secret>
 ```
@@ -443,10 +443,10 @@ helm template fusion-maas-model-deploy-prod-tiny-llama \
 
 ```bash
 helm template fusion-maas-model-deploy-prod-gpt-oss-20b \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy \
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy \
   --namespace deploy-models \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/values.yaml \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/prod/values-gpt-oss-20b.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/values.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values-gpt-oss-20b.yaml \
   --set s3.accessKeyId=<key> \
   --set s3.secretAccessKey=<secret>
 ```
@@ -456,10 +456,10 @@ helm template fusion-maas-model-deploy-prod-gpt-oss-20b \
 ```bash
 # Confirm the two ExternalSecrets and RBAC resources appear (no plain Secret)
 helm template fusion-maas-model-deploy-prod-gpt-oss-20b \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy \
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy \
   --namespace deploy-models \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/values.yaml \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/prod/values-gpt-oss-20b.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/values.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values-gpt-oss-20b.yaml \
   --set s3.externalSecret.enabled=true \
   --set s3.externalSecret.remoteRef.key=maas/model-deploy/gpt-oss-20b/s3 \
   --show-only templates/s3-externalsecret.yaml \
@@ -474,17 +474,17 @@ helm template fusion-maas-model-deploy-prod-gpt-oss-20b \
 ```bash
 # Deploy tiny-llama
 helm upgrade --install fusion-maas-model-deploy-prod-tiny-llama \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy \
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy \
   --namespace deploy-models --create-namespace \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/values.yaml \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/prod/values-tiny-llama.yaml
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/values.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values-tiny-llama.yaml
 
 # Deploy gpt-oss-20b into the same namespace
 helm upgrade --install fusion-maas-model-deploy-prod-gpt-oss-20b \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy \
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy \
   --namespace deploy-models --create-namespace \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/values.yaml \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/prod/values-gpt-oss-20b.yaml
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/values.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values-gpt-oss-20b.yaml
 ```
 
 ---
@@ -495,7 +495,7 @@ helm upgrade --install fusion-maas-model-deploy-prod-gpt-oss-20b \
 
 ```bash
 helm template test \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy \
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy \
   -f values.yaml \
   -f environments/prod/values-gpt-oss-20b.yaml \
   --debug 2>&1 | head -60
@@ -583,7 +583,7 @@ If missing, verify `s3.externalSecret.enabled: true` is set and the template ren
 
 ```bash
 helm template test \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy \
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy \
   -f values.yaml \
   -f environments/prod/values-gpt-oss-20b.yaml \
   --show-only templates/argocd-externalsecret-rbac.yaml
@@ -593,9 +593,9 @@ helm template test \
 
 ## Related Documents
 
-- [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) — step-by-step Vault and ESO setup guide for this chart
-- [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) — equivalent guide for `maas-model-registry` (Git credentials + Hugging Face token)
-- [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — equivalent guide for `maas-platform` (Postgres + DB config)
-- [`docs/deploying-external-secrets-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — ESO operator installation
-- [`docs/deploying-vault-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — Vault operator installation
-- [`environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) — add/remove model procedures and version history
+- [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) — step-by-step Vault and ESO setup guide for this chart
+- [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) — equivalent guide for `maas-model-registry` (Git credentials + Hugging Face token)
+- [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — equivalent guide for `maas-platform` (Postgres + DB config)
+- [`docs/deploying-external-secrets-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — ESO operator installation
+- [`docs/deploying-vault-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — Vault operator installation
+- [`environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) — add/remove model procedures and version history

@@ -659,10 +659,10 @@ aws s3 ls --endpoint-url "$IBM_ENDPOINT"
 
 ### 1. Explore Features
 
-- **[Model Catalog](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/02-model-catalog-and-registry/MODEL_CATALOG_GUIDE.md)**: Discover and import models from HuggingFace
-- **[Model Registry](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)**: Version and manage model artifacts
-- **[Workbench Storage](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/GETTING_STARTED.md)**: Configure object storage for workbenches
-- **[Model Testing](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/examples/Fusion-Agentic-Assistance-Platform/README.md)**: Test models in workbenches
+- **[Model Catalog](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/MODEL_CATALOG_GUIDE.md)**: Discover and import models from HuggingFace
+- **[Model Registry](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)**: Version and manage model artifacts
+- **[Workbench Storage](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/GETTING_STARTED.md)**: Configure object storage for workbenches
+- **[Model Testing](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/README.md)**: Test models in workbenches
 
 ### 2. Deploy Additional Models
 
@@ -868,7 +868,7 @@ oc get events -A --sort-by='.lastTimestamp' > debug-info/events.txt
 #### Community Support
 
 - **GitHub Issues**: [Report issues](https://github.com/rh-ai-quickstart/maas-platform/issues)
-- **Documentation**: [Full documentation](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/README.md)
+- **Documentation**: [Full documentation](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/README.md)
 - **Examples**: [Example configurations](../examples/)
 
 ---
@@ -893,14 +893,14 @@ You've successfully:
 
 ### Key Resources
 
-- [Model Catalog Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/02-model-catalog-and-registry/MODEL_CATALOG_GUIDE.md)
-- [Model Registry Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)
-- [Workbench Storage Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/GETTING_STARTED.md)
-- [GitOps Deployment](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/README.md)
-- [Model Testing](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/examples/Fusion-Agentic-Assistance-Platform/README.md)
+- [Model Catalog Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/MODEL_CATALOG_GUIDE.md)
+- [Model Registry Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)
+- [Workbench Storage Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/GETTING_STARTED.md)
+- [GitOps Deployment](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/README.md)
+- [Model Testing](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/examples/Fusion-Agentic-Assistance-Platform/README.md)
 
 ---
 
 **Need Help?** Check our [troubleshooting section](#troubleshooting) or [open an issue](https://github.com/rh-ai-quickstart/maas-platform/issues).
 
-**Ready for Production?** Review our [GitOps deployment guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/README.md) for best practices.
+**Ready for Production?** Review our [GitOps deployment guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/README.md) for best practices.

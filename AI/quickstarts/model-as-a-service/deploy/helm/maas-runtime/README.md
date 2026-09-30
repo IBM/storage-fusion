@@ -5,7 +5,7 @@ Deploys the core MaaS runtime infrastructure on Red Hat OpenShift AI. The chart 
 ## Chart Location
 
 ```
-AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-runtime/
+AI/quickstarts/model-as-a-service/deploy/helm/maas-runtime/
 ├── Chart.yaml
 ├── values.yaml                          # Base defaults (all environments)
 ├── environments/
@@ -535,7 +535,7 @@ oc delete externalsecret model-registry-object-storage-eso-test \
   model-registry-db-credentials-eso-test -n rhoai-model-registries
 ```
 
-Then go live by setting `targetName: ""` (or removing it) and syncing ArgoCD. See [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-runtime/VAULT-SECRET-SETUP.md) for the full runbook.
+Then go live by setting `targetName: ""` (or removing it) and syncing ArgoCD. See [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-runtime/VAULT-SECRET-SETUP.md) for the full runbook.
 
 ---
 
@@ -711,7 +711,7 @@ oc logs job/<hook-job-name> -n rhoai-model-registries
 
 ## Related Documents
 
-- [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-runtime/VAULT-SECRET-SETUP.md) — complete Vault setup runbook (Scenarios A, B, C + testing + rotation)
-- [`maas-platform/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-runtime/README.md) — platform chart documentation
-- [`docs/deploying-external-secrets-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — ESO operator installation
-- [`docs/deploying-vault-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — Vault operator installation
+- [`VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-runtime/VAULT-SECRET-SETUP.md) — complete Vault setup runbook (Scenarios A, B, C + testing + rotation)
+- [`maas-platform/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-runtime/README.md) — platform chart documentation
+- [`docs/deploying-external-secrets-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — ESO operator installation
+- [`docs/deploying-vault-guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) — Vault operator installation

@@ -13,7 +13,7 @@ spec:
   source:
     repoURL: https://github.com/IBM/storage-fusion.git
     targetRevision: master
-    path: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/staging/applications
+    path: AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/staging/applications
   
   destination:
     server: https://kubernetes.default.svc

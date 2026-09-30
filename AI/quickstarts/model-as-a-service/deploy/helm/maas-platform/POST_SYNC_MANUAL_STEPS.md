@@ -249,7 +249,7 @@ is healthy enough that `odh-dashboard-config` exists.
 DSC reconciliation. The live resource already contains operator-managed `spec`
 fields, so use a merge patch to add only the MaaS dashboard flags without
 changing existing configuration.
-**Ref:** [`maas-1.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/infoDocs/maas-config-governance-guide.md) §1.2 dashboard configuration
+**Ref:** [`maas-1.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/infoDocs/maas-config-governance-guide.md) §1.2 dashboard configuration
 
 ### Step 3a — Check current state
 
@@ -285,7 +285,7 @@ fields such as `disableTracking`, `hardwareProfileOrder`,
 ### Optional — Enable the MaaS observability dashboard
 
 Only do this after the observability prerequisites in
-[`maas-1.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/infoDocs/maas-config-governance-guide.md) are complete, including OpenShift AI
+[`maas-1.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/infoDocs/maas-config-governance-guide.md) are complete, including OpenShift AI
 observability configuration, Cluster Observability Operator setup, Kuadrant
 observability, and Tenant telemetry.
 
@@ -421,7 +421,7 @@ oc get tenants.maas.opendatahub.io default-tenant \
 
 ## Related Documents
 
-- [`VERIFICATION.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VERIFICATION.md) — full deployment verification checklist (maas-1.md §1.5)
-- [`DEPLOYMENT_ORDER.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/DEPLOYMENT_ORDER.md) — ArgoCD Application wave order and sync strategy
-- [`MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service-rhoai-3.5/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md) — all `maas-platform` Helm values explained
+- [`VERIFICATION.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VERIFICATION.md) — full deployment verification checklist (maas-1.md §1.5)
+- [`DEPLOYMENT_ORDER.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/DEPLOYMENT_ORDER.md) — ArgoCD Application wave order and sync strategy
+- [`MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md) — all `maas-platform` Helm values explained
 - [`models-as-a-service/docs/content/install/maas-setup.md`](../../../../models-as-a-service/docs/content/install/maas-setup.md) — upstream install guide

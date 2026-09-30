@@ -125,17 +125,17 @@ All applications use `ServerSideApply=true` so that only the `users` field of pr
 **Production:**
 ```bash
 helm template maas-config \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/values.yaml \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/environments/prod/values-prod.yaml
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-config \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-config/values.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-config/environments/prod/values-prod.yaml
 ```
 
 **Dev / Staging** (replace `dev` with `staging` as needed):
 ```bash
 helm template maas-config \
-  AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/values.yaml \
-  -f AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/environments/dev/values.yaml
+  AI/quickstarts/model-as-a-service/deploy/helm/maas-config \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-config/values.yaml \
+  -f AI/quickstarts/model-as-a-service/deploy/helm/maas-config/environments/dev/values.yaml
 ```
 
 ### Apply with ArgoCD
@@ -143,7 +143,7 @@ helm template maas-config \
 Point an ArgoCD Application at this chart with:
 ```yaml
 source:
-  path: AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config
+  path: AI/quickstarts/model-as-a-service/deploy/helm/maas-config
   helm:
     valueFiles:
       - values.yaml
