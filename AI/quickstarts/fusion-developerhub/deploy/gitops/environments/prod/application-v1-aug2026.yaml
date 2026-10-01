@@ -2,32 +2,39 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: fusion-developer-hub-staging
-  namespace: openshift-gitops # ArgoCD namespace
+  name: fusion-developer-hub
+  # ArgoCD namespace: OpenShift GitOps default is openshift-gitops
+  namespace: openshift-gitops
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
-    environment: staging
+    environment: production
+    app.kubernetes.io/managed-by: argocd
+
 spec:
   project: default
   source:
-    repoURL: https://github.com/IBM/storage-fusion.git #IMPORTANT: Replace with your repo URL
+    # REQUIRED: Replace with your Git repository URL
+    repoURL: https://github.com/IBM/storage-fusion.git
     path: AI/quickstarts/fusion-developerhub/deploy/helm
-    targetRevision: master # Replace with your target branch or tag
+    # REQUIRED: Replace with your target branch
+    targetRevision: master
     helm:
       valueFiles:
         - values.yaml
-        - environments/staging/values.yaml   
+        - environments/prod/values.yaml
       valuesObject:
         global:
-          # IMPORTANT: Change this to match your OpenShift cluster domain
+          # REQUIRED: OCP wildcard domain — replace with your cluster's wildcard domain.
           # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
-          wildcardDomain: apps.<cluster-domain>.com 
+          # Example: apps.mycluster.example.com
+          wildcardDomain: apps.<cluster-domain>
         developerHub:
           storage:
-            # IMPORTANT: Must support ReadWriteMany (RWX) access mode
-            # ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
-            storageClassName: "ocs-storagecluster-cephfs"
+            # REQUIRED: RWX StorageClass — leave empty ("") to use the cluster default.
+            # Only set this if your cluster default does not support ReadWriteMany (RWX).
+            # Common RWX classes: ocs-storagecluster-cephfs (ODF), nfs-client (NFS)
+            storageClassName: ""
           catalog:
             # ── Namespace-as-a-Service (NaaS) ──────────────────────────────────────
             # Set enabled: true to register the NaaS Software Template in the catalog
@@ -43,28 +50,25 @@ spec:
           enabled: true
           rbac:
             enabled: true
-  
+
   destination:
     server: https://kubernetes.default.svc
-    namespace: fusion-developer-hub-staging
-  
+    namespace: fusion-developer-hub
+
   revisionHistoryLimit: 10
-  
+
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
-      allowEmpty: false
-    
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-      # NOTE: Replace=true is intentionally omitted. A global Replace overrides
-      # per-resource argocd.argoproj.io/sync-options: Replace=false annotations,
-      # which would cause the dynamic-plugins-root PVC to fail with
-      # "spec is immutable after creation" on every sync.
-    
+      # Replace=true intentionally removed — global Replace overrides per-resource
+      # argocd.argoproj.io/sync-options: Replace=false on the dynamic-plugins-root PVC.
+      # Removing this allows the PVC annotation to take effect and prevents the
+      # "spec is immutable after creation" failure on every ArgoCD sync.
     retry:
       limit: 5
       backoff:
@@ -73,10 +77,6 @@ spec:
         maxDuration: 3m
 
   ignoreDifferences:
-    - group: ""
-      kind: PersistentVolumeClaim
-      jsonPointers:
-        - /spec/volumeName
     - group: operators.coreos.com
       kind: Subscription
       jsonPointers:
@@ -91,7 +91,15 @@ spec:
       jsonPointers:
         - /status
         - /metadata/annotations
-   
+    - group: rhdh.redhat.com
+      kind: Backstage
+      jsonPointers:
+        - /status
+    - group: postgres-operator.crunchydata.com
+      kind: PostgresCluster
+      jsonPointers:
+        - /status
+
   info:
     - name: 'Deployment Order'
       value: |
@@ -104,3 +112,12 @@ spec:
         Wave 50: Configuration (15 resources - ConfigMaps, RHOAI RBAC, Secrets, Policies)
         Wave 60: Database (3 resources - PostgresCluster, CREATEDB Job, Backup setup)
         Wave 70: Application (2 resources - Backstage CR, PVC)
+    - name: 'Add a CAS/DCS Cluster'
+      value: |
+        Wave 50: Configuration — add cluster to environments/prod/values.yaml:
+          developerHub.fusionServices.clusters:
+            - name: <cluster-id>
+              ocpApiUrl: https://api.<cluster-domain>:6443
+              clusterType: self-hosted   # or proxy-only
+        Wave 50: ArgoCD syncs → Helm rerenders ConfigMaps (no restart needed)
+        Wave 70: RHDH catalog processor picks up new entities (~30 s)

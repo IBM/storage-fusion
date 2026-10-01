@@ -27,7 +27,7 @@ spec:
           storage:
             # IMPORTANT: Must support ReadWriteMany (RWX) access mode
             # ODF: ocs-storagecluster-cephfs | NFS: nfs-client | Leave empty for cluster default
-            storageClassName: "ocs-storagecluster-cephfs"
+            storageClassName: ""
           catalog:
             # ── Namespace-as-a-Service (NaaS) ──────────────────────────────────────
             # Set enabled: true to register the NaaS Software Template in the catalog
@@ -60,10 +60,9 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-      # NOTE: Replace=true is intentionally omitted. A global Replace overrides
-      # per-resource argocd.argoproj.io/sync-options: Replace=false annotations,
-      # which would cause the dynamic-plugins-root PVC to fail with
-      # "spec is immutable after creation" on every sync.
+      # Replace (not patch) the home-quick-access ConfigMap so stale
+      # icon keys from a previous install are fully removed on upgrade.
+      - Replace=true
     
     retry:
       limit: 5
@@ -73,10 +72,6 @@ spec:
         maxDuration: 3m
 
   ignoreDifferences:
-    - group: ""
-      kind: PersistentVolumeClaim
-      jsonPointers:
-        - /spec/volumeName
     - group: operators.coreos.com
       kind: Subscription
       jsonPointers:

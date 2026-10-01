@@ -15,10 +15,10 @@ spec:
   project: default
   source:
     # REQUIRED: Replace with your Git repository URL
-    repoURL: https://github.ibm.com/ProjectAbell/Fusion-AI
-    path: quickstarts/fusion-developerhub/deploy/helm
+    repoURL: https://github.com/IBM/storage-fusion.git
+    path: AI/quickstarts/fusion-developerhub/deploy/helm
     # REQUIRED: Replace with your target branch
-    targetRevision: cas-dcs-rhdh
+    targetRevision: master
     helm:
       valueFiles:
         - values.yaml
@@ -34,7 +34,7 @@ spec:
             # REQUIRED: RWX StorageClass — leave empty ("") to use the cluster default.
             # Only set this if your cluster default does not support ReadWriteMany (RWX).
             # Common RWX classes: ocs-storagecluster-cephfs (ODF), nfs-client (NFS)
-            storageClassName: ""
+            storageClassName: "ocs-storagecluster-cephfs"
           catalog:
             # ── Namespace-as-a-Service (NaaS) ──────────────────────────────────────
             # Set enabled: true to register the NaaS Software Template in the catalog
@@ -77,6 +77,10 @@ spec:
         maxDuration: 3m
 
   ignoreDifferences:
+    - group: ""
+      kind: PersistentVolumeClaim
+      jsonPointers:
+        - /spec/volumeName
     - group: operators.coreos.com
       kind: Subscription
       jsonPointers:

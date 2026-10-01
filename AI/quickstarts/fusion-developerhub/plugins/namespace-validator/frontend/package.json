@@ -1,0 +1,51 @@
+{
+  "name": "namespace-validator-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/remoteEntry.js",
+  "backstage": {
+    "role": "frontend-plugin",
+    "supported-versions": "1.49.4"
+  },
+  "scalprum": {
+    "name": "namespace-validator-frontend",
+    "exposedModules": {
+      "PluginRoot": "./src/index.ts",
+      "NamespaceNameFieldExtension": "./src/plugin.ts",
+      "OcGroupFieldExtension": "./src/plugin.ts",
+      "NaaSProjectFieldExtension": "./src/plugin.ts",
+      "ArgoAppFieldExtension": "./src/plugin.ts",
+      "NaaSDeleteFieldExtension": "./src/plugin.ts"
+    }
+  },
+  "scripts": {
+    "build": "backstage-cli package build",
+    "export-dynamic": "npx --yes @red-hat-developer-hub/cli@1.10.3 plugin export --clean",
+    "package-oci": "npx --yes @red-hat-developer-hub/cli@latest plugin package --tag <your-registry>/<your-org>/namespace-validator-frontend:<tag>",
+    "tsc": "tsc"
+  },
+  "dependencies": {
+    "@backstage/core-plugin-api": "1.12.4",
+    "@backstage/plugin-scaffolder": "^1.15.0",
+    "@backstage/plugin-scaffolder-react": "^1.11.0",
+    "@material-ui/core": "^4.12.4",
+    "@material-ui/lab": "^4.0.0-alpha.61",
+    "@rjsf/utils": "5.24.13",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router": "^6.3.0",
+    "react-router-dom": "^6.3.0"
+  },
+  "devDependencies": {
+    "@backstage/cli": "0.36.0",
+    "@backstage/cli-defaults": "0.1.0",
+    "@types/jest": "^30.0.0",
+    "@types/react": "18.3.28",
+    "jsdom": "^27.4.0",
+    "typescript": "5.9.3"
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
+}

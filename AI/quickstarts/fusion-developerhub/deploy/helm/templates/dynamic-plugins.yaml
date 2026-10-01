@@ -7,6 +7,7 @@
 # RHOAI model catalog plugin.
 {{- $homepageEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.enabled }}
 {{- $rhoaiEnabled := and .Values.developerHub.fusion .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
+{{- $namespaceValidator := .Values.developerHub.catalog.naas.namespaceValidator }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -22,10 +23,44 @@ data:
     includes:
       - dynamic-plugins.default.yaml
     plugins:
+      # Lightspeed plugin ships enabled in dynamic-plugins.default.yaml but has a TDZ crash
+      # (Cannot access '_' before initialization) in its PluginRoot module that halts
+      # DynamicRoot initialization. Disable it until an upstream fix is available.
+      - package: 'oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-lightspeed:{{ "{{inherit}}" }}'
+        disabled: true
+      - package: 'oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-lightspeed-backend:{{ "{{inherit}}" }}'
+        disabled: true
       # Scaffolder GitHub module — provides publish:github and publish:github:pull-request
       # actions used by the NaaS self-service template and the Fusion AI template.
       - package: './dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-github-dynamic'
         disabled: false
+      {{- if .Values.developerHub.catalog.naas.enabled }}
+      # NaaS namespace availability field extension and server-side validation action.
+      - package: 'oci://{{ $namespaceValidator.ociRepository }}/{{ $namespaceValidator.frontendPackage }}:{{ $namespaceValidator.version }}!namespace-validator-frontend'
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              namespace-validator-frontend:
+                scaffolderFieldExtensions:
+                  - name: NamespaceName
+                    module: NamespaceNameFieldExtension
+                    importName: NamespaceNameFieldExtension
+                  - name: OcGroupField
+                    module: OcGroupFieldExtension
+                    importName: OcGroupFieldExtension
+                  - name: NaaSProjectField
+                    module: NaaSProjectFieldExtension
+                    importName: NaaSProjectFieldExtension
+                  - name: ArgoAppField
+                    module: ArgoAppFieldExtension
+                    importName: ArgoAppFieldExtension
+                  - name: NaaSDeleteField
+                    module: NaaSDeleteFieldExtension
+                    importName: NaaSDeleteFieldExtension
+      - package: 'oci://{{ $namespaceValidator.ociRepository }}/{{ $namespaceValidator.backendPackage }}:{{ $namespaceValidator.version }}!namespace-validator-backend'
+        disabled: false
+      {{- end }}
       {{- if $homepageEnabled }}
       # Enable the Dynamic Home Page plugin — required for custom homepage rendering
       - package: './dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page'

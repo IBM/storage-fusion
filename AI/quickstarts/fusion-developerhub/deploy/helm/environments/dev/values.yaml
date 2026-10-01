@@ -147,7 +147,7 @@ developerHub:
     # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
     # - If using NFS: use "nfs-client" or your NFS storage class
     # - Other filesystem storage classes that support RWX
-    storageClassName: "" # Uses cluster default
+    storageClassName: "ocs-storagecluster-cephfs"
     # Storage size for dynamic plugins
     size: 5Gi
   # High Availability - 3 replicas
@@ -390,18 +390,26 @@ developerHub:
     naas:
       # Toggle NaaS on or off.  When false the Software Template catalog entry and
       # the ArgoCD namespace-controller Application are both omitted from the deployment.
-      # Set to true and fill in the values below to enable NaaS for your deployment.
       enabled: false
       # Repository name that holds the NaaS template (must match the actual GitHub repo name)
       repoName: "your-gitops-repo"
       # Branch in the GitOps repo that holds the NaaS template
       templateBranch: "main"
-      # Path to the template.yaml within the repo
-      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
+      # Paths to the individual NaaS template files within the repo
+      requestTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
+      updateTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
+      deleteTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
       # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
       gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
       # Directory inside the GitOps repo where provisioned namespace manifests land
       namespacesPath: "namespaces"
+      # Namespace validator plugins — loaded whenever naas.enabled is true.
+      # The referenced OCI artifacts must be built for the deployed RHDH release.
+      namespaceValidator:
+        ociRepository: "your-registry.example.com"
+        frontendPackage: "namespace-validator-frontend"
+        backendPackage: "namespace-validator-backend"
+        version: "latest"
   # TechDocs configuration
   techdocs:
     enabled: true
