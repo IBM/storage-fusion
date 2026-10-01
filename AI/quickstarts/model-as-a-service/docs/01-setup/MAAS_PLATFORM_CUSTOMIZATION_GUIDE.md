@@ -87,13 +87,13 @@ By the end of this guide, you'll be able to:
 
 This guide assumes you have the OpenShift AI operators already installed. If you haven't done this yet:
 
-**Option 1**: Follow our [complete operators installation guide](MAAS_OPERATORS_GUIDE.md) (15 minutes)
+**Option 1**: Follow our [complete operators installation guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_OPERATORS_GUIDE.md) (15 minutes)
 
 **Option 2**: Quick install if you're already familiar with OpenShift:
 ```bash
 # Install operators using Helm
 helm install maas-operators \
-  quickstarts/model-as-a-service/deploy/maas-operators/ \
+  AI/quickstarts/model-as-a-service/deploy/maas-operators/ \
   --create-namespace \
   --wait \
   --timeout 15m
@@ -109,7 +109,7 @@ oc get csv -A | grep -E "rhods-operator|kuadrant|cert-manager|leader-worker"
 - ✅ Helm 3.x installed
 - ✅ Basic understanding of Kubernetes/OpenShift concepts
 
-**Don't have operators installed?** No problem—check out our [operators guide](MAAS_OPERATORS_GUIDE.md) first, then come back here.
+**Don't have operators installed?** No problem—check out our [operators guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_OPERATORS_GUIDE.md) first, then come back here.
 
 ---
 
@@ -265,7 +265,7 @@ DOMAIN=$(oc get ingresses.config/cluster -o jsonpath='{.spec.domain}')
 
 # 2. Deploy with minimal configuration
 helm install maas-platform \
-  quickstarts/model-as-a-service/deploy/maas-platform/ \
+  AI/quickstarts/model-as-a-service/deploy/maas-platform/ \
   --set global.wildcardDomain=$DOMAIN \
   --wait \
   --timeout 10m
@@ -342,7 +342,7 @@ leaderWorkerSet:
 **Deploy**:
 ```bash
 helm install maas-platform \
-  quickstarts/model-as-a-service/deploy/maas-platform/ \
+  AI/quickstarts/model-as-a-service/deploy/maas-platform/ \
   -f inference-only-values.yaml
 ```
 
@@ -721,7 +721,7 @@ EOF
 
 # 2. Deploy
 helm install maas-platform \
-  quickstarts/model-as-a-service/deploy/maas-platform/ \
+  AI/quickstarts/model-as-a-service/deploy/maas-platform/ \
   -f my-platform-config.yaml \
   --wait \
   --timeout 15m
@@ -731,7 +731,7 @@ helm install maas-platform \
 
 ```bash
 helm install maas-platform \
-  quickstarts/model-as-a-service/deploy/maas-platform/ \
+  AI/quickstarts/model-as-a-service/deploy/maas-platform/ \
   --set global.wildcardDomain=apps.mycluster.example.com \
   --set dataScienceCluster.components.workbenches.managementState=Removed \
   --set dataScienceCluster.components.trustyai.managementState=Removed
@@ -742,7 +742,7 @@ helm install maas-platform \
 ```bash
 # Use one of the scenario configurations
 helm install maas-platform \
-  quickstarts/model-as-a-service/deploy/maas-platform/ \
+  AI/quickstarts/model-as-a-service/deploy/maas-platform/ \
   -f scenarios/inference-only.yaml
 ```
 
@@ -884,14 +884,14 @@ You've successfully customized your OpenShift AI platform. Here's what to do nex
 ```bash
 # Deploy model registry and gateway
 helm install maas-runtime \
-  quickstarts/model-as-a-service/deploy/maas-runtime/
+  AI/quickstarts/model-as-a-service/deploy/maas-runtime/
 ```
 
 **2. Deploy Your First Model**
 ```bash
 # Deploy a sample model
 helm install granite-model \
-  quickstarts/model-as-a-service/deploy/maas-model-service/ \
+  AI/quickstarts/model-as-a-service/deploy/maas-model-service/ \
   -f examples/model-registry-deployment/granite-3.1-8b-instruct-values.yaml
 ```
 
@@ -904,17 +904,17 @@ oc get route -n redhat-ods-applications rhods-dashboard -o jsonpath='{.spec.host
 ### Learning Path
 
 📚 **Continue the Series**:
-- **Part 1**: [Operators Installation](MAAS_OPERATORS_GUIDE.md) ✅ Complete
+- **Part 1**: [Operators Installation](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_OPERATORS_GUIDE.md) ✅ Complete
 - **Part 2**: Platform Customization ✅ You are here
-- **Part 3**: [Runtime Configuration](MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) ← **Next Step**
-- **Part 4**: [Deploying Models](../03-model-deployment/DEPLOYING_MODEL_SERVICES.md)
+- **Part 3**: [Runtime Configuration](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) ← **Next Step**
+- **Part 4**: [Deploying Models](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md)
 
-**Ready for the next step?** Continue with the [Runtime Customization Guide](MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) to configure model registry, gateway, and runtime components for your AI platform.
+**Ready for the next step?** Continue with the [Runtime Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md) to configure model registry, gateway, and runtime components for your AI platform.
 
 🔗 **Related Guides**:
-- [Model Registry Setup](../02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)
-- [Workbench Configuration](../04-workbench-configuration/WORKBENCH_STORAGE_GUIDE.md)
-- [Deployment Order](DEPLOYMENT_ORDER.md)
+- [Model Registry Setup](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)
+- [Workbench Configuration](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/GETTING_STARTED.md)
+- [Deployment Order](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/DEPLOYMENT_ORDER.md)
 
 ### Best Practices Checklist
 

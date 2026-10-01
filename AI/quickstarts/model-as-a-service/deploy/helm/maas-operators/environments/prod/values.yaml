@@ -1,22 +1,28 @@
-# MaaS Operators - Production Environment
-# Environment-specific operator configuration for production
-
+# Operator configuration
 operators:
   openshiftAI:
     enabled: true
     channel: stable-3.x
+    startingCSV: rhods-operator.3.5.0
     namespace: redhat-ods-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-    installPlanApproval: Automatic  # Manual approval for production
+    installPlanApproval: Automatic
 
   connectivityLink:
     enabled: true
     channel: stable
-    namespace: kuadrant-system
+    # Subscription must be in openshift-operators (AllNamespaces install mode).
+    # The DSC controller looks for the rhcl-operator Subscription there to satisfy
+    # KserveLLMInferenceServiceDependencies.
+    namespace: openshift-operators
+    # kuadrantNamespace is the dedicated namespace for the Kuadrant CR, Authorino,
+    # Limitador, and DNS operator components. Separate from the Subscription namespace.
+    # Ref: maas-1.md line 124 — "created a Kuadrant CR in the kuadrant-system namespace"
+    kuadrantNamespace: kuadrant-system
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-    installPlanApproval: Automatic  # Manual approval for production
+    installPlanApproval: Automatic
 
   certManager:
     enabled: true
@@ -24,7 +30,7 @@ operators:
     namespace: cert-manager-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-    installPlanApproval: Automatic  # Manual approval for production
+    installPlanApproval: Automatic
 
   leaderWorkerSet:
     enabled: true
@@ -32,7 +38,7 @@ operators:
     namespace: openshift-lws-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
-    installPlanApproval: Automatic  # Manual approval for production
+    installPlanApproval: Automatic
 
   grafana:
     enabled: true
@@ -40,5 +46,4 @@ operators:
     namespace: grafana-operator
     source: community-operators
     sourceNamespace: openshift-marketplace
-    installPlanApproval: Automatic  # Manual approval for production
-
+    installPlanApproval: Automatic

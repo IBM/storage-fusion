@@ -41,13 +41,13 @@ model-deploy-vllm-cpu/              ← this chart
         └── values-smollm2-1-7b-cpu.yaml
 ```
 
-For the ArgoCD `AppProject` and `Application` manifests that deploy this chart, see [`../../gitops/model-deploy-vllm-cpu/`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-deploy-vllm-cpu).
+For the ArgoCD `AppProject` and `Application` manifests that deploy this chart, see [`../../gitops/model-deploy-vllm-cpu/`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-deploy-vllm-cpu).
 
 ---
 
 ## Deployed Models
 
-See [`../../gitops/model-deploy-vllm-cpu/README.md`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-deploy-vllm-cpu/README.md) for the full model table with ArgoCD Application names, S3 paths, and per-environment namespaces.
+See [`../../gitops/model-deploy-vllm-cpu/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-deploy-vllm-cpu/README.md) for the full model table with ArgoCD Application names, S3 paths, and per-environment namespaces.
 
 ---
 
@@ -599,7 +599,7 @@ curl -sk "${ENDPOINT}/v1/chat/completions" \
 
 ## Related Documents
 
-- [`maas-cpu-vs-gpu-capabilities.md`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/infoDocs/maas-cpu-vs-gpu-capabilities.md) — Full CPU vs GPU capability matrix
-- [`maas-model-deploy`](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/README.md) — GPU / LLMInferenceService chart (MaaS-publishable)
+- [`maas-cpu-vs-gpu-capabilities.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/infoDocs/maas-cpu-vs-gpu-capabilities.md) — Full CPU vs GPU capability matrix
+- [`maas-model-deploy`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/README.md) — GPU / LLMInferenceService chart (MaaS-publishable)
 - [KServe InferenceService API](https://kserve.github.io/website/latest/reference/api/)
 - [KServe ServingRuntime API](https://kserve.github.io/website/latest/modelserving/servingruntimes/)

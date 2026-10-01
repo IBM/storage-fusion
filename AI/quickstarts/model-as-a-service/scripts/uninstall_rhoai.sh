@@ -39,32 +39,43 @@ delete_resource_with_finalizers() {
 delete_all_resources_with_finalizers() {
   local resource_type=$1
   local namespace=${2:-""}
-  
+
   if [ -n "$namespace" ]; then
     local ns_flag="-n $namespace"
   else
     local ns_flag="--all-namespaces"
   fi
-  
+
   echo "Deleting all $resource_type resources..."
   oc delete $resource_type --all $ns_flag --timeout=30s 2>/dev/null || true
-  
-  # Wait and remove finalizers from any stuck resources
+
+  # Strip finalizers from every instance regardless of whether delete succeeded.
+  # The owning operator may already be gone and will never clear them itself.
   sleep 5
   local stuck_resources=$(oc get $resource_type $ns_flag -o name 2>/dev/null || true)
-  
+
   if [ -n "$stuck_resources" ]; then
     echo "Removing finalizers from stuck $resource_type resources..."
     for resource in $stuck_resources; do
       if [ -n "$namespace" ]; then
-        oc patch $resource -n $namespace -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+        oc patch $resource -n $namespace \
+          -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
       else
-        # Get namespace for each resource
-        local res_ns=$(oc get $resource -o jsonpath='{.metadata.namespace}' 2>/dev/null || echo "")
+        # oc get -o name returns "kind/name"; fetch the namespace via -o jsonpath
+        # using the kind/name form directly against the API (works for namespaced CRs).
+        local res_ns
+        res_ns=$(oc get $resource --all-namespaces -o jsonpath='{.metadata.namespace}' 2>/dev/null || true)
+        if [ -z "$res_ns" ]; then
+          # Fallback: query with -o json and parse namespace field
+          res_ns=$(oc get $resource -o json 2>/dev/null | grep -m1 '"namespace"' | awk -F'"' '{print $4}' || true)
+        fi
         if [ -n "$res_ns" ]; then
-          oc patch $resource -n $res_ns -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+          oc patch $resource -n $res_ns \
+            -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
         else
-          oc patch $resource -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+          # Cluster-scoped resource
+          oc patch $resource \
+            -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
         fi
       fi
     done
@@ -311,9 +322,13 @@ echo "==========================================="
 
 echo ""
 echo "Step 15: Uninstalling Connectivity Link (Kuadrant) operator..."
-oc delete subscription kuadrant-operator -n kuadrant-system --ignore-not-found=true || true
-oc delete subscription rhcl-operator -n kuadrant-system --ignore-not-found=true || true
-oc get csv -n kuadrant-system | grep -i kuadrant | awk '{print $1}' | xargs -r oc delete csv -n kuadrant-system || true
+# Subscription name is "rhcl-operator" in openshift-operators (AllNamespaces install mode).
+# The DSC kserve controller looks up the subscription by metadata.name="rhcl-operator".
+oc delete subscription rhcl-operator -n openshift-operators --ignore-not-found=true || true
+# Delete CSV in openshift-operators (where the subscription lives)
+oc get csv -n openshift-operators | grep -i rhcl-operator | awk '{print $1}' | xargs -r oc delete csv -n openshift-operators || true
+# Also clean up sub-operator CSVs in kuadrant-system (authorino, limitador, dns-operator)
+oc get csv -n kuadrant-system | grep -iE 'authorino|limitador|dns-operator' | awk '{print $1}' | xargs -r oc delete csv -n kuadrant-system || true
 
 echo ""
 echo "Step 16: Uninstalling Cert Manager operator..."
@@ -338,6 +353,7 @@ for ns in \
   redhat-ods-applications \
   redhat-ods-monitoring \
   redhat-ods-operator \
+  rhods-notebooks \
   rhoai-model-registries \
   odh-model-registries \
   modelmesh-serving \
@@ -346,7 +362,9 @@ for ns in \
   kuadrant-system \
   cert-manager-operator \
   cert-manager \
-  openshift-lws-operator
+  openshift-lws-operator \
+  keycloak \
+  deploy-models-rhoai
 do
   echo "Deleting namespace: $ns"
   oc delete ns $ns --ignore-not-found=true || true
@@ -359,13 +377,38 @@ sleep 30
 echo ""
 echo "Step 19: Removing stuck namespace finalizers if needed..."
 
-for ns in $(oc get ns | egrep 'odh|rhoai|modelmesh|kserve|knative|opendatahub|kuadrant|cert-manager|lws' | awk '{print $1}')
+for ns in \
+  opendatahub \
+  redhat-ods-applications \
+  redhat-ods-monitoring \
+  redhat-ods-operator \
+  rhods-notebooks \
+  rhoai-model-registries \
+  odh-model-registries \
+  modelmesh-serving \
+  knative-serving \
+  knative-eventing \
+  kuadrant-system \
+  cert-manager-operator \
+  cert-manager \
+  openshift-lws-operator \
+  keycloak \
+  deploy-models-rhoai
 do
   phase=$(oc get ns $ns -o jsonpath='{.status.phase}' 2>/dev/null || true)
 
   if [[ "$phase" == "Terminating" ]]; then
     echo "Removing finalizers from namespace: $ns"
-    oc patch namespace $ns -p '{"metadata":{"finalizers":[]}}' --type=merge || true
+    # --type=merge does not clear spec.finalizers; use a JSON patch on the correct path
+    oc patch namespace $ns \
+      --type=json \
+      -p '[{"op":"replace","path":"/spec/finalizers","value":[]}]' \
+      2>/dev/null || true
+    # Also clear metadata finalizers in case controllers set them
+    oc patch namespace $ns \
+      --type=merge \
+      -p '{"metadata":{"finalizers":[]}}' \
+      2>/dev/null || true
   fi
 done
 
@@ -405,7 +448,7 @@ oc get crd | egrep 'opendatahub|datascience|kserve|modelmesh|serving.kserve|ray.
 
 echo ""
 echo "Remaining subscriptions:"
-oc get subscriptions -A | egrep 'rhods|kuadrant|cert-manager|leader-worker' || true
+oc get subscriptions -A | egrep 'rhods|rhcl-operator|kuadrant|cert-manager|leader-worker' || true
 
 echo ""
 echo "Remaining pods:"

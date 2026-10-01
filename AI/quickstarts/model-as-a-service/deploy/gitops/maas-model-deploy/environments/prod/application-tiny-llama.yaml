@@ -51,20 +51,6 @@ spec:
       kind: HTTPRoute
       jsonPointers:
         - /status
-    # The gateway OpenShift Route is a shared cluster resource — it may be
-    # rendered by any Application that sets exposeGateway: true.
-    # Ignore status and the instance/model labels that ArgoCD stamps on it
-    # to prevent the two prod Applications fighting over ownership.
-    - group: route.openshift.io
-      kind: Route
-      name: openshift-ai-inference
-      jsonPointers:
-        - /status
-      jqPathExpressions:
-        - .metadata.labels["app.kubernetes.io/instance"]
-        - .metadata.labels["app.kubernetes.io/managed-by"]
-        - .metadata.labels["maas.redhat.com/model"]
-        - .metadata.labels["helm.sh/chart"]
     # S3 connection secret – credentials are runtime-injected
     - group: ""
       kind: Secret
@@ -112,7 +98,3 @@ spec:
       value: deploy-models
     - name: Model
       value: tiny-llama-test
-    - name: Gateway
-      value: openshift-ai-inference (openshift-ingress)
-    - name: External URL
-      value: https://openshift-ai-inference-openshift-ingress.<wildcardDomain>/deploy-models/tiny-llama-test/v1/

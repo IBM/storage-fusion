@@ -7,69 +7,10 @@ global:
   modelsNamespace: maas-staging
   toolsImage: image-registry.openshift-image-registry.svc:5000/openshift/tools:latest
 
-gateway:
-  enabled: true
-  createGatewayClass: true
-  name: openshift-ai-inference
-  namespace: openshift-ingress
-  gatewayClassName: openshift-ai-inference
-  controllerName: openshift.io/gateway-controller/v1
-  istioRevision: openshift-gateway
-  listeners:
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: http
-      port: 80
-      protocol: HTTP
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: https
-      port: 443
-      protocol: HTTPS
-      tls:
-        certificateRefs:
-          - group: ''
-            kind: Secret
-            name: router-certs-default
-        mode: Terminate
-  labels: {}
-  annotations: {}
-
-tiers:
-  free:
-    requestRates:
-      - limit: 5
-        window: 2m
-    tokenRates:
-      - limit: 100
-        window: 1m
-  premium:
-    requestRates:
-      - limit: 20
-        window: 2m
-    tokenRates:
-      - limit: 10000
-        window: 1m
-  enterprise:
-    requestRates:
-      - limit: 50
-        window: 2m
-    tokenRates:
-      - limit: 20000
-        window: 1m
-
-userMapping:
-  free: []
-  premium: []
-  enterprise: []
-
 monitoring:
   enabled: true
   clusterMonitoring:
     enabled: true
-    userWorkloadMonitoring: true
   grafana:
     enabled: true
     namespace: grafana
@@ -105,7 +46,7 @@ modelRegistry:
   exposeHttpPort: true
   objectStorage:
     enabled: true
-    autoCreateBucket: true
+    autoCreateBucket: true          # STAGING: OBC hook Job populates credentials
     odfStorageClass: openshift-storage.noobaa.io
     bucketClass: noobaa-default-bucket-class
     bucketRetentionPolicy: false
@@ -118,9 +59,13 @@ modelRegistry:
     secretAccessKey: ""
     verifySSL: true
     storageClass: STANDARD
+    externalSecret:
+      enabled: false                # STAGING: autoCreateBucket handles credentials; no ESO needed
   database:
     type: postgres
     external: false
+    externalSecret:
+      enabled: false        # STAGING: Helm path used; in-cluster postgres with randAlphaNum password
     internalDatabase:
       storageSize: 10Gi
       storageClassName: ""

@@ -1,7 +1,7 @@
 # Changelog - MaaS Model Deploy
 
 Tracks file-naming conventions, add/remove procedures, and version history for environment values files.
-For key definitions, update guidance, and troubleshooting see [`../README.md`](../README.md).
+For key definitions, update guidance, and troubleshooting see [`../README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/README.md).
 
 ---
 

@@ -656,8 +656,8 @@ Regardless of the prompt used, check these fields in every response:
 
 | Resource | Location |
 |---|---|
-| GitOps README | [`README.md`](README.md) |
-| Helm chart README | [`../../helm/maas-model-deploy/README.md`](../../helm/maas-model-deploy/README.md) |
+| GitOps README | [`README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/README.md) |
+| Helm chart README | [`../../helm/maas-model-deploy/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/README.md) |
 | ArgoCD RBAC | [`../maas-gitops-deployment/argocd-cluster-rbac.yaml`](../maas-gitops-deployment/argocd-cluster-rbac.yaml) |
 | Gateway Route template | [`../../helm/maas-model-deploy/templates/gateway-route.yaml`](../../helm/maas-model-deploy/templates/gateway-route.yaml) |
 | Dev Application | [`environments/dev/application.yaml`](environments/dev/application.yaml) |

@@ -15,7 +15,7 @@ spec:
   
   source:
     repoURL: https://github.com/IBM/storage-fusion.git
-    targetRevision: master  # Consider using tags/releases for production
+    targetRevision: master
     path: AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/applications
   
   destination:

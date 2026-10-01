@@ -150,7 +150,6 @@ monitoring:
   enabled: true
   clusterMonitoring:
     enabled: true
-    userWorkloadMonitoring: true
   grafana:
     enabled: true
     namespace: grafana

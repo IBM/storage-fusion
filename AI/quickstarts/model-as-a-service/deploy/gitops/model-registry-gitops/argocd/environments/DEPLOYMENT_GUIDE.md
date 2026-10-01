@@ -1,6 +1,6 @@
 # Model Registry GitOps — Environment Deployment Guide
 
-> See [`../../README.md`](../../README.md) for the full architecture overview and prerequisites.
+> See [`../../README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/README.md) for the full architecture overview and prerequisites.
 
 This is the operational runbook for deploying, syncing, monitoring, and troubleshooting the Model Registry GitOps pipeline across all three environments.
 
@@ -339,7 +339,7 @@ huggingface:
 
 ### Key values to customise per environment
 
-See [`../../../../deploy/helm/maas-model-registry/README.md`](../../../../deploy/helm/maas-model-registry/README.md) for the full values reference. The most commonly changed keys per environment are:
+See [`../../../../deploy/helm/maas-model-registry/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/README.md) for the full values reference. The most commonly changed keys per environment are:
 
 | Key | Dev | Staging | Prod |
 |-----|-----|---------|------|

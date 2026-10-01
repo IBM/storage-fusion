@@ -5,8 +5,16 @@
 # Keys that differ from the base default are set explicitly.
 # Keys matching the base default are commented out — uncomment to override.
 #
-# Supply s3.accessKeyId and s3.secretAccessKey via sealed-secrets or
-# --set flags at deploy time. Never commit real credentials.
+# Two modes — choose one:
+#
+#   Manual mode (s3.externalSecret.enabled: false):
+#     Supply s3.accessKeyId and s3.secretAccessKey via --set flags at deploy
+#     time. Never commit real credentials in this file.
+#
+#   ESO mode (s3.externalSecret.enabled: true):
+#     ALL five S3 fields are pulled from Vault. The s3.* credential fields
+#     below are ignored. Configure s3.externalSecret.remoteRef.key to point
+#     at the Vault path for this model.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -30,15 +38,28 @@ project:
 # S3 Object Storage Configuration
 # -----------------------------------------------------------------------------
 s3:
+  # endpoint, region, bucket: set here for Manual mode.
+  # In ESO mode these are ignored — all five fields come from Vault.
   # endpoint: "https://s3.openshift-storage.svc:443"
-  # region: "us-south"
-  # bucket: "model-registry-artifacts-p-ccc9b6a9-897a-4971-9161-9c0d25448836"
+  region: "us-east-1"
+  # bucket: ""
   # modelPath: "tiny-llama-test/1.0.0"
-  accessKeyId: ""        # supply via --set or sealed-secret
-  secretAccessKey: ""    # supply via --set or sealed-secret
+  accessKeyId: ""        # supply via --set or use ESO mode
+  secretAccessKey: ""    # supply via --set or use ESO mode
   # verifySSL: "0"
   connectionSecretName: ""
   serviceAccountName: ""
+
+  # ── ESO mode ──────────────────────────────────────────────────────────────
+  # Uncomment and set enabled: true to activate ESO for this environment.
+  # externalSecret:
+  #   enabled: true
+  #   refreshInterval: 1h
+  #   secretStoreRef:
+  #     name: vault-backend
+  #     kind: ClusterSecretStore
+  #   remoteRef:
+  #     key: maas/model-deploy/<model-name>/s3
 
 # -----------------------------------------------------------------------------
 # Inference Configuration

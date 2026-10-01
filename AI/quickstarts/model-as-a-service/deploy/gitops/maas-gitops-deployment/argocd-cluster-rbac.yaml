@@ -108,6 +108,24 @@ rules:
       - patch
       - delete
 
+  # MaaS CRD permissions
+  # Required for ArgoCD to create/patch MaaSModelRef (and related MaaS CRs)
+  # when maasModelRef.enabled: true in the Helm chart values.
+  - apiGroups:
+      - maas.opendatahub.io
+    resources:
+      - maasmodelrefs
+      - maasauthpolicies
+      - maassubscriptions
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+
   # Gateway API permissions
   - apiGroups:
       - gateway.networking.k8s.io

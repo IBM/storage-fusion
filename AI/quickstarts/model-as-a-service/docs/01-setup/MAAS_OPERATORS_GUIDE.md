@@ -149,11 +149,11 @@ helm version
 
 ```bash
 # View what will be installed
-cat quickstarts/model-as-a-service/deploy/maas-operators/values.yaml
+cat AI/quickstarts/model-as-a-service/deploy/maas-operators/values.yaml
 
 # Preview the deployment (dry-run)
 helm template maas-operators \
-  quickstarts/model-as-a-service/deploy/maas-operators \
+  AI/quickstarts/model-as-a-service/deploy/maas-operators \
   --debug
 ```
 
@@ -162,7 +162,7 @@ helm template maas-operators \
 ```bash
 # Deploy with default configuration
 helm install maas-operators \
-  quickstarts/model-as-a-service/deploy/maas-operators \
+  AI/quickstarts/model-as-a-service/deploy/maas-operators \
   --create-namespace \
   --wait \
   --timeout 15m
@@ -302,12 +302,12 @@ You've successfully deployed the operator foundation. Here's what to do next:
 ```bash
 # Install the platform components
 helm install maas-platform \
-  quickstarts/model-as-a-service/deploy/maas-platform
+  AI/quickstarts/model-as-a-service/deploy/maas-platform
 
 # Deploy a sample model
 helm install granite-model \
-  quickstarts/model-as-a-service/deploy/maas-model-service \
-  -f quickstarts/model-as-a-service/examples/model-registry-deployment/granite-3.1-8b-instruct-values.yaml
+  AI/quickstarts/model-as-a-service/deploy/maas-model-service \
+  -f AI/quickstarts/model-as-a-service/examples/model-registry-deployment/granite-3.1-8b-instruct-values.yaml
 ```
 
 **Path 2: Configure the Platform** (For production deployments)
@@ -325,14 +325,14 @@ helm install granite-model \
 ### Learning Resources
 
 📚 **Continue the Series**:
-- **Part 2**: [Customizing Your OpenShift AI Deployment](MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md)
-- **Part 3**: [Deploying and Managing AI Models](../03-model-deployment/DEPLOYING_MODEL_SERVICES.md)
+- **Part 2**: [Customizing Your OpenShift AI Deployment](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md)
+- **Part 3**: [Deploying and Managing AI Models](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md)
 - **Part 4**: Production Best Practices and Troubleshooting
 
 🔗 **Related Guides**:
-- [Getting Started Guide](../GETTING_STARTED.md) - Complete platform overview
-- [Model Registry Guide](../02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md) - Version control for models
-- [Deployment Order](DEPLOYMENT_ORDER.md) - Understanding the full stack
+- [Getting Started Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/GETTING_STARTED.md) - Complete platform overview
+- [Model Registry Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md) - Version control for models
+- [Deployment Order](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/DEPLOYMENT_ORDER.md) - Understanding the full stack
 
 ### Join the Community
 
@@ -346,7 +346,7 @@ helm install granite-model \
 
 ### Helm Chart Details
 
-**Chart Location:** `quickstarts/model-as-a-service/deploy/maas-operators/`
+**Chart Location:** `AI/quickstarts/model-as-a-service/deploy/maas-operators/`
 
 **Configuration:** Defined in [deploy/maas-operators/values.yaml](../deploy/maas-operators/values.yaml)
 
@@ -477,7 +477,7 @@ operators:
 **Deployment**:
 ```bash
 helm upgrade --install maas-operators \
-  quickstarts/model-as-a-service/deploy/maas-operators \
+  AI/quickstarts/model-as-a-service/deploy/maas-operators \
   --set operators.connectivityLink.enabled=false \
   --set operators.certManager.enabled=false
 ```
@@ -592,7 +592,7 @@ oc logs -n redhat-ods-operator -l name=rhods-operator
 ```bash
 oc delete subscription rhods-operator -n redhat-ods-operator
 oc delete csv rhods-operator.3.3.1 -n redhat-ods-operator
-helm upgrade --install maas-operators quickstarts/model-as-a-service/deploy/maas-operators
+helm upgrade --install maas-operators AI/quickstarts/model-as-a-service/deploy/maas-operators
 ```
 
 2. **Check resource constraints**:
@@ -707,5 +707,5 @@ This is just the beginning. With your operator foundation in place, you're ready
 - Implement MLOps pipelines
 - Scale to enterprise workloads
 
-**Ready for the next step?** Check out [Part 2: Customizing Your OpenShift AI Deployment](MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md) to configure your platform for production use.
+**Ready for the next step?** Check out [Part 2: Customizing Your OpenShift AI Deployment](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_PLATFORM_CUSTOMIZATION_GUIDE.md) to configure your platform for production use.
 

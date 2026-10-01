@@ -630,10 +630,10 @@ Happy deploying! 🚀
 
 ## Additional Resources
 
-- **Documentation**: [MaaS Platform Guide](../01-setup/MAAS_OPERATORS_GUIDE.md)
+- **Documentation**: [MaaS Platform Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_OPERATORS_GUIDE.md)
 - **Examples**: [Model Registry Deployment Examples](../../examples/model-registry-deployment/)
-- **Customization**: [Runtime Customization Guide](../01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md)
-- **Operations**: [Adding Models to Registry](../02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)
+- **Customization**: [Runtime Customization Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/01-setup/MAAS_RUNTIME_CUSTOMIZATION_GUIDE.md)
+- **Operations**: [Adding Models to Registry](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md)
 
 ## About the MaaS Runtime
 

@@ -2,7 +2,7 @@
 
 Environment-specific GitOps deployment structure for the Model-as-a-Service (MaaS) Platform.
 
-> 📖 For the full operational runbook — step-by-step sync, troubleshooting, RBAC, security, and migration — see **[`environments/DEPLOYMENT_GUIDE.md`](environments/DEPLOYMENT_GUIDE.md)**.
+> 📖 For the full operational runbook — step-by-step sync, troubleshooting, RBAC, security, and migration — see **[`environments/DEPLOYMENT_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/DEPLOYMENT_GUIDE.md)**.
 
 ## Directory Structure
 
@@ -79,7 +79,7 @@ oc apply -f environments/prod/00-prod-app-of-apps.yaml
 # 3. Manually trigger each sync wave in the ArgoCD UI (auto-sync is disabled for prod)
 ```
 
-> For the full production sync walkthrough (waves, health checks, verification commands), see the [Deployment Guide](environments/DEPLOYMENT_GUIDE.md).
+> For the full production sync walkthrough (waves, health checks, verification commands), see the [Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/DEPLOYMENT_GUIDE.md).
 
 ## Environment Structure
 
@@ -117,5 +117,5 @@ Applications are deployed in ordered sync waves across all environments:
 
 ## Documentation
 
-- **Full Deployment Runbook**: [`environments/DEPLOYMENT_GUIDE.md`](environments/DEPLOYMENT_GUIDE.md)
+- **Full Deployment Runbook**: [`environments/DEPLOYMENT_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/DEPLOYMENT_GUIDE.md)
 - **Helm Values**: `../../helm/*/environments/{env}/values.yaml`
