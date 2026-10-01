@@ -15,10 +15,10 @@ spec:
   project: default
   source:
     # REQUIRED: Replace with your Git repository URL
-    repoURL: https://github.com/your-org/your-repo.git
+    repoURL: https://github.com/IBM/storage-fusion.git
     path: AI/quickstarts/fusion-developerhub/deploy/helm
     # REQUIRED: Replace with your target branch
-    targetRevision: main
+    targetRevision: master
     helm:
       valueFiles:
         - values.yaml

@@ -12,9 +12,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-org/your-gitops-repo.git  # IMPORTANT: Replace with your repo URL
+    repoURL: https://github.com/IBM/storage-fusion.git  # IMPORTANT: Replace with your repo URL
     path: AI/quickstarts/fusion-developerhub/deploy/helm
-    targetRevision: main  # Replace with your target branch or tag
+    targetRevision: master  # Replace with your target branch or tag
     helm:
       valueFiles:
         - values.yaml
