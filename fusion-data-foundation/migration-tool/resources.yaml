@@ -1,0 +1,219 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fusion-access-migration
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-kmm
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-storage
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ibm-spectrum-fusion-ns
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fusion-access-migration
+  namespace: fusion-access-migration
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fusion-access-migration-cluster-scope
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "create"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingwebhookconfigurations"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: ["config.openshift.io"]
+    resources: ["clusterversions"]
+    verbs: ["get"]
+  - apiGroups: ["operator.openshift.io"]
+    resources: ["consoles"]
+    verbs: ["get", "update"]
+  - apiGroups: ["scale.spectrum.ibm.com"]
+    resources: ["clusters"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: ["kmm.sigs.x-k8s.io"]
+    resources: ["nodemodulesconfigs"]
+    verbs: ["get", "list", "update", "patch", "delete"]
+  - apiGroups: ["odf.isf.ibm.com"]
+    resources: ["odfmanagers"]
+    verbs: ["get", "list", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fusion-access-migration-cluster-scope
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-cluster-scope
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fusion-access-migration-namespaced
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "update"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "update"]
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["subscriptions"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["clusterserviceversions"]
+    verbs: ["get", "list", "update", "delete"]
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["operatorgroups"]
+    verbs: ["get", "list", "create"]
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["catalogsources"]
+    verbs: ["get", "list", "create", "update", "patch"]
+  - apiGroups: ["kmm.sigs.x-k8s.io"]
+    resources: ["modules"]
+    verbs: ["get", "list", "update", "patch", "delete"]
+  - apiGroups: ["fusion.storage.openshift.io"]
+    resources: ["filesystemclaims"]
+    verbs: ["get", "list", "update", "delete"]
+  - apiGroups: ["scale.spectrum.ibm.com"]
+    resources: ["localdisks", "filesystems", "daemons"]
+    verbs: ["get", "list", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fusion-access-migration-rw
+  namespace: fusion-access-migration
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-namespaced
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fusion-access-migration-rw
+  namespace: ibm-fusion-access
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-namespaced
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fusion-access-migration-rw
+  namespace: ibm-spectrum-scale
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-namespaced
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fusion-access-migration-rw
+  namespace: ibm-spectrum-scale-operator
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-namespaced
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fusion-access-migration-rw
+  namespace: openshift-storage
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-namespaced
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fusion-access-migration-rw
+  namespace: openshift-kmm
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-namespaced
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fusion-access-migration-rw
+  namespace: openshift-marketplace
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-namespaced
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fusion-access-migration-rw
+  namespace: ibm-spectrum-fusion-ns
+subjects:
+  - kind: ServiceAccount
+    name: fusion-access-migration
+    namespace: fusion-access-migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fusion-access-migration-namespaced

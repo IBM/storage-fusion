@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fusion-access-migration
+  namespace: fusion-access-migration
+spec:
+  backoffLimit: 20
+  podFailurePolicy:
+    rules:
+      - action: FailJob
+        onExitCodes:
+          operator: In
+          values: [42]
+  template:
+    spec:
+      serviceAccountName: fusion-access-migration
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: registry.redhat.io/odf4/odf-cli-rhel9:v4.22
+          command: ["/usr/bin/migrate"]
+          imagePullPolicy: Always
+          env:
+            - name: MIGRATION_DRY_RUN
+              value: "false"
+            - name: MIGRATION_STATE_CONFIGMAP_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MIGRATION_STATE_CONFIGMAP_NAME
+              value: "fusion-access-migration-state"
+            - name: FDF_CATALOG_IMAGE
+              value: "icr.io/cpopen/isf-data-foundation-catalog:v4.21"
+            - name: FUSION_OPERATOR_CATALOG_IMAGE
+              value: "icr.io/cpopen/ibm-operator-catalog:latest"
