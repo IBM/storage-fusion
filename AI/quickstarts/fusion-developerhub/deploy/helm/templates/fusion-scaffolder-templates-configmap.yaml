@@ -19,8 +19,7 @@
 ---
 # ── WXO Self-Service Template ─────────────────────────────────────────────────
 # Guard: developerHub.enabled only — no fusionServices dependency.
-# Tier 1 (ephemeral): fill 4 fields → WXO entity appears immediately in catalog.
-# Tier 2 (permanent): output page shows the values.yaml snippet to paste + push.
+# Fill 4 fields → follow the instructions on the output page to complete the setup.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -40,8 +39,7 @@ data:
       title: "Add watsonx Orchestrate Instance"
       description: >
         Register an IBM watsonx Orchestrate instance in the Fusion Developer Hub catalog.
-        Fill in 4 fields — the entity appears immediately. No Git commit, no secrets,
-        no infrastructure prerequisites on the target cluster.
+        Fill in 4 fields and follow the instructions on the output page to complete the setup.
       tags:
         - watsonx
         - wxo
