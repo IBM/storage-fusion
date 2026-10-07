@@ -19,7 +19,7 @@ Copy (or symlink) this directory into your Bob skills location:
 ```bash
 # Project-level (recommended — version-controlled with this repo)
 mkdir -p <your-project>/.bob/skills
-cp -r storage-fusion/backup-restore/recipes/Bob <your-project>/.bob/skills/create-fusion-recipe
+cp -r storage-fusion/backup-restore/recipes/AI-Generator/Bob <your-project>/.bob/skills/create-fusion-recipe
 
 # Or global (available in all your projects)
 mkdir -p ~/.bob/skills
