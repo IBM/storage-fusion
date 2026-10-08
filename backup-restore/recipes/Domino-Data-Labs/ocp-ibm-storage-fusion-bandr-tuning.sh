@@ -102,25 +102,21 @@ case $1 in
 			-n ibm-backup-restore --replicas=1
 		;;
 	'checkhub')
-		echo "dpagent settings:"
+		printf "dpagent settings:\nCURRENT\tTARGET\tNAME\n"
 		oc get dataprotectionagent dpagent -n ibm-backup-restore \
-			-o yaml | grep -e backupDatamoverTimeout \
-				-e restoreDatamoverTimeout \
-				-e datamoverJobpodEphemeralStorageLimit
-		echo "guardian-configmap settings:"
+			-ojsonpath='{range .spec.transactionManager}{.backupDatamoverTimeout}{"\t480\tbackupDatamoverTimeout\n"}{.restoreDatamoverTimeout}{"\t1200\trestoreDatamoverTimeout\n"}{.datamoverJobpodEphemeralStorageLimit}{"\t8000Mi\tdatamoverJobpodEphemeralStorageLimit\n"}{end}'
+		printf "\nguardian-configmap settings:\nCURRENT\tTARGET\tNAME\n"
 		oc get configmap guardian-configmap -n ibm-backup-restore \
-			-o yaml | grep -e backupDatamoverTimeout \
-				-e restoreDatamoverTimeout \
-				-e datamoverJobpodEphemeralStorageLimit
-		echo "job-manager deployment settings:"
+			-ojsonpath='{range .data}{.backupDatamoverTimeout}{"\t480\tbackupDatamoverTimeout\n"}{.restoreDatamoverTimeout}{"\t1200\trestoreDatamoverTimeout\n"}{.datamoverJobpodEphemeralStorageLimit}{"\t8000Mi\tdatamoverJobpodEphemeralStorageLimit\n"}{end}'
+		printf "\njob-manager deployment settings:\nCURRENT\t\tTARGET\t\tNAME\n"
 		oc get deployment job-manager -n ibm-backup-restore \
-			-o yaml | grep -A1 cancelJobAfter
-		echo "velero settings:"
+			-ojsonpath='{range .spec.template.spec.containers[?(.name=="job-manager-container")].env[?(.name=="cancelJobAfter")]}{.value}{"\t72000000\tcancelJobAfter\n"}{end}'
+		printf "\nvelero settings:\nCURRENT\tTARGET\tNAME\n"
 		oc get dataprotectionapplication velero -n ibm-backup-restore \
-			-o yaml | grep -A3 limits | tail -4
-		echo "backup-location-deployment settings:"
+			-ojsonpath='{range .spec.configuration.velero.podConfig.resourceAllocations.limits}{.ephemeral-storage}{"\t30Gi\tephemeral-storage\n"}{.memory}{"\t12Gi\tmemory\n"}{end}' 
+		printf "\nbackup-location-deployment settings:\nCURRENT\tTARGET\tNAME\n"
 		oc get deployment backup-location-deployment \
-			-n ibm-backup-restore -o yaml | grep -A3 limits
+			-n ibm-backup-restore -ojsonpath='{range .spec.template.spec.containers[?(.name=="backup-location-container")].resources.limits}{.memory}{"\t4Gi\tmemory\n"}{end}'
 		;;
 	'spoke')
 		# Long-running backup and restore jobs and increase ephemeral
@@ -176,21 +172,17 @@ case $1 in
 			}'
 		;;
 	'checkspoke')
-		echo "dpagent settings:"
+		printf "dpagent settings:\nCURRENT\tTARGET\tNAME\n"
 		oc get dataprotectionagent \
 			ibm-backup-restore-agent-service-instance \
-			-n ibm-backup-restore -o yaml | \
-			grep -e backupDatamoverTimeout \
-				-e restoreDatamoverTimeout \
-				-e datamoverJobpodEphemeralStorageLimit
-		echo "guardian-configmap settings:"
+			-n ibm-backup-restore \
+			-ojsonpath='{range .spec.transactionManager}{.backupDatamoverTimeout}{"\t480\tbackupDatamoverTimeout\n"}{.restoreDatamoverTimeout}{"\t1200\trestoreDatamoverTimeout\n"}{.datamoverJobpodEphemeralStorageLimit}{"\t8000Mi\tdatamoverJobpodEphemeralStorageLimit\n"}{end}'
+		printf "\nguardian-configmap settings:\nCURRENT\tTARGET\tNAME\n"
 		oc get configmap guardian-configmap -n ibm-backup-restore \
-			-o yaml | grep -e backupDatamoverTimeout \
-				-e restoreDatamoverTimeout \
-				-e datamoverJobpodEphemeralStorageLimit
-		echo "velero settings:"
+			-ojsonpath='{range .data}{.backupDatamoverTimeout}{"\t480\tbackupDatamoverTimeout\n"}{.restoreDatamoverTimeout}{"\t1200\trestoreDatamoverTimeout\n"}{.datamoverJobpodEphemeralStorageLimit}{"\t8000Mi\tdatamoverJobpodEphemeralStorageLimit\n"}{end}'
+		printf "\nvelero settings:\nCURRENT\tTARGET\tNAME\n"
 		oc get dataprotectionapplication velero -n ibm-backup-restore \
-			-o yaml | grep -A3 limits | tail -4
+			-ojsonpath='{range .spec.configuration.velero.podConfig.resourceAllocations.limits}{.ephemeral-storage}{"\t30Gi\tephemeral-storage\n"}{.memory}{"\t12Gi\tmemory\n"}{end}'
 		;;
 	*) echo "$(basename "$0") [hub|checkhub|spoke|checkspoke]"
 esac

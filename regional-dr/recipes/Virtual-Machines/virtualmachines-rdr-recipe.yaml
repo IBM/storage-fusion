@@ -1,0 +1,45 @@
+apiVersion: ramendr.openshift.io/v1alpha1
+kind: Recipe
+metadata:
+  name: virtualmachines-rdr-recipe
+  namespace: virtualmachines
+spec:
+  appType: virtualmachines
+  groups:
+  - name: captured-resources
+    type: resource
+    includedNamespaces:
+    - virtualmachines
+    excludedResourceTypes:
+    - events
+    - event.events.k8s.io
+    - persistentvolumes
+    - replicaset
+    - persistentvolumeclaims
+    - pods
+    - clusterserviceversions.operators.coreos.com
+    - installplans.operators.coreos.com
+    labelSelector:
+      matchExpressions:
+      - key: ramendr.openshift.io/exclude
+        operator: NotIn
+        values:
+        - "true"
+  volumes:
+    type: volume
+    name: captured-volumes
+    includedNamespaces:
+    - virtualmachines
+    labelSelector:
+      matchExpressions:
+      - key: ramendr.openshift.io/exclude
+        operator: NotIn
+        values:
+        - "true"
+  workflows:
+  - name: backup
+    sequence:
+    - group: captured-resources
+  - name: restore
+    sequence:
+    - group: captured-resources
