@@ -1,0 +1,232 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-to-rados-migration
+spec:
+  backoffLimit: 0
+  completions: 1
+  parallelism: 1
+
+  template:
+    metadata:
+      labels:
+        app: minio-to-rados-migration
+        bnr.network/egress-object-storage: "true"
+
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: migration
+          image: d3fk/s3cmd:arch-stable
+          imagePullPolicy: IfNotPresent
+
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+            - name: MINIO_ACCESS
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-credentials
+                  key: miniouser
+
+            - name: MINIO_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-credentials
+                  key: miniopassword
+
+            - name: RADOS_ACCESS
+              valueFrom:
+                secretKeyRef:
+                  name: zgw-posix-user
+                  key: ACCESS_KEY
+
+            - name: RADOS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: zgw-posix-user
+                  key: SECRET_KEY
+
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+
+              WORKDIR="/tmp/migration"
+
+              echo "========================================"
+              echo "Creating MinIO s3cmd configuration"
+              echo "========================================"
+
+              cat > /tmp/minio-s3cfg <<EOF
+              [default]
+              access_key = ${MINIO_ACCESS}
+              secret_key = ${MINIO_SECRET}
+              host_base = guardian-minio-svc.${POD_NAMESPACE}.svc.cluster.local:9000
+              host_bucket = guardian-minio-svc.${POD_NAMESPACE}.svc.cluster.local:9000/%(bucket)s
+              use_https = True
+              check_ssl_certificate = False
+              signature_v2 = True
+              bucket_location = us-east-1
+              EOF
+
+              echo "========================================"
+              echo "Creating RADOS s3cmd configuration"
+              echo "========================================"
+
+              cat > /tmp/rados-s3cfg <<EOF
+              [default]
+              access_key = ${RADOS_ACCESS}
+              secret_key = ${RADOS_SECRET}
+              host_base = s3-posix.${POD_NAMESPACE}.svc.cluster.local
+              host_bucket = s3-posix.${POD_NAMESPACE}.svc.cluster.local/%(bucket)s
+              use_https = True
+              check_ssl_certificate = False
+              signature_v2 = True
+              bucket_location = us-east-1
+              EOF
+
+              echo "========================================"
+              echo "Testing MinIO connectivity"
+              echo "========================================"
+
+              s3cmd -c /tmp/minio-s3cfg ls
+
+              echo "========================================"
+              echo "Testing RADOS connectivity"
+              echo "========================================"
+
+              s3cmd -c /tmp/rados-s3cfg ls
+
+              echo "========================================"
+              echo "Preparing migration directory"
+              echo "========================================"
+
+              rm -rf "${WORKDIR}"
+              mkdir -p "${WORKDIR}"
+
+              echo "========================================"
+              echo "Starting bucket migration"
+              echo "========================================"
+
+              s3cmd -c /tmp/minio-s3cfg ls | while read -r DATE TIME BUCKET; do
+
+                  if [ -z "${BUCKET}" ]; then
+                      continue
+                  fi
+
+                  BUCKET_NAME="${BUCKET#s3://}"
+                  BUCKET_NAME="${BUCKET_NAME%/}"
+
+                  if [ -z "${BUCKET_NAME}" ]; then
+                      continue
+                  fi
+
+                  echo ""
+                  echo "========================================"
+                  echo "Checking bucket: ${BUCKET_NAME}"
+                  echo "========================================"
+
+                  # Check whether bucket contains any objects
+                  OBJECT_LIST=$(s3cmd -c /tmp/minio-s3cfg \
+                      ls "s3://${BUCKET_NAME}/")
+
+                  if [ -z "${OBJECT_LIST}" ]; then
+                      echo "Bucket ${BUCKET_NAME} is empty. Skipping migration."
+                      continue
+                  fi
+
+                  echo "Objects found in ${BUCKET_NAME}:"
+                  echo "${OBJECT_LIST}"
+
+                  BUCKET_WORKDIR="${WORKDIR}/${BUCKET_NAME}"
+
+                  echo ""
+                  echo "Checking destination bucket..."
+
+                  if s3cmd -c /tmp/rados-s3cfg \
+                      ls "s3://${BUCKET_NAME}/" >/dev/null 2>&1; then
+
+                      echo "RADOS bucket already exists."
+
+                  else
+
+                      echo "Creating RADOS bucket..."
+
+                      s3cmd -c /tmp/rados-s3cfg \
+                          mb "s3://${BUCKET_NAME}"
+
+                  fi
+
+                  echo ""
+                  echo "Downloading objects from MinIO..."
+
+                  rm -rf "${BUCKET_WORKDIR}"
+                  mkdir -p "${BUCKET_WORKDIR}"
+
+                  s3cmd -c /tmp/minio-s3cfg \
+                      get --recursive \
+                      "s3://${BUCKET_NAME}/" \
+                      "${BUCKET_WORKDIR}/"
+
+                  echo ""
+                  echo "Downloaded files:"
+
+                  find "${BUCKET_WORKDIR}" -type f -print
+
+                  echo ""
+                  echo "Uploading objects to RADOS..."
+
+                  s3cmd -c /tmp/rados-s3cfg \
+                      put --recursive \
+                      "${BUCKET_WORKDIR}/" \
+                      "s3://${BUCKET_NAME}/"
+
+                  echo ""
+                  echo "RADOS contents after migration:"
+
+                  s3cmd -c /tmp/rados-s3cfg \
+                      ls --recursive \
+                      "s3://${BUCKET_NAME}/"
+
+                  echo ""
+                  echo "Migration completed for bucket: ${BUCKET_NAME}"
+
+                  rm -rf "${BUCKET_WORKDIR}"
+
+              done
+
+              echo ""
+              echo "========================================"
+              echo "FINAL RADOS BUCKET LIST"
+              echo "========================================"
+
+              s3cmd -c /tmp/rados-s3cfg ls
+
+              echo ""
+              echo "========================================"
+              echo "FINAL RADOS OBJECT LIST"
+              echo "========================================"
+
+              for BUCKET in $(s3cmd -c /tmp/rados-s3cfg ls | awk '{print $3}' | sed 's#s3://##'); do
+
+                  echo ""
+                  echo "----------------------------------------"
+                  echo "Bucket: ${BUCKET}"
+                  echo "----------------------------------------"
+
+                  s3cmd -c /tmp/rados-s3cfg \
+                    ls --recursive \
+                    "s3://${BUCKET}/"
+
+              done
+
+              echo ""
+              echo "========================================"
+              echo "MIGRATION COMPLETED SUCCESSFULLY"
+              echo "========================================"
