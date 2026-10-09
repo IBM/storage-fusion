@@ -1,7 +1,12 @@
 #!/bin/bash
 
 usage() {
-    echo "Usage: ${0} <image repository>"
+    echo "Usage: ${0} [ -hci | -sds ] <image repository> [log file]"
+    echo "Options:"
+    echo "  -hci     Mirror only the images required for HCI"
+    echo "  -sds     Mirror only the images required for SDS"
+    echo "  -help    Display usage"
+    echo "If neither or both of -hci and -sds are given, images for both HCI and SDS are mirrored."
 }
 
 BNR_PREFIX="cp.icr.io/cp/bnr"
@@ -56,17 +61,21 @@ copy_images() {
     skopeo copy --insecure-policy --preserve-digests --all docker://"$BNR_PREFIX"/"$IMAGE" "$DESTINATION"
   done
 
-  for FUSIONHCIIMAGE in "${FUSIONIMAGES_HCI[@]}"; do
-    DESTINATION=docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE
-    echo -e "Copying\n Image: $(build_icr_path ${HCI_PREFIX} ${FUSIONHCIIMAGE})\n Destination: docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE\n"
-    skopeo copy --insecure-policy --preserve-digests --all docker://"$HCI_PREFIX"/"$FUSIONHCIIMAGE" "$DESTINATION"
-  done
+  if [ "$PLATFORM" != "SDS" ]; then
+    for FUSIONHCIIMAGE in "${FUSIONIMAGES_HCI[@]}"; do
+      DESTINATION=docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE
+      echo -e "Copying\n Image: $(build_icr_path ${HCI_PREFIX} ${FUSIONHCIIMAGE})\n Destination: docker://$TARGET_PATH/cp/fusion-hci/$FUSIONHCIIMAGE\n"
+      skopeo copy --insecure-policy --preserve-digests --all docker://"$HCI_PREFIX"/"$FUSIONHCIIMAGE" "$DESTINATION"
+    done
+  fi
 
-  for FUSIONSDSIMAGE in "${FUSIONIMAGES_SDS[@]}"; do
-    DESTINATION=docker://$TARGET_PATH/cp/fusion-sds/$FUSIONSDSIMAGE
-    echo -e "Copying\n Image: $(build_icr_path ${SDS_PREFIX} ${FUSIONSDSIMAGE})\n Destination: docker://$TARGET_PATH/cp/fusion-sds/$FUSIONSDSIMAGE\n"
-    skopeo copy --insecure-policy --preserve-digests --all docker://"$SDS_PREFIX"/"$FUSIONSDSIMAGE" "$DESTINATION"
-  done
+  if [ "$PLATFORM" != "HCI" ]; then
+    for FUSIONSDSIMAGE in "${FUSIONIMAGES_SDS[@]}"; do
+      DESTINATION=docker://$TARGET_PATH/cp/fusion-sds/$FUSIONSDSIMAGE
+      echo -e "Copying\n Image: $(build_icr_path ${SDS_PREFIX} ${FUSIONSDSIMAGE})\n Destination: docker://$TARGET_PATH/cp/fusion-sds/$FUSIONSDSIMAGE\n"
+      skopeo copy --insecure-policy --preserve-digests --all docker://"$SDS_PREFIX"/"$FUSIONSDSIMAGE" "$DESTINATION"
+    done
+  fi
 }
 
 declare -a IMAGES=(
@@ -102,6 +111,41 @@ done
 
 # execution when copying images rather than as image path source
 if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
+  MIRROR_HCI=
+  MIRROR_SDS=
+  POSITIONAL=()
+  while [[ $# -gt 0 ]]; do
+    case "${1}" in
+    -hci)
+      MIRROR_HCI=true
+      shift
+      ;;
+    -sds)
+      MIRROR_SDS=true
+      shift
+      ;;
+    -help)
+      usage
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: $1"
+      usage
+      exit 1
+      ;;
+    *)
+      POSITIONAL+=("${1}")
+      shift
+      ;;
+    esac
+  done
+  set -- "${POSITIONAL[@]}"
+
+  # no flag or both flags mirrors images for both HCI and SDS
+  PLATFORM=
+  [ -n "$MIRROR_HCI" ] && [ -z "$MIRROR_SDS" ] && PLATFORM="HCI"
+  [ -n "$MIRROR_SDS" ] && [ -z "$MIRROR_HCI" ] && PLATFORM="SDS"
+
   if [ -z "${1}" ]; then
      usage
      exit 1
@@ -118,6 +162,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
   touch ${LOG}
   exec &> >(tee -a $LOG)
   echo -e "Logging to $LOG\n"
+  echo -e "Mirroring images for: ${PLATFORM:-HCI and SDS}\n"
   set -e
 
   copy_images ${1}
