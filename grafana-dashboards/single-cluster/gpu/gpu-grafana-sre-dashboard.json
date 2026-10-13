@@ -109,16 +109,13 @@
                 "value": 60
               },
               {
-                "color": "yellow",
-                "value": 80
-              },
-              {
                 "color": "green",
-                "value": 95
+                "value": 80
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -167,15 +164,15 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:health_score:composite{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "gpu:health_score:composite{UUID=~\"$UUID\"}",
           "instant": true,
-          "legendFormat": "{{hostname}} {{UUID}}",
+          "legendFormat": "{{UUID}}",
           "refId": "A"
         }
       ],
       "title": "Composite Health Score",
       "type": "gauge",
-      "description": "Composite health score (0–100) for the selected GPU, derived from temperature deviation, ECC error rate and throttle pressure. Green ≥80, yellow 60–80, red <60."
+      "description": "Red <60 = GPUHealthScoreCritical; orange 60–80 = GPUHealthScoreHigh; green ≥80."
     },
     {
       "datasource": {
@@ -199,15 +196,16 @@
               },
               {
                 "color": "orange",
-                "value": 20
+                "value": 30
               },
               {
                 "color": "red",
-                "value": 50
+                "value": 70
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -221,7 +219,7 @@
       "links": [
         {
           "title": "GPUPredictiveFailure — firing",
-          "url": "/alerting/list?state=firing&search=GPUPredictiveFailure",
+          "url": "/alerting/list?state=firing&search=GPUPredictiveFailure24h",
           "targetBlank": true
         },
         {
@@ -256,7 +254,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:failure_probability:24h{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "gpu:failure_probability:24h{UUID=~\"$UUID\"}",
           "instant": true,
           "legendFormat": "Fail Prob 24h %",
           "refId": "A"
@@ -264,7 +262,7 @@
       ],
       "title": "24h Failure Probability %",
       "type": "gauge",
-      "description": "Model-derived probability (0–100%) that this GPU will experience a failure event within the next 24 hours, based on temperature trend, ECC rate and PCIe replay rate."
+      "description": "Orange >30% = at-risk (WorkloadsOnAtRiskGPUNodes). Red >70% with health <60 fires GPUPredictiveFailure24h."
     },
     {
       "datasource": {
@@ -342,7 +340,7 @@
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -357,7 +355,7 @@
       "links": [
         {
           "title": "GPUThermalThrottlingSustained — firing",
-          "url": "/alerting/list?state=firing&search=GPUThermalThrottlingSustained",
+          "url": "/alerting/list?state=firing&search=GPUFrequentThermalThrottling",
           "targetBlank": true
         }
       ],
@@ -386,7 +384,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:throttle:pressure_score{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "gpu:throttle:pressure_score{UUID=~\"$UUID\"}",
           "instant": true,
           "legendFormat": "Throttle Pressure",
           "refId": "A"
@@ -403,14 +401,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "text"
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "text",
                 "value": null
               }
             ]
@@ -450,7 +449,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_SM_CLOCK{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "DCGM_FI_DEV_SM_CLOCK{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "instant": true,
           "legendFormat": "SM Clock",
           "refId": "A"
@@ -494,7 +493,7 @@
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "Not collected"
         },
         "overrides": []
       },
@@ -508,12 +507,12 @@
       "links": [
         {
           "title": "GPUThermalThrottlingSustained — firing",
-          "url": "/alerting/list?state=firing&search=GPUThermalThrottlingSustained",
+          "url": "/alerting/list?state=firing&search=GPUFrequentThermalThrottling",
           "targetBlank": true
         },
         {
           "title": "GPUOverheating — firing",
-          "url": "/alerting/list?state=firing&search=GPUOverheating",
+          "url": "/alerting/list?state=firing&search=GPUHighTemperatureSustained",
           "targetBlank": true
         }
       ],
@@ -539,7 +538,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{hostname=~\"$hostname\",UUID=~\"$UUID\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0",
+          "expr": "DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "instant": true,
           "legendFormat": "Throttle Reasons",
           "refId": "A"
@@ -557,14 +556,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "text"
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "text",
                 "value": null
               }
             ]
@@ -604,7 +604,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_MEM_CLOCK{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "DCGM_FI_DEV_MEM_CLOCK{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "instant": true,
           "legendFormat": "Mem Clock",
           "refId": "A"
@@ -646,12 +646,8 @@
                 "value": 60
               },
               {
-                "color": "yellow",
-                "value": 80
-              },
-              {
                 "color": "green",
-                "value": 95
+                "value": 80
               }
             ]
           },
@@ -705,8 +701,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:health_score:composite{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
-          "legendFormat": "{{hostname}} {{UUID}}",
+          "expr": "gpu:health_score:composite{UUID=~\"$UUID\"}",
+          "legendFormat": "{{UUID}}",
           "refId": "A"
         }
       ],
@@ -744,11 +740,11 @@
               },
               {
                 "color": "orange",
-                "value": 20
+                "value": 30
               },
               {
                 "color": "red",
-                "value": 50
+                "value": 70
               }
             ]
           },
@@ -766,7 +762,7 @@
       "links": [
         {
           "title": "GPUPredictiveFailure — firing",
-          "url": "/alerting/list?state=firing&search=GPUPredictiveFailure",
+          "url": "/alerting/list?state=firing&search=GPUPredictiveFailure24h",
           "targetBlank": true
         }
       ],
@@ -791,7 +787,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:failure_probability:24h{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "gpu:failure_probability:24h{UUID=~\"$UUID\"}",
           "legendFormat": "Fail Prob 24h %",
           "refId": "A"
         }
@@ -838,10 +834,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -923,7 +915,7 @@
         "showHeader": true,
         "sortBy": [
           {
-            "desc": true,
+            "desc": false,
             "displayName": "Severity"
           }
         ]
@@ -952,7 +944,7 @@
                 "alertname",
                 "severity",
                 "category",
-                "hostname",
+                "Hostname",
                 "UUID",
                 "alertstate"
               ]
@@ -966,9 +958,9 @@
               "alertname": "Alert",
               "severity": "Severity",
               "category": "Category",
-              "hostname": "Node",
               "UUID": "GPU",
-              "alertstate": "State"
+              "alertstate": "State",
+              "Hostname": "Node"
             }
           }
         }
@@ -1015,7 +1007,7 @@
               },
               {
                 "color": "orange",
-                "value": 80
+                "value": 85
               },
               {
                 "color": "red",
@@ -1037,12 +1029,12 @@
       "links": [
         {
           "title": "GPUOverheating — firing",
-          "url": "/alerting/list?state=firing&search=GPUOverheating",
+          "url": "/alerting/list?state=firing&search=GPUHighTemperatureSustained",
           "targetBlank": true
         },
         {
           "title": "GPUOverheating — rule",
-          "url": "/alerting/list?search=GPUOverheating",
+          "url": "/alerting/list?search=GPUHighTemperatureSustained",
           "targetBlank": true
         }
       ],
@@ -1066,7 +1058,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1137,7 +1129,7 @@
       "links": [
         {
           "title": "GPUOverheating — firing",
-          "url": "/alerting/list?state=firing&search=GPUOverheating",
+          "url": "/alerting/list?state=firing&search=GPUHighTemperatureSustained",
           "targetBlank": true
         }
       ],
@@ -1161,7 +1153,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_MEMORY_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "DCGM_FI_DEV_MEMORY_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1224,12 +1216,12 @@
       "links": [
         {
           "title": "GPUPowerAnomaly — firing",
-          "url": "/alerting/list?state=firing&search=GPUPowerAnomaly",
+          "url": "/alerting/list?state=firing&search=GPUPowerFluctuation",
           "targetBlank": true
         },
         {
           "title": "GPUPowerAnomaly — rule",
-          "url": "/alerting/list?search=GPUPowerAnomaly",
+          "url": "/alerting/list?search=GPUPowerFluctuation",
           "targetBlank": true
         }
       ],
@@ -1254,7 +1246,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_POWER_USAGE{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1291,7 +1283,7 @@
               },
               {
                 "color": "orange",
-                "value": 20
+                "value": 50
               }
             ]
           },
@@ -1309,7 +1301,7 @@
       "links": [
         {
           "title": "GPUPowerAnomaly — firing",
-          "url": "/alerting/list?state=firing&search=GPUPowerAnomaly",
+          "url": "/alerting/list?state=firing&search=GPUPowerFluctuation",
           "targetBlank": true
         }
       ],
@@ -1333,15 +1325,15 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) (\n  stddev_over_time(DCGM_FI_DEV_POWER_USAGE{hostname=~\"$hostname\",UUID=~\"$UUID\"}[15m])\n)",
-          "legendFormat": "{{hostname}} / GPU{{gpu}}",
+          "expr": "avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) (\n  stddev_over_time(DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$hostname\",UUID=~\"$UUID\"}[15m])\n)",
+          "legendFormat": "{{Hostname}} / GPU{{gpu}}",
           "refId": "A"
         }
       ],
       "title": "Power Instability — 15m Rolling Stddev",
       "type": "timeseries",
       "pluginVersion": "12.1.0",
-      "description": "15-minute rolling standard deviation of power draw. High variance (>15 W) indicates power instability — triggers GPUPowerAnomaly."
+      "description": "15m rolling stddev of power draw. Orange >50 W matches GPUPowerFluctuation."
     },
     {
       "collapsed": false,
@@ -1417,7 +1409,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "expr": "DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1489,7 +1481,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_PROF_GR_ENGINE_ACTIVE{hostname=~\"$hostname\",UUID=~\"$UUID\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(DCGM_FI_PROF_GR_ENGINE_ACTIVE{Hostname=~\"$hostname\",UUID=~\"$UUID\"})",
           "legendFormat": "GR Engine",
           "refId": "A"
         },
@@ -1498,7 +1490,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{hostname=~\"$hostname\",UUID=~\"$UUID\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{Hostname=~\"$hostname\",UUID=~\"$UUID\"})",
           "legendFormat": "Tensor Core",
           "refId": "B"
         }
@@ -1570,7 +1562,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_PROF_DRAM_ACTIVE{hostname=~\"$hostname\",UUID=~\"$UUID\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(DCGM_FI_PROF_DRAM_ACTIVE{Hostname=~\"$hostname\",UUID=~\"$UUID\"})",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1652,7 +1644,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\",UUID=~\"$UUID\"} / 1024",
+          "expr": "DCGM_FI_DEV_FB_USED{Hostname=~\"$hostname\",UUID=~\"$UUID\"} / 1024",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1722,7 +1714,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_FB_FREE{hostname=~\"$hostname\",UUID=~\"$UUID\"} / 1024",
+          "expr": "DCGM_FI_DEV_FB_FREE{Hostname=~\"$hostname\",UUID=~\"$UUID\"} / 1024",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1801,7 +1793,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\",UUID=~\"$UUID\"} / (DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\",UUID=~\"$UUID\"} + DCGM_FI_DEV_FB_FREE{hostname=~\"$hostname\",UUID=~\"$UUID\"} + 1) * 100",
+          "expr": "DCGM_FI_DEV_FB_USED{Hostname=~\"$hostname\",UUID=~\"$UUID\"} / (DCGM_FI_DEV_FB_USED{Hostname=~\"$hostname\",UUID=~\"$UUID\"} + DCGM_FI_DEV_FB_FREE{Hostname=~\"$hostname\",UUID=~\"$UUID\"} + 1) * 100",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1869,12 +1861,12 @@
       "links": [
         {
           "title": "GPUPCIeReplayRateHigh — firing",
-          "url": "/alerting/list?state=firing&search=GPUPCIeReplayRateHigh",
+          "url": "/alerting/list?state=firing&search=GPUPCIeReplayErrorsIncreasing",
           "targetBlank": true
         },
         {
           "title": "GPUPCIeReplayRateHigh — rule",
-          "url": "/alerting/list?search=GPUPCIeReplayRateHigh",
+          "url": "/alerting/list?search=GPUPCIeReplayErrorsIncreasing",
           "targetBlank": true
         }
       ],
@@ -1898,7 +1890,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) (\n  rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER{hostname=~\"$hostname\",UUID=~\"$UUID\"}[5m])\n)",
+          "expr": "avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) (\n  rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER{Hostname=~\"$hostname\",UUID=~\"$UUID\"}[5m])\n)",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -1950,7 +1942,7 @@
       "links": [
         {
           "title": "GPUPCIeReplayRateHigh — firing",
-          "url": "/alerting/list?state=firing&search=GPUPCIeReplayRateHigh",
+          "url": "/alerting/list?state=firing&search=GPUPCIeReplayErrorsIncreasing",
           "targetBlank": true
         }
       ],
@@ -1975,7 +1967,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) (\n  rate(DCGM_FI_PROF_PCIE_TX_BYTES{hostname=~\"$hostname\",UUID=~\"$UUID\"}[5m])\n)) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) (\n  rate(DCGM_FI_PROF_PCIE_TX_BYTES{Hostname=~\"$hostname\",UUID=~\"$UUID\"}[5m])\n))",
           "legendFormat": "TX",
           "refId": "A"
         },
@@ -1984,7 +1976,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) (\n  rate(DCGM_FI_PROF_PCIE_RX_BYTES{hostname=~\"$hostname\",UUID=~\"$UUID\"}[5m])\n)) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) (\n  rate(DCGM_FI_PROF_PCIE_RX_BYTES{Hostname=~\"$hostname\",UUID=~\"$UUID\"}[5m])\n))",
           "legendFormat": "RX",
           "refId": "B"
         }
@@ -2026,7 +2018,8 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "Not collected"
         },
         "overrides": []
       },
@@ -2040,12 +2033,12 @@
       "links": [
         {
           "title": "GPUThermalThrottlingSustained — firing",
-          "url": "/alerting/list?state=firing&search=GPUThermalThrottlingSustained",
+          "url": "/alerting/list?state=firing&search=GPUFrequentThermalThrottling",
           "targetBlank": true
         },
         {
           "title": "GPUOverheating — firing",
-          "url": "/alerting/list?state=firing&search=GPUOverheating",
+          "url": "/alerting/list?state=firing&search=GPUHighTemperatureSustained",
           "targetBlank": true
         }
       ],
@@ -2068,7 +2061,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{hostname=~\"$hostname\",UUID=~\"$UUID\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0",
+          "expr": "DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "legendFormat": "{{UUID}}",
           "refId": "A"
         }
@@ -2150,7 +2143,7 @@
         },
         {
           "title": "GPUBurnoutPermanentFailure — firing",
-          "url": "/alerting/list?state=firing&search=GPUBurnoutPermanentFailure",
+          "url": "/alerting/list?state=firing&search=GPUXIDFatalCritical",
           "targetBlank": true
         }
       ],
@@ -2176,7 +2169,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_DEV_ROW_REMAP_FAILURE{hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"} > bool 0) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(DCGM_FI_DEV_ROW_REMAP_FAILURE{Hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"} > bool 0) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
           "instant": true,
           "legendFormat": "Row Remap Failure",
           "refId": "A"
@@ -2225,12 +2218,12 @@
       "links": [
         {
           "title": "GPUUncorrectableRemappedRows — firing",
-          "url": "/alerting/list?state=firing&search=GPUUncorrectableRemappedRows",
+          "url": "/alerting/list?state=firing&search=GPUDBERetiredPages",
           "targetBlank": true
         },
         {
           "title": "GPUMemoryDegradationCritical — firing",
-          "url": "/alerting/list?state=firing&search=GPUMemoryDegradationCritical",
+          "url": "/alerting/list?state=firing&search=GPUDBERetiredPages",
           "targetBlank": true
         }
       ],
@@ -2256,7 +2249,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{Hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"}) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
           "instant": true,
           "legendFormat": "Uncorrectable Remapped",
           "refId": "A"
@@ -2305,7 +2298,7 @@
       "links": [
         {
           "title": "GPUCorrectableRemapAccelerating — firing",
-          "url": "/alerting/list?state=firing&search=GPUCorrectableRemapAccelerating",
+          "url": "/alerting/list?state=firing&search=GPUPageRetirementIncreasing",
           "targetBlank": true
         }
       ],
@@ -2331,7 +2324,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{Hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"}) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
           "instant": true,
           "legendFormat": "Correctable Remapped",
           "refId": "A"
@@ -2366,7 +2359,7 @@
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "Not collected"
         },
         "overrides": []
       },
@@ -2406,7 +2399,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_ECC_SBE_VOL_TOTAL{hostname=~\"$hostname\",UUID=~\"$UUID\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"} * 0",
+          "expr": "DCGM_FI_DEV_ECC_SBE_VOL_TOTAL{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "instant": true,
           "legendFormat": "SBE Volatile",
           "refId": "A"
@@ -2414,7 +2407,7 @@
       ],
       "title": "ECC SBE Volatile Total",
       "type": "stat",
-      "description": "Single-bit ECC (correctable) volatile error count since last driver reset. Increasing values indicate DRAM degradation."
+      "description": "Single-bit ECC (correctable) volatile error count since last driver reset. Increasing values indicate DRAM degradation. 'Not collected' = DCGM field 312 not enabled in exporter config."
     },
     {
       "datasource": {
@@ -2441,7 +2434,7 @@
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "Not collected"
         },
         "overrides": []
       },
@@ -2460,7 +2453,7 @@
         },
         {
           "title": "GPUMemoryDegradationCritical — firing",
-          "url": "/alerting/list?state=firing&search=GPUMemoryDegradationCritical",
+          "url": "/alerting/list?state=firing&search=GPUDBERetiredPages",
           "targetBlank": true
         }
       ],
@@ -2486,7 +2479,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_ECC_DBE_VOL_TOTAL{hostname=~\"$hostname\",UUID=~\"$UUID\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"} * 0",
+          "expr": "DCGM_FI_DEV_ECC_DBE_VOL_TOTAL{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "instant": true,
           "legendFormat": "DBE Volatile",
           "refId": "A"
@@ -2494,7 +2487,7 @@
       ],
       "title": "ECC DBE Volatile Total",
       "type": "stat",
-      "description": "Double-bit ECC (uncorrectable) volatile error count. Any non-zero value triggers GPUDoubleBitECCDetected — immediate action required."
+      "description": "Double-bit ECC (uncorrectable) volatile error count. Any non-zero value triggers GPUDoubleBitECCDetected — immediate action required. 'Not collected' = DCGM field 313 not enabled in exporter config."
     },
     {
       "datasource": {
@@ -2546,7 +2539,7 @@
       "links": [
         {
           "title": "GPUXIDErrorsDetected — firing",
-          "url": "/alerting/list?state=firing&search=GPUXIDErrorsDetected",
+          "url": "/alerting/list?state=firing&search=GPUXIDErrorDetected",
           "targetBlank": true
         },
         {
@@ -2577,7 +2570,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_XID_ERRORS{hostname=~\"$hostname\",UUID=~\"$UUID\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"} * 0",
+          "expr": "DCGM_FI_DEV_XID_ERRORS{Hostname=~\"$hostname\",UUID=~\"$UUID\"} or DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"} * 0",
           "instant": true,
           "legendFormat": "XID Errors",
           "refId": "A"
@@ -2634,7 +2627,7 @@
         },
         {
           "title": "GPUCorrectableRemapAccelerating — firing",
-          "url": "/alerting/list?state=firing&search=GPUCorrectableRemapAccelerating",
+          "url": "/alerting/list?state=firing&search=GPUPageRetirementIncreasing",
           "targetBlank": true
         }
       ],
@@ -2658,7 +2651,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{Hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"}) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
           "legendFormat": "Correctable",
           "refId": "A"
         },
@@ -2667,7 +2660,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"}) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{Hostname=~\"$hostname\",UUID=~\"$UUID\",container=\"nvidia-dcgm-exporter\"}) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
           "legendFormat": "Uncorrectable",
           "refId": "B"
         }
@@ -2709,7 +2702,8 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "Not collected"
         },
         "overrides": []
       },
@@ -2728,7 +2722,7 @@
         },
         {
           "title": "GPUMemoryDegradationCritical — firing",
-          "url": "/alerting/list?state=firing&search=GPUMemoryDegradationCritical",
+          "url": "/alerting/list?state=firing&search=GPUDBERetiredPages",
           "targetBlank": true
         }
       ],
@@ -2752,7 +2746,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_ECC_SBE_AGG_TOTAL{hostname=~\"$hostname\",UUID=~\"$UUID\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0",
+          "expr": "DCGM_FI_DEV_ECC_SBE_AGG_TOTAL{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "legendFormat": "SBE Agg",
           "refId": "A"
         },
@@ -2761,7 +2755,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_ECC_DBE_AGG_TOTAL{hostname=~\"$hostname\",UUID=~\"$UUID\"} or DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0",
+          "expr": "DCGM_FI_DEV_ECC_DBE_AGG_TOTAL{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "legendFormat": "DBE Agg",
           "refId": "B"
         }
@@ -2784,61 +2778,63 @@
       "type": "row"
     },
     {
+      "id": 31,
+      "type": "stat",
+      "title": "GPU Scoring & Alert Rules",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 80
-              },
-              {
-                "color": "red",
-                "value": 95
-              }
-            ]
-          },
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "decimals": 1,
-          "noValue": "N/A"
-        },
-        "overrides": []
-      },
+      "description": "Are the gpu-alert-rules recording rules evaluating? NOT LOADED = health score, failure probability, impact counts and every platform=gpu-monitoring alert are not computed, so a 0 or empty value elsewhere does NOT mean healthy. Fix: oc apply -f gpu-rules.yaml.",
       "gridPos": {
         "h": 4,
         "w": 6,
         "x": 0,
         "y": 76
       },
-      "id": 31,
-      "title": "VRAM Utilisation",
-      "description": "GPU framebuffer memory in use as % of total (used ÷ (used + free) × 100). Orange ≥80%, red ≥95%. High VRAM pressure causes workload OOM kills and accelerates thermal/power degradation.",
-      "links": [
-        {
-          "title": "GPU memory panels — SRE Deep Dive",
-          "url": "/d/gpu-sre-dashboard-v5?var-hostname=${hostname}&var-UUID=${UUID}",
-          "targetBlank": false,
-          "keepTime": true
-        }
-      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "none",
+          "noValue": "0",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "NOT LOADED",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Active",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "options": {
         "colorMode": "background",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
@@ -2848,26 +2844,22 @@
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "percentChangeColorMode": "standard"
+        "textMode": "auto"
       },
-      "pluginVersion": "12.1.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\",UUID=~\"$UUID\"} / (DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\",UUID=~\"$UUID\"} + DCGM_FI_DEV_FB_FREE{hostname=~\"$hostname\",UUID=~\"$UUID\"}) * 100",
+          "expr": "count(gpu:platform:heartbeat) or vector(0)",
           "instant": true,
-          "legendFormat": "VRAM %",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
-      "type": "stat"
+      "links": [],
+      "pluginVersion": "12.1.0"
     },
     {
       "datasource": {
@@ -3023,12 +3015,8 @@
                 "value": 0.01
               },
               {
-                "color": "orange",
-                "value": 0.9
-              },
-              {
                 "color": "green",
-                "value": 1
+                "value": 0.9
               }
             ]
           },
@@ -3189,24 +3177,7 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": false,
-          "text": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com",
-          "value": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com"
-        },
-        "description": "OCP Console base URL — set automatically by deploy.sh",
-        "hide": 2,
-        "label": "OCP Console",
-        "name": "ocp_console",
-        "query": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com",
-        "skipUrlSync": true,
-        "type": "constant"
-      },
-      {
-        "current": {
-          "text": "Prometheus",
-          "value": "datasource"
-        },
+        "current": {},
         "hide": 0,
         "includeAll": false,
         "label": "Datasource",
@@ -3225,7 +3196,7 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP, hostname)",
+        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP, Hostname)",
         "hide": 0,
         "includeAll": true,
         "label": "Node",
@@ -3233,7 +3204,7 @@
         "name": "hostname",
         "options": [],
         "query": {
-          "query": "label_values(DCGM_FI_DEV_GPU_TEMP, hostname)",
+          "query": "label_values(DCGM_FI_DEV_GPU_TEMP, Hostname)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -3249,7 +3220,7 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\"}, UUID)",
+        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\"}, UUID)",
         "hide": 0,
         "includeAll": true,
         "label": "GPU (UUID)",
@@ -3257,15 +3228,14 @@
         "name": "UUID",
         "options": [],
         "query": {
-          "query": "label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\"}, UUID)",
+          "query": "label_values(DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\"}, UUID)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
-        "type": "query",
-        "allValue": ".*"
+        "type": "query"
       }
     ]
   },

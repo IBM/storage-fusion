@@ -92,20 +92,20 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "green"
+            "fixedColor": "text"
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
               }
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -116,9 +116,15 @@
         "y": 1
       },
       "id": 1,
-      "links": [],
+      "links": [
+        {
+          "title": "SRE Deep Dive →",
+          "url": "/d/gpu-sre-dashboard-v5?${__url_time_range}&var-datasource=${datasource}",
+          "targetBlank": true
+        }
+      ],
       "options": {
-        "colorMode": "background",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
@@ -139,7 +145,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count(DCGM_FI_DEV_GPU_TEMP) or vector(0)",
+          "expr": "count(DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\"})",
           "instant": true,
           "legendFormat": "GPUs",
           "refId": "A"
@@ -173,16 +179,13 @@
                 "value": 60
               },
               {
-                "color": "yellow",
-                "value": 80
-              },
-              {
                 "color": "green",
-                "value": 95
+                "value": 80
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -231,14 +234,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "avg(gpu:health_score:composite) or vector(0)",
+          "expr": "avg(gpu:health_score:composite{UUID=~\"$UUID\"})",
           "instant": true,
           "legendFormat": "Health Score",
           "refId": "A"
         }
       ],
       "pluginVersion": "12.1.0",
-      "description": "Composite health score (0–100) averaged across all GPUs, derived from temperature, ECC errors and throttle pressure. Green ≥80, yellow 60–80, red <60."
+      "description": "Composite health (0–100), average of selected GPUs. Red <60 = GPUHealthScoreCritical; orange 60–80 = GPUHealthScoreHigh; green ≥80."
     },
     {
       "datasource": {
@@ -249,20 +252,20 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "green"
+            "fixedColor": "text"
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
               }
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -275,14 +278,13 @@
       "id": 3,
       "links": [
         {
-          "title": "Open SRE Deep Dive",
-          "url": "/d/gpu-sre-dashboard-v5",
-          "targetBlank": true,
-          "keepTime": true
+          "title": "SRE Deep Dive →",
+          "url": "/d/gpu-sre-dashboard-v5?${__url_time_range}&var-datasource=${datasource}",
+          "targetBlank": true
         }
       ],
       "options": {
-        "colorMode": "background",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
@@ -295,7 +297,7 @@
         },
         "textMode": "auto"
       },
-      "title": "Healthy GPUs (score > 80)",
+      "title": "Healthy GPUs (score ≥ 80)",
       "type": "stat",
       "targets": [
         {
@@ -303,7 +305,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count(gpu:health_score:composite > 80) or vector(0)",
+          "expr": "count(gpu:health_score:composite{UUID=~\"$UUID\"} >= 80) or (count(gpu:health_score:composite{UUID=~\"$UUID\"}) * 0)",
           "instant": true,
           "legendFormat": "Healthy",
           "refId": "A"
@@ -337,7 +339,7 @@
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -374,7 +376,7 @@
         },
         "textMode": "auto"
       },
-      "title": "Warning GPUs (60–80)",
+      "title": "Warning GPUs (60–79)",
       "type": "stat",
       "targets": [
         {
@@ -382,7 +384,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count(gpu:health_score:composite <= 80 and gpu:health_score:composite > 60) or vector(0)",
+          "expr": "count(gpu:health_score:composite{UUID=~\"$UUID\"} >= 60 < 80) or (count(gpu:health_score:composite{UUID=~\"$UUID\"}) * 0)",
           "instant": true,
           "legendFormat": "Warning",
           "refId": "A"
@@ -416,7 +418,7 @@
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -435,7 +437,7 @@
         },
         {
           "title": "GPUPredictiveFailure — firing",
-          "url": "/alerting/list?state=firing&search=GPUPredictiveFailure",
+          "url": "/alerting/list?state=firing&search=GPUPredictiveFailure24h",
           "targetBlank": true
         },
         {
@@ -466,7 +468,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count(gpu:health_score:composite < 60) or vector(0)",
+          "expr": "count(gpu:health_score:composite{UUID=~\"$UUID\"} < 60) or (count(gpu:health_score:composite{UUID=~\"$UUID\"}) * 0)",
           "instant": true,
           "legendFormat": "Critical",
           "refId": "A"
@@ -496,15 +498,11 @@
               {
                 "color": "orange",
                 "value": 1
-              },
-              {
-                "color": "red",
-                "value": 3
               }
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -518,7 +516,7 @@
       "links": [
         {
           "title": "GPUPredictiveFailure — firing",
-          "url": "/alerting/list?state=firing&search=GPUPredictiveFailure",
+          "url": "/alerting/list?state=firing&search=GPUPredictiveFailure24h",
           "targetBlank": true
         },
         {
@@ -547,7 +545,7 @@
         },
         "textMode": "auto"
       },
-      "title": "Predicted Failures 24h",
+      "title": "Failure risk > 30% (24h)",
       "type": "stat",
       "targets": [
         {
@@ -555,14 +553,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count(gpu:failure_probability:24h > 20) or vector(0)",
+          "expr": "count(gpu:failure_probability:24h{UUID=~\"$UUID\"} > 30) or (count(gpu:health_score:composite{UUID=~\"$UUID\"}) * 0)",
           "instant": true,
           "legendFormat": "Predicted Failures",
           "refId": "A"
         }
       ],
       "pluginVersion": "12.1.0",
-      "description": "Number of GPUs where the 24 h failure-probability model exceeds 30%, based on temperature trend, ECC rate and PCIe replay rate."
+      "description": "GPUs with >30% predicted 24h failure probability — the cut-off WorkloadsOnAtRiskGPUNodes uses."
     },
     {
       "datasource": {
@@ -641,7 +639,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "avg(DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\"} / (DCGM_FI_DEV_FB_USED{hostname=~\"$hostname\"} + DCGM_FI_DEV_FB_FREE{hostname=~\"$hostname\"}) * 100)",
+          "expr": "avg(DCGM_FI_DEV_FB_USED{Hostname=~\"$hostname\"} / (DCGM_FI_DEV_FB_USED{Hostname=~\"$hostname\"} + DCGM_FI_DEV_FB_FREE{Hostname=~\"$hostname\"}) * 100)",
           "instant": true,
           "legendFormat": "Avg VRAM %",
           "refId": "A"
@@ -669,7 +667,7 @@
               },
               {
                 "color": "orange",
-                "value": 75
+                "value": 85
               },
               {
                 "color": "red",
@@ -678,13 +676,13 @@
             ]
           },
           "unit": "celsius",
-          "noValue": "N/A"
+          "noValue": "No data"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 4,
-        "w": 3,
+        "w": 5,
         "x": 8,
         "y": 5
       },
@@ -692,7 +690,7 @@
       "links": [
         {
           "title": "GPUOverheating — firing",
-          "url": "/alerting/list?state=firing&search=GPUOverheating",
+          "url": "/alerting/list?state=firing&search=GPUHighTemperatureSustained",
           "targetBlank": true
         }
       ],
@@ -718,216 +716,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "avg(DCGM_FI_DEV_GPU_TEMP) or vector(0)",
+          "expr": "avg(DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\"})",
           "instant": true,
           "legendFormat": "Avg Temp",
           "refId": "A"
         }
       ],
       "pluginVersion": "12.1.0",
-      "description": "Average GPU core-die temperature across all devices. Yellow ≥75 °C, red ≥85 °C."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "green"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "watt",
-          "noValue": "N/A"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 11,
-        "y": 5
-      },
-      "id": 9,
-      "links": [
-        {
-          "title": "GPUPowerAnomaly — firing",
-          "url": "/alerting/list?state=firing&search=GPUPowerAnomaly",
-          "targetBlank": true
-        }
-      ],
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "title": "Avg Power Draw (W)",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "avg(DCGM_FI_DEV_POWER_USAGE) or vector(0)",
-          "instant": true,
-          "legendFormat": "Avg Power",
-          "refId": "A"
-        }
-      ],
-      "pluginVersion": "12.1.0",
-      "description": "Average instantaneous power draw in Watts across all GPUs."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
-          },
-          "decimals": 1,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none",
-          "noValue": "N/A"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 14,
-        "y": 5
-      },
-      "id": 10,
-      "links": [],
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "title": "Total VRAM (GiB)",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE) / 1024 or vector(0)",
-          "instant": true,
-          "legendFormat": "Total VRAM",
-          "refId": "A"
-        }
-      ],
-      "pluginVersion": "12.1.0",
-      "description": "Total installed VRAM (framebuffer) across all GPUs in GiB."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none",
-          "noValue": "N/A"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 17,
-        "y": 5
-      },
-      "id": 11,
-      "links": [],
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "title": "Used VRAM (GiB)",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(DCGM_FI_DEV_FB_USED) / 1024 or vector(0)",
-          "instant": true,
-          "legendFormat": "Used VRAM",
-          "refId": "A"
-        }
-      ],
-      "pluginVersion": "12.1.0",
-      "description": "Total VRAM currently in use across all GPUs in GiB."
+      "description": "Orange ≥85°C matches GPUHighTemperatureSustained (>85°C). Red ≥90°C is near hardware slowdown."
     },
     {
       "datasource": {
@@ -960,8 +756,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 3,
-        "x": 20,
+        "w": 5,
+        "x": 13,
         "y": 5
       },
       "id": 12,
@@ -1433,7 +1229,7 @@
       "links": [
         {
           "title": "Thermal/Power Alerts — firing",
-          "url": "/alerting/list?state=firing&search=GPUOverheating",
+          "url": "/alerting/list?state=firing&search=GPUHighTemperatureSustained",
           "targetBlank": true
         }
       ],
@@ -1796,7 +1592,7 @@
         "showHeader": true,
         "sortBy": [
           {
-            "desc": true,
+            "desc": false,
             "displayName": "Severity"
           }
         ]
@@ -1811,7 +1607,7 @@
                 "alertname",
                 "severity",
                 "category",
-                "hostname",
+                "Hostname",
                 "UUID",
                 "alertstate"
               ]
@@ -1825,9 +1621,9 @@
               "alertname": "Alert",
               "severity": "Severity",
               "category": "Category",
-              "hostname": "Node",
               "UUID": "GPU",
-              "alertstate": "State"
+              "alertstate": "State",
+              "Hostname": "Node"
             }
           }
         }
@@ -1839,7 +1635,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",hostname=~\"$hostname|\"} or ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",category=~\"operator|platform\"}",
+          "expr": "ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",Hostname=~\"$hostname|\"} or ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",category=~\"operator|platform\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -1949,12 +1745,8 @@
                       "value": 60
                     },
                     {
-                      "color": "yellow",
-                      "value": 80
-                    },
-                    {
                       "color": "green",
-                      "value": 95
+                      "value": 80
                     }
                   ]
                 }
@@ -1993,11 +1785,11 @@
                     },
                     {
                       "color": "orange",
-                      "value": 20
+                      "value": 30
                     },
                     {
                       "color": "red",
-                      "value": 50
+                      "value": 70
                     }
                   ]
                 }
@@ -2111,20 +1903,20 @@
               "service": true
             },
             "renameByName": {
-              "hostname": "Node",
               "UUID": "GPU UUID",
               "modelName": "Model",
               "Value #A": "Health Score",
               "Value #B": "Fail Prob 24h %",
-              "Value #C": "VRAM %"
+              "Value #C": "VRAM %",
+              "Hostname": "Node"
             },
             "indexByName": {
-              "hostname": 0,
               "UUID": 1,
               "modelName": 2,
               "Value #A": 3,
               "Value #B": 4,
-              "Value #C": 5
+              "Value #C": 5,
+              "Hostname": 0
             }
           }
         }
@@ -2136,7 +1928,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:health_score:composite",
+          "expr": "gpu:health_score:composite * on(UUID) group_left(Hostname) (max by(UUID, Hostname) (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\"}) * 0 + 1)",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -2147,7 +1939,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:failure_probability:24h",
+          "expr": "gpu:failure_probability:24h * on(UUID) group_left(Hostname) (max by(UUID, Hostname) (DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\"}) * 0 + 1)",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -2221,7 +2013,8 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "None — no GPU affected"
         },
         "overrides": []
       },
@@ -2240,7 +2033,7 @@
         },
         {
           "title": "GPUBurnoutPermanentFailure — firing",
-          "url": "/alerting/list?state=firing&search=GPUBurnoutPermanentFailure",
+          "url": "/alerting/list?state=firing&search=GPUXIDFatalCritical",
           "targetBlank": true
         },
         {
@@ -2265,7 +2058,7 @@
         "showUnfilled": true,
         "valueMode": "color"
       },
-      "title": "Row Remap Failure Flag — All GPUs (0=OK · 1=Failed)",
+      "title": "Row Remap FAILED — affected GPUs only",
       "type": "bargauge",
       "targets": [
         {
@@ -2273,9 +2066,9 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_DEV_ROW_REMAP_FAILURE > bool 0) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "max by(Hostname, device, gpu) (DCGM_FI_DEV_ROW_REMAP_FAILURE{Hostname=~\"$hostname\",UUID=~\"$UUID\"} > 0)",
           "instant": true,
-          "legendFormat": "{{hostname}} {{device}}",
+          "legendFormat": "{{Hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2307,7 +2100,8 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "none",
+          "noValue": "None — no GPU affected"
         },
         "overrides": []
       },
@@ -2321,12 +2115,12 @@
       "links": [
         {
           "title": "GPUUncorrectableRemappedRows — firing",
-          "url": "/alerting/list?state=firing&search=GPUUncorrectableRemappedRows",
+          "url": "/alerting/list?state=firing&search=GPUDBERetiredPages",
           "targetBlank": true
         },
         {
           "title": "GPUMemoryDegradationCritical — firing",
-          "url": "/alerting/list?state=firing&search=GPUMemoryDegradationCritical",
+          "url": "/alerting/list?state=firing&search=GPUDBERetiredPages",
           "targetBlank": true
         },
         {
@@ -2351,7 +2145,7 @@
         "showUnfilled": true,
         "valueMode": "color"
       },
-      "title": "Uncorrectable Remapped Rows — All GPUs",
+      "title": "Uncorrectable Remapped Rows — affected GPUs only",
       "type": "bargauge",
       "targets": [
         {
@@ -2359,14 +2153,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS) or (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"} * 0)",
+          "expr": "max by(Hostname, device, gpu) (DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{Hostname=~\"$hostname\",UUID=~\"$UUID\"} > 0)",
           "instant": true,
-          "legendFormat": "{{hostname}} {{device}}",
+          "legendFormat": "{{Hostname}} {{device}}",
           "refId": "A"
         }
       ],
       "pluginVersion": "12.1.0",
-      "description": "Count of uncorrectable (DBE-triggered) row remaps per GPU. Non-zero values indicate permanent DRAM cell damage."
+      "description": "Only GPUs with ≥1 uncorrectable remapped row (fires GPUDBERetiredPages, critical). Action: schedule GPU replacement."
     },
     {
       "collapsed": false,
@@ -2419,8 +2213,8 @@
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "mode": "gradient",
-                  "type": "color-background"
+                  "type": "gauge",
+                  "mode": "basic"
                 }
               },
               {
@@ -2429,20 +2223,8 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
+                      "color": "blue",
                       "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 50
-                    },
-                    {
-                      "color": "orange",
-                      "value": 80
-                    },
-                    {
-                      "color": "red",
-                      "value": 95
                     }
                   ]
                 }
@@ -2483,19 +2265,35 @@
       "title": "GPU Utilisation by Workload — Namespace · Pod · Device",
       "transformations": [
         {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Hostname",
+                "exported_namespace",
+                "exported_pod",
+                "device",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
           "id": "organize",
           "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "UUID": true,
-              "gpu": true,
-              "instance": true,
-              "job": true,
-              "pci_bus_id": true
-            },
             "renameByName": {
+              "Hostname": "Node",
+              "exported_namespace": "Namespace",
+              "exported_pod": "Pod",
+              "device": "Device",
               "Value": "GPU Util %"
+            },
+            "indexByName": {
+              "Hostname": 0,
+              "exported_namespace": 1,
+              "exported_pod": 2,
+              "device": 3,
+              "Value": 4
             }
           }
         }
@@ -2507,7 +2305,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_GPU_TEMP{pod!=\"\"}",
+          "expr": "DCGM_FI_DEV_GPU_UTIL{exported_pod!=\"\",Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -2515,7 +2313,7 @@
         }
       ],
       "pluginVersion": "12.1.0",
-      "description": "Workload breakdown showing GPU compute utilisation per namespace and pod, attributed via DCGM container labels."
+      "description": "GPU compute utilisation per consuming pod (DCGM exported_pod). Informational — high utilisation is not a fault."
     },
     {
       "collapsed": false,
@@ -2597,8 +2395,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
-          "legendFormat": "{{hostname}} {{device}}",
+          "expr": "DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "legendFormat": "{{Hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2641,7 +2439,7 @@
               },
               {
                 "color": "orange",
-                "value": 80
+                "value": 85
               },
               {
                 "color": "red",
@@ -2663,7 +2461,7 @@
       "links": [
         {
           "title": "GPUOverheating — firing",
-          "url": "/alerting/list?state=firing&search=GPUOverheating",
+          "url": "/alerting/list?state=firing&search=GPUHighTemperatureSustained",
           "targetBlank": true
         }
       ],
@@ -2690,8 +2488,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
-          "legendFormat": "{{hostname}} {{device}}",
+          "expr": "DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "legendFormat": "{{Hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2745,7 +2543,7 @@
       "links": [
         {
           "title": "GPUPowerAnomaly — firing",
-          "url": "/alerting/list?state=firing&search=GPUPowerAnomaly",
+          "url": "/alerting/list?state=firing&search=GPUPowerFluctuation",
           "targetBlank": true
         }
       ],
@@ -2772,8 +2570,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "DCGM_FI_DEV_POWER_USAGE{hostname=~\"$hostname\",UUID=~\"$UUID\"}",
-          "legendFormat": "{{hostname}} {{device}}",
+          "expr": "DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$hostname\",UUID=~\"$UUID\"}",
+          "legendFormat": "{{Hostname}} {{device}}",
           "refId": "A"
         }
       ],
@@ -2821,12 +2619,8 @@
                 "value": 60
               },
               {
-                "color": "yellow",
-                "value": 80
-              },
-              {
                 "color": "green",
-                "value": 95
+                "value": 80
               }
             ]
           },
@@ -2876,8 +2670,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "gpu:health_score:composite{UUID=~\"$UUID\",hostname=~\"$hostname\"}",
-          "legendFormat": "{{hostname}} {{UUID}}",
+          "expr": "gpu:health_score:composite{UUID=~\"$UUID\"}",
+          "legendFormat": "{{UUID}}",
           "refId": "A"
         }
       ],
@@ -2915,17 +2709,13 @@
                 "value": null
               },
               {
-                "color": "orange",
-                "value": 1
-              },
-              {
                 "color": "red",
-                "value": 5
+                "value": 1
               }
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -2970,14 +2760,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(gpu:impact:pod_count_on_failed_nodes) or vector(0)",
+          "expr": "sum(gpu:impact:pod_count_on_failed_nodes)",
           "instant": true,
           "legendFormat": "Affected Pods",
           "refId": "A"
         }
       ],
       "pluginVersion": "12.1.0",
-      "description": "Pods currently scheduled on GPU nodes where the health score has dropped to critical (< 60)."
+      "description": "Pods on nodes with a failed row remap. >0 fires WorkloadsOnFailedGPUNodes (critical). Action: cordon/drain the node."
     },
     {
       "datasource": {
@@ -3000,15 +2790,11 @@
               {
                 "color": "orange",
                 "value": 1
-              },
-              {
-                "color": "red",
-                "value": 10
               }
             ]
           },
           "unit": "none",
-          "noValue": "0"
+          "noValue": "No data"
         },
         "overrides": []
       },
@@ -3046,7 +2832,7 @@
         "textMode": "auto"
       },
       "title": "Pods on At-Risk GPU Nodes (>30% 24h failure prob)",
-      "description": "Pod count on GPU nodes where the composite 24h failure probability exceeds 30%. Powered by recording rule R6: gpu:impact:pod_count_on_at_risk_nodes. These workloads are at proactive-migration risk. See WorkloadsOnAtRiskGPUNodes (F2).",
+      "description": "Pods on nodes with a GPU above 30% 24h failure probability. >0 fires WorkloadsOnAtRiskGPUNodes (warning).",
       "type": "stat",
       "targets": [
         {
@@ -3054,7 +2840,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(gpu:impact:pod_count_on_at_risk_nodes) or vector(0)",
+          "expr": "sum(gpu:impact:pod_count_on_at_risk_nodes)",
           "instant": true,
           "legendFormat": "At-Risk Pods",
           "refId": "A"
@@ -3082,11 +2868,11 @@
               },
               {
                 "color": "orange",
-                "value": 0.9
+                "value": 0.01
               },
               {
                 "color": "green",
-                "value": 1
+                "value": 0.9
               }
             ]
           },
@@ -3138,60 +2924,63 @@
         }
       ],
       "pluginVersion": "12.1.0",
-      "description": "Proportion of DCGM scrape attempts that returned valid data in the last 5 minutes."
+      "description": "Share of DCGM exporter targets scraping. <90% fires GPUDCGMScrapeDegraded."
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 70
-      },
-      "id": 200,
-      "title": "╌ Fusion Gap Analysis — Enhanced Indicators vs NVIDIA Out-of-Box",
-      "type": "row"
-    },
-    {
+      "id": 40,
+      "type": "stat",
+      "title": "GPU Scoring & Alert Rules",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
+      },
+      "description": "Are the gpu-alert-rules recording rules evaluating? NOT LOADED = health score, failure probability, impact counts and every platform=gpu-monitoring alert are not computed, so a 0 or empty value elsewhere does NOT mean healthy. Fix: oc apply -f gpu-rules.yaml.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "unit": "none",
+          "noValue": "0",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "NOT LOADED",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Active",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "green",
                 "value": 1
-              },
-              {
-                "color": "red",
-                "value": 5
               }
             ]
-          },
-          "unit": "none",
-          "noValue": "0"
+          }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 71
-      },
-      "id": 201,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -3206,293 +2995,19 @@
         },
         "textMode": "auto"
       },
-      "title": "Custom Field Alerts Firing (ECC/XID/PCIe/Memory/Thermal)",
-      "description": "Alerts firing that depend on custom DCGM fields: ECC, XID, PCIe, row-remap, memory, and thermal signals.",
-      "type": "stat",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count(ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",category=~\"ecc|xid|memory|pcie|thermal|burnout\"}) or vector(0)",
-          "instant": true,
-          "legendFormat": "Fusion-Enhanced Firing",
-          "refId": "A"
-        }
-      ],
-      "links": [
-        {
-          "title": "View Fusion-enhanced firing alerts",
-          "url": "/alerting/list?state=firing&search=fusion_enhanced%3Dtrue",
-          "targetBlank": true
-        }
-      ],
-      "pluginVersion": "12.1.0"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "none",
-          "noValue": "0"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 71
-      },
-      "id": 202,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "title": "Platform & Operator Alerts Firing",
-      "description": "Alerts firing that use default DCGM fields or Kubernetes state: platform liveness, node, and operator rules.",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "count(ALERTS{alertstate=\"firing\",platform=\"gpu-monitoring\",category=~\"platform|node|operator|power\"}) or vector(0)",
-          "instant": true,
-          "legendFormat": "Baseline Firing",
-          "refId": "A"
-        }
-      ],
-      "links": [
-        {
-          "title": "View baseline firing alerts",
-          "url": "/alerting/list?state=firing&search=fusion_enhanced%3Dfalse",
-          "targetBlank": true
-        }
-      ],
-      "pluginVersion": "12.1.0"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0.01
-              }
-            ]
-          },
-          "unit": "none",
-          "noValue": "—"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "alertstate"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "firing": {
-                        "color": "red",
-                        "index": 0,
-                        "text": "🔴 FIRING"
-                      },
-                      "pending": {
-                        "color": "yellow",
-                        "index": 1,
-                        "text": "🟡 PENDING"
-                      },
-                      "inactive": {
-                        "color": "green",
-                        "index": 2,
-                        "text": "✅ OK"
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "custom.width",
-                "value": 110
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "severity"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "critical": {
-                        "color": "red",
-                        "index": 0,
-                        "text": "critical"
-                      },
-                      "warning": {
-                        "color": "orange",
-                        "index": 1,
-                        "text": "warning"
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "custom.width",
-                "value": 90
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 75
-      },
-      "id": 203,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "fusion_enhanced"
-          }
-        ]
-      },
-      "title": "All GPU Alerts — Live State",
-      "description": "Every GPU alert rule with its live state.",
-      "type": "table",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "ALERTS{platform=\"gpu-monitoring\"}",
-          "format": "table",
+          "expr": "count(gpu:platform:heartbeat) or vector(0)",
           "instant": true,
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "transformations": [
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "alertname",
-                "severity",
-                "category",
-                "alertstate",
-                "hostname",
-                "UUID"
-              ]
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "renameByName": {
-              "alertname": "Alert",
-              "severity": "Severity",
-              "category": "Category",
-              "alertstate": "State",
-              "hostname": "Node",
-              "UUID": "GPU"
-            }
-          }
-        }
-      ],
-      "links": [
-        {
-          "title": "View all firing GPU alerts",
-          "url": "/alerting/list?state=firing&search=platform%3Dgpu-monitoring",
-          "targetBlank": true
-        },
-        {
-          "title": "All GPU alert rules",
-          "url": "/alerting/list?search=gpu-alert-rules",
-          "targetBlank": true
-        }
-      ],
+      "links": [],
       "pluginVersion": "12.1.0"
     }
   ],
@@ -3508,24 +3023,7 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": false,
-          "text": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com",
-          "value": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com"
-        },
-        "description": "OCP Console base URL — set automatically by deploy.sh",
-        "hide": 2,
-        "label": "OCP Console",
-        "name": "ocp_console",
-        "query": "https://grafana-a-route-grafana.apps.f80l034.fusion.tadn.ibm.com",
-        "skipUrlSync": true,
-        "type": "constant"
-      },
-      {
-        "current": {
-          "text": "Prometheus",
-          "value": "datasource"
-        },
+        "current": {},
         "hide": 0,
         "includeAll": false,
         "label": "Datasource",
@@ -3543,7 +3041,7 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP, hostname)",
+        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP, Hostname)",
         "hide": 0,
         "includeAll": true,
         "allValue": ".*",
@@ -3552,7 +3050,7 @@
         "name": "hostname",
         "options": [],
         "query": {
-          "query": "label_values(DCGM_FI_DEV_GPU_TEMP, hostname)",
+          "query": "label_values(DCGM_FI_DEV_GPU_TEMP, Hostname)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -3566,16 +3064,15 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\"}, UUID)",
+        "definition": "label_values(DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\"}, UUID)",
         "hide": 0,
         "includeAll": true,
-        "allValue": ".*",
         "label": "GPU (UUID)",
         "multi": false,
         "name": "UUID",
         "options": [],
         "query": {
-          "query": "label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\"$hostname\"}, UUID)",
+          "query": "label_values(DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$hostname\"}, UUID)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
