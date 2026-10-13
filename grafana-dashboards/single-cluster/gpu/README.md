@@ -18,8 +18,11 @@ Namespace: openshift-user-workload-monitoring / openshift-monitoring
         │
         ▼
 Grafana (Local OpenShift Instance)
-        ├── GPU Cluster Overview (gpu-cluster-overview-cr.yaml / .json)
-        └── GPU SRE Deep Dive (gpu-sre-deep-dive-cr.yaml / .json)
+        ├── GPU Cluster Overview (gpu-grafana-cluster-overview.json)
+        └── GPU SRE Deep Dive (gpu-grafana-sre-dashboard.json)
+
+Prometheus rules (recording rules + alerts; dashboard thresholds mirror them):
+  config/prometheus/gpu-rules.yaml in isf-compute-operator → PrometheusRule gpu-alert-rules
 ```
 
 ---
@@ -29,7 +32,7 @@ Grafana (Local OpenShift Instance)
 ### 1. GPU Cluster Overview
 Provides high-level health summaries, predictive failure risk, active alerts, workload attribution (blast radius), and time-series trends across all GPU nodes in the cluster.
 
-**Files:** `gpu-cluster-overview-cr.yaml` (Grafana Operator) / `gpu-grafana-cluster-overview.json` (UI Import)  
+**File:** `gpu-grafana-cluster-overview.json`  
 **Dashboard UID:** `gpu-cluster-overview-v8`
 
 #### Fleet Health & Alert Summary
@@ -43,7 +46,7 @@ Provides high-level health summaries, predictive failure risk, active alerts, wo
 ### 2. GPU SRE Deep Dive
 Provides granular per-GPU forensic telemetry: power instability (15-min rolling standard deviation), thermal throttle events, Tensor/GR engine activity, VRAM utilization, ECC memory row remapping, and PCIe replay counters.
 
-**Files:** `gpu-sre-deep-dive-cr.yaml` (Grafana Operator) / `gpu-grafana-sre-dashboard.json` (UI Import)  
+**File:** `gpu-grafana-sre-dashboard.json`  
 **Dashboard UID:** `gpu-sre-dashboard-v5`
 
 #### GPU Utilisation & VRAM Telemetry
@@ -57,6 +60,23 @@ Provides granular per-GPU forensic telemetry: power instability (15-min rolling 
 
 #### Predictive Analysis & Composite Health
 ![GPU SRE Deep Dive — Predictive Analysis & Composite Health](screenshots/gpu-sre-predictive.png)
+
+> The screenshots above predate the dashboard-advisor refactor; current panel names and layout are in [DASHBOARD-PANEL-GUIDE.md](DASHBOARD-PANEL-GUIDE.md).
+
+---
+
+## Design (dashboard-advisor)
+
+Both dashboards follow the Practical Dashboards method (dashboard-advisor):
+
+| Principle | Applied as |
+|---|---|
+| Status → exceptions → detail | Overview: health/alert tiles, then exception tables, then trends. SRE Deep Dive: score gauges, then raw telemetry. |
+| Valence where there is an action | Every stat/gauge/bar gauge has thresholds, or is explicitly neutral (counts, clocks). |
+| Thresholds match alerts | Panel colours change at the same values as the alert rules (health 60/80, temperature 85 °C, failure probability 70 %, PCIe replay 5/s, power stddev 50 W). |
+| Exceptions only | Remap-failure panels list only affected GPUs; when healthy they say *None — no GPU affected*. |
+| Honest no-data | Metrics the exporter does not export show *Not collected*, never 0. |
+| Drill-down | Tiles link to the owning alert rule or the SRE Deep Dive, keeping time range and variables. |
 
 ---
 
@@ -114,28 +134,7 @@ Ensure either:
 
 ### Step 1: Deploy Dashboards
 
-Choose **Option A** (Grafana Operator CR) or **Option B** (Manual JSON Import).
-
-#### Option A: Deploy via Grafana Operator CR (Recommended)
-
-1. **Verify Grafana instance selector label:**
-   ```bash
-   oc get grafana -n grafana -o jsonpath='{.items[0].metadata.labels}'
-   ```
-   *(Ensure `dashboards: grafana-a` matches `spec.instanceSelector.matchLabels` in the CR files).*
-
-2. **Apply Custom Resources:**
-   ```bash
-   oc apply -f gpu-cluster-overview-cr.yaml
-   oc apply -f gpu-sre-deep-dive-cr.yaml
-   ```
-
-3. **Verify dashboard creation:**
-   ```bash
-   oc get grafanadashboard -n grafana
-   ```
-
-#### Option B: Deploy via Grafana API (JSON — no Grafana Operator needed)
+#### Deploy via Grafana API (JSON — no Grafana Operator needed)
 
 Use this method when you want to push the JSON dashboards directly to a running Grafana instance via its REST API. This is the **recommended path** when deploying to an existing Grafana and you do not want to manage Kubernetes CRs.
 
@@ -317,15 +316,38 @@ Panels should now show live data. Refresh the dashboard in your browser.
 | Datasource health returns `connection refused` | Wrong Thanos URL or port | Use `9091` not `9090`; confirm `thanos-querier` service exists in `openshift-monitoring` |
 | Panels show data for some nodes only | Some GPU nodes have DCGM pods in `Init` state (driver not loaded) | Check `nvidia-driver-daemonset` pods — ImagePullBackOff = missing driver image |
 
-### Step 2: Configure OpenShift Console Deep-Links (Optional)
+### Step 2: Apply the Prometheus rules
 
-Both dashboards support direct links (↗) to OpenShift node and pod console pages:
+The dashboards read `gpu:health_score:composite`, `gpu:failure_probability:24h` and the `GPU*` alerts. Apply `config/prometheus/gpu-rules.yaml` in `isf-compute-operator` first, otherwise the health and alert panels are empty:
 
-- **Via CR File:** Update `"query"` and `"current.value"` for the `ocp_console` variable in `gpu-cluster-overview-cr.yaml` and `gpu-sre-deep-dive-cr.yaml` with your cluster URL:
-  ```json
-  "query": "https://console-openshift-console.apps.<your-cluster-domain>"
-  ```
-- **Via Grafana UI:** Dashboard **Settings** → **Variables** → `ocp_console` → Set value → **Save dashboard**.
+```bash
+oc apply -f config/prometheus/gpu-rules.yaml   # PrometheusRule in openshift-monitoring
+```
+
+### Step 3: Test the dashboards end to end
+
+Every panel was tested against a live Grafana; the results are in [PANEL-TEST-REPORT.md](PANEL-TEST-REPORT.md). To repeat the test after changing a dashboard or rule, check each item below for every panel, with the variables set to *All* and then to one node / one GPU:
+
+| # | Check | How |
+|---|---|---|
+| 1 | Data | Query each panel target through Grafana's datasource API (`POST /api/ds/query`, the path the browser uses) with real `$hostname` / `$UUID` values. It must return without a PromQL error. |
+| 2 | State | Map the last value through the panel thresholds and confirm the colour (green / orange / red) is the expected one. |
+| 3 | Deployed | `GET /api/dashboards/uid/<uid>` and confirm each panel equals the JSON file in this directory. |
+| 4 | Links | Every `/d/<uid>` drill-down must target an existing dashboard; alert links must name an existing alert rule. |
+| 5 | Valence | Stat / gauge / bar-gauge panels have thresholds or are explicitly neutral, have a description and an explicit no-data text; no pie / donut panels. |
+| 6 | Alignment | Panel thresholds equal the numbers in the alert rule the panel links to. |
+| 7 | Variables | `$hostname` and `$UUID` return values. |
+
+Example (check 1, one panel query):
+
+```bash
+curl -sk -u <USER>:<PASSWORD> -X POST -H "Content-Type: application/json" \
+  https://<GRAFANA_URL>/api/ds/query \
+  -d '{"queries":[{"refId":"A","datasource":{"type":"prometheus","uid":"prometheus"},
+       "expr":"avg(gpu:health_score:composite)","instant":true}],"from":"now-3h","to":"now"}'
+```
+
+Panels that legitimately return no data (exception-only panels while healthy, and metrics the exporter does not export) are expected to be empty and are listed in the report.
 
 ---
 
@@ -334,9 +356,8 @@ Both dashboards support direct links (↗) to OpenShift node and pod console pag
 | Variable | Type | Description |
 |---|---|---|
 | `datasource` | Datasource | Prometheus / Thanos Querier datasource. |
-| `hostname` | Query | Filters by GPU worker node hostname (`label_values(DCGM_FI_DEV_GPU_TEMP, hostname)`). |
-| `UUID` | Query | Filters by specific GPU UUID on the selected host (`label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~"$hostname"}, UUID)`). |
-| `ocp_console` | Constant | Base URL of the OpenShift Web Console for deep links. |
+| `hostname` | Query | Filters by GPU worker node (`label_values(DCGM_FI_DEV_GPU_TEMP, Hostname)`). DCGM exports the label as `Hostname`. |
+| `UUID` | Query | Filters by specific GPU UUID on the selected host (`label_values(DCGM_FI_DEV_GPU_TEMP{Hostname=~"$hostname"}, UUID)`). |
 
 ---
 
@@ -348,8 +369,9 @@ Both dashboards support direct links (↗) to OpenShift node and pod console pag
 | `DCGM_FI_DEV_GPU_TEMP` | GPU core die temperature in Celsius (°C). |
 | `DCGM_FI_DEV_POWER_USAGE` | Instantaneous power consumption in Watts (W). |
 | `DCGM_FI_DEV_FB_USED` / `DCGM_FI_DEV_FB_FREE` | VRAM Framebuffer memory used / free in MiB. |
-| `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL` | Double-bit ECC uncorrectable errors (volatile). |
-| `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL` | Single-bit ECC correctable errors (volatile). |
+| `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL` | Double-bit ECC uncorrectable errors (volatile). Optional — *Not collected* if the exporter omits it. |
+| `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL` | Single-bit ECC correctable errors (volatile). Optional, as above. |
+| `DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS` / `ROW_REMAP_FAILURE` | Permanent memory damage / exhausted spare rows — exception-only panels. |
 | `DCGM_FI_DEV_PCIE_REPLAY_COUNTER` | PCIe replay counter for tracking bus errors and degraded links. |
 | `DCGM_FI_PROF_GR_ENGINE_ACTIVE` | Graphics / compute engine active ratio (0–1). |
 | `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` | Tensor Core pipeline utilization ratio (0–1). |

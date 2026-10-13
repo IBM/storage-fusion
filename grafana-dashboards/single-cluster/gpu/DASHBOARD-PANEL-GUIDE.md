@@ -1,244 +1,193 @@
-# GPU Grafana Dashboard — Panel Guide
+# GPU Grafana Dashboards — Panel Guide
 
-> **Data Source:** All panels query **Thanos Querier** (`https://thanos-querier.openshift-monitoring.svc.cluster.local:9091`) which federates metrics from both `openshift-monitoring` (cluster Prometheus) and `openshift-user-workload-monitoring`.
->
-> **How data flows:** `nvidia-dcgm-exporter` DaemonSet runs on every GPU node → scrapes NVIDIA DCGM counters → Prometheus scrapes the exporter → Thanos aggregates across namespaces → Grafana queries via the `prometheus` datasource (UID: `prometheus`).
->
-> **Filters:** Most panels respect the `$hostname` (node) and `$UUID` (GPU device) drop-down variables at the top of each dashboard.
+> Generated from the dashboard JSON by the dashboard-advisor refactor. Every panel below was tested end to end; results are in [`PANEL-TEST-REPORT.md`](PANEL-TEST-REPORT.md).
 
----
+**Data path:** `nvidia-dcgm-exporter` → Prometheus → Thanos Querier → Grafana datasource `prometheus` (UID `prometheus`).  
+**Filters:** `$hostname` (node, label `Hostname`) and `$UUID` (GPU). Both default to *All*.  
+**Labels:** DCGM exports the node as `Hostname`; the GPU's consumer pod is in `exported_pod` / `exported_namespace`.
 
-## Dashboard 1 — GPU Cluster Overview
-**URL:** `/d/gpu-cluster-overview-v8/gpu-cluster-overview`
-**Purpose:** Fleet-wide health at a glance — one row per section, covering health scores, alerts, per-GPU matrix, and workload impact.
+## Design rules applied (dashboard-advisor method)
 
----
-
-### Section: GPU Health Summary
-
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Total GPU Count** | How many GPU devices DCGM is reporting | `count(DCGM_FI_DEV_GPU_TEMP)` — counts every time-series the exporter publishes |
-| **Avg GPU Health Score** | 0–100 composite health averaged across all GPUs | `avg(gpu:health_score:composite)` — recording rule combining temp deviation + ECC rate + throttle pressure |
-| **Healthy GPUs (score > 80)** | GPUs operating normally | `count(gpu:health_score:composite > 80)` |
-| **Warning GPUs (60–80)** | GPUs in degraded-but-running state | `count(gpu:health_score:composite <= 80 and gpu:health_score:composite > 60)` |
-| **Critical GPUs (< 60)** | GPUs requiring immediate action | `count(gpu:health_score:composite < 60)` |
-| **Predicted Failures 24h** | GPUs where failure probability model exceeds 20% | `count(gpu:failure_probability:24h > 20)` — recording rule from temp trend + ECC rate + PCIe replays |
-| **VRAM Utilisation** | Avg framebuffer memory used % across all GPUs | `avg(DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE) * 100)` |
-| **Avg GPU Temp (°C)** | Fleet-wide average GPU die temperature | `avg(DCGM_FI_DEV_GPU_TEMP)` |
-| **Avg Power Draw (W)** | Fleet-wide average instantaneous power | `avg(DCGM_FI_DEV_POWER_USAGE)` |
-| **Total VRAM (GiB)** | Total installed VRAM across all GPUs | `sum(DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE) / 1024` — converts MiB → GiB |
-| **Used VRAM (GiB)** | Total VRAM currently allocated | `sum(DCGM_FI_DEV_FB_USED) / 1024` |
-| **DCGM Targets Up** | How many exporter pods Prometheus is scraping | `count(up{job="nvidia-dcgm-exporter"} == 1)` |
+| Rule | How it shows up |
+|---|---|
+| Layers: status → exceptions → detail | Overview: health + alert tiles on top, exception tables next, trends last. SRE: score gauges first, raw telemetry below. |
+| Valence only where there is an action | Every stat/gauge has threshold steps matching `gpu-rules.yaml`, or is explicitly *neutral* (counts, clocks). |
+| Thresholds = alert rules | Panel colours flip at the same numbers as the alerts they link to (e.g. health 60 / 80, temperature 85 °C, predictive 70 %). |
+| Exceptions only | Hardware-fault bar gauges list affected GPUs only and say *None — no GPU affected* when healthy. |
+| No fake zeros | Metrics this exporter does not export show **Not collected**, never 0. |
+| Drill-down | Valence tiles link to the owning alert rule or the SRE dashboard, keeping time range and variables. |
+| No pie / donut / dual axis | Bar gauges, tables, timeseries and gauges only. |
 
 ---
 
-### Section: Alert Summary — GPU
+## GPU Cluster Overview
 
-> All alert panels filter on `ALERTS{platform="gpu-monitoring"}` — a label set on every GPU PrometheusRule. `alertstate="firing"` means the rule condition is currently true.
+**UID:** `gpu-cluster-overview-v8` · **Display type:** Monitoring / fleet · **Question:** Is every GPU healthy right now, and if not, which ones and which workloads are hit?
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Total Firing GPU Alerts** | All active GPU alerts | `count(ALERTS{alertstate="firing", platform="gpu-monitoring"})` |
-| **Critical Alerts** | `severity="critical"` firing rules | `count(ALERTS{alertstate="firing", platform="gpu-monitoring", severity="critical"})` |
-| **Warning Alerts** | `severity="warning"` firing rules | `count(ALERTS{alertstate="firing", platform="gpu-monitoring", severity="warning"})` |
-| **Node Alerts** | Node-scoped alerts (DCGM darkout, unreachable) | `count(ALERTS{..., category="node"})` |
-| **Hardware Alerts** | Device-level faults (XID, row-remap, ECC DBE) | `count(ALERTS{..., category=~"hardware|burnout|xid|ecc"})` |
-| **Thermal / Power Alerts** | Overheating, throttle, power anomaly | `count(ALERTS{..., category=~"thermal|power|pcie"})` |
-| **Memory Alerts** | ECC double-bit, row-remap failure, VRAM degradation | `count(ALERTS{..., category="memory"})` |
-| **Predictive Alerts** | 24h failure prob exceeded, low health score | `count(ALERTS{..., category="predictive"})` |
-| **Impact Alerts** | Pods running on failed/at-risk GPU nodes | `count(ALERTS{..., category="impact_analysis"})` |
-| **All Firing GPU Alerts** (table) | Live list of every firing rule | `ALERTS{alertstate="firing", platform="gpu-monitoring", hostname=~"$hostname|"}` |
+### GPU Health Summary
 
----
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 1 | **Total GPU Count** — Total number of NVIDIA GPUs detected across all nodes via DCGM Exporter. | stat | neutral (no action) | `count(DCGM_FI_DEV_GPU_TEMP{Hostname=~"$hostname"})` |
+| 2 | **Avg GPU Health Score** — Composite health (0–100), average of selected GPUs. Red <60 = GPUHealthScoreCritical; orange 60–80 = GPUHealthScoreHigh; green ≥80. | gauge | red < 60, orange ≥ 60, green ≥ 80 | `avg(gpu:health_score:composite{UUID=~"$UUID"})` |
+| 3 | **Healthy GPUs (score ≥ 80)** — GPUs with a composite health score above 80 — operating normally. | stat | neutral (no action) | `count(gpu:health_score:composite{UUID=~"$UUID"} >= 80) or (count(gpu:health_score:composite{UUID=~"$UUID"}) * 0)` |
+| 4 | **Warning GPUs (60–79)** — GPUs in the warning band (60–80). Investigate temperature, ECC or clock throttle. | stat | green < 1, orange ≥ 1 | `count(gpu:health_score:composite{UUID=~"$UUID"} >= 60 < 80) or (count(gpu:health_score:composite{UUID=~"$UUID"}) * 0)` |
+| 5 | **Critical GPUs (< 60)** — GPUs below health score 60 or with active predictive-failure alerts — require immediate attention. | stat | green < 1, red ≥ 1 | `count(gpu:health_score:composite{UUID=~"$UUID"} < 60) or (count(gpu:health_score:composite{UUID=~"$UUID"}) * 0)` |
+| 6 | **Failure risk > 30% (24h)** — GPUs with >30% predicted 24h failure probability — the cut-off WorkloadsOnAtRiskGPUNodes uses. | stat | green < 1, orange ≥ 1 | `count(gpu:failure_probability:24h{UUID=~"$UUID"} > 30) or (count(gpu:health_score:composite{UUID=~"$UUID"}) * 0)` |
+| 7 | **VRAM Utilisation** — Avg GPU framebuffer memory used as % of total. Orange ≥80%, red ≥95%. High VRAM pressure causes workload OOM kills. | stat | green < 80, orange ≥ 80, red ≥ 95 | `avg(DCGM_FI_DEV_FB_USED{Hostname=~"$hostname"} / (DCGM_FI_DEV_FB_USED{Hostname=~"$hostname"} + DCGM_FI_DEV_FB_FREE{Hostname=~"$hostname"}) * 100)` |
+| 8 | **Avg GPU Temp (°C)** — Orange ≥85°C matches GPUHighTemperatureSustained (>85°C). Red ≥90°C is near hardware slowdown. | stat | green < 85, orange ≥ 85, red ≥ 90 | `avg(DCGM_FI_DEV_GPU_TEMP{Hostname=~"$hostname"})` |
+| 12 | **DCGM Targets Up** — Number of DCGM Exporter targets currently being scraped successfully by Prometheus. | stat | red < 1, green ≥ 1 | `count(up{job="nvidia-dcgm-exporter"} == 1) or vector(0)` |
 
-### Section: Per-GPU Health Matrix
+### Alert Summary — GPU
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Per-GPU Health Score, Failure Probability & VRAM** (table) | One row per GPU with 3 key metrics; click node name → SRE Deep Dive | `gpu:health_score:composite` + `gpu:failure_probability:24h` + `DCGM_FI_DEV_FB_USED / (used+free) * 100` — joined by UUID |
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 107 | **Total Firing GPU Alerts** — Total number of GPU alert rules currently in the Firing state. | stat | green < 1, orange ≥ 1, red ≥ 3 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring"}) or vector(0)` |
+| 13 | **Critical Alerts** — Alerts at Severity=Critical — require immediate action. | stat | green < 1, red ≥ 1 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring",severity="critical"}) or vector(0)` |
+| 14 | **Warning Alerts** — Alerts at Severity=Warning — should be investigated promptly. | stat | green < 1, orange ≥ 1 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring",severity="warning"}) or vector(0)` |
+| 15 | **Node Alerts** — Alerts scoped to a GPU worker node (e.g. node unreachable, DCGM darkout). | stat | green < 1, red ≥ 1 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring",category="node"}) or vector(0)` |
+| 16 | **Hardware Alerts** — Alerts scoped to a specific GPU device (e.g. row-remap failure, XID errors). | stat | green < 1, red ≥ 1 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring",category=~"hardware\|burnout\|xid\|ecc"}) or vector(0)` |
+| 17 | **Thermal / Power Alerts** — Thermal and power alerts: overheating, sustained throttling, power anomaly. | stat | green < 1, orange ≥ 1 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring",category=~"thermal\|power\|pcie"}) or vector(0)` |
+| 18 | **Memory Alerts** — Memory alerts: ECC double-bit errors, row-remap failures, VRAM degradation. | stat | green < 1, orange ≥ 1 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring",category="memory"}) or vector(0)` |
+| 19 | **Predictive Alerts** — Predictive alerts: 24 h failure probability exceeded, composite health score low. | stat | green < 1, orange ≥ 1 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring",category="predictive"}) or vector(0)` |
+| 20 | **Impact Alerts** — Workload-impact alerts: pods running on failed or at-risk GPU nodes. | stat | green < 1, red ≥ 1 | `count(ALERTS{alertstate="firing",platform="gpu-monitoring",category="impact_analysis"}) or vector(0)` |
+| 21 | **All Firing GPU Alerts** — Live table of all firing GPU alerts with rule name, severity, and labels. | table | neutral (no action) | `ALERTS{alertstate="firing",platform="gpu-monitoring",Hostname=~"$hostname\|"} or ALERTS{alertstate="firing",platform="gpu-monitoring",category=~"ope...` |
 
----
+### Per-GPU Health Matrix
 
-### Section: Hardware Failure Indicators
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 22 | **Per-GPU Health Score, Failure Probability & VRAM** — Click any Node name (blue) to open the SRE Deep Dive dashboard scoped to that GPU. Sorted worst health first. | table | neutral (no action) | `gpu:health_score:composite * on(UUID) group_left(Hostname) (max by(UUID, Hostname) (DCGM_FI_DEV_GPU_TEMP{Hostname=~"$hostname"}) * 0 + 1)` |
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Row Remap Failure Flag** | Binary 0/1 per GPU — 1 = uncorrectable row remapped | `DCGM_FI_DEV_ROW_REMAP_FAILURE > bool 0` — `bool` converts threshold to 0/1 |
-| **Uncorrectable Remapped Rows** | Count of permanently damaged DRAM rows | `DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS` — non-zero means permanent cell damage |
+### Hardware Failure Indicators
 
----
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 23 | **Row Remap FAILED — affected GPUs only** — Per-GPU row-remap failure flag. 1 = at least one uncorrectable row has been remapped — GPU may need replacement. | bargauge | green < 1, red ≥ 1 | `max by(Hostname, device, gpu) (DCGM_FI_DEV_ROW_REMAP_FAILURE{Hostname=~"$hostname",UUID=~"$UUID"} > 0)` |
+| 24 | **Uncorrectable Remapped Rows — affected GPUs only** — Only GPUs with ≥1 uncorrectable remapped row (fires GPUDBERetiredPages, critical). Action: schedule GPU replacement. | bargauge | green < 1, red ≥ 1 | `max by(Hostname, device, gpu) (DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{Hostname=~"$hostname",UUID=~"$UUID"} > 0)` |
 
-### Section: Workload Attribution
+### Workload Attribution — GPU Utilisation by Pod
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **GPU Utilisation by Workload** (table) | Per namespace/pod GPU utilisation via DCGM container labels | `DCGM_FI_DEV_GPU_TEMP{pod!=""}` — filters to pods with a pod label, showing workload attribution |
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 25 | **GPU Utilisation by Workload — Namespace · Pod · Device** — GPU compute utilisation per consuming pod (DCGM exported_pod). Informational — high utilisation is not a fault. | table | neutral (no action) | `DCGM_FI_DEV_GPU_UTIL{exported_pod!="",Hostname=~"$hostname",UUID=~"$UUID"}` |
 
----
+### Time-Series Trends
 
-### Section: Time-Series Trends
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 26 | **GPU Utilisation — All Devices** — GPU compute utilisation (%) time-series for every device. Hover for per-GPU breakdown. | timeseries | neutral (no action) | `DCGM_FI_DEV_GPU_UTIL{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 27 | **GPU Temperature — All Devices** — GPU core-die temperature (°C) per device over time. Sustained values above 85 °C trigger GPUOverheating alert. | timeseries | green < 85, orange ≥ 85, red ≥ 90 | `DCGM_FI_DEV_GPU_TEMP{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 28 | **Power Draw — All Devices** — Instantaneous power draw (W) per device. Spikes or sustained drops may indicate power anomalies. | timeseries | neutral (no action) | `DCGM_FI_DEV_POWER_USAGE{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 29 | **Composite Health Score Trend** — Composite health score trend (0–100) per device over the selected time range. | timeseries | red < 60, orange ≥ 60, green ≥ 80 | `gpu:health_score:composite{UUID=~"$UUID"}` |
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **GPU Utilisation — All Devices** | Compute utilisation % over time per device | `DCGM_FI_DEV_GPU_TEMP{hostname=~"$hostname", UUID=~"$UUID"}` |
-| **GPU Temperature — All Devices** | Core-die temp (°C) per device over time | `DCGM_FI_DEV_GPU_TEMP{hostname=~"$hostname", UUID=~"$UUID"}` |
-| **Power Draw — All Devices** | Instantaneous power (W) per device over time | `DCGM_FI_DEV_POWER_USAGE{hostname=~"$hostname", UUID=~"$UUID"}` |
-| **Composite Health Score Trend** | Health score history per device | `gpu:health_score:composite{UUID=~"$UUID", hostname=~"$hostname"}` |
+### Workload Impact
 
----
-
-### Section: Workload Impact
-
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Pods on Failed GPU Nodes** | Pods scheduled on GPU nodes with health score < 60 | `sum(gpu:impact:pod_count_on_failed_nodes)` — recording rule joining node health to kube_pod_info |
-| **Pods on At-Risk GPU Nodes** | Pods on nodes where 24h failure prob > 30% | `sum(gpu:impact:pod_count_on_at_risk_nodes)` — recording rule R6 |
-| **DCGM Scrape Success** | Fraction of exporter targets scraping cleanly | `count(up{job="nvidia-dcgm-exporter"}==1) / count(up{job="nvidia-dcgm-exporter"})` |
-
----
-
-### Section: Fusion Gap Analysis
-
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Custom Field Alerts Firing** | Alerts using advanced DCGM fields (ECC/XID/PCIe/thermal) | `count(ALERTS{..., category=~"ecc|xid|memory|pcie|thermal|burnout"})` |
-| **Platform & Operator Alerts Firing** | Alerts using default DCGM or Kubernetes state | `count(ALERTS{..., category=~"platform|node|operator|power"})` |
-| **All GPU Alerts — Live State** (table) | Every GPU alert rule and its current state | `ALERTS{platform="gpu-monitoring"}` — no `alertstate` filter, shows pending + firing |
-
----
----
-
-## Dashboard 2 — GPU SRE Deep Dive
-**URL:** `/d/gpu-sre-dashboard-v5/gpu-sre-deep-dive`
-**Purpose:** Per-GPU drill-down for on-call SREs — select a specific node + GPU UUID to see every signal for that device.
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 30 | **Pods on Failed GPU Nodes** — Pods on nodes with a failed row remap. >0 fires WorkloadsOnFailedGPUNodes (critical). Action: cordon/drain the node. | stat | green < 1, red ≥ 1 | `sum(gpu:impact:pod_count_on_failed_nodes)` |
+| 32 | **Pods on At-Risk GPU Nodes (>30% 24h failure prob)** — Pods on nodes with a GPU above 30% 24h failure probability. >0 fires WorkloadsOnAtRiskGPUNodes (warning). | stat | green < 1, orange ≥ 1 | `sum(gpu:impact:pod_count_on_at_risk_nodes)` |
+| 31 | **DCGM Scrape Success** — Share of DCGM exporter targets scraping. <90% fires GPUDCGMScrapeDegraded. | stat | red < 0.01, orange ≥ 0.01, green ≥ 0.9 | `(count(up{job="nvidia-dcgm-exporter"} == 1) / count(up{job="nvidia-dcgm-exporter"})) or vector(0)` |
+| 40 | **GPU Scoring & Alert Rules** — Are the gpu-alert-rules recording rules evaluating? NOT LOADED = health score, failure probability, impact counts and every platform=gpu-monitoring alert are not computed, so a 0 or empty value elsewhere does NOT mean healthy. Fix: oc apply -f gpu-rules.yaml. | stat | red < 1, green ≥ 1 | `count(gpu:platform:heartbeat) or vector(0)` |
 
 ---
 
-### Section: Predictive Analysis & Composite Health
+## GPU SRE Deep Dive
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Composite Health Score** (gauge) | 0–100 score for the selected GPU | `gpu:health_score:composite{hostname=~"$hostname", UUID=~"$UUID"}` — recording rule: `100 - (temp_penalty + ecc_penalty + throttle_penalty)` |
-| **24h Failure Probability %** (gauge) | Model-derived probability of failure in next 24h | `gpu:failure_probability:24h{hostname=~"$hostname", UUID=~"$UUID"}` — weighted from temp trend + ECC rate + PCIe replays |
-| **Throttle Pressure Score** | Composite throttle signal — orange ≥10, red ≥50 | `gpu:throttle:pressure_score{...}` — recording rule combining throttle bitmask + SM clock drop |
-| **SM Clock (MHz)** | Streaming multiprocessor clock — drops = active throttle | `DCGM_FI_DEV_SM_CLOCK{hostname=~"$hostname", UUID=~"$UUID"}` |
-| **Clock Throttle Reasons (bitmask)** | Bit flags for why clocks are being throttled | `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{...}` — bit 2 = thermal, bit 3 = power, bit 4 = sync boost |
-| **Memory Clock (MHz)** | Memory bus clock — drops indicate HBM bandwidth throttle | `DCGM_FI_DEV_MEM_CLOCK{hostname=~"$hostname", UUID=~"$UUID"}` |
-| **Health Score Trend** | Health score history for the selected GPU | `gpu:health_score:composite{hostname=~"$hostname", UUID=~"$UUID"}` |
-| **Failure Probability Trend** | 24h failure probability history | `gpu:failure_probability:24h{hostname=~"$hostname", UUID=~"$UUID"}` |
+**UID:** `gpu-sre-dashboard-v5` · **Display type:** Entity deep dive · **Question:** Why is this GPU / node unhealthy, and what is the evidence?
 
----
+### Predictive Analysis & Composite Health
 
-### Section: Active Alerts — This GPU / Node
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 1 | **Composite Health Score** — Red <60 = GPUHealthScoreCritical; orange 60–80 = GPUHealthScoreHigh; green ≥80. | gauge | red < 60, orange ≥ 60, green ≥ 80 | `gpu:health_score:composite{UUID=~"$UUID"}` |
+| 2 | **24h Failure Probability %** — Orange >30% = at-risk (WorkloadsOnAtRiskGPUNodes). Red >70% with health <60 fires GPUPredictiveFailure24h. | gauge | green < 30, orange ≥ 30, red ≥ 70 | `gpu:failure_probability:24h{UUID=~"$UUID"}` |
+| 3 | **Throttle Pressure Score** — Composite throttle signal (0 = no throttle). Turns orange ≥10, red ≥50. Triggers GPUThermalThrottlingSustained at sustained pressure. | stat | green < 10, orange ≥ 10, red ≥ 50 | `gpu:throttle:pressure_score{UUID=~"$UUID"}` |
+| 4 | **SM Clock (MHz)** — Current SM (streaming multiprocessor) clock frequency in MHz. Drops below base clock indicate active throttling. | stat | neutral (no action) | `DCGM_FI_DEV_SM_CLOCK{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 5 | **Clock Throttle Reasons (bitmask)** — DCGM clock-throttle bitmask. Non-zero bits indicate active throttle reasons: thermal (bit 2), power (bit 3), sync boost (bit 5). | stat | green < 1, orange ≥ 1 | `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 6 | **Memory Clock (MHz)** — Current memory clock frequency in MHz. Drops indicate memory bandwidth throttling, often correlated with thermal events. | stat | neutral (no action) | `DCGM_FI_DEV_MEM_CLOCK{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 7 | **Health Score Trend** — Composite health score trend over the selected time window. Downward trend warrants proactive investigation. | timeseries | red < 60, orange ≥ 60, green ≥ 80 | `gpu:health_score:composite{UUID=~"$UUID"}` |
+| 8 | **Failure Probability Trend** — 24 h failure-probability trend. Rising curve indicates worsening GPU condition. | timeseries | green < 30, orange ≥ 30, red ≥ 70 | `gpu:failure_probability:24h{UUID=~"$UUID"}` |
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Firing GPU Alerts** (table) | All firing GPU alerts for selected node/UUID | `ALERTS{alertstate="firing", platform="gpu-monitoring"}` — cluster-level alerts (no hostname) also included |
+### Active Alerts — This GPU / Node
 
----
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 9 | **Firing GPU Alerts — All (cluster-level alerts have no hostname/UUID)** — All GPU alert rules currently in Firing state for the selected node and GPU. | table | neutral (no action) | `ALERTS{alertstate="firing",platform="gpu-monitoring"}` |
 
-### Section: Temperature
+### Temperature
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **GPU Core Temperature (°C)** | Die temperature over time — red line at 85 °C | `DCGM_FI_DEV_GPU_TEMP{hostname=~"$hostname", UUID=~"$UUID"}` |
-| **Memory (HBM) Temperature (°C)** | HBM/memory die temperature over time | `DCGM_FI_DEV_MEMORY_TEMP{hostname=~"$hostname", UUID=~"$UUID"}` |
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 10 | **GPU Core Temperature (°C)** — GPU core-die temperature (°C) over time. Sustained readings above 85 °C trigger the GPUOverheating alert. | timeseries | green < 85, orange ≥ 85, red ≥ 90 | `DCGM_FI_DEV_GPU_TEMP{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 11 | **Memory (HBM) Temperature (°C)** — HBM/memory die temperature (°C) over time. Elevated values alongside ECC errors indicate thermal-induced memory degradation. | timeseries | green < 85, orange ≥ 85, red ≥ 95 | `DCGM_FI_DEV_MEMORY_TEMP{Hostname=~"$hostname",UUID=~"$UUID"}` |
 
----
+### Power & Energy
 
-### Section: Power & Energy
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 12 | **Power Draw (W)** — Instantaneous power draw (W) over time. Spikes or sustained drops from TDP may indicate power-rail anomalies. | timeseries | neutral (no action) | `DCGM_FI_DEV_POWER_USAGE{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 13 | **Power Instability — 15m Rolling Stddev** — 15m rolling stddev of power draw. Orange >50 W matches GPUPowerFluctuation. | timeseries | green < 50, orange ≥ 50 | `avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) ( stddev_over_time(DCGM_FI_DEV_POWER_USAGE{Hostname=~"$hostname",UUID=~"$UUID"}[15m]) )` |
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Power Draw (W)** | Instantaneous power over time | `DCGM_FI_DEV_POWER_USAGE{hostname=~"$hostname", UUID=~"$UUID"}` |
-| **Power Instability — 15m Rolling Stddev** | Variability of power draw; >15W variance = anomaly | `stddev_over_time(DCGM_FI_DEV_POWER_USAGE[15m])` averaged by UUID/hostname |
+### GPU Utilisation & Profiling
 
----
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 14 | **GPU Compute Utilisation (%)** — GPU compute utilisation (%) — percentage of SMs actively executing CUDA kernels. | timeseries | neutral (no action) | `DCGM_FI_DEV_GPU_UTIL{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 15 | **GR Engine Active & Tensor Core Active (0–1)** — GR Engine Active (graphics/compute pipeline) and Tensor Core Active ratios (0–1). Tensor values near 1 indicate AI/ML workload saturation. | timeseries | neutral (no action) | `(DCGM_FI_PROF_GR_ENGINE_ACTIVE{Hostname=~"$hostname",UUID=~"$UUID"})` |
+| 16 | **DRAM Bandwidth Active (0–1)** — DRAM bandwidth active ratio (0–1). Values near 1 indicate memory-bandwidth-bound workloads. | timeseries | neutral (no action) | `(DCGM_FI_PROF_DRAM_ACTIVE{Hostname=~"$hostname",UUID=~"$UUID"})` |
 
-### Section: GPU Utilisation & Profiling
+### Framebuffer Memory (VRAM)
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **GPU Compute Utilisation (%)** | % of SMs executing CUDA kernels over time | `DCGM_FI_DEV_GPU_TEMP{...}` *(mapped to utilisation counter — same label set)* |
-| **GR Engine Active & Tensor Core Active** | Graphics pipeline active ratio + tensor pipe ratio (0–1) | `DCGM_FI_PROF_GR_ENGINE_ACTIVE{...}` + `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{...}` — profiling counters, value near 1 = fully active |
-| **DRAM Bandwidth Active (0–1)** | Memory bandwidth utilisation ratio — near 1 = memory-bound workload | `DCGM_FI_PROF_DRAM_ACTIVE{hostname=~"$hostname", UUID=~"$UUID"}` |
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 17 | **VRAM Used (GiB)** — Framebuffer (VRAM) memory used in GiB over time. | timeseries | neutral (no action) | `DCGM_FI_DEV_FB_USED{Hostname=~"$hostname",UUID=~"$UUID"} / 1024` |
+| 18 | **VRAM Free (GiB)** — Framebuffer (VRAM) memory free in GiB over time. Approaching zero triggers workload OOM risks. | timeseries | neutral (no action) | `DCGM_FI_DEV_FB_FREE{Hostname=~"$hostname",UUID=~"$UUID"} / 1024` |
+| 19 | **VRAM Utilisation %** — VRAM utilisation as a percentage of total framebuffer capacity. Orange ≥80%, red ≥95%. | timeseries | green < 80, orange ≥ 80, red ≥ 95 | `DCGM_FI_DEV_FB_USED{Hostname=~"$hostname",UUID=~"$UUID"} / (DCGM_FI_DEV_FB_USED{Hostname=~"$hostname",UUID=~"$UUID"} + DCGM_FI_DEV_FB_FREE{Hostname...` |
 
----
+### PCIe Bus
 
-### Section: Framebuffer Memory (VRAM)
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 20 | **PCIe Replay Counter Rate (/s)** — Rate of PCIe replay events per second. Non-zero values indicate PCIe bus errors — triggers GPUPCIeReplayRateHigh. | timeseries | green < 5, orange ≥ 5 | `avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) ( rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER{Hostname=~"$hostname",UUID=~"$UUID"}[5m]) )` |
+| 21 | **PCIe TX/RX Bandwidth (bytes/s)** — PCIe transmit and receive bandwidth in bytes/s. Useful for diagnosing data-transfer bottlenecks. | timeseries | neutral (no action) | `(avg by(UUID, hostname, gpu, modelName, device, pci_bus_id) ( rate(DCGM_FI_PROF_PCIE_TX_BYTES{Hostname=~"$hostname",UUID=~"$UUID"}[5m]) ))` |
+| 22 | **Clock Throttle Reasons Over Time** — Clock throttle reason bitmask over time, showing which throttle condition was active at each point. | timeseries | green < 1, orange ≥ 1 | `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{Hostname=~"$hostname",UUID=~"$UUID"}` |
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **VRAM Used (GiB)** | Framebuffer memory allocated over time | `DCGM_FI_DEV_FB_USED{...} / 1024` — converts MiB → GiB |
-| **VRAM Free (GiB)** | Free framebuffer over time — approaching zero = OOM risk | `DCGM_FI_DEV_FB_FREE{...} / 1024` |
-| **VRAM Utilisation %** | Used ÷ (used + free) × 100 over time | `DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE + 1) * 100` — `+1` avoids division-by-zero |
+### ECC Errors & Memory Health
 
----
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 23 | **Row Remap Failure (0=OK · 1=Failed)** — Row-remap failure flag per GPU. 1 = an uncorrectable DRAM row has been permanently remapped — GPU may require replacement. | stat | green < 1, red ≥ 1 | `(DCGM_FI_DEV_ROW_REMAP_FAILURE{Hostname=~"$hostname",UUID=~"$UUID",container="nvidia-dcgm-exporter"} > bool 0) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~"...` |
+| 24 | **Uncorrectable Remapped Rows** — Count of uncorrectable (DBE-driven) remapped DRAM rows. Non-zero means permanent cell damage has occurred. | stat | green < 1, red ≥ 1 | `(DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{Hostname=~"$hostname",UUID=~"$UUID",container="nvidia-dcgm-exporter"}) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~...` |
+| 25 | **Correctable Remapped Rows** — Count of correctable (SBE-driven) remapped DRAM rows. Rapid growth triggers GPUCorrectableRemapAccelerating alert. | stat | green < 10, orange ≥ 10 | `(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{Hostname=~"$hostname",UUID=~"$UUID",container="nvidia-dcgm-exporter"}) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~"$...` |
+| 26 | **ECC SBE Volatile Total** — Single-bit ECC (correctable) volatile error count since last driver reset. Increasing values indicate DRAM degradation. 'Not collected' = DCGM field 312 not enabled in exporter config. | stat | green < 1, orange ≥ 1 | `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 27 | **ECC DBE Volatile Total** — Double-bit ECC (uncorrectable) volatile error count. Any non-zero value triggers GPUDoubleBitECCDetected — immediate action required. 'Not collected' = DCGM field 313 not enabled in exporter config. | stat | green < 1, red ≥ 1 | `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL{Hostname=~"$hostname",UUID=~"$UUID"}` |
+| 28 | **XID Errors (counter)** — XID error counter. XID codes indicate GPU hardware faults; specific codes (e.g. 79, 94, 95) indicate fatal errors. | stat | green < 1, red ≥ 1 | `DCGM_FI_DEV_XID_ERRORS{Hostname=~"$hostname",UUID=~"$UUID"} or DCGM_FI_DEV_GPU_TEMP{Hostname=~"$hostname",UUID=~"$UUID",container="nvidia-dcgm-expo...` |
+| 29 | **Row Remap Count Over Time** — Row-remap count over time — both correctable and uncorrectable. Accelerating slope indicates active DRAM degradation. | timeseries | neutral (no action) | `(DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{Hostname=~"$hostname",UUID=~"$UUID",container="nvidia-dcgm-exporter"}) or (DCGM_FI_DEV_GPU_TEMP{Hostname=~"$...` |
+| 30 | **ECC Aggregate Errors Over Time** — ECC aggregate error time-series showing accumulated SBE and DBE counts. | timeseries | green < 1, orange ≥ 1 | `DCGM_FI_DEV_ECC_SBE_AGG_TOTAL{Hostname=~"$hostname",UUID=~"$UUID"}` |
 
-### Section: PCIe Bus
+### Platform Health
 
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **PCIe Replay Counter Rate (/s)** | PCIe error retry rate — non-zero = bus errors | `rate(DCGM_FI_DEV_PCIE_REPLAY_COUNTER{...}[5m])` averaged by UUID/hostname |
-| **PCIe TX/RX Bandwidth (bytes/s)** | PCIe transmit and receive throughput over time | `rate(DCGM_FI_PROF_PCIE_TX_BYTES{...}[5m])` + `rate(DCGM_FI_PROF_PCIE_RX_BYTES{...}[5m])` |
-| **Clock Throttle Reasons Over Time** | Throttle bitmask history — shows when and why clocks were limited | `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS{...}` over time |
-
----
-
-### Section: ECC Errors & Memory Health
-
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **Row Remap Failure (0=OK · 1=Failed)** | Binary flag — 1 = permanent DRAM row damage | `DCGM_FI_DEV_ROW_REMAP_FAILURE > bool 0` filtered to selected GPU |
-| **Uncorrectable Remapped Rows** | Count of DBE-triggered permanent remaps | `DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{...}` — triggers `GPURowRemapFailure` alert |
-| **Correctable Remapped Rows** | Count of SBE-triggered correctable remaps | `DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{...}` — rapid growth triggers `GPUCorrectableRemapAccelerating` |
-| **ECC SBE Volatile Total** | Single-bit (correctable) ECC errors since last driver reset | `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL{...}` — increasing trend = gradual DRAM degradation |
-| **ECC DBE Volatile Total** | Double-bit (uncorrectable) ECC errors — any non-zero = critical | `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL{...}` — triggers `GPUDoubleBitECCDetected` immediately |
-| **XID Errors (counter)** | NVIDIA XID hardware fault counter | `DCGM_FI_DEV_XID_ERRORS{...}` — XID 79/94/95 = fatal; any non-zero warrants investigation |
-| **Row Remap Count Over Time** | SBE + DBE remap growth over time — accelerating slope = active degradation | `DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{...}` + `DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{...}` |
-| **ECC Aggregate Errors Over Time** | Accumulated SBE + DBE counts (persists across driver resets) | `DCGM_FI_DEV_ECC_SBE_AGG_TOTAL{...}` + `DCGM_FI_DEV_ECC_DBE_AGG_TOTAL{...}` |
-
----
-
-### Section: Platform Health
-
-| Panel | What it shows | Query / Formula |
-|-------|---------------|-----------------|
-| **VRAM Utilisation** | Current VRAM % for selected GPU | `DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE) * 100` |
-| **DCGM Exporter Targets** | Exporter pods actively scraped | `count(up{job="nvidia-dcgm-exporter"} == 1)` |
-| **DCGM Scrape Success Rate** | Fraction of scrapes succeeding — <90% triggers alert | `count(up==1) / count(up)` for `job="nvidia-dcgm-exporter"` |
-| **Firing GPU Alerts** | Total GPU alert rules currently firing | `count(ALERTS{platform="gpu-monitoring", alertstate="firing"})` |
+| ID | Panel | Type | Thresholds | Query |
+|---|---|---|---|---|
+| 31 | **GPU Scoring & Alert Rules** — Are the gpu-alert-rules recording rules evaluating? NOT LOADED = health score, failure probability, impact counts and every platform=gpu-monitoring alert are not computed, so a 0 or empty value elsewhere does NOT mean healthy. Fix: oc apply -f gpu-rules.yaml. | stat | red < 1, green ≥ 1 | `count(gpu:platform:heartbeat) or vector(0)` |
+| 32 | **DCGM Exporter Targets** — Number of nvidia-dcgm-exporter pods Prometheus is successfully scraping. Zero means no GPU hardware metrics are flowing — all DCGM panels will show No data. | stat | red < 1, green ≥ 1 | `count(up{job="nvidia-dcgm-exporter"} == 1) or vector(0)` |
+| 33 | **DCGM Scrape Success Rate** — Fraction of nvidia-dcgm-exporter targets Prometheus scraped successfully in the last interval. Below 90% triggers GPUDCGMScrapeDegraded (warning). Below 100% means some GPU nodes are producing no metrics. | stat | red < 0.01, orange ≥ 0.01, green ≥ 0.9 | `(count(up{job="nvidia-dcgm-exporter"} == 1) / count(up{job="nvidia-dcgm-exporter"})) or vector(0)` |
+| 34 | **Firing GPU Alerts** — Count of ALERTS{platform=gpu-monitoring, alertstate=firing}. Any value above 0 means at least one GPU alert rule has triggered. Green = no active incidents. | stat | green < 1, red ≥ 1 | `count(ALERTS{platform="gpu-monitoring",alertstate="firing"}) or vector(0)` |
 
 ---
 
-## Key DCGM Metrics Reference
+## Metrics this exporter may not export
 
-| Metric | What it measures |
-|--------|-----------------|
-| `DCGM_FI_DEV_GPU_TEMP` | GPU core die temperature (°C) |
-| `DCGM_FI_DEV_MEMORY_TEMP` | HBM / memory die temperature (°C) |
-| `DCGM_FI_DEV_POWER_USAGE` | Instantaneous power draw (W) |
-| `DCGM_FI_DEV_FB_USED` / `FB_FREE` | Framebuffer (VRAM) used / free (MiB) |
-| `DCGM_FI_DEV_SM_CLOCK` | SM clock frequency (MHz) |
-| `DCGM_FI_DEV_MEM_CLOCK` | Memory bus clock (MHz) |
-| `DCGM_FI_DEV_CLOCK_THROTTLE_REASONS` | Bitmask of active throttle causes |
-| `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL` | Single-bit ECC errors (volatile) |
-| `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL` | Double-bit ECC errors (volatile) |
-| `DCGM_FI_DEV_ROW_REMAP_FAILURE` | Row remap failure flag (0/1) |
-| `DCGM_FI_DEV_PCIE_REPLAY_COUNTER` | PCIe replay (error) counter |
-| `DCGM_FI_DEV_XID_ERRORS` | NVIDIA XID hardware fault counter |
-| `DCGM_FI_PROF_GR_ENGINE_ACTIVE` | Graphics/compute pipeline active ratio (0–1) |
-| `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` | Tensor core active ratio (0–1) |
-| `DCGM_FI_PROF_DRAM_ACTIVE` | DRAM bandwidth active ratio (0–1) |
-| `DCGM_FI_PROF_PCIE_TX_BYTES` / `RX_BYTES` | PCIe TX/RX bytes (requires profiling) |
+`DCGM_FI_DEV_CLOCK_THROTTLE_REASONS`, `DCGM_FI_DEV_ECC_SBE_VOL_TOTAL`, `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL`, `DCGM_FI_DEV_ECC_*_AGG_TOTAL` depend on the dcgm-exporter field list. When absent, the matching panels display *Not collected* and the alerts built on them stay inactive. Enable them in the exporter's counters ConfigMap to light these panels up.
 
-## Recording Rules Reference
+## Recording rules (from `gpu-rules.yaml`)
 
-| Rule | Formula summary |
-|------|----------------|
-| `gpu:health_score:composite` | `100 - temp_penalty - ecc_penalty - throttle_penalty` — weighted 0–100 |
-| `gpu:failure_probability:24h` | `weighted(temp_trend + ecc_rate + pcie_replay_rate)` — 0–100% |
-| `gpu:throttle:pressure_score` | `throttle_bitmask_weight + sm_clock_drop_ratio * 100` |
-| `gpu:impact:pod_count_on_failed_nodes` | Joins `gpu:health_score < 60` nodes with `kube_pod_info` |
-| `gpu:impact:pod_count_on_at_risk_nodes` | Joins `gpu:failure_probability:24h > 30` with `kube_pod_info` |
+| Rule | Meaning |
+|---|---|
+| `gpu:health_score:composite` | 0–100; 100 minus weighted penalties for temperature, memory/row-remap, power instability, PCIe replays, XID errors |
+| `gpu:failure_probability:24h` | 0–100 %; temperature trend, PCIe replay rate, remapped rows, power, ECC |
+| `gpu:throttle:pressure_score` | clock-throttle, thermal and power violation rates |
+| `gpu:impact:pod_count_on_failed_nodes` | pods on nodes with a row-remap failure |
+| `gpu:impact:pod_count_on_at_risk_nodes` | pods on nodes with failure probability > 30 % |
+| `gpu:platform:heartbeat` | constant 1; proves the rules are evaluating (the *GPU Scoring & Alert Rules* tile) |
