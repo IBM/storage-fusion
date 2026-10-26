@@ -169,6 +169,7 @@ All components are designed to work together seamlessly while remaining independ
 - **Ansible**: Version 2.15+ (or ansible-core 2.15+) for playbook-based automation
 - **Git**: For GitOps repository management
 - **jq**: For JSON parsing in scripts (auto-installed if missing)
+- **yq**: For YAML parsing in scripts (auto-installed if missing)
 
 ### Verification
 
@@ -290,7 +291,7 @@ oc get pods -n openshift-gitops
 oc get route openshift-gitops-server -n openshift-gitops
 ```
 
-📖 **Detailed guide**: [docs/deploying-gitops-guide.md](docs/deploying-gitops-guide.md)
+📖 **Detailed guide**: [docs/deploying-gitops-guide.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-gitops-guide.md)
 
 ### 2. Deploy Vault
 
@@ -319,20 +320,33 @@ oc get secret vault-unseal-keys -n vault \
 oc get secret vault-unseal-keys -n vault -o yaml
 ```
 
-#### Custom Configurations
+#### Environment-Specific Deployments
+
+Choose the appropriate values file for your environment:
 
 ```bash
-# Use specific storage class
-./scripts/deploy-secret-manager.sh --storage-class ocs-storagecluster-ceph-rbd
+# Development (single replica, minimal resources, monitoring off)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/dev/values.yaml
 
-# Production deployment with HA
-./scripts/deploy-secret-manager.sh --namespace vault-prod --replicas 5 --size 20Gi
+# Staging (3 replicas, moderate resources, monitoring on)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/stage/values.yaml
 
-# Custom namespace with specific storage
+# Production (3 replicas, full resources, required pod anti-affinity)
+./scripts/deploy-secret-manager.sh -f helm/vault-operator/environments/prod/values.yaml
+```
+
+You can further override individual values on top of an environment file:
+
+```bash
+# Use a different storage class with the dev profile
 ./scripts/deploy-secret-manager.sh \
-  --namespace vault-staging \
-  --storage-class thin \
-  --size 15Gi
+  -f helm/vault-operator/environments/dev/values.yaml \
+  --storage-class ocs-storagecluster-ceph-rbd
+
+# Use a custom storage class with the prod profile
+./scripts/deploy-secret-manager.sh \
+  -f helm/vault-operator/environments/prod/values.yaml \
+  --storage-class ocs-storagecluster-ceph-rbd
 ```
 
 #### Validation
@@ -416,7 +430,7 @@ oc get secret vault-unseal-keys -n vault -o yaml > vault-keys-backup.yaml
 # oc delete secret vault-unseal-keys -n vault
 ```
 
-📖 **Detailed guide**: [docs/deploying-vault-guide.md](docs/deploying-vault-guide.md)
+📖 **Detailed guide**: [docs/deploying-vault-guide.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-vault-guide.md)
 
 ### 3. Deploy External Secrets
 
@@ -570,6 +584,35 @@ oc get externalsecret my-app-secrets
 oc get secret my-app-secrets
 ```
 
+#### Environment-Specific Deployments
+
+Choose the appropriate values file for your environment. When passing `-f`, the active backend is auto-detected from the file, or use `-b` to explicitly override:
+
+```bash
+# Development (1 replica, reduced resources, PDB disabled)
+./scripts/deploy-external-secrets.sh -f helm/external-secrets-operator/environments/dev/values.yaml
+
+# Staging (2 replicas, full resources, certController HA)
+./scripts/deploy-external-secrets.sh -f helm/external-secrets-operator/environments/stage/values.yaml
+
+# Production (2 replicas, full resources, Manual upgrade approval)
+./scripts/deploy-external-secrets.sh -f helm/external-secrets-operator/environments/prod/values.yaml
+```
+
+You can explicitly force a backend on top of any environment file with `-b`:
+
+```bash
+# Force Vault backend with dev profile (overrides enabled: false in file)
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/dev/values.yaml
+
+# Force Vault backend with prod profile
+./scripts/deploy-external-secrets.sh \
+  -b vault \
+  -f helm/external-secrets-operator/environments/prod/values.yaml
+```
+
 #### Validation
 
 Run the comprehensive validation script to verify your External Secrets Operator deployment:
@@ -618,7 +661,7 @@ oc get clustersecretstore
 oc logs -n external-secrets-operator -l app=external-secrets-operator --tail=50
 ```
 
-📖 **Detailed guide**: [docs/deploying-external-secrets-guide.md](docs/deploying-external-secrets-guide.md)
+📖 **Detailed guide**: [docs/deploying-external-secrets-guide.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-external-secrets-guide.md)
 
 ## Sample Application
 
@@ -634,7 +677,7 @@ This reference implementation showcases production-ready deployment patterns wit
 
 The sample application provides a practical example of deploying AI/ML workloads with secure secret management on Fusion HCI.
 
-📖 **Get started**: [fusion-gitops-sample-app/README.md](../../fusion-gitops-sample-app/README.md)
+📖 **Get started**: [fusion-gitops-sample-app/README.md](https://github.com/IBM/storage-fusion/blob/master/AI/fusion-gitops-sample-app/README.md)
 
 ## Cleanup
 
@@ -753,15 +796,15 @@ cd quickstarts/fusion-gitops
 For in-depth information, architecture details, troubleshooting, and advanced configurations, refer to the detailed guides:
 
 ### Component Guides
-- [**GitOps Deployment Guide**](docs/deploying-gitops-guide.md)
+- [**GitOps Deployment Guide**](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-gitops-guide.md)
   - Advanced configuration options
   - Troubleshooting common issues
 
-- [**HashiCorp Vault Deployment Guide**](docs/deploying-vault-guide.md)
+- [**HashiCorp Vault Deployment Guide**](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-vault-guide.md)
   - High availability configuration
   - Security best practices
 
-- [**External Secrets Deployment Guide**](docs/deploying-external-secrets-guide.md)
+- [**External Secrets Deployment Guide**](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/docs/deploying-external-secrets-guide.md)
   - Backend configuration
   - Troubleshooting sync issues
   - Security considerations
