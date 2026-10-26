@@ -30,7 +30,7 @@ The homepage automatically discovers and displays:
 - **Cluster admin access**
 - **Red Hat OpenShift AI (RHOAI)** installed and configured
   - Required for automatic model discovery and AI capabilities
-  - Installation guide: [`../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md`](../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md)
+  - Installation guide: [`fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md`](https://github.com/IBM/storage-fusion/blob/master/AI/fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md)
 - **100GB available storage** (ODF recommended)
 
 ### Required CLI Tools
@@ -393,7 +393,7 @@ The wizard guides you through creating your AI application with automatic GitOps
 
 To deploy AI models that will be automatically discovered by Developer Hub, see the **Model Serving Guide**:
 
-**📖 Model Deployment Guide**: [`../../fusion-model-serving/README.md`](../../fusion-model-serving/README.md)
+**📖 Model Deployment Guide**: [`fusion-model-serving/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/fusion-model-serving/README.md)
 
 This guide covers:
 - GitOps-driven model deployment using KServe
@@ -441,7 +441,7 @@ Edit the configuration:
 oc edit backstage fusion-hub -n fusion-develoepr-hub
 ```
 
-See [docs/homepage-customization.md](docs/homepage-customization.md) for details.
+See [docs/homepage-customization.md](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/docs/homepage-customization.md) for details.
 
 ### Upgrade Developer Hub
 
@@ -637,25 +637,26 @@ helm install fusion-developer-hub \
 ## Additional resources
 
 ### Setup and Configuration
-- [Complete Setup Guide](SETUP.md) - Comprehensive setup with all prerequisites
-- [Production Deployment Guide](docs/README.md) - Advanced configuration options
-- [Homepage Customization](docs/homepage-customization.md) - Customize the UI
-- [RHOAI Integration](docs/getting-started/rhoai-integration.md) - Deep dive into AI integration
+- [Complete Setup Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/QUICKSTART.md) - Comprehensive setup with all prerequisites
+- [Production Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/README.md) - Advanced configuration options
+- [Homepage Customization](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/docs/homepage-customization.md) - Customize the UI
+- [RHOAI Integration](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/docs/getting-started/rhoai-integration.md) - Deep dive into AI integration
 
 ### AI Platform Components
-- [Red Hat OpenShift AI Installation](../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md) - Install RHOAI on Fusion
-- [Model Serving Guide](../../fusion-model-serving/README.md) - Deploy and serve AI models
-- [GitOps with Argo CD](../../fusion-gitops-argocd/README.md) - GitOps deployment patterns
+- [Red Hat OpenShift AI Installation](https://github.com/IBM/storage-fusion/blob/master/AI/fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md) - Install RHOAI on Fusion
+- [Model Serving Guide](https://github.com/IBM/storage-fusion/blob/master/AI/fusion-model-serving/README.md) - Deploy and serve AI models
+- [GitOps with Argo CD](https://github.com/IBM/storage-fusion/blob/master/AI/fusion-gitops-argocd/README.md) - GitOps deployment patterns
 
 ### Troubleshooting
-- [Troubleshooting Guide](docs/troubleshooting/README.md) - Comprehensive troubleshooting
-- [PostgreSQL Issues](docs/troubleshooting/postgresql-troubleshooting.md) - Database troubleshooting
-- [Readiness Probe 503 Fix](docs/troubleshooting/READINESS_PROBE_503_FIX.md) - Fix common startup issues
+- [Troubleshooting Guides](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/fusion-developerhub/docs/troubleshooting) - Comprehensive troubleshooting
+- [PostgreSQL Issues](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/docs/troubleshooting/postgresql-troubleshooting.md) - Database troubleshooting
+- [CRD Installation Fix](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/docs/troubleshooting/crd-installation-fix.md) - Fix operator and CRD startup issues
+- [Homepage 404 Fix](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/docs/troubleshooting/homepage-404-fix.md) - Fix homepage customization errors
 
 ## Support
 
 - [GitHub Issues](https://github.com/IBM/storage-fusion/issues)
-- [Documentation](../../fusion-developerhub/docs/)
+- [Documentation](https://github.com/IBM/storage-fusion/tree/master/AI/quickstarts/fusion-developerhub/docs)
 - [Red Hat Developer Hub Docs](https://access.redhat.com/documentation/en-us/red_hat_developer_hub)
 
 ---

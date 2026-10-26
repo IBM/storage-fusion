@@ -14,8 +14,9 @@ metadata:
 spec:
   project: default
   source:
-    # REQUIRED: Replace with your Git repository URL
-    repoURL: https://github.com/IBM/storage-fusion.git
+    # REQUIRED: Replace with your fork/mirror URL if you maintain your own copy
+    repoURL: https://github.com/IBM/storage-fusion
+    # Chart location inside the IBM/storage-fusion repository
     path: AI/quickstarts/fusion-developerhub/deploy/helm
     # REQUIRED: Replace with your target branch
     targetRevision: master
@@ -58,9 +59,9 @@ spec:
   revisionHistoryLimit: 10
 
   syncPolicy:
-    automated:
-      prune: false
-      selfHeal: true
+    # Automated sync is intentionally OFF for production: changes are applied
+    # only when an operator syncs manually (ArgoCD UI, `argocd app sync`, or
+    # `oc patch application ... operation`).
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

@@ -1,0 +1,43 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fusion-gitops-quickstart
+  title: "Quickstart: GitOps (ArgoCD) on IBM Fusion HCI"
+  description: |
+    The Fusion GitOps Quickstart deploys a complete, production-ready GitOps platform on IBM Fusion HCI in minutes — ArgoCD for continuous delivery, HashiCorp Vault for secret management, and External Secrets Operator for automatic secret synchronization. What used to take days of manual configuration is reduced to a single command.
+
+    What gets deployed:
+    - ArgoCD — declarative GitOps continuous delivery with automated sync, self-healing, and RBAC integration with OpenShift authentication
+    - HashiCorp Vault — encrypted secret storage with Raft HA, auto-initialization, and automatic unsealing
+    - External Secrets Operator — bridges Vault and Kubernetes, automatically syncing secrets to native Kubernetes resources
+
+    Why this quickstart:
+    - All three components pre-configured to work together — no manual integration required
+    - Environment-specific values files for dev, staging, and production out of the box
+    - Comprehensive validation and diagnostic scripts included
+    - Tuned for IBM Fusion HCI storage (IBM Fusion Data Foundation / ODF)
+
+    Ideal for:
+    - Teams deploying AI/ML pipelines that need GitOps-driven continuous delivery
+    - Multi-tenant platforms requiring centralized, encrypted secret management
+    - Multi-cluster environments needing consistent application state across clusters
+  tags:
+    - fusion
+    - quickstart
+    - gitops
+    - argocd
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+  links:
+    - url: https://community.ibm.com/community/user/blogs/christo-abraham/2026/05/27/fusion-gitops-quickstart
+      title: Read the IBM Tech Exchange Blog
+      icon: article
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
+      title: Explore on Fusion Tech Community
+      icon: web
+spec:
+  type: quickstart
+  lifecycle: production
+  owner: group:default/fusion-platform-team
+  system: fusion-ai-services
