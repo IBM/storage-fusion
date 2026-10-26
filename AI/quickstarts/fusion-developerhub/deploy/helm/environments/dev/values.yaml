@@ -399,9 +399,9 @@ developerHub:
       # Branch in the GitOps repo that holds the NaaS template
       templateBranch: "main"
       # Paths to the individual NaaS template files within the repo
-      requestTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
-      updateTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
-      deleteTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
+      requestTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
+      updateTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
+      deleteTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
       # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
       gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
       # Directory inside the GitOps repo where provisioned namespace manifests land
