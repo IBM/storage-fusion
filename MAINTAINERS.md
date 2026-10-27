@@ -1,3 +1,3 @@
 # MAINTAINERS
 
-Christopher Ferris - chrisfer@us.ibm.com
+Ajesh Thankappan - Ajesh.Thankappan1@ibm.com
