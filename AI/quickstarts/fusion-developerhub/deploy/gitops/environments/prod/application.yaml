@@ -58,9 +58,9 @@ spec:
   revisionHistoryLimit: 10
 
   syncPolicy:
-    automated:
-      prune: false
-      selfHeal: true
+    # Automated sync is intentionally OFF for production: changes are applied
+    # only when an operator syncs manually (ArgoCD UI, `argocd app sync`, or
+    # `oc patch application ... operation`).
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

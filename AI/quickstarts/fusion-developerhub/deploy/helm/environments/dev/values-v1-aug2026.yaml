@@ -345,19 +345,19 @@ developerHub:
 
         # Fusion Developer Hub Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-developerhub/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Fusion GitOps Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-gitops/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Model-as-a-Service Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/model-as-a-service/catalog-info.yaml
           rules:
             - allow: [Component]
 

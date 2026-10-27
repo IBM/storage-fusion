@@ -215,7 +215,7 @@ developerHub:
       learningPaths:
         enabled: true
         githubRawBaseUrl: "https://raw.githubusercontent.com"
-        dataJsonPath: "/IBM/storage-fusion/main/AI/quickstarts/fusion-developerhub/assets/learning-paths/data.json"
+        dataJsonPath: "/IBM/storage-fusion/master/AI/quickstarts/fusion-developerhub/assets/learning-paths/data.json"
 
       # OpenShift AI Model Connector (KEY FEATURE)
       plugins:
@@ -345,19 +345,19 @@ developerHub:
 
         # Fusion Developer Hub Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-developerhub/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Fusion GitOps Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-gitops/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Model-as-a-Service Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/model-as-a-service/catalog-info.yaml
           rules:
             - allow: [Component]
 
@@ -372,16 +372,19 @@ developerHub:
           target: https://github.com/IBM/storage-fusion/blob/master/catalog-info.yaml
           rules:
             - allow: [Component]
-    # GitHub integration for catalog imports
-    # For GitHub Enterprise set enterpriseHost to your GHE hostname (e.g. github.example.com).
-    # Leave enterpriseHost empty to use public GitHub (github.com).
+    # GitHub integration for catalog imports — OFF by default (no GitHub secret needed).
+    # To enable (all four steps):
+    #   1. Set enabled: true and target to your GitHub organisation URL.
+    #   2. For GitHub Enterprise, set enterpriseHost to the hostname only (e.g. github.example.com);
+    #      leave it empty for public GitHub (github.com).
+    #   3. Create the secret:  oc create secret generic github-auth-secret \
+    #        --from-literal=GITHUB_TOKEN=<your-pat> -n <rhdh-namespace>
+    #   4. Set enableToken: true and add github-auth-secret under developerHub.extraEnvs.secrets.
     github:
-      enabled: true
+      enabled: false
       enterpriseHost: ""
       target: "https://github.com/your-org"
-      # Enable GitHub PAT token for repository access
-      # Requires GITHUB_TOKEN in github-auth-secret
-      enableToken: true
+      enableToken: false
     # GitLab integration
     gitlab:
       enabled: false
@@ -428,11 +431,12 @@ developerHub:
     # environment: "production"
     guest:
       enabled: true
-    # GitHub OAuth Authentication
-    # Enables "Sign in with GitHub" button
+    # GitHub OAuth Authentication — OFF by default.
+    # Enables "Sign in with GitHub" button when set to true.
     # Requires github-auth-secret with GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET
+    # (also add github-auth-secret under developerHub.extraEnvs.secrets).
     github:
-      enabled: true
+      enabled: false
       enterpriseInstanceUrl: ""  # Set to your GitHub Enterprise URL (e.g. https://github.example.com); leave empty for public GitHub
       # Allow any GitHub Enterprise user to sign in (not just users already in the catalog)
       allowSignInWithoutCatalog: true
@@ -453,8 +457,7 @@ developerHub:
   #   secrets:
   #     - name: custom-secrets
   extraEnvs:
-    secrets:
-      - name: github-auth-secret  # must contain GITHUB_TOKEN
+    secrets: []
   # Production resources
   resources:
     limits:
@@ -552,6 +555,12 @@ developerHub:
         drop:
           - ALL
       readOnlyRootFilesystem: false # Developer Hub needs to write temp files
+  # IBM Fusion CAS/DCS services: enables the "Add IBM Fusion CAS Cluster" and
+  # "Add IBM Fusion DCS Cluster" templates and the Fusion AI catalog entities.
+  # To add clusters, list them under clusters: (see deploy/helm/values.yaml).
+  fusionServices:
+    enabled: true
+    clusters: []
 
 # OpenShift Console QuickStart Configuration
 quickstart:
@@ -708,14 +717,3 @@ autoscaling:
   # maxReplicas: 10
   # targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
-
-# IBM Fusion CAS/DCS Services
-# fusionServices.enabled: true — mounts the "Add IBM Fusion CAS Cluster" and
-# "Add IBM Fusion DCS Cluster" self-service templates into the Developer Hub catalog.
-# Clusters are registered dynamically: a customer runs the template from the UI,
-# fills in a name + OCP API URL, and the entity is written directly to the catalog DB.
-# No static clusters list, no values.yaml edits, no ArgoCD sync needed per cluster.
-developerHub:
-  fusionServices:
-    enabled: true
-    clusters: []   # No static clusters — all clusters added via self-service templates

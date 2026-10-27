@@ -210,7 +210,7 @@ developerHub:
       learningPaths:
         enabled: true
         githubRawBaseUrl: "https://raw.githubusercontent.com"
-        dataJsonPath: "/IBM/storage-fusion/main/AI/quickstarts/fusion-developerhub/assets/learning-paths/data.json"
+        dataJsonPath: "/IBM/storage-fusion/master/AI/quickstarts/fusion-developerhub/assets/learning-paths/data.json"
 
       # OpenShift AI Model Connector (KEY FEATURE)
       plugins:
@@ -339,19 +339,19 @@ developerHub:
 
         # Fusion Developer Hub Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-developerhub/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Fusion GitOps Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-gitops/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Model-as-a-Service Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/model-as-a-service/catalog-info.yaml
           rules:
             - allow: [Component]
 
@@ -366,16 +366,20 @@ developerHub:
           target: https://github.com/IBM/storage-fusion/blob/master/catalog-info.yaml
           rules:
             - allow: [Component]
-    # GitHub integration for catalog imports
-    # For GitHub Enterprise set enterpriseHost to your GHE hostname (e.g. github.example.com).
-    # Leave enterpriseHost empty to use public GitHub (github.com).
+    # GitHub integration for catalog imports — OFF by default (no GitHub secret needed).
+    # To enable (all four steps):
+    #   1. Set enabled: true and target to your GitHub organisation URL.
+    #   2. For GitHub Enterprise, set enterpriseHost to the hostname only (e.g. github.example.com);
+    #      leave it empty for public GitHub (github.com).
+    #   3. Create the secret:  oc create secret generic github-auth-secret \
+    #        --from-literal=GITHUB_TOKEN=<your-pat> -n <rhdh-namespace>
+    #   4. Set enableToken: true and add github-auth-secret under developerHub.extraEnvs.secrets.
     github:
-      enabled: true
+      enabled: false
       enterpriseHost: ""
       target: "https://github.com/your-org"
-      # Enable GitHub PAT token for repository access
-      # Requires GITHUB_TOKEN in github-auth-secret
-      enableToken: true
+      # Reads ${GITHUB_TOKEN} from github-auth-secret. Only set to true after step 3 above.
+      enableToken: false
     # GitLab integration
     gitlab:
       enabled: false
@@ -426,6 +430,8 @@ developerHub:
     # GitHub OAuth Authentication
     # Enables "Sign in with GitHub" button
     # Requires github-auth-secret with GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET
+    # To enable: create github-auth-secret with GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET,
+    # add it under developerHub.extraEnvs.secrets, then set github.enabled: true.
     github:
       enabled: false
       # GitHub Enterprise Configuration (Optional)
@@ -444,9 +450,12 @@ developerHub:
       clientSecret: "" # OIDC Client Secret
       signInResolver: "emailMatchingUserEntityProfileEmail"
   # Extra environment variables from secrets.
-  # Neither secret is required for a basic deployment.
+  # No user-created secret is needed for the default deployment. List a secret here
+  # ONLY after you have created it in the RHDH namespace (the pod loads every listed
+  # secret as environment variables).
   #
-  # fusion-cluster-tokens — only needed when fusionServices.enabled=true (CAS/DCS discovery).
+  # fusion-cluster-tokens — only for self-hosted CAS/DCS clusters (fusionServices.clusters
+  #   with clusterType: self-hosted). Proxy-only clusters need no token.
   #   Contains FUSION_<CLUSTER_ID>_SA_TOKEN and FUSION_<CLUSTER_ID>_CAS_SA_TOKEN.
   #   Create with:
   #     oc create secret generic fusion-cluster-tokens \
@@ -455,20 +464,24 @@ developerHub:
   #       -n <rhdh-namespace>
   #   See RUNBOOK.md Phase 2 for full token creation steps.
   #
-  # github-auth-secret — only needed when catalog.github.enableToken=true or
-  #   auth.github.enabled=true (GitHub OAuth / catalog imports from private repos).
-  #   Contains GITHUB_TOKEN (repo read scope) and optionally GITHUB_CLIENT_ID /
-  #   GITHUB_CLIENT_SECRET for OAuth.
+  # github-auth-secret — only when you enable GitHub:
+  #   catalog.github.enableToken=true needs GITHUB_TOKEN (repo read scope);
+  #   auth.github.enabled=true (Sign in with GitHub) needs GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.
   #   Create with:
   #     oc create secret generic github-auth-secret \
   #       --from-literal=GITHUB_TOKEN=<your-pat> \
+  #       --from-literal=GITHUB_CLIENT_ID=<id> \
+  #       --from-literal=GITHUB_CLIENT_SECRET=<secret> \
   #       -n <rhdh-namespace>
+  #   (include only the keys you need)
   #
-  # Uncomment the secrets you need. Remove this block entirely if neither is required.
+  # Example once the secrets exist:
+  #   extraEnvs:
+  #     secrets:
+  #       - name: fusion-cluster-tokens
+  #       - name: github-auth-secret
   extraEnvs:
-    secrets:
-      - name: fusion-cluster-tokens
-      - name: github-auth-secret
+    secrets: []
   # Production resources
   resources:
     limits:
@@ -575,17 +588,18 @@ developerHub:
 
     # Git repository that hosts the TechDocs source and catalog-info files.
     # REQUIRED for private repos — must match the repo where this branch lives.
-    gitRepo: "https://github.ibm.com/ProjectAbell/Fusion-AI"
-    gitBranch: "cas-dcs-rhdh"
+    gitRepo: "https://github.com/IBM/storage-fusion"
+    gitBranch: "master"
 
-    # GitHub token for private repo catalog imports.
-    # Set to true once github-auth-secret exists in the RHDH namespace.
-    # Create the secret in your terminal (NEVER paste the token here or in Git):
+    # GitHub token for private repo catalog imports — OFF by default (no secret needed).
+    # Only needed for a GitHub Enterprise host. To enable, create github-auth-secret
+    # (NEVER paste the token here or in Git), add it under developerHub.extraEnvs.secrets,
+    # then set this to true:
     #   oc create secret generic github-auth-secret \
     #     --from-literal=GITHUB_TOKEN=<your-pat> \
     #     -n <rhdh-namespace>
     # Token requires: repo (read) scope.
-    githubToken: true
+    githubToken: false
 
     # Clusters — one entry per IBM Fusion HCI cluster.
     # Add:    append a block below, git push → ArgoCD syncs → entities appear.
@@ -595,7 +609,7 @@ developerHub:
     # Replace the placeholder values below with your real cluster details.
     # CLUSTER_ID_UPPER = uppercase(CLUSTER_ID), replace '-' with '_'
     # e.g. my-cluster-01 → MY_CLUSTER_01
-    clusters:
+    clusters: []
       # Add your clusters below.
       # Example self-hosted cluster (has oc CLI access / ServiceAccount tokens):
       # - name: <cluster-id>
@@ -763,7 +777,7 @@ templates:
   # IBM Fusion AI templates
   locations:
     - type: url
-      target: https://github.com/IBM/storage-fusion/blob/main/AI/quickstarts/fusion-developerhub/templates/fusion-ai-template.yaml
+      target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/templates/fusion-ai-template.yaml
 
 # Ingress/Route Configuration
 route:
