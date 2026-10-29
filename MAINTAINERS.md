@@ -1,3 +1,3 @@
 # MAINTAINERS
 
-Ajesh Thankappan - Ajesh.Thankappan1@ibm.com
+Ajesh Thankappan -  Ajesh.Thankappan1@ibm.com
