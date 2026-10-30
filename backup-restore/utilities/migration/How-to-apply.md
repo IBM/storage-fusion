@@ -6,13 +6,13 @@
 - The following secrets exist in that namespace **before** running the job:
   - `cloud-credentials` — keys `miniouser` and `miniopassword` (MinIO credentials)
   - `zgw-posix-user` — keys `ACCESS_KEY` and `SECRET_KEY` (RADOS credentials)
-- Either `oc` (OpenShift CLI) **or** `kubectl` is available on your workstation.  
+- Either `oc` (OpenShift CLI) **or** `kubectl` is available on your workstation.
   If neither is available, follow the **OCP Web Console** path in Step 1.
 
 ---
 
 ## Step 1 — Apply the migration Job
-
+  Clone [this](https://github.com/IBM/storage-fusion.git) repo or Copy the required files manually
 ### Option A — Using `oc` or `kubectl`
 
 ```bash
@@ -22,9 +22,9 @@ oc project ibm-backup-restore
 kubectl config set-context --current --namespace=ibm-backup-restore
 
 # Apply the Job
-oc apply -f job.yaml
+oc apply -f backup-restore/utilities/migration/job.yaml
 # -- or --
-kubectl apply -f job.yaml
+kubectl apply -f backup-restore/utilities/migration/job.yaml
 ```
 
 ### Option B — Using the OCP Web Console (no CLI required)
@@ -57,7 +57,7 @@ MIGRATION COMPLETED SUCCESSFULLY
 ========================================
 ```
 
-> **Note:** The Job has `backoffLimit: 0` and will **not** retry automatically on failure.  
+> **Note:** The Job has `backoffLimit: 0` and will **not** retry automatically on failure.
 > If it fails, inspect the logs, fix the issue, then follow the re-run steps below.
 
 ---
@@ -68,10 +68,10 @@ Once migration is confirmed successful, run the cleanup script:
 
 ```bash
 # Default namespace: ibm-backup-restore
-./delete-minio-resources.sh
+./backup-restore/utilities/migration/delete-minio-resources.sh
 
 # Or pass a custom namespace
-./delete-minio-resources.sh <NAMESPACE>
+./backup-restore/utilities/migration/delete-minio-resources.sh <NAMESPACE>
 ```
 
 The script removes:
