@@ -1,0 +1,132 @@
+# model-deploy-vllm-cpu – values.yaml
+# CPU (x86) inference via vLLM CPU ServingRuntime for KServe.
+# ⚠️  Not published to MaaS catalogue — CPU inference testing only.
+
+# -----------------------------------------------------------------------------
+# Model
+# -----------------------------------------------------------------------------
+model:
+  name: qwen2-5-1-5b-cpu
+  displayName: "Qwen2.5-1.5B (CPU)"
+  namespace: deploy-models-cpu
+
+# -----------------------------------------------------------------------------
+# Namespace
+# -----------------------------------------------------------------------------
+project:
+  create: true
+  labels: {}
+  annotations: {}
+
+# -----------------------------------------------------------------------------
+# vLLM CPU ServingRuntime
+# -----------------------------------------------------------------------------
+# Two modes — choose one per model deployment:
+#
+#   create: true  (default)
+#     A new ServingRuntime is created, named after the model (model.name).
+#     Use this when deploying multiple models into the same namespace — each
+#     model gets its own isolated runtime instance.
+#     Override servingRuntime.name to give it a custom name.
+#
+#   create: false
+#     No ServingRuntime is created. The InferenceService will reference an
+#     existing runtime already present in the namespace.
+#     Set servingRuntime.name to the exact name of that existing runtime.
+#     Use this when a shared runtime is already deployed (e.g. by another
+#     Helm release or manually) and you want to reuse it.
+# -----------------------------------------------------------------------------
+servingRuntime:
+  create: true   # set false to reuse an existing runtime in the namespace
+  name: ""       # default: model.name. Set explicitly to use a shared runtime.
+  image: "registry.redhat.io/rhaii-early-access/vllm-cpu-rhel9:latest"
+
+  # Extra CLI args appended to the vLLM server command.
+  extraArgs: []
+
+  # Extra env vars injected into the kserve-container.
+  # Set VLLM_CPU_KVCACHE_SPACE in your environment values file — see environments/*/values.yaml.
+  extraEnv: []
+
+# -----------------------------------------------------------------------------
+# S3 Object Storage
+# -----------------------------------------------------------------------------
+# Two modes:
+#   Manual (default): set accessKeyId + secretAccessKey via --set at deploy time.
+#   ESO:              set externalSecret.enabled: true — credentials from Vault.
+# -----------------------------------------------------------------------------
+s3:
+  endpoint: "https://s3.openshift-storage.svc:443"
+  region: "us-east-1"
+  bucket: ""
+  modelPath: ""         # e.g. "qwen2.5-1.5b-instruct-hf/1.0.0"
+  accessKeyId: ""       # supply via --set or ESO. Never commit real keys.
+  secretAccessKey: ""   # supply via --set or ESO. Never commit real keys.
+  verifySSL: "0"
+  connectionSecretName: ""   # defaults to <model.namespace>-connection
+  serviceAccountName: ""     # defaults to <connectionSecretName>-sa
+
+  externalSecret:
+    enabled: false
+    refreshInterval: 1h
+    secretStoreRef:
+      name: vault-backend
+      kind: ClusterSecretStore
+    remoteRef:
+      key: maas/model-deploy/cpu/s3   # override per model in environment values
+
+# -----------------------------------------------------------------------------
+# External Access
+# -----------------------------------------------------------------------------
+# When enabled, exposes the model outside the cluster via an OpenShift Route
+# (reencrypt/Redirect TLS) and enforces bearer-token authentication.
+# Creates: <model.name>-sa ServiceAccount + token Secret.
+# Token is auto-populated by OpenShift — retrieve with:
+#   oc get secret external-access-token-<model.name>-sa -n <namespace> \
+#     -o jsonpath='{.data.token}' | base64 -d
+# -----------------------------------------------------------------------------
+externalAccess:
+  enabled: false
+  routeTimeoutSeconds: 300    # match or exceed predictor inference timeout
+  tokenSAName: "external-access-token"
+
+# -----------------------------------------------------------------------------
+# Inference
+# -----------------------------------------------------------------------------
+inference:
+  replicas: 1
+
+# -----------------------------------------------------------------------------
+# Resources
+# -----------------------------------------------------------------------------
+# CPU-only — no nvidia.com/gpu field.
+# Size by model: 1.5B params × 4 bytes ≈ 6 GiB weights (float32).
+# Add kvCacheSpace + ~2 GiB overhead to get total memory needed.
+resources:
+  limits:
+    cpu: "8"
+    memory: 16Gi
+  requests:
+    cpu: "4"
+    memory: 8Gi
+
+# -----------------------------------------------------------------------------
+# Pod Scheduling
+# -----------------------------------------------------------------------------
+scheduling:
+  nodeSelector: {}      # e.g. kubernetes.io/arch: amd64
+  tolerations: []       # do NOT add nvidia.com/gpu toleration
+  affinity: {}
+
+# -----------------------------------------------------------------------------
+# ArgoCD RBAC — required only when s3.externalSecret.enabled: true
+# -----------------------------------------------------------------------------
+argocd:
+  namespace: openshift-gitops
+  serviceAccountName: openshift-gitops-argocd-application-controller
+
+# -----------------------------------------------------------------------------
+# Additional Labels / Annotations
+# -----------------------------------------------------------------------------
+labels: {}
+annotations: {}

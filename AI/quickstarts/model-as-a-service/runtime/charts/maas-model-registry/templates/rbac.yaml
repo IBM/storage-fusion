@@ -1,0 +1,82 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "model-registry-gitops.serviceAccountName" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: reconciler
+rules:
+  # Manage ConfigMaps containing model definitions
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  
+  # Read secrets for credentials
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "model-registry-gitops.serviceAccountName" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: reconciler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "model-registry-gitops.serviceAccountName" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "model-registry-gitops.serviceAccountName" . }}
+    namespace: {{ .Values.namespace }}
+
+---
+# Role for accessing target namespace (Model Registry namespace)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "model-registry-gitops.serviceAccountName" . }}-target
+  namespace: {{ .Values.modelRegistry.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: reconciler
+rules:
+  # Read secrets for S3 credentials and HF token
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+  
+  # Manage ConfigMaps for model catalog
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "create", "update", "patch"]
+  
+  # Access to pods for catalog restart
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "model-registry-gitops.serviceAccountName" . }}-target
+  namespace: {{ .Values.modelRegistry.namespace }}
+  labels:
+    {{- include "model-registry-gitops.labels" . | nindent 4 }}
+    component: reconciler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "model-registry-gitops.serviceAccountName" . }}-target
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "model-registry-gitops.serviceAccountName" . }}
+    namespace: {{ .Values.namespace }}
+

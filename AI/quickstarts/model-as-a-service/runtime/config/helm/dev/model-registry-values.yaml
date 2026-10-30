@@ -1,0 +1,57 @@
+# Development environment overrides for maas-model-registry
+
+# Namespace where the reconciler will run
+namespace: fusion-model-registry-gitops-dev
+
+# Model Registry configuration
+modelRegistry:
+  # Namespace where Model Registry is deployed
+  namespace: rhoai-model-registries
+  
+  # Model Registry service name
+  serviceName: model-registry
+  
+  # Model Registry service port (8080 for HTTP, 8443 for HTTPS)
+  servicePort: 8080
+  
+  # Use secure connection (HTTPS)
+  secure: false
+  
+  # Verify SSL certificates (set to false for self-signed certs)
+  verifySSL: false
+  
+  # Name of the ObjectBucketClaim for model storage
+  obcName: model-registry-artifacts-dev
+
+# Reconciler deployment configuration
+reconciler:
+  # Container image configuration
+  image:
+    # Use OpenShift internal registry (built with BuildConfig)
+    repository: image-registry.openshift-image-registry.svc:5000/fusion-model-registry-gitops-dev/model-reconciler
+    tag: latest
+    pullPolicy: Always
+  
+  # Reconciliation settings
+  config:
+    # How often to reconcile (seconds) - more frequent in dev
+    reconcileInterval: 180
+    
+    # Log level (DEBUG, INFO, WARNING, ERROR)
+    logLevel: DEBUG
+
+# BuildConfig configuration (OpenShift only)
+buildConfig:
+  # Git repository configuration
+  git:
+    ref: develop  # Use develop branch for dev environment
+
+# CronJob for Git sync
+cronJob:
+  # Schedule (cron format) - more frequent in dev
+  schedule: "*/3 * * * *"
+  
+  # Git repository to sync from
+  git:
+    branch: develop
+

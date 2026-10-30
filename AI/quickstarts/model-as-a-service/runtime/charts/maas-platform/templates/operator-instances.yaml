@@ -1,0 +1,56 @@
+{{- if and .Values.platformKuadrant.enabled .Values.platformKuadrant.instance.enabled }}
+{{- $hasKuadrantCRD := .Capabilities.APIVersions.Has "kuadrant.io/v1beta1/Kuadrant" }}
+{{- $existing := false }}
+{{- if $hasKuadrantCRD }}
+  {{- $existing = lookup "kuadrant.io/v1beta1" "Kuadrant" .Values.platformKuadrant.namespace .Values.platformKuadrant.instance.name }}
+{{- end }}
+{{- if and $hasKuadrantCRD (not $existing.metadata) }}
+---
+# Kuadrant CR — triggers Authorino, Limitador, and DNS operator deployment.
+# Wave 2: runs in parallel with GatewayClass; both are independent of each other.
+# Skipped via lookup guard if a Kuadrant instance already exists (e.g. pre-installed by OLM).
+apiVersion: kuadrant.io/v1beta1
+kind: Kuadrant
+metadata:
+  name: {{ .Values.platformKuadrant.instance.name }}
+  namespace: {{ .Values.platformKuadrant.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  mtls:
+    enable: {{ .Values.platformKuadrant.mtls.enable | default true }}
+    authorino: {{ .Values.platformKuadrant.mtls.authorino | default true }}
+    limitador: {{ .Values.platformKuadrant.mtls.limitador | default false }}
+  observability: {}
+{{- end }}
+{{- end }}
+
+{{- if and .Values.leaderWorkerSet.enabled .Values.leaderWorkerSet.instance.enabled }}
+{{- $hasLwsCRD := .Capabilities.APIVersions.Has "operator.openshift.io/v1/LeaderWorkerSetOperator" }}
+{{- $existingLws := false }}
+{{- if $hasLwsCRD }}
+  {{- $existingLws = lookup "operator.openshift.io/v1" "LeaderWorkerSetOperator" .Values.leaderWorkerSet.namespace .Values.leaderWorkerSet.instance.name }}
+{{- end }}
+{{- if and $hasLwsCRD (not $existingLws.metadata) }}
+---
+# LeaderWorkerSetOperator CR — enables multi-node distributed inference (llm-d).
+# Wave 2: independent of Gateway and Kuadrant.
+# Skipped via lookup guard if the CR already exists (e.g. CRD not yet installed; the
+# lookup returns nil for unknown CRDs, so this guard prevents double-create on re-runs).
+apiVersion: operator.openshift.io/v1
+kind: LeaderWorkerSetOperator
+metadata:
+  name: {{ .Values.leaderWorkerSet.instance.name }}
+  namespace: {{ .Values.leaderWorkerSet.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  managementState: {{ .Values.leaderWorkerSet.instance.managementState }}
+{{- end }}
+{{- end }}

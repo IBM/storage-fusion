@@ -1,0 +1,173 @@
+# =============================================================================
+# MaaS Model Specification — nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4
+# =============================================================================
+# Architecture: Nemotron 3 Ultra 550B — hybrid SSM + attention (Mamba-2 MoE)
+# GPU Requirement: 4× NVIDIA GPU with ≥80GB VRAM per card (TP=4)
+#   Examples: H200 NVL 143GB, H100 SXM 80GB, RTX PRO 6000 Blackwell 96GB
+# Quantization: NVFP4 (~220GB total across 4 GPUs)
+# Use Cases: Complex Reasoning, Background Agent Tasks, Long-Context Analysis
+#
+# This file is hardware- and consumer-agnostic. Node selection, tolerations and the
+# NCCL / all-reduce settings for PCIe-only GPUs live in profiles/. Deploy with:
+#   ./scripts/deploy-model.sh --profile profiles/rtx-pro-6000-blackwell-x4.yaml \
+#                             models/nemotron-3-ultra-550b-nvfp4.yaml
+#
+# BEFORE DEPLOYING — fill in every value marked REQUIRED:
+#   model.namespace          — namespace where MaaS platform is running
+#   inference.image          — oc get template -n redhat-ods-applications \
+#                                vllm-cuda-runtime-template \
+#                                -o jsonpath='{.objects[*].spec.containers[*].image}'
+# =============================================================================
+
+accelerator:
+  vendor: nvidia                  # 'nvidia' or 'amd'
+  count: 4
+
+model:
+  name: nemotron-ultra
+  displayName: "Nemotron 3 Ultra 550B NVFP4 (4-GPU)"
+  # REQUIRED: namespace where your MaaS runtime is deployed
+  namespace: deploy-models-rhoai
+
+project:
+  create: false                   # Namespace deploy-models-rhoai already exists
+
+modelRegistry:
+  enabled: true
+  name: model-registry
+  namespace: rhoai-model-registries
+  registeredModelName: "nemotron-ultra-550b"
+  connectionSecret: ""
+  createConnectionSecret: false
+
+source:
+  # CephFS PVC — weights pre-staged before deploy (no re-download on restart)
+  uri: "pvc://nemotron-model-weights-pvc/"
+
+inference:
+  engine: vllm
+  # REQUIRED: get the RHOAI-bundled vLLM image from your cluster:
+  #   oc get template -n redhat-ods-applications vllm-cuda-runtime-template \
+  #     -o jsonpath='{.objects[*].spec.containers[*].image}'
+  # This image supports nemotron_h architecture (transformers 4.52+).
+  # Do NOT use vllm/vllm-openai from DockerHub — it does not support this model.
+  image: ""
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+
+  # Bypass the RHOAI vLLM entrypoint wrapper.
+  # The RHOAI wrapper uses `eval` on VLLM_ADDITIONAL_ARGS which strips double-quotes
+  # from JSON values → "RuntimeError: Failed to infer device type" (exit 1).
+  # With command set here, all args are passed directly — no eval, no quoting issues.
+  command:
+    - python3
+    - -m
+    - vllm.entrypoints.openai.api_server
+
+  # All vLLM flags must be listed explicitly (no auto-injection from the wrapper).
+  # --tensor-parallel-size: must match accelerator.count above.
+  # --port: must be 8000 — the containerPort, workload Service targetPort and
+  #   operator probes all use 8000; no routing sidecar listens there in this setup.
+  args:
+    - --port=8000
+    - --model=/mnt/models
+    - --served-model-name=nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4
+    - --tensor-parallel-size=4
+    - --enable-expert-parallel
+    - --max-model-len=262144
+    - --max-num-seqs=32
+    - --max-num-batched-tokens=32768
+    - --gpu-memory-utilization=0.90
+    - --enable-chunked-prefill
+    - --enable-prefix-caching
+    - --mamba-cache-mode=align
+    - --mamba-ssm-cache-dtype=float16
+    - --mamba-backend=flashinfer
+    - --enable-mamba-cache-stochastic-rounding
+    - --mamba-cache-philox-rounds=5
+    - '--speculative-config={"method": "nemotron_h_mtp", "num_speculative_tokens": 5}'
+    - '--model-loader-extra-config={"enable_multithread_load": true, "num_threads": 64}'
+    - --reasoning-parser=nemotron_v3
+    - --tool-call-parser=qwen3_coder
+    - --enable-auto-tool-choice
+    - --enable-prompt-tokens-details
+    - --trust-remote-code
+
+  extraArgs: []   # not used in direct entrypoint mode
+
+  # Loading this model can take over an hour; the operator default (10 min) kills it mid-load.
+  startupProbe:
+    httpGet:
+      path: /health
+      port: 8000
+      scheme: HTTP
+    periodSeconds: 10
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 2147483647
+
+  env:
+    - name: HOME
+      value: /tmp
+    - name: HF_HOME
+      value: /tmp/hf_home
+    # Disable symmetric memory all-reduce (required for Nemotron Mamba layers)
+    - name: VLLM_ALLREDUCE_USE_SYMM_MEM
+      value: "0"
+    - name: FLASHINFER_WORKSPACE_DIR
+      value: /tmp/flashinfer
+    # NCCL_P2P_DISABLE and --disable-custom-all-reduce are hardware-specific: see profiles/.
+
+pvc:
+  enabled: true
+  # Set create: true on first deploy to have Helm provision the PVC.
+  # Set create: false when PVC was pre-created by the NooBaa S3 populate job.
+  create: false
+  claimName: nemotron-model-weights-pvc
+  size: "450Gi"
+  storageClass: "ocs-storagecluster-cephfs"   # RWX — required for TP>1 across nodes
+  readWriteMany: true
+
+s3:
+  enabled: false
+  createSecret: false
+
+# 550B NVFP4 weight loading peaks well above 256Gi CPU RAM.
+# 512Gi is the minimum to avoid OOMKill (exit 137) during KV cache pre-allocation.
+resources:
+  limits:
+    cpu: "64"
+    memory: 512Gi
+  requests:
+    cpu: "32"
+    memory: 128Gi
+
+# Node selection and tolerations come from the hardware profile (profiles/).
+scheduling:
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+gateway:
+  # Single-tenant mode: Bifrost talks directly to the LLM-D in-cluster Service.
+  # No Kuadrant required. Set enabled: true only for multi-tenant with AuthPolicy.
+  enabled: false
+  exposeExternally: false
+  name: maas-default-gateway
+  namespace: openshift-ingress
+  wildcardDomain: ""
+
+# Bob wiring for this model is generated, not hand-written: see bob/README.md
+# (bob/gen-model-config.sh reads this file).
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+labels:
+  app.kubernetes.io/name: nemotron-3
+  app.kubernetes.io/part-of: maas-platform
+  tier: premium

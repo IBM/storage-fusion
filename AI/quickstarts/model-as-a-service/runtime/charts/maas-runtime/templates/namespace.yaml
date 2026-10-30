@@ -1,0 +1,19 @@
+{{- if .Values.rbac.enabled }}
+{{- $nsName := include "maas-runtime.modelsNamespace" . }}
+{{- $existing := lookup "v1" "Namespace" "" $nsName }}
+{{- if not $existing }}
+---
+# Models namespace — skipped via lookup guard if the namespace already exists
+# (e.g. created by a previous helm install or manually pre-provisioned).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $nsName }}
+  labels:
+    {{- include "maas-runtime.labels" . | nindent 4 }}
+    opendatahub.io/dashboard: "true"
+  annotations:
+    {{- include "maas-runtime.annotations" . | nindent 4 }}
+{{- end }}
+{{- end }}
+

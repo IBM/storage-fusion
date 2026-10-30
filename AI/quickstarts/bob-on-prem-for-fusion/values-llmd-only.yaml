@@ -1,0 +1,63 @@
+# Override for the MaaS platform charts: llm-d only.
+#
+# Installs OpenShift AI (KServe LLMInferenceService), cert-manager and LeaderWorkerSet.
+# Does NOT install Red Hat Connectivity Link (Kuadrant, Authorino, Limitador), the MaaS
+# gateway, its PostgreSQL database or the MaaS subscription/API-key layer.
+# Bob calls the model's in-cluster Service directly, so none of those are needed.
+#
+# Layer it on top of the environment values for each chart:
+#   helm upgrade --install maas-operators deploy/helm/maas-operators \
+#     -f deploy/helm/maas-operators/environments/prod/values.yaml -f bob/values-llmd-only.yaml
+#   helm upgrade --install maas-platform  deploy/helm/maas-platform \
+#     -f deploy/helm/maas-platform/environments/prod/values.yaml  -f bob/values-llmd-only.yaml
+#
+# To add the gateway later, remove this file from the commands above and see the parent README.
+
+# --- maas-operators ---------------------------------------------------------
+operators:
+  connectivityLink:
+    enabled: false          # no Kuadrant / Authorino / Limitador
+  grafana:
+    enabled: false          # optional dashboards, not needed to serve a model
+
+# --- maas-platform ----------------------------------------------------------
+platformKuadrant:
+  enabled: false            # no Kuadrant instance
+
+gateway:
+  enabled: false            # no MaaS gateway, Route or GatewayClass
+
+maasDatabase:
+  enabled: false            # MaaS API-key database, only used by the gateway layer
+  internal:
+    enabled: false
+
+dataScienceCluster:
+  components:
+    kserve:
+      enableLLMInferenceServiceTLS: false   # Plaintext in-cluster HTTP on port 8000 for Bob Direct Mode
+    aigateway:              # MaaS gateway component of OpenShift AI
+      managementState: Removed
+      modelsAsAService:
+        managementState: Removed
+
+# --- maas-runtime (Model Registry only) --------------------------------------
+global:
+  modelsNamespace: deploy-models-rhoai
+
+monitoring:
+  enabled: false          # no Prometheus/Grafana overhead
+
+authentication:
+  keycloak:
+    enabled: false        # Bob uses its own Keycloak
+
+modelRegistry:
+  enabled: true
+  name: model-registry
+  namespace: rhoai-model-registries
+  objectStorage:
+    enabled: false        # Direct OCI ModelCar / PVC images
+  database:
+    type: postgres
+    external: false       # Deploys in-cluster PostgreSQL (model-registry-db)
