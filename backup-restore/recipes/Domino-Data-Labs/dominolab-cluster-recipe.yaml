@@ -10,11 +10,12 @@ spec:
     type: volume
     includedNamespaces:
     - domino-platform
+    labelSelector: app.kubernetes.io/created-by notin (volsync)
   - name: compute-volumes
     type: volume
-    essential: false
     includedNamespaces:
     - domino-compute
+    labelSelector: dominodatalab.com/workload-type notin (Scheduled),dominodatalab.com/workload-type notin (App)
   - name: namespace-resources
     type: resource
     includedNamespaces:
@@ -51,14 +52,14 @@ spec:
     - priorityclasses
     - securitycontextconstraints.security.openshift.io
   workflows:
-  - failOn: essential-error
+  - failOn: any-error
     name: backup
     sequence:
     - group: cluster-resources
     - group: namespace-resources
     - group: compute-volumes
     - group: platform-volumes
-  - failOn: essential-error
+  - failOn: any-error
     name: restore
     sequence:
     - group: platform-volumes
