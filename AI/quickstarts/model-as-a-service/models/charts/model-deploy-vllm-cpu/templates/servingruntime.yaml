@@ -1,0 +1,51 @@
+{{- if .Values.servingRuntime.create }}
+---
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: {{ include "model-deploy-vllm-cpu.servingRuntimeName" . }}
+  namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+    opendatahub.io/dashboard: "true"
+  annotations:
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/runtime-version: v0.19.1
+    opendatahub.io/serving-runtime-scope: global
+    opendatahub.io/template-display-name: "vLLM CPU (x86) ServingRuntime for KServe"
+    opendatahub.io/template-name: vllm-cpu-x86-runtime-template
+    openshift.io/display-name: "vLLM CPU (x86) ServingRuntime for KServe"
+spec:
+  annotations:
+    opendatahub.io/kserve-runtime: vllm
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8080"
+  multiModel: false
+  supportedModelFormats:
+    - name: vLLM
+      autoSelect: true
+  containers:
+    - name: kserve-container
+      image: {{ .Values.servingRuntime.image }}
+      command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - --port=8080
+        - --model=/mnt/models
+        - --served-model-name={{`{{.Name}}`}}
+        {{- range .Values.servingRuntime.extraArgs }}
+        - {{ . | quote }}
+        {{- end }}
+      env:
+        - name: HF_HOME
+          value: /tmp/hf_home
+        {{- range .Values.servingRuntime.extraEnv }}
+        - name: {{ .name }}
+          value: {{ .value | quote }}
+        {{- end }}
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+{{- end }}

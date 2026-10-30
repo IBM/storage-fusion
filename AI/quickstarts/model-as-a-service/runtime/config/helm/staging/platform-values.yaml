@@ -1,0 +1,104 @@
+# MaaS Platform - Staging Environment
+# Environment-specific platform configuration for staging
+
+global:
+  wildcardDomain: apps.cluster.example.com
+  toolsImage: quay.io/openshift/origin-cli:latest
+
+platform:
+  namespaces:
+    modelRegistry: rhoai-model-registries
+    workbench: rhods-notebooks
+
+dataScienceCluster:
+  enabled: true
+  name: default-dsc
+  # DataScienceCluster is cluster-scoped — no namespace field.
+  components:
+    dashboard:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+    kserve:
+      managementState: Managed
+      modelsAsService:
+        managementState: Managed
+      rawDeploymentServiceConfig: Headless
+      nim:
+        managementState: Managed
+    ogx:
+      managementState: Managed
+    modelregistry:
+      managementState: Managed
+    feastoperator:
+      managementState: Removed
+    trustyai:
+      managementState: Managed
+    aipipelines:
+      managementState: Managed
+    ray:
+      managementState: Managed
+    trainingoperator:
+      managementState: Managed
+    trainer:
+      managementState: Removed
+    mlflowoperator:
+      managementState: Removed
+    llamastackoperator:
+      managementState: Removed
+    kueue:
+      managementState: Removed
+
+# ── MaaS Database — Staging (in-cluster postgres, persistent storage) ─────────
+# Same image/config as dev but with a PVC so data survives pod restarts.
+maasDatabase:
+  enabled: true               # Helm creates maas-db-config Secret
+  external: false
+  secretNamespace: redhat-ods-applications
+  connectionUrl: ""
+  externalSecret:
+    enabled: false            # STAGING: Helm owns secrets (no ESO needed)
+                              # Switch to true + clear credentials to use ESO (see VAULT-SECRET-SETUP.md)
+  internal:
+    enabled: true             # deploy in-cluster Postgres Deployment + Service
+    namespace: redhat-ods-applications
+    purpose: poc
+    username: maas
+    password: "changeme-staging" # REPLACE — do not use default in any live cluster
+    database: maas
+    sslMode: disable            # switch to "require" only when using an external managed DB with TLS
+    image: "registry.redhat.io/rhel9/postgresql-16:latest"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+    persistence:
+      enabled: true             # PVC — data survives pod restarts
+      size: 20Gi
+      storageClassName: ""      # use cluster default StorageClass
+
+# ── Gateway — clusterip mode for bare-metal / HostNetwork IngressController ──
+gateway:
+  ingressMode: clusterip
+
+platformKuadrant:
+  enabled: true
+  namespace: kuadrant-system
+  instance:
+    enabled: true
+    name: kuadrant
+
+leaderWorkerSet:
+  enabled: true
+  namespace: openshift-lws-operator
+  instance:
+    enabled: true
+    name: cluster
+    managementState: Managed
+

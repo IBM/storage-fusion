@@ -1,0 +1,101 @@
+{{- if .Values.externalAccess.enabled }}
+---
+# External Access — Token ServiceAccount
+# -----------------------------------------------------------------------
+# A dedicated ServiceAccount used solely for bearer-token authentication
+# on the external route. This is separate from the S3 storage ServiceAccount.
+#
+# Corresponds to the "Service account name" field in the RHOAI dashboard
+# Advanced Settings → Token authentication section.
+#
+# The token Secret (external-access-token.yaml) is bound to this SA.
+# OpenShift auto-populates the token value after the Secret is created.
+#
+# Naming convention observed on cluster:
+#   SA name   : <model.name>-sa
+#   Secret name: external-access-token-<model.name>-sa
+# -----------------------------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.model.name }}-sa
+  namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+    opendatahub.io/dashboard: "true"
+  annotations:
+    {{- include "model-deploy-vllm-cpu.annotations" . | nindent 4 }}
+---
+# External Access — RBAC
+# -----------------------------------------------------------------------
+# kube-rbac-proxy (injected by RHOAI alongside every InferenceService) gates
+# the external Route with two checks:
+#
+#   1. TokenReview  — validates the bearer token presented by the caller.
+#      Requires system:auth-delegator at cluster scope so the proxy can
+#      call the Kubernetes TokenReview API on behalf of the SA.
+#
+#   2. SubjectAccessReview (SAR) — verifies the token's identity has
+#      "get inferenceservices/<model>" in the model namespace.
+#      A namespace-scoped Role + RoleBinding satisfies this.
+#
+# Both bindings target <model.name>-sa, which owns the token Secret.
+# -----------------------------------------------------------------------
+
+# 1. ClusterRoleBinding → system:auth-delegator (TokenReview)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "model-deploy-vllm-cpu.namespace" . }}-{{ .Values.model.name }}-sa-auth-delegator
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+  annotations:
+    {{- include "model-deploy-vllm-cpu.annotations" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.model.name }}-sa
+    namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+---
+# 2a. Role — get on the specific InferenceService (SAR check)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.model.name }}-sa-inferenceservice-viewer
+  namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+  annotations:
+    {{- include "model-deploy-vllm-cpu.annotations" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - serving.kserve.io
+    resources:
+      - inferenceservices
+    resourceNames:
+      - {{ .Values.model.name }}
+    verbs:
+      - get
+---
+# 2b. RoleBinding — bind the Role to <model.name>-sa
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.model.name }}-sa-inferenceservice-viewer
+  namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+  labels:
+    {{- include "model-deploy-vllm-cpu.labels" . | nindent 4 }}
+  annotations:
+    {{- include "model-deploy-vllm-cpu.annotations" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.model.name }}-sa-inferenceservice-viewer
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.model.name }}-sa
+    namespace: {{ include "model-deploy-vllm-cpu.namespace" . }}
+{{- end }}

@@ -9,10 +9,14 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
   labels:
     environment: staging
+    app.kubernetes.io/managed-by: argocd
+
 spec:
   project: default
   source:
-    repoURL: https://github.com/IBM/storage-fusion.git #IMPORTANT: Replace with your repo URL
+    # REQUIRED: Replace with your fork/mirror URL if you maintain your own copy
+    repoURL: https://github.com/IBM/storage-fusion
+    # Chart location inside the IBM/storage-fusion repository
     path: AI/quickstarts/fusion-developerhub/deploy/helm
     # REQUIRED: Replace with your target branch
     targetRevision: master

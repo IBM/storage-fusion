@@ -1,0 +1,73 @@
+{{- /* Only create OperatorGroups when none already exists in the namespace.
+     A namespace can only have one OperatorGroup — creating a second one causes
+     an error. Pre-existing OLM-managed namespaces already have one.
+     Guard: lookup ANY existing OperatorGroup in the namespace (not just ours)
+     using the list form — if the list is non-empty, skip creation entirely. */}}
+
+{{- if .Values.operators.openshiftAI.enabled }}
+{{- $existingOGs := lookup "operators.coreos.com/v1" "OperatorGroup" .Values.operators.openshiftAI.namespace "" }}
+{{- if not (and $existingOGs $existingOGs.items (gt (len $existingOGs.items) 0)) }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: rhoai3-operatorgroup
+  namespace: {{ .Values.operators.openshiftAI.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec: {}
+{{- end }}
+{{- end }}
+
+{{- if .Values.operators.certManager.enabled }}
+{{- if not (lookup "operators.coreos.com/v1" "OperatorGroup" .Values.operators.certManager.namespace (printf "%s-og" .Values.operators.certManager.namespace)).metadata }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .Values.operators.certManager.namespace }}-og
+  namespace: {{ .Values.operators.certManager.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.certManager.namespace }}
+{{- end }}
+{{- end }}
+
+{{- if false }}
+{{- if .Values.operators.grafana.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .Values.operators.grafana.namespace }}-og
+  namespace: {{ .Values.operators.grafana.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.grafana.namespace }}
+{{- end }}
+{{- end }}
+
+{{- /* connectivityLink Subscription is installed in openshift-operators which already
+     has the cluster-provided global-operators OperatorGroup — do NOT create another one.
+     kuadrant-operator-group in kuadrant-system is created by the rhcl-operator itself
+     after installation and must not be managed here. */}}
+
+{{- if .Values.operators.leaderWorkerSet.enabled }}
+{{- if not (lookup "operators.coreos.com/v1" "OperatorGroup" .Values.operators.leaderWorkerSet.namespace "leader-worker-set").metadata }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: leader-worker-set
+  namespace: {{ .Values.operators.leaderWorkerSet.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+spec:
+  targetNamespaces:
+    - {{ .Values.operators.leaderWorkerSet.namespace }}
+{{- end }}
+{{- end }}

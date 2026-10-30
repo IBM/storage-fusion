@@ -13,7 +13,7 @@
   "scripts": {
     "build": "backstage-cli package build",
     "export-dynamic": "npx --yes @red-hat-developer-hub/cli@1.10.3 plugin export --clean",
-    "package-oci": "npx --yes @red-hat-developer-hub/cli@latest plugin package --tag <your-registry>/<your-org>/namespace-validator-backend:<tag>",
+    "package-oci": "npx --yes @red-hat-developer-hub/cli@1.10.3 plugin package --tag <your-registry>/<your-org>/namespace-validator-backend:latest",
     "tsc": "tsc"
   },
   "dependencies": {

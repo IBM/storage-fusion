@@ -1,0 +1,59 @@
+source: "IBM Fusion Enterprise"
+models:
+  - name: "nemotron-3-ultra-550b-nvfp4"
+    description: "NVIDIA Nemotron 3 Ultra 550B NVFP4 parameter model optimized for 4x Blackwell / RTX GPUs on IBM Storage Fusion."
+    readme: |-
+      # NVIDIA Nemotron 3 Ultra 550B NVFP4
+
+      Enterprise ultra-scale model deployed locally on IBM Storage Fusion.
+      - **Parameters**: 550 Billion
+      - **Precision**: NVFP4
+      - **Inference Runtime**: vLLM (Tensor Parallelism = 4)
+      - **Hardware**: 4x GPU Node
+    provider: "NVIDIA / IBM Fusion"
+    license: "Custom Enterprise"
+    artifacts:
+      - uri: "s3://models/nemotron-3-ultra-550b-nvfp4/"
+
+  - name: "granite-3.1-8b-instruct"
+    description: "IBM Granite 3.1 8B Instruct LLM hosted internally on IBM Fusion Data Foundation."
+    readme: |-
+      # IBM Granite 3.1 8B Instruct
+
+      Enterprise instruction-tuned LLM optimized for code generation and enterprise assistant tasks.
+      - **Parameters**: 8 Billion
+      - **Inference Runtime**: vLLM (Tensor Parallelism = 1)
+      - **License**: Apache 2.0
+    provider: "IBM"
+    license: "apache-2.0"
+    licenseLink: "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    artifacts:
+      - uri: "s3://models/granite-3.1-8b/"
+
+  - name: "gpt-oss-20b"
+    description: "General purpose internal open-source LLM hosted on IBM Storage Fusion."
+    readme: |-
+      # GPT-OSS 20B
+
+      General purpose open model hosted completely offline.
+      - **Parameters**: 20 Billion
+      - **Inference Runtime**: vLLM (Tensor Parallelism = 1)
+      - **License**: Apache 2.0
+    provider: "Enterprise AI Platform"
+    license: "apache-2.0"
+    licenseLink: "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    artifacts:
+      - uri: "s3://models/gpt-oss-20b/"
+
+  - name: "laguna-s2-1"
+    description: "Specialized enterprise domain model hosted on IBM Fusion storage."
+    readme: |-
+      # Laguna S2 1
+
+      Enterprise domain LLM.
+      - **Inference Runtime**: vLLM (Tensor Parallelism = 1)
+      - **License**: Enterprise
+    provider: "Enterprise AI Platform"
+    license: "Enterprise"
+    artifacts:
+      - uri: "s3://models/laguna-s2-1/"

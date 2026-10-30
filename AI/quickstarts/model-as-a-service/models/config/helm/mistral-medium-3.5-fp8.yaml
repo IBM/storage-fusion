@@ -1,0 +1,58 @@
+# =============================================================================
+# MaaS Model Specification — mistralai/Mistral-Medium-3.5 (FP8)
+# =============================================================================
+# Architecture: Mistral Medium 3.5 Dense (FP8) with Eagle Speculative Decoding
+# GPU Requirement: 8× NVIDIA GPU (TP=8)
+# Use Cases: Enterprise Chat, Code Reasoning, High-Concurrency Agent Workflows
+# =============================================================================
+
+accelerator:
+  vendor: nvidia
+  count: 8
+
+model:
+  name: mistral-medium-3-5
+  displayName: "Mistral Medium 3.5 FP8"
+  namespace: deploy-models-rhoai
+
+project:
+  create: true
+
+modelRegistry:
+  enabled: true
+  name: default-modelregistry
+  namespace: rhoai-model-registries
+  registeredModelName: "mistral-medium-3.5"
+  connectionSecret: ""
+  createConnectionSecret: false
+
+source:
+  uri: "pvc://mistral-model-weights-pvc/"
+
+inference:
+  engine: vllm
+  image: ""
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  extraArgs:
+    - --served-model-name=mistralai/Mistral-Medium-3.5
+    - --tool-call-parser=mistral
+    - --enable-auto-tool-choice
+    - --reasoning-parser=mistral
+    - --max-num-batched-tokens=32768
+    - --max-num-seqs=32
+    - --kv-cache-dtype=fp8
+    - --max-model-len=234800
+    - --gpu-memory-utilization=0.92
+    - '--speculative-config={"model":"/mnt/models/eagle","num_speculative_tokens":3,"method":"eagle"}'
+
+resources:
+  limits:
+    cpu: "32"
+    memory: 256Gi
+  requests:
+    cpu: "16"
+    memory: 128Gi
+
+monitoring:
+  enabled: true

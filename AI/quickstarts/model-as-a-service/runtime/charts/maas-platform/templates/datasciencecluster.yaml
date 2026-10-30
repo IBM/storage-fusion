@@ -1,0 +1,82 @@
+{{- if .Values.dataScienceCluster.enabled }}
+{{- $existingDSC := lookup "datasciencecluster.opendatahub.io/v2" "DataScienceCluster" "" .Values.dataScienceCluster.name }}
+{{- if not $existingDSC.metadata }}
+---
+# DataScienceCluster is a cluster-scoped resource — no namespace field.
+# Must be applied AFTER:
+#   1. The Gateway and maas-db-config Secret exist
+#      (maas-setup.md: "Create Gateway before enabling modelsAsService")
+#   2. The Kuadrant CR (wave 2) has been applied AND Authorino has started,
+#      registering the AuthConfig CRD (authorino.kuadrant.io/v1beta3).
+#      The RHOAI DSC controller requires this CRD before it will mark
+#      ModelsAsServiceReady=True.  Wave 10 gives Authorino time to become
+#      healthy after the Kuadrant CR is created at wave 2.
+apiVersion: datasciencecluster.opendatahub.io/v2
+kind: DataScienceCluster
+metadata:
+  name: {{ .Values.dataScienceCluster.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    {{- include "maas-platform.labels" . | nindent 4 }}
+spec:
+  components:
+    dashboard:
+      managementState: {{ .Values.dataScienceCluster.components.dashboard.managementState }}
+    workbenches:
+      managementState: {{ .Values.dataScienceCluster.components.workbenches.managementState }}
+    kserve:
+      managementState: {{ .Values.dataScienceCluster.components.kserve.managementState }}
+      {{- /* modelsAsService is deprecated in RHOAI 3.5+ — only emit if explicitly set to Managed
+           to avoid "cannot re-enable once Removed" validation error. Use aigateway instead. */}}
+      {{- if eq ((.Values.dataScienceCluster.components.kserve.modelsAsService).managementState | default "Removed") "Managed" }}
+      modelsAsService:
+        managementState: Managed
+      {{- end }}
+      rawDeploymentServiceConfig: {{ .Values.dataScienceCluster.components.kserve.rawDeploymentServiceConfig }}
+      {{- if hasKey .Values.dataScienceCluster.components.kserve "enableLLMInferenceServiceTLS" }}
+      enableLLMInferenceServiceTLS: {{ .Values.dataScienceCluster.components.kserve.enableLLMInferenceServiceTLS }}
+      {{- end }}
+      nim:
+        managementState: {{ .Values.dataScienceCluster.components.kserve.nim.managementState }}
+    {{- /* aigateway.modelsAsAService replaces kserve.modelsAsService in RHOAI 3.5+.
+         The parent aigateway.managementState MUST be Managed too; if it is unset the
+         operator reports AIGatewayReady=False/Removed and never installs the
+         maas.opendatahub.io CRDs, even when modelsAsAService is Managed. */}}
+    {{- if .Values.dataScienceCluster.components.aigateway }}
+    aigateway:
+      managementState: {{ .Values.dataScienceCluster.components.aigateway.managementState | default "Managed" }}
+      modelsAsAService:
+        managementState: {{ .Values.dataScienceCluster.components.aigateway.modelsAsAService.managementState }}
+    {{- end }}
+    {{- if .Values.dataScienceCluster.components.ogx }}
+    ogx:
+      managementState: {{ .Values.dataScienceCluster.components.ogx.managementState }}
+    {{- end }}
+    modelregistry:
+      managementState: {{ .Values.dataScienceCluster.components.modelregistry.managementState }}
+      registriesNamespace: {{ .Values.platform.namespaces.modelRegistry }}
+    feastoperator:
+      managementState: {{ .Values.dataScienceCluster.components.feastoperator.managementState }}
+    trustyai:
+      managementState: {{ .Values.dataScienceCluster.components.trustyai.managementState }}
+    aipipelines:
+      managementState: {{ .Values.dataScienceCluster.components.aipipelines.managementState }}
+    ray:
+      managementState: {{ .Values.dataScienceCluster.components.ray.managementState }}
+    trainingoperator:
+      managementState: {{ .Values.dataScienceCluster.components.trainingoperator.managementState }}
+    trainer:
+      managementState: {{ .Values.dataScienceCluster.components.trainer.managementState }}
+    mlflowoperator:
+      managementState: {{ .Values.dataScienceCluster.components.mlflowoperator.managementState }}
+    llamastackoperator:
+      managementState: {{ .Values.dataScienceCluster.components.llamastackoperator.managementState }}
+    kueue:
+      managementState: {{ .Values.dataScienceCluster.components.kueue.managementState }}
+{{- else }}
+# DataScienceCluster "{{ .Values.dataScienceCluster.name }}" already exists — skipping creation.
+# Helm will patch only if the resource is already Helm-managed.
+{{- end }}
+{{- end }}

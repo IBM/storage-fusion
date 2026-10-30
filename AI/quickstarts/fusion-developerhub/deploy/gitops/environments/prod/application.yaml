@@ -14,8 +14,9 @@ metadata:
 spec:
   project: default
   source:
-    # REQUIRED: Replace with your Git repository URL
-    repoURL: https://github.com/IBM/storage-fusion.git
+    # REQUIRED: Replace with your fork/mirror URL if you maintain your own copy
+    repoURL: https://github.com/IBM/storage-fusion
+    # Chart location inside the IBM/storage-fusion repository
     path: AI/quickstarts/fusion-developerhub/deploy/helm
     # REQUIRED: Replace with your target branch
     targetRevision: master

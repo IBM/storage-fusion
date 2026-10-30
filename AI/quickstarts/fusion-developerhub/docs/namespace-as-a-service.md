@@ -304,9 +304,9 @@ developerHub:
       enabled: true
       repoName: "your-gitops-repo"                 # Repository name
       templateBranch: "main"                       # Branch holding the templates
-      requestTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
-      updateTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
-      deleteTemplatePath: "AI/quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
+      requestTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
+      updateTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
+      deleteTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
       gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
       namespacesPath: "namespaces"                 # Directory inside the repo where namespace manifests land
 
@@ -336,9 +336,9 @@ https://<enterpriseHost or github.com>/<org>/<repoName>/blob/<templateBranch>/<d
 | `catalog.naas.enabled` | Feature toggle - set `true` to deploy the templates and ArgoCD controller | `true` |
 | `catalog.naas.repoName` | Repository name that contains the template files | `my-platform-repo` |
 | `catalog.naas.templateBranch` | Branch that holds the templates and `skeleton/` files | `main` |
-| `catalog.naas.requestTemplatePath` | Relative path to the Request (Provision) template within the repo | `AI/quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml` |
-| `catalog.naas.updateTemplatePath` | Relative path to the Update template within the repo | `AI/quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml` |
-| `catalog.naas.deleteTemplatePath` | Relative path to the Delete template within the repo | `AI/quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml` |
+| `catalog.naas.requestTemplatePath` | Relative path to the Request (Provision) template within the repo | `quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml` |
+| `catalog.naas.updateTemplatePath` | Relative path to the Update template within the repo | `quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml` |
+| `catalog.naas.deleteTemplatePath` | Relative path to the Delete template within the repo | `quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml` |
 | `catalog.naas.gitopsRepoURL` | Full Git clone URL watched by the ArgoCD namespace-controller | `https://github.com/my-org/my-repo.git` |
 | `catalog.naas.namespacesPath` | Repo-relative directory where provisioned namespace manifests land | `namespaces` |
 | `catalog.naas.namespaceValidator.ociRepository` | OCI registry prefix for the validator plugin artifacts | `your-registry.example.com/your-org` |
