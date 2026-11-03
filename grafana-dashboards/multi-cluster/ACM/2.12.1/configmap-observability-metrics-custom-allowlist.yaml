@@ -1,11 +1,11 @@
-﻿kind: ConfigMap
+kind: ConfigMap
 apiVersion: v1
 metadata:
   name: observability-metrics-custom-allowlist
   namespace: open-cluster-management-observability
 data:
   metrics_list.yaml: |
-    names:      
+    names:
       # Fusion Metrics
       - isf_cluster_details
       - isf_service
@@ -38,6 +38,50 @@ data:
       # Memory Metrics
       - memAvailReal
       - memTotalReal
+
+      # NVIDIA DCGM GPU Metrics — fleet-wide GPU observability (for gpu-fleet-acm-dashboard)
+      - DCGM_FI_DEV_GPU_UTIL
+      - DCGM_FI_DEV_MEM_COPY_UTIL
+      - DCGM_FI_DEV_ENC_UTIL
+      - DCGM_FI_DEV_DEC_UTIL
+      - DCGM_FI_DEV_FB_FREE
+      - DCGM_FI_DEV_FB_USED
+      - DCGM_FI_DEV_FB_TOTAL
+      - DCGM_FI_DEV_SM_CLOCK
+      - DCGM_FI_DEV_MEM_CLOCK
+      - DCGM_FI_DEV_GPU_TEMP
+      - DCGM_FI_DEV_POWER_USAGE
+      - DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION
+      - DCGM_FI_DEV_PCIE_TX_THROUGHPUT
+      - DCGM_FI_DEV_PCIE_RX_THROUGHPUT
+      - DCGM_FI_DEV_PCIE_REPLAY_COUNTER
+      - DCGM_FI_DEV_ECC_SBE_VOL_TOTAL
+      - DCGM_FI_DEV_ECC_DBE_VOL_TOTAL
+      - DCGM_FI_DEV_ECC_SBE_AGG_TOTAL
+      - DCGM_FI_DEV_ECC_DBE_AGG_TOTAL
+      - DCGM_FI_DEV_RETIRED_SBE
+      - DCGM_FI_DEV_RETIRED_DBE
+      - DCGM_FI_DEV_RETIRED_PENDING
+      - DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL
+      - DCGM_FI_DEV_VGPU_LICENSE_STATUS
+      - DCGM_FI_DEV_XID_ERRORS
+      - DCGM_FI_PROF_GR_ENGINE_ACTIVE
+      - DCGM_FI_PROF_SM_ACTIVE
+      - DCGM_FI_PROF_SM_OCCUPANCY
+      - DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
+      - DCGM_FI_PROF_DRAM_ACTIVE
+      - DCGM_FI_PROF_PCIE_TX_BYTES
+      - DCGM_FI_PROF_PCIE_RX_BYTES
+      - DCGM_FI_PROF_NVLINK_TX_BYTES
+      - DCGM_FI_PROF_NVLINK_RX_BYTES
+
+      # GPU composite health recording rules (from gpu-rules.yaml)
+      - gpu:health_score:composite
+      - gpu:failure_probability:24h
+      - gpu:throttle:pressure_score
+      - gpu:impact:pod_count_on_failed_nodes
+      - gpu:impact:pod_count_on_at_risk_nodes
+
   uwl_metrics_list.yaml: |
     names:
       # Fusion Event Metrics
@@ -46,3 +90,18 @@ data:
       
       # GDP Remote Mount Health
       - gpfs_health_status
+
+      # NVIDIA DCGM UWL metrics (user-workload namespace scraped)
+      - DCGM_FI_DEV_GPU_UTIL
+      - DCGM_FI_DEV_FB_USED
+      - DCGM_FI_DEV_FB_FREE
+      - DCGM_FI_DEV_GPU_TEMP
+      - DCGM_FI_DEV_POWER_USAGE
+      - DCGM_FI_DEV_ECC_SBE_VOL_TOTAL
+      - DCGM_FI_DEV_ECC_DBE_VOL_TOTAL
+      - DCGM_FI_DEV_XID_ERRORS
+      - DCGM_FI_PROF_GR_ENGINE_ACTIVE
+      - DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
+      - DCGM_FI_PROF_DRAM_ACTIVE
+      - gpu:health_score:composite
+      - gpu:failure_probability:24h
