@@ -30,7 +30,7 @@ hooks:
     namespace: <app-namespace>
     selectResource: statefulset
     labelSelector: postgres-operator.crunchydata.com/instance-set=instance1
-    timeout: 120
+    timeout: 180
     onError: fail
     chks:
       - name: replicasReady
@@ -70,7 +70,7 @@ hooks:
     namespace: <app-namespace>
     selectResource: deployment
     nameSelector: mysql
-    timeout: 120
+    timeout: 600
     onError: fail
     chks:
       - name: replicasReady
@@ -252,3 +252,6 @@ workflows:
 - Exclude `events`, `replicasets`, and `pods` from resource groups — these are ephemeral and will be recreated automatically.
 - For operator-based applications, always back up and restore the operator subscription and OperatorGroup in addition to the application's CRDs, so the operator is reinstalled on a bare-cluster restore.
 - Use `restoreOverwriteResources: true` on groups containing resources that the operator will have already auto-created — otherwise the restore will skip them as duplicates.
+- A hook's outer `timeout` must be greater than or equal to the largest inner `chks[].timeout` — the outer one is enforced first.
+- A `check` hook on a custom resource (operator CR) needs a ClusterRole and ClusterRoleBinding granting the `transaction-manager` service account (`system:serviceaccount:ibm-backup-restore:transaction-manager`) `get`, `list` and `watch` on that CRD's API group. Verify with `oc auth can-i list <resource>.<group> --as=system:serviceaccount:ibm-backup-restore:transaction-manager`.
+- Set `appType` to the exact name of the Application CR registered in Fusion (`oc get application.application.isf.ibm.com -n ibm-spectrum-fusion-ns`), not the technology name. For example, Crunchy PGO uses `postgres-operator`, not `postgresql`.

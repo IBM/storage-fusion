@@ -29,6 +29,7 @@ Ask the user the following questions in a **single message** (do not ask them on
 9. **Post-restore steps**: Are there any commands that must run after a restore? (e.g. re-initialise replication, drop and re-sync a local database, restart a cluster member)
 10. **Additional Kubernetes resources**: Should any cluster-scoped resources, operator subscriptions, or custom CR types be included in the backup? (e.g. `ClusterRoleBindings`, `subscriptions.operators.coreos.com`, operator CRs)
 11. **Fusion namespace**: What namespace is the IBM Fusion operator running in? (default: `ibm-spectrum-fusion-ns`)
+12. **Application CR name**: What is the name of the Application CR registered in IBM Fusion for this application? (check with `oc get application.application.isf.ibm.com -n <fusion-namespace>`). Use this exact value for `spec.appType`.
 
 **Before presenting these questions**, check `question-guide.md` to see if the named application is a well-known application. If it is, pre-fill the quiesce/resume answers with the known defaults, present them to the user as suggested values, and ask the user to confirm or override.
 
@@ -50,6 +51,7 @@ Based on the answers, plan the following before writing any YAML:
 - **`exec`** hooks run a shell command inside a container — use for quiesce, flush, fsync, and post-restore init commands
 - **`scale`** hooks scale a workload up or down — use when no in-container quiesce command exists (scale to zero before backup, scale back up after restore)
 - **`check`** hooks poll a JSONPath condition — use to verify readiness after restore before declaring success
+- A hook's outer `timeout` is enforced first, so it must be greater than or equal to the largest `chks[].timeout` (or `ops[].timeout`) inside it, otherwise the inner timeout is never reached
 - Set `inverseOp` on quiesce `exec` ops pointing to the resume op — this auto-triggers resume if backup fails mid-sequence
 - Use `singlePodOnly: true` on `exec` hooks targeting replica sets or clusters where the command should run on only one pod (e.g. primary/leader)
 
@@ -84,7 +86,7 @@ metadata:
   name: <appname>-backup-restore-recipe
   namespace: <fusion-namespace>
 spec:
-  appType: <appType>
+  appType: <application-cr-name>   # exact Application CR name from Step 1 question 12
   groups:
     - name: <appname>-volumes
       type: volume
@@ -122,7 +124,7 @@ spec:
       namespace: <app-namespace>
       selectResource: <deployment|statefulset>
       labelSelector: <selector>
-      timeout: 120
+      timeout: 300
       onError: fail
       chks:
         - name: replicasReady
@@ -158,6 +160,7 @@ After generating the YAML:
    oc apply -f <recipe-filename>.yaml -n <fusion-namespace>
    ```
 5. Remind the user that the Recipe CR `name` must match the name of the Application CR in IBM Fusion for the recipe to be automatically associated with the application
+6. If the recipe has a `check` hook on a custom resource (an operator CR), remind the user that the `transaction-manager` service account (`system:serviceaccount:ibm-backup-restore:transaction-manager`) needs a ClusterRole and ClusterRoleBinding granting `get`, `list` and `watch` on that CRD's API group, or the check cannot read the CR. Suggest `oc api-resources --api-group=<group>` to confirm the group and version, and `oc auth can-i list <resource>.<group> --as=system:serviceaccount:ibm-backup-restore:transaction-manager` to verify access.
 
 ---
 
