@@ -69,6 +69,7 @@ Backing up and restoring Cloud Pak for Data deployed by Maximo is not supported.
 
 4. Run the prerequisite scripts that apply to the Maximo instance. Some prerequisite scripts must always be run, while others depend on the deployed capabilities and databases. The prerequisite scripts that must be run regardless of the capabilities installed are: `ibm-sls`, `mas-core` and `mas-manage`. If the cluster hosts the databases as well, then `mongodb` and/or `db2u` should also be run, depending on the case at hand.
 
+    *Note: the `--custom-certs` flag should be used if custom TLS certificates for routes were configured.*
 
     - **mongodb**:
     
@@ -100,50 +101,50 @@ Backing up and restoring Cloud Pak for Data deployed by Maximo is not supported.
     - **mas-core**:
     
         ```
-        core/backup-pre-req-core.sh
+        core/backup-pre-req-core.sh [--custom-certs]
         ```
     
     - **mas-manage**:
     
         ```
-        manage/backup-pre-req-manage.sh
+        manage/backup-pre-req-manage.sh [--custom-certs]
         ```
     
     - **mas-iot**:
 
     
         ```
-        iot/backup-pre-req-iot.sh
+        iot/backup-pre-req-iot.sh [--custom-certs]
         ```
     
     - **mas-monitor**:
     
         ```
-        monitor/backup-pre-req-monitor.sh
+        monitor/backup-pre-req-monitor.sh [--custom-certs]
         ```
     
     - **mas-optimizer**:
     
         ```
-        optimizer/backup-pre-req-optimizer.sh
+        optimizer/backup-pre-req-optimizer.sh [--custom-certs]
         ```
     
     - **mas-visual-inspection**:
     
         ```
-        visual-inspection/backup-pre-req-visual-inspection.sh
+        visual-inspection/backup-pre-req-visual-inspection.sh [--custom-certs]
         ```
     
     - **mas-predict**\*:
     
         ```
-        predict/backup-pre-req-predict.sh
+        predict/backup-pre-req-predict.sh [--custom-certs]
         ```
     
     - **mas-assist**:
     
         ```
-        assist/backup-pre-req-assist.sh
+        assist/backup-pre-req-assist.sh [--custom-certs]
         ```
     
     - **mas-aiservice**:
@@ -155,7 +156,7 @@ Backing up and restoring Cloud Pak for Data deployed by Maximo is not supported.
     - **mref**:
     
         ```
-        mref/backup-pre-req-mref.sh
+        mref/backup-pre-req-mref.sh [--custom-certs]
         ```
 
 \**Predict is only supported for Backup and restore to the same cluster and only for scenarios where the Cloud Pak for Data instance is untouched.
