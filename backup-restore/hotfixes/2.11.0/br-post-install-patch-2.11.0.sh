@@ -20,12 +20,12 @@ elif [[ "$1" == "-sds" ]]; then
 elif [[ "$1" == "-help" ]]; then
     patch_usage
     exit 0
-else 
+else
     echo "Unknown option: $1"
     patch_usage
     exit 1
 fi
-HOTFIX_NUMBER=12
+HOTFIX_NUMBER=13
 EXPECTED_VERSION=2.11.0
 
 mkdir -p /tmp/br-post-install-patch-2.11.0
@@ -304,13 +304,13 @@ if [ -z "$ISF_NS" ]; then
 fi
 
 if BR_NS=$(oc get dataprotectionserver -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null) && [ -n "$BR_NS" ]
-  then 
+  then
   HUB=true
 else
   BR_NS=$(oc get dataprotectionagent -A --no-headers -o custom-columns=NS:metadata.namespace 2>/dev/null)
 fi
 
-if [ -z "$BR_NS" ] 
+if [ -z "$BR_NS" ]
  then
     echo "ERROR: No B&R installation found. Exiting."
     exit 1
@@ -318,7 +318,7 @@ fi
 
 AGENTCSV=$(oc -n "$BR_NS" get csv -o name | grep ibm-dataprotectionagent)
 VERSION=$(oc -n "$BR_NS" get "$AGENTCSV" -o custom-columns=:spec.version --no-headers)
-if [ -z "$VERSION" ] 
+if [ -z "$VERSION" ]
   then
     echo "ERROR: Could not get B&R version. Skipped updates"
     exit 0
@@ -339,10 +339,10 @@ if [ -n "$HUB" ]; then
     backupservice_img=cp.icr.io/cp/bnr/guardian-backup-service@sha256:6517b55c0c3ab8aa44f2e5cc4554ee3efb49211f7eb8840623c4160076485611
     set_deployment_image backup-service backup-service ${backupservice_img}
 
-    backuplocation_img=cp.icr.io/cp/bnr/guardian-backup-location@sha256:42e8fdc35807cc3edeb02f5ae5668197e6b45409c33b2d6176a230d6b72b7a4b
+    backuplocation_img=cp.icr.io/cp/bnr/guardian-backup-location@sha256:327b87c899e1aa88e5493c5d4893796abc9d2c40c159160dbad5fc79802658d9
     set_deployment_image backup-location-deployment backup-location-container "${backuplocation_img}"
 
-    restart_deployments "$BR_NS" applicationsvc 
+    restart_deployments "$BR_NS" applicationsvc
 
 fi
 
@@ -364,25 +364,25 @@ update_guardian_configmap(){
 
 update_transaction_manager_clusterrole(){
     echo "Updating transaction-manager-ibm-backup-restore ClusterRole with Prometheus API access..."
-    
+
     # Check if ClusterRole exists
     if ! oc get clusterrole transaction-manager-ibm-backup-restore &>/dev/null; then
         echo "WARNING: ClusterRole transaction-manager-ibm-backup-restore not found. Skipping update."
         return
     fi
-    
+
     # Save original ClusterRole
     oc get clusterrole transaction-manager-ibm-backup-restore -o yaml > $DIR/transaction-manager-clusterrole-original.yaml
-    
+
     # Check if the rule already exists
     if oc get clusterrole transaction-manager-ibm-backup-restore -o yaml | grep -q "monitoring.coreos.com"; then
         echo "Prometheus API rule already exists in ClusterRole. Skipping update."
         return
     fi
-    
+
     # Add the new rule for Prometheus API access
     patch='[{"op": "add", "path": "/rules/-", "value": {"verbs": ["get"], "apiGroups": ["monitoring.coreos.com"], "resources": ["prometheuses/api"], "resourceNames": ["k8s"]}}]'
-    
+
     if [ -z "$DRY_RUN" ]; then
         oc patch clusterrole transaction-manager-ibm-backup-restore --type='json' -p="${patch}"
         echo "Successfully updated ClusterRole with Prometheus API access rule"
@@ -413,7 +413,7 @@ if [ -n "$HUB" ]; then
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "job-manager"
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "backup-service"
     printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "applicationsvc"
-    
+
 fi
 
 printf "  %-${#BR_NS}s: %s\n" "$BR_NS" "transaction-manager"
