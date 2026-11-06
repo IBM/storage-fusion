@@ -6,7 +6,14 @@ This document lists all hotfixes available for IBM Storage Fusion Backup & Resto
 
 Hotfixes are cumulative patches that address specific issues in the Backup & Restore component. Each hotfix builds upon previous fixes and should be applied to both hub and spoke clusters.
 
-## Hotfix hotfix-2.11.0.12 (Latest)
+## Hotfix hotfix-2.11.0.13 (Latest)
+
+**Release Date:** November 6, 2026
+
+### Issues Fixed
+1. Ensure BSL capacity is retrieved after changing its endpoint/region
+
+## Hotfix hotfix-2.11.0.12
 
 **Release Date:** July 31, 2026
 
@@ -14,12 +21,12 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 1. Prevent BSL updates from persisting out of order
 2. Ensure restores update Velero's BSL with the proper region
 
-## Hotfix hotfix-2.11.0.11 (Latest)
+## Hotfix hotfix-2.11.0.11
 
 **Release Date:** June 9, 2026
 
 ### Issues Fixed
-1. 2.11 Spoke cannot connect to 2.13 Hub due to incorrect Kafka header 
+1. 2.11 Spoke cannot connect to 2.13 Hub due to incorrect Kafka header
 2. Fix broken hotfix idp-agent-operator patch which causing invalidImage references for agent pods
 
 ## Hotfix hotfix-2.11.0.10
@@ -89,8 +96,8 @@ Hotfixes are cumulative patches that address specific issues in the Backup & Res
 
 Before applying the hotfix, download the following files:
 
-- [`br-post-install-patch-2.11.0.sh`](br-post-install-patch-2.11.0.sh) 
-- [`br-2.11.0patch-offline-mirror.sh`](br-2.11.0patch-offline-mirror.sh) 
+- [`br-post-install-patch-2.11.0.sh`](br-post-install-patch-2.11.0.sh)
+- [`br-2.11.0patch-offline-mirror.sh`](br-2.11.0patch-offline-mirror.sh)
 
 ### Installation Steps
 
@@ -105,7 +112,7 @@ If your environment does not have direct internet access, mirror the hotfix imag
   ```bash
   # Login to IBM Container Registry
   podman login cp.icr.io
-  
+
   # Login to your local registry
   podman login <YOUR_LOCAL_REGISTRY>
   ```
