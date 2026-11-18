@@ -254,21 +254,42 @@ matrix_lookup() {
 }
 
 # Check 2: duplicate registry mirror sources across IDMS and ICSP. Usage: audit_mirror_sources <label> <kubeconfig>
+# A source listed more than once is reported with the objects defining it and whether their mirrors are identical.
 audit_mirror_sources() {
-  local label=$1 kc=$2 idms icsp dups
+  local label=$1 kc=$2 idms icsp all dups
   idms=$("$CLI_TOOL" --kubeconfig "$kc" get imagedigestmirrorsets.config.openshift.io \
-    -o jsonpath='{range .items[*].spec.imageDigestMirrors[*]}{.source}{"\n"}{end}' 2>/dev/null | grep . || true)
+    -o jsonpath='{range .items[*]}{"#"}{.metadata.name}{"\n"}{range .spec.imageDigestMirrors[*]}{.source}{"|"}{.mirrors[*]}{"\n"}{end}{end}' 2>/dev/null |
+    awk '/^#/{n=substr($0,2);next} NF{print "IDMS/"n"|"$0}' || true)
   icsp=$("$CLI_TOOL" --kubeconfig "$kc" get imagecontentsourcepolicies.operator.openshift.io \
-    -o jsonpath='{range .items[*].spec.repositoryDigestMirrors[*]}{.source}{"\n"}{end}' 2>/dev/null | grep . || true)
-  if [ -z "$idms" ] && [ -z "$icsp" ]; then
+    -o jsonpath='{range .items[*]}{"#"}{.metadata.name}{"\n"}{range .spec.repositoryDigestMirrors[*]}{.source}{"|"}{.mirrors[*]}{"\n"}{end}{end}' 2>/dev/null |
+    awk '/^#/{n=substr($0,2);next} NF{print "ICSP/"n"|"$0}' || true)
+  all=$(printf '%s\n%s\n' "$idms" "$icsp" | grep . || true)
+  if [ -z "$all" ]; then
     note "$label: No IDMS/ICSP mirror sources defined"
     return 0
   fi
-  dups=$(printf '%s\n%s\n' "$idms" "$icsp" | grep . | sort | uniq -c | awk '$1 > 1 {print $2 " (x" $1 ")"}')
-  if [ -n "$dups" ]; then
-    warn "$label: Duplicate/conflicting IDMS/ICSP mirror source(s): $(echo "$dups" | tr '\n' ' ')"
-  else
+  # Input lines: <KIND/name>|<source>|<mirrors, space separated>. Output one line per duplicated source.
+  dups=$(echo "$all" | awk -F'|' '
+    {
+      n=split($3, t, " ")
+      for (i=2; i<=n; i++) { v=t[i]; j=i-1; while (j>=1 && t[j] > v) { t[j+1]=t[j]; j-- } t[j+1]=v }
+      key=""; for (i=1; i<=n; i++) key=key (i>1 ? "," : "") t[i]
+      src=$2; cnt[src]++
+      if (index(" " own[src] " ", " " $1 " ") == 0) own[src]=own[src] (own[src]=="" ? "" : " ") $1
+      if (index("|" keys[src] "|", "|" key "|") == 0) { keys[src]=keys[src] (keys[src]=="" ? "" : "|") key; nk[src]++ }
+    }
+    END {
+      for (s in cnt) if (cnt[s] > 1) {
+        gsub(/ /, ",", own[s])
+        printf "%s (x%d in %s; %s)\n", s, cnt[s], own[s], (nk[s] > 1 ? "DIFFERENT mirrors" : "identical mirrors")
+      }
+    }' | sort)
+  if [ -z "$dups" ]; then
     pass "$label: All IDMS/ICSP mirror sources are unique"
+  elif echo "$dups" | grep -q 'DIFFERENT mirrors'; then
+    warn "$label: Duplicate IDMS/ICSP mirror source(s) with DIFFERENT mirrors (verify each mirror is reachable and has the images): $(echo "$dups" | tr '\n' ' ')"
+  else
+    warn "$label: Duplicate IDMS/ICSP mirror source(s) with identical mirrors (usually harmless; consider removing the redundant entry): $(echo "$dups" | tr '\n' ' ')"
   fi
 }
 
@@ -299,8 +320,10 @@ audit_hostedcluster() {
 # Check 3: NodePool readiness (Hub). Usage: audit_nodepool <namespace> <name> <desired> <ready> <unready>
 # ready/unready are the sums of .status.nodesInfo.nodeVersions[].readyNodeCount / unreadyNodeCount.
 np_cond() { hub get nodepool.hypershift.openshift.io "$2" -n "$1" -o jsonpath="{.status.conditions[?(@.type==\"$3\")].status}" 2>/dev/null; }
+# Condition message flattened to one line (messages can be multi-line, one Machine per line).
+np_cond_msg() { hub get nodepool.hypershift.openshift.io "$2" -n "$1" -o jsonpath="{.status.conditions[?(@.type==\"$3\")].message}" 2>/dev/null | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'; }
 audit_nodepool() {
-  local ns=$1 name=$2 desired=$3 ready=${4:-0} unready=${5:-0} s t bad=0
+  local ns=$1 name=$2 desired=$3 ready=${4:-0} unready=${5:-0} s t msg bad=0
   s=$(np_cond "$ns" "$name" Ready)
   if [ "$s" != "True" ]; then stop "NodePool $ns/$name: Ready=${s:-<missing>} (expected True)"; bad=1; fi
   for t in UpdatingConfig UpdatingVersion; do
@@ -313,7 +336,10 @@ audit_nodepool() {
   done
   for t in AllMachinesReady AllNodesHealthy; do
     s=$(np_cond "$ns" "$name" "$t")
-    if [ "$s" = "False" ]; then warn "NodePool $ns/$name: $t=False"; fi
+    if [ "$s" = "False" ]; then
+      msg=$(np_cond_msg "$ns" "$name" "$t")
+      warn "NodePool $ns/$name: $t=False${msg:+ ($msg)}"
+    fi
   done
   case "$desired" in
     ''|*[!0-9]*) ;;
@@ -962,6 +988,15 @@ while IFS= read -r mc; do
     spoke_extra_blockers=$((spoke_extra_blockers+1))
   else
     pass "Spoke $mc has $active_nodes active/Ready schedulable node(s) (minimum $MIN_SPOKE_READY_NODES)"
+  fi
+
+  # Node pressure: any node reporting Memory/Disk/PID pressure
+  pressured=$(spoke get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.status.conditions[?(@.type=="MemoryPressure")].status}{"|"}{.status.conditions[?(@.type=="DiskPressure")].status}{"|"}{.status.conditions[?(@.type=="PIDPressure")].status}{"\n"}{end}' 2>/dev/null |
+    awk -F'|' '{c=""; if($2=="True")c=c" MemoryPressure"; if($3=="True")c=c" DiskPressure"; if($4=="True")c=c" PIDPressure"; if(c!="") printf "%s (%s) ", $1, substr(c,2)}')
+  if [ -n "$pressured" ]; then
+    warn "Spoke $mc: node(s) under pressure: $pressured- resolve before upgrade (can leave NodePool AllNodesHealthy=False)"
+  else
+    pass "Spoke $mc: no node reports Memory/Disk/PID pressure"
   fi
 
   # Check 9: Spoke OCP version skew against Hub and release matrix

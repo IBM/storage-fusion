@@ -115,7 +115,9 @@ The temporary spoke kubeconfigs are deleted when the script exits. Tokens and se
 | `status-reporter` reports `no storageConsumer found` | The StorageConsumer is missing on the hub. Contact IBM Support. |
 | Fusion subscription set to `Automatic` | Switch to `Manual` approval before upgrading. |
 | In-flight backups or restores | Wait for them to finish or cancel them. |
-| Version warnings (OCP, Data Foundation, IDMS/ICSP duplicates) | Compare against the supported matrix for your target Fusion release. Remove duplicate mirror sources. |
+| Version warnings (OCP, Data Foundation) | Compare against the supported matrix for your target Fusion release. |
+| Duplicate IDMS/ICSP mirror source | The warning shows which objects define the source and whether their mirrors are `identical` or `DIFFERENT`. Identical is usually harmless, so remove the redundant entry when convenient. If the mirrors differ, make sure each one is reachable and has the images, and fix any stale entry. Changing IDMS/ICSP reboots nodes, so do it outside the upgrade window. |
 | Spoke below node minimum or too far behind the hub OCP version (0–2 minors) | Fix the spoke capacity or version first. |
+| Node under Memory/Disk/PID pressure, or NodePool `AllNodesHealthy=False` / fewer ready nodes than desired | Check `oc describe node <node>` on the spoke. Free memory, disk or PIDs, or add capacity, until the node is healthy. Re-run. |
 
 Re-run the script until the result is `SAFE TO UPGRADE`. If you need IBM Support, attach `SUMMARY.txt` and the relevant `clusters/` and `snapshot/` files.
