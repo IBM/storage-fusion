@@ -27,7 +27,8 @@
 #      - Hub ManagedClusterAddOns and cascaded ManifestWorks
 #      - Spoke SpectrumFusion, FSIs, StorageClients, Connections, and namespaces
 #      - Stuck cleanup jobs and pods in Terminating state
-#   4. ManagedCluster label vs StorageConsumer consistency audit (TS023322996 RCA check):
+#   4. ManagedCluster status, label vs StorageConsumer consistency audit (TS023322996 RCA check):
+#      - ManagedCluster status and availability condition checks (Available, Joined, HubAccepted)
 #      - Robust label key presence check (handles empty and boolean label values)
 #      - Flags clusters where ManagedCluster was recreated or pruned without labels
 #      - Verifies GitOps (ArgoCD / Flux) prune / selfHeal configuration
@@ -710,16 +711,50 @@ while IFS= read -r mc; do
 
   note "ManagedCluster $mc: created=$created base='$base_desc' fdf='$fdf_desc' clientConfigs=$cfgs consumer='${cons:-none}'"
 
+  # ManagedCluster status conditions check
+  avail=$(hub get managedcluster "$mc" -o jsonpath='{.status.conditions[?(@.type=="ManagedClusterConditionAvailable")].status}' 2>/dev/null || true)
+  [ -z "$avail" ] && avail=$(hub get managedcluster "$mc" -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' 2>/dev/null || true)
+  avail_reason=$(hub get managedcluster "$mc" -o jsonpath='{.status.conditions[?(@.type=="ManagedClusterConditionAvailable")].reason}' 2>/dev/null || true)
+  [ -z "$avail_reason" ] && avail_reason=$(hub get managedcluster "$mc" -o jsonpath='{.status.conditions[?(@.type=="Available")].reason}' 2>/dev/null || true)
+
+  joined=$(hub get managedcluster "$mc" -o jsonpath='{.status.conditions[?(@.type=="ManagedClusterJoined")].status}' 2>/dev/null || true)
+  [ -z "$joined" ] && joined=$(hub get managedcluster "$mc" -o jsonpath='{.status.conditions[?(@.type=="Joined")].status}' 2>/dev/null || true)
+  if [ -n "$joined" ] && [ "$joined" != "True" ]; then
+    warn "ManagedCluster $mc is not Joined (condition ManagedClusterJoined='$joined')"
+  fi
+
+  hub_acc=$(hub get managedcluster "$mc" -o jsonpath='{.status.conditions[?(@.type=="HubAcceptedManagedCluster")].status}' 2>/dev/null || true)
+  [ -z "$hub_acc" ] && hub_acc=$(hub get managedcluster "$mc" -o jsonpath='{.status.conditions[?(@.type=="HubAccepted")].status}' 2>/dev/null || true)
+  if [ -n "$hub_acc" ] && [ "$hub_acc" != "True" ]; then
+    warn "ManagedCluster $mc is not accepted by Hub (condition HubAcceptedManagedCluster='$hub_acc')"
+  fi
+
+  if [ "$avail" = "True" ]; then
+    pass "ManagedCluster $mc is Available"
+  else
+    warn "ManagedCluster $mc is not Available (condition ManagedClusterConditionAvailable='${avail:-Unknown}'${avail_reason:+, reason='$avail_reason'})"
+  fi
+
   if [ "$has_base" = false ] && [ "$has_fdf" = false ]; then
     if [ -n "$cons" ]; then
       stop "ManagedCluster $mc has a StorageConsumer ($cons) but NEITHER isf.ibm.com/fusion-base NOR fusion-fdf labels. (Incident TS023322996 state: cluster was recreated/pruned without addon labels). NOT SAFE TO UPGRADE!"
     else
-      note "ManagedCluster $mc has no isf.ibm.com/fusion-* labels and no StorageConsumer matched by label."
+      note "ManagedCluster $mc has no isf.ibm.com/fusion-* labels and no StorageConsumer (no FDF consumer expected)."
     fi
-  elif [ "$has_base" = false ] || [ "$has_fdf" = false ]; then
-    warn "ManagedCluster $mc has only one of fusion-base / fusion-fdf (base='$base_desc', fdf='$fdf_desc'). Expected both for clusters consuming FDF."
-  else
-    pass "ManagedCluster $mc carries required fusion-base and fusion-fdf labels"
+  elif [ "$has_fdf" = true ] && [ "$has_base" = false ]; then
+    warn "ManagedCluster $mc has fusion-fdf without fusion-base. The Fusion webhook requires fusion-base for fusion-fdf."
+  elif [ "$has_base" = true ] && [ "$has_fdf" = false ]; then
+    if [ -n "$cons" ]; then
+      warn "ManagedCluster $mc has fusion-base but not fusion-fdf while StorageConsumer $cons exists. Confirm whether FDF storage consumption is intended."
+    else
+      pass "ManagedCluster $mc carries fusion-base only (no FDF consumer expected)"
+    fi
+  elif [ "$has_base" = true ] && [ "$has_fdf" = true ]; then
+    if [ -z "$cons" ]; then
+      warn "ManagedCluster $mc has fusion-fdf label but no StorageConsumer was found on Hub."
+    else
+      pass "ManagedCluster $mc carries required fusion-base and fusion-fdf labels with StorageConsumer $cons"
+    fi
   fi
 
   # Cluster recreation indicator
@@ -794,13 +829,15 @@ while IFS= read -r mc; do
 
   # 2. ManagedClusterAddOn health conditions
   for addon in $(hub get managedclusteraddons -n "$mc" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null); do
-    available_cond=$(hub get managedclusteraddon "$addon" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' 2>/dev/null)
-    degraded_cond=$(hub get managedclusteraddon "$addon" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Degraded")].status}' 2>/dev/null)
+    available_cond=$(hub get managedclusteraddon "$addon" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' 2>/dev/null || true)
+    degraded_cond=$(hub get managedclusteraddon "$addon" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Degraded")].status}' 2>/dev/null || true)
     
     if [ "$available_cond" = "False" ] || [ "$degraded_cond" = "True" ]; then
-      stop "Cluster $mc: AddOn '$addon' is DEGRADED or UNAVAILABLE (Available=$available_cond, Degraded=$degraded_cond)"
+      stop "Cluster $mc: AddOn '$addon' is DEGRADED or UNAVAILABLE (Available=${available_cond:-missing}, Degraded=${degraded_cond:-False})"
+    elif [ "$available_cond" = "True" ]; then
+      pass "Cluster $mc: AddOn '$addon' is Healthy (Available=True, Degraded=${degraded_cond:-False})"
     else
-      pass "Cluster $mc: AddOn '$addon' is Healthy (Available=$available_cond, Degraded=${degraded_cond:-False})"
+      warn "Cluster $mc: AddOn '$addon' availability is Unknown or unconfirmed (Available='${available_cond:-missing}', Degraded=${degraded_cond:-False})"
     fi
   done
 
@@ -813,10 +850,22 @@ while IFS= read -r mc; do
   fi
 
   for mw in $(hub get manifestworks -n "$mc" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null); do
-    applied_cond=$(hub get manifestwork "$mw" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Applied")].status}' 2>/dev/null)
-    degraded_cond=$(hub get manifestwork "$mw" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Degraded")].status}' 2>/dev/null)
+    applied_cond=$(hub get manifestwork "$mw" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Applied")].status}' 2>/dev/null || true)
+    available_cond=$(hub get manifestwork "$mw" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' 2>/dev/null || true)
+    degraded_cond=$(hub get manifestwork "$mw" -n "$mc" -o jsonpath='{.status.conditions[?(@.type=="Degraded")].status}' 2>/dev/null || true)
+    
     if [ "$applied_cond" = "False" ] || [ "$degraded_cond" = "True" ]; then
-      stop "Cluster $mc: ManifestWork '$mw' failed to apply or is Degraded (Applied=$applied_cond, Degraded=$degraded_cond)"
+      stop "Cluster $mc: ManifestWork '$mw' failed to apply or is Degraded (Applied=${applied_cond:-missing}, Available=${available_cond:-missing}, Degraded=${degraded_cond:-False})"
+    elif [ "$applied_cond" = "True" ]; then
+      if [ -n "$available_cond" ] && [ "$available_cond" = "False" ]; then
+        stop "Cluster $mc: ManifestWork '$mw' is Applied but not Available (Applied=True, Available=False)"
+      elif [ -n "$available_cond" ] && [ "$available_cond" != "True" ]; then
+        warn "Cluster $mc: ManifestWork '$mw' is Applied but Available condition is '$available_cond'"
+      else
+        pass "Cluster $mc: ManifestWork '$mw' is Applied (Applied=True${available_cond:+, Available=$available_cond})"
+      fi
+    else
+      warn "Cluster $mc: ManifestWork '$mw' has no Applied condition or status is not True (Applied='${applied_cond:-missing}')"
     fi
   done
 done <<< "$mc_list"
