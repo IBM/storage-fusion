@@ -12,7 +12,7 @@
   - HostedCluster and NodePool health (HCP clusters only).
   - Duplicate IDMS/ICSP mirrors.
   - OCP/Fusion/Data Foundation version support.
-- **Hub and spoke consistency:** `isf.ibm.com/fusion-*` ManagedCluster labels against StorageConsumers and spoke resources. This catches the case where a ManagedCluster was recreated without its addon labels.
+- **Hub and spoke consistency:** ManagedCluster availability and `isf.ibm.com/fusion-*` ManagedCluster labels against StorageConsumers and spoke resources. This catches the case where a ManagedCluster was recreated without its addon labels.
 - **Each spoke:** for HCP clusters the script gets the spoke's `admin-kubeconfig` automatically from the hub. For other clusters it uses the kubeconfig you pass with `-s`. It then checks:
   - Node quorum and OCP version skew.
   - Terminating namespaces, pods and PVCs.
@@ -111,7 +111,7 @@ The temporary spoke kubeconfigs are deleted when the script exits. Tokens and se
 | ManagedCluster missing `isf.ibm.com/fusion-*` label while the spoke has that addon, or a ManagedCluster newer than its StorageConsumer | **Stop and contact IBM Support.** The ManagedCluster was probably recreated or pruned. Do not re-label or delete anything on your own. |
 | StorageConsumer has no matching ManagedCluster | Contact IBM Support. |
 | GitOps (ArgoCD/Flux) `prune` or `selfHeal` warning | Turn off automated prune for the upgrade window. |
-| HostedCluster or NodePool not Available, updating or paused | Wait for it to finish or unpause it. Re-run when it is stable. |
+| ManagedCluster, HostedCluster or NodePool not Available, updating or paused | Check cluster connectivity or wait for it to finish or unpause it. Re-run when it is stable. |
 | `status-reporter` reports `no storageConsumer found` | The StorageConsumer is missing on the hub. Contact IBM Support. |
 | Fusion subscription set to `Automatic` | Switch to `Manual` approval before upgrading. |
 | In-flight backups or restores | Wait for them to finish or cancel them. |
