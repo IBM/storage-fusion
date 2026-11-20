@@ -6,8 +6,8 @@ Source: `isf-data-protection-operator/config/crd/bases/spp-data-protection.isf.i
 apiVersion: spp-data-protection.isf.ibm.com/v1alpha1
 kind: Recipe
 metadata:
-  name: <string>         # Must match the Application CR name in IBM Fusion
-  namespace: <string>    # Typically the IBM Fusion operator namespace (ibm-spectrum-fusion-ns)
+  name: <string>         # Referenced from PolicyAssignment spec.recipe (not auto-matched to the Application name)
+  namespace: <string>    # Fusion namespace (recommended) or the application namespace; must match PolicyAssignment spec.recipe.namespace
 spec:
   appType: <string>      # REQUIRED. Type/name of application this recipe targets.
   groups: []             # REQUIRED. At least one group must be defined.
@@ -35,20 +35,22 @@ Each group narrows the scope of what is captured or restored.
 | `labelSelector` | string | | Select items matching this label selector. |
 | `nameSelector` | string | | Select volumes whose PVC name matches this expression. (**volume** groups only) |
 | `selectResource` | enum | | What resource type `labelSelector`/`nameSelector` apply to for PVC selection. One of: `pvc` (default), `pod`, `deployment`, `statefulset`. (**volume** groups only) |
-| `includeClusterResources` | boolean | | Include cluster-scoped resources associated with included namespaced resources. Defaults to `true` if nil. |
+| `includeClusterResources` | boolean | | Include cluster-scoped resources associated with included namespaced resources. If nil or `true`, the default set is Namespace, ClusterRole, ClusterRoleBinding, and (OpenShift 4.22+) SecurityContextConstraints of the application's pods. **CRDs and webhook configurations are not in the default set** — capture them with `includedResourceTypes` plus a label selector (see "Cluster-scoped resources" in SKILL.md). |
+| `orLabelSelector` | string[] | | Select items matching ANY of the label selectors (OR). `labelSelector` is AND. |
+| `ignoreNoResources` | boolean | | If `includedResourceTypes` or `includeClusterResources` is used and no objects of a listed type exist, the group fails. Set `true` for optional types, but only in a group that still matches at least one object: a group that backs up nothing fails regardless (BMYBR0009). |
 | `backupRef` | string | | For restore-only groups: name of the backup group this group restores from. |
 | `restoreOverwriteResources` | boolean | | If `true`, overwrite existing resources during restore instead of skipping them. |
 
 ### Common resource types to exclude from resource groups
 
-Always exclude these from `resource` groups to avoid capturing ephemeral or auto-recreated objects:
+Exclude these from `resource` groups to avoid capturing ephemeral or auto-recreated objects:
 ```yaml
 excludedResourceTypes:
-  - events
-  - event.events.k8s.io
   - replicasets
   - pods
 ```
+
+Do not list `events` or `event.events.k8s.io`: Fusion and Velero already exclude events by default.
 
 ### Dynamic namespace reference
 
@@ -84,7 +86,7 @@ Hooks are actions executed at specific points in the backup or restore workflow 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | ✅ | Unique operation name within this hook |
-| `command` | string | ✅ | The shell command to execute. Use JSON array format: `["/bin/bash", "-c", "..."]` |
+| `command` | string | ✅ | The command to execute. For simple commands use a plain quoted string, as in the IBM PostgreSQL sample (`command: "psql -c CHECKPOINT"`). The JSON-array form (`command: >` followed by `["/bin/bash", "-c", "..."]`) is used in some other samples, but on a Fusion 2.14 cluster it was run as a literal string and failed with `executable file '/["/bin/bash",' not found`. Prefer the plain string; use the array form only when a shell is genuinely needed (pipes, `&&`, env var expansion), and test it with a backup before relying on it. |
 | `container` | string | | Container name to run the command in. Required when the pod has multiple containers. |
 | `timeout` | integer | | Timeout for this operation in seconds (overrides hook-level timeout) |
 | `onError` | string | | `fail` or `continue` (overrides hook-level onError) |
@@ -108,6 +110,66 @@ Scale hooks use built-in operations. Reference them in workflow sequences as:
 - `hook: <hook-name>/sync` — wait for the scale operation to complete
 
 No `ops` or `chks` are needed for scale hooks.
+
+**Caution: `/sync` on Deployments after `/up`.** For a Deployment, `sync` finds its pods through the *latest ReplicaSet by `creationTimestamp`* (one-second resolution). After a restore, Velero and the app operators often leave several ReplicaSets created in the same second. Fusion then picks the first of the tied ones, which may be an inactive (0-replica) ReplicaSet, and `sync` loops forever with `Syncing: configured are N, currently there's 0 pods` (verified from the transaction-manager log and the ReplicaSet list; the logic was read from the compiled `bacutils.get_pods_for_deployments`). For Deployments, after `/up` use a `check` hook (`{$.spec.replicas} == {$.status.readyReplicas}`) instead of `/sync`. `/sync` after `/down` is harmless (it expects 0 pods), and `/sync` on StatefulSets is fine because their pods are found by owner reference.
+### Hook type: `job` — jobs[] (verified on IBM Bob: backup-time and restore-time jobs both worked)
+
+The Job object itself is defined either inline in the hook, or in the top-level `spec.jobs` list, whose entries are `<hook name>: <Job as a YAML/JSON string>`.
+
+| Field (`hooks[].jobs[]`) | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | ✅ | Job name, unique among jobs. Workflow step: `hook: <hook-name>/<name>` |
+| `timeout` | integer | | Seconds to wait for the Job to complete. Default 864000 (10 days) |
+| `onError` | string | | `fail` (default) or `continue` |
+| `forceCreate` | boolean | | Remove an existing Job of the same name/namespace first. Default false |
+| `inverseOp` | string | | Name of another operation that reverts this one if the hook fails |
+
+Behaviour: the transaction-manager creates the Job, waits for Complete or Failed, collects the pod log, then deletes the Job. `${...}` variables inside the Job string are substituted (avoid `${` in shell scripts). The Job runs in the hook's `namespace` and needs its own ServiceAccount and Role there. Pod Security admission of that namespace applies.
+
+
+
+---
+
+## Application CR (fapp)
+
+Fusion automatically creates one Application CR per monitored namespace, and recreates it if deleted. The Application CR, not the recipe, defines which namespaces belong to the application and therefore the namespace mappings used on restore.
+
+```yaml
+apiVersion: application.isf.ibm.com/v1alpha1
+kind: Application
+metadata:
+  name: <app>
+  namespace: <fusion-namespace>
+spec:
+  includedNamespaces:           # EVERY namespace referenced by any recipe group must be listed here
+    - <namespace-1>
+    - <namespace-2>
+  variables:                    # optional; referenced as ${NAME} in hook namespace fields and exec commands
+    - name: <NAME>
+      value: <value>
+```
+
+Reserved variables set by Fusion (do not redefine, except `ISF_ALLOWED_UNRESOLVED_VARS`): `ISF_BACKUP_UID`, `ISF_NAMESPACE_MAPPINGS` (`src:target,src:target`), `ISF_NOT_EQUAL_NAMESPACE_MAPPINGS`, `ISF_ALLOWED_UNRESOLVED_VARS` (`"true"` skips unresolved-variable verification; needed if exec commands use shell variables/array syntax).
+
+Group-derived variables: `${GROUP.<groupname>.namespaces}` (effective namespaces) and `${GROUP.<groupname>.namespace}` (single namespace enforced; runtime validation error otherwise). Variables are valid only in hook `namespace` fields and exec hook commands.
+
+---
+
+## PolicyAssignment CR
+
+```yaml
+apiVersion: data-protection.isf.ibm.com/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: <name>
+  namespace: <fusion-namespace>   # typically ibm-spectrum-fusion-ns or ibm-fusion
+spec:
+  application: <fapp-name>        # plain string — the name of the fapp CR
+  backupPolicy: <policy-name>     # plain string — the name of the Fusion backup policy
+  recipe:
+    name: <recipe-name>           # must match Recipe metadata.name
+    namespace: <recipe-namespace> # must match Recipe metadata.namespace
+```
 
 ---
 

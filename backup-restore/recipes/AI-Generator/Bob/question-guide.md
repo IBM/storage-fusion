@@ -7,8 +7,12 @@ When a user names one of these applications, use these patterns as pre-filled de
 
 ## PostgreSQL (Crunchy Data PGO operator)
 
-**Quiesce**: Issue a `CHECKPOINT` command to flush dirty pages to disk before snapshot.  
-**Resume**: None required — `CHECKPOINT` is non-blocking and does not hold a lock.  
+**Flush (always)**: `CHECKPOINT` before the snapshot. It is non-blocking and only shortens crash recovery. **On its own it is crash-consistent, not application-consistent** (the sample below stops here).  
+**Quiesce (for an application-consistent online backup)**: PostgreSQL has no freeze command. Instead locks can block writes while the snapshots are being taken:
+- A background `psql` session that opens a transaction, takes `LOCK TABLE ... IN EXCLUSIVE MODE` on every user table (`lock_timeout` 3 s) and holds it until a release file exists or a hard cap (60 s) passes. Writers queue, reads keep working. The `exec` op returns once the locks are held.
+**Resume** is an op that creates the release file, set as the quiesce op's `inverseOp`. See `ibm-bob-backup-restore-recipe.yaml` (`bob-db-quiesce`) for the full command.
+- Not usable: `ALTER SYSTEM SET default_transaction_read_only` (blocked when `allow_alter_system = off`), `ALTER DATABASE ... SET default_transaction_read_only` (only new connections), `pg_backup_start()` (does not block writes), `fsfreeze` (needs privileges the pod does not have).
+- The lock must cover every database that holds data (one session per database), and the volume snapshots must be taken while it is held. A snapshot of a single volume that holds data and WAL is crash-recoverable by itself (PostgreSQL docs, "File System Level Backup"); the quiesce makes several volumes consistent with each other.
 **Post-restore**: Wait for StatefulSet replicas to be ready.
 
 ```yaml
@@ -249,9 +253,10 @@ workflows:
 - Always use `inverseOp` on quiesce operations — if backup fails mid-flight, IBM Fusion will automatically call the inverse to resume the application.
 - Always add a `check` hook at the end of the restore workflow to verify the application is healthy before the restore is declared successful.
 - Use `${GROUP.<name>.namespace}` in hook namespaces rather than hardcoding — this makes the Recipe portable across namespace names.
-- Exclude `events`, `replicasets`, and `pods` from resource groups — these are ephemeral and will be recreated automatically.
+- Exclude `replicasets` and `pods` from resource groups — these are ephemeral and will be recreated automatically. Do not list `events`; Fusion and Velero exclude them by default.
+- If restores onto a fresh or different cluster must work, check whether the application needs cluster-scoped resources (CRDs, webhook configurations) that Fusion does not capture by default. See "Cluster-scoped resources" in SKILL.md.
 - For operator-based applications, always back up and restore the operator subscription and OperatorGroup in addition to the application's CRDs, so the operator is reinstalled on a bare-cluster restore.
 - Use `restoreOverwriteResources: true` on groups containing resources that the operator will have already auto-created — otherwise the restore will skip them as duplicates.
-- A hook's outer `timeout` must be greater than or equal to the largest inner `chks[].timeout` — the outer one is enforced first.
+- A hook's outer `timeout` must be greater than or equal to the largest inner `chks[].timeout` — the outer one is enforced first.                     
 - A `check` hook on a custom resource (operator CR) needs a ClusterRole and ClusterRoleBinding granting the `transaction-manager` service account (`system:serviceaccount:ibm-backup-restore:transaction-manager`) `get`, `list` and `watch` on that CRD's API group. Verify with `oc auth can-i list <resource>.<group> --as=system:serviceaccount:ibm-backup-restore:transaction-manager`.
 - Set `appType` to the exact name of the Application CR registered in Fusion (`oc get application.application.isf.ibm.com -n ibm-spectrum-fusion-ns`), not the technology name. For example, Crunchy PGO uses `postgres-operator`, not `postgresql`.
