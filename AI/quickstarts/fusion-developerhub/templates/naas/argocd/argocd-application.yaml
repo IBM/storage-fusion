@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ${{ values.applicationName }}-${{ values.environment }}
+  namespace: ${{ values.argoCdInstance }}
+  labels:
+    app.kubernetes.io/managed-by: naas
+    project: ${{ values.projectName }}
+    environment: ${{ values.environment }}
+  annotations:
+    # Deploy the ArgoCD Application after the namespace infrastructure (wave 0)
+    # so the destination namespace already exists when this Application is synced.
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    # Ensures ArgoCD removes all deployed resources before deleting this Application.
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: ${{ values.applicationRepoURL }}
+    targetRevision: ${{ values.applicationTargetRevision }}
+    path: ${{ values.applicationPath }}
+    {%- if values.applicationSourceType == 'Helm' %}
+    helm:
+      releaseName: ${{ values.applicationName }}-${{ values.environment }}
+    {%- endif %}
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${{ values.projectName }}-${{ values.environment }}
+
+  syncPolicy:
+    automated:
+      # Remove resources from the cluster when they are deleted from the app repo.
+      prune: true
+      # Re-apply resources that have drifted from the desired state.
+      selfHeal: true
+    syncOptions:
+      # The namespace is already created by the infrastructure manifests — do not
+      # let this Application attempt to recreate it with different labels.
+      - CreateNamespace=false

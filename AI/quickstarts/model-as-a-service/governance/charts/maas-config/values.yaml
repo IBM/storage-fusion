@@ -1,0 +1,137 @@
+# =============================================================================
+# MaaS Config – values.yaml
+# =============================================================================
+# This chart creates the following resources:
+#   - OpenShift Group          (user.openshift.io/v1)   → groups.yaml
+#   - MaaSSubscription CRD     (maas.opendatahub.io)    → maassubscription.yaml
+#   - MaaSAuthPolicy CRD       (maas.opendatahub.io)    → maasauthpolicy.yaml
+#
+# Both MaaSSubscription and MaaSAuthPolicy are required for users to access
+# models through the MaaS gateway:
+#   - MaaSSubscription  – grants token quota for model access per group
+#   - MaaSAuthPolicy    – grants API gateway access to model endpoints
+#
+# Override values per environment in environments/<env>/values-<name>.yaml.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# MaaS Namespace
+# -----------------------------------------------------------------------------
+# The namespace where MaaSSubscription and MaaSAuthPolicy resources live.
+# This is always "models-as-a-service" and should not normally be changed.
+maasNamespace: models-as-a-service
+
+# =============================================================================
+# Subscriptions
+# =============================================================================
+# A list of MaaSSubscription resources to create.
+# Each entry maps to one MaaSSubscription CR in the models-as-a-service
+# namespace.
+#
+# subscriptions:
+#   - name: <subscription-resource-name>
+#     displayName: "<human-readable name>"
+#     description: "<optional description>"
+#     priority: 0          # higher number = higher precedence; default: 0
+#                          # recommended: production=100, staging=50, dev=0, sandbox=-10
+#     groups:              # OpenShift Group names (or external OIDC group names)
+#       - rhods-admins     # rendered as: - name: rhods-admins
+#     users: []            # individual Kubernetes user identities (optional)
+#     modelRefs:           # models this subscription grants quota for
+#       - name: <MaaSModelRef name>
+#         namespace: <namespace where the MaaSModelRef lives>
+#         tokenRateLimits:
+#           - limit: 10000   # tokens per window
+#             window: "1h"   # supported units: s, m, h — 'd' (days) is NOT supported
+#           - limit: 500000  # multiple limits allowed (e.g. per-hour AND per-day)
+#             window: "24h"
+# =============================================================================
+subscriptions: []
+
+# =============================================================================
+# Authorization Policies
+# =============================================================================
+# A list of MaaSAuthPolicy resources to create.
+# Each entry maps to one MaaSAuthPolicy CR in the models-as-a-service
+# namespace.
+#
+# Access logic: OR — any matching group OR user grants access to ALL listed
+# models. At least one of groups or users must be specified.
+#
+# authPolicies:
+#   - name: <policy-resource-name>
+#     description: "<optional description>"
+#     groups:                  # OpenShift or OIDC group names
+#       - rhods-admins         # rendered as: - name: rhods-admins
+#     users: []                # individual Kubernetes user identities (optional)
+#     modelRefs:
+#       - name: <MaaSModelRef name>
+#         namespace: <namespace where the MaaSModelRef lives>
+#     meteringMetadata:        # optional – omit entire block if not needed
+#       organizationId: ""     # org identifier for billing purposes
+#       costCenter: ""         # cost center for billing attribution
+#       labels: {}             # arbitrary key-value pairs for tracking/reporting
+# =============================================================================
+authPolicies: []
+
+# =============================================================================
+# OpenShift Groups
+# =============================================================================
+# Creates or updates OpenShift Group resources (user.openshift.io/v1).
+# Each entry maps to one Group object on the cluster.
+#
+# Behaviour depends on whether the Group already exists:
+#
+#   New Group (not yet on the cluster):
+#     Kubernetes creates it with the name, labels, and users specified here.
+#     Use this to create custom groups alongside the OpenShift AI defaults.
+#
+#   Existing Group (e.g. pre-created by the OpenShift AI operator):
+#     Argo CD applies via ServerSideApply (enabled in each Application's
+#     syncOptions). Only the "users" field managed by this chart is reconciled.
+#     All other fields owned by other controllers are left untouched.
+#
+# Well-known groups pre-created by the OpenShift AI operator on install:
+#   rhods-admins          – members can administer OpenShift AI (subscriptions,
+#                           auth policies, model serving, dashboard settings).
+#   model-registry-users  – members can access the OpenShift AI Model Registry.
+#
+# To add a user:    append their OpenShift username (oc whoami) to users list.
+# To remove a user: delete their entry from the list and sync.
+# Find usernames:   oc get users
+#
+# IMPORTANT – Helm list merge behaviour:
+#   Helm replaces lists entirely when a value file overrides them.
+#   Always declare ALL groups in your env override — both pre-existing ones
+#   you manage and any new ones you are creating — or omitted groups will be
+#   dropped from the rendered output.
+#
+# Example (copy into your environments/<env>/values*.yaml and fill in users):
+#
+# groups:
+#   # Pre-existing group (OpenShift AI) — users list patched via ServerSideApply
+#   - name: rhods-admins
+#     description: "OpenShift AI administrators"
+#     users:
+#       - alice
+#       - bob
+#   - name: model-registry-users
+#     description: "Users with access to the OpenShift AI Model Registry"
+#     users: []
+#   # New custom group — created by this chart on first sync
+#   - name: my-team-group
+#     description: "Custom group for my team"
+#     users:
+#       - carol
+# =============================================================================
+groups: []
+
+# -----------------------------------------------------------------------------
+# Additional Labels / Annotations applied to all resources
+# -----------------------------------------------------------------------------
+labels: {}
+  # team: ai-platform
+  # environment: prod
+
+annotations: {}
+  # managed-by: helm

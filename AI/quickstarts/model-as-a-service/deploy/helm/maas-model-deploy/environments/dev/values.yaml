@@ -31,8 +31,8 @@ project:
 # -----------------------------------------------------------------------------
 s3:
   # endpoint: "https://s3.openshift-storage.svc:443"
-  # region: "us-south"
-  # bucket: "model-registry-artifacts-p-ccc9b6a9-897a-4971-9161-9c0d25448836"
+  region: "us-east-1"
+  # bucket: ""
   # modelPath: "tiny-llama-test/1.0.0"
   accessKeyId: ""        # supply via --set or sealed-secret
   secretAccessKey: ""    # supply via --set or sealed-secret

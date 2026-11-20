@@ -33,6 +33,7 @@ GitOps pipeline for managing AI model registration in the OpenShift AI Model Reg
 - OpenShift cluster with OpenShift GitOps (ArgoCD) installed
 - Red Hat OpenShift AI with Model Registry enabled
 - For **private repositories**: Git credentials required (see below)
+- **ESO / Vault (production):** Store Git credentials and/or Hugging Face token in Vault before the first ArgoCD sync. See [`../../helm/maas-model-registry/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md). Vault paths must exist before ESO resolves the `ExternalSecret` CRs at sync time.
 
 ## Directory Structure
 
@@ -64,14 +65,20 @@ model-registry-gitops/
 
 > **Create this secret BEFORE deploying the ArgoCD application.**
 
+Choose one method:
+
+**Option A — ESO / Vault (production, recommended):** Store credentials in Vault and set `gitCredentials.externalSecret.enabled: true` in the values overlay. No credentials touch Git. See [`../../helm/maas-model-registry/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) Scenario A.
+
+**Option B — kubectl (development):**
 ```bash
-# Option A: kubectl (development)
 kubectl create secret generic git-credentials \
   --from-literal=username=YOUR_GITHUB_USERNAME \
   --from-literal=password=YOUR_GITHUB_TOKEN \
   --namespace=fusion-model-registry-gitops-dev
+```
 
-# Option B: Sealed Secrets (production recommended)
+**Option C — Sealed Secrets:**
+```bash
 kubectl create secret generic git-credentials \
   --from-literal=username=YOUR_USERNAME \
   --from-literal=password=YOUR_TOKEN \
@@ -92,7 +99,7 @@ oc apply -f argocd/environments/staging/appproject-staging.yaml
 oc apply -f argocd/environments/staging/application.yaml
 ```
 
-See [`argocd/environments/DEPLOYMENT_GUIDE.md`](argocd/environments/DEPLOYMENT_GUIDE.md) for the full per-environment runbook.
+See [`argocd/environments/DEPLOYMENT_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md) for the full per-environment runbook.
 
 ### 3. Add a model
 
@@ -120,7 +127,7 @@ spec:
     - approved
 ```
 
-Commit, push, and ArgoCD does the rest. See [`models/ADDING_A_MODEL.md`](models/ADDING_A_MODEL.md) for the full field reference.
+Commit, push, and ArgoCD does the rest. See [`models/ADDING_A_MODEL.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models/ADDING_A_MODEL.md) for the full field reference.
 
 ## Configuration
 
@@ -137,16 +144,18 @@ The reconciler reads these environment variables (set in the Helm chart values):
 ## Security Best Practices
 
 1. **Never commit plain-text credentials** to Git
-2. **Use Sealed Secrets** or an external secrets operator for production
-3. **Rotate tokens regularly** (every 90 days recommended)
-4. **Use least-privilege tokens** — only the `repo` scope for private repos
-5. **Review RBAC permissions** in the AppProject manifests regularly
+2. **Use ESO / Vault (preferred) or Sealed Secrets** for production credentials — see [`../../helm/maas-model-registry/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md)
+3. **Vault secrets must exist before ArgoCD syncs** — ESO resolves `ExternalSecret` CRs at sync time; missing paths cause `SecretSyncedError`
+4. **Rotate tokens regularly** (every 90 days) — use `vault kv patch` + `oc annotate externalsecret ... force-sync=$(date +%s) --overwrite` for zero-downtime rotation
+5. **Use least-privilege tokens** — only the `repo` scope for private repos
+6. **Review RBAC permissions** in the AppProject manifests regularly
 
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [`models/ADDING_A_MODEL.md`](models/ADDING_A_MODEL.md) | Full field reference and step-by-step model registration |
-| [`argocd/environments/DEPLOYMENT_GUIDE.md`](argocd/environments/DEPLOYMENT_GUIDE.md) | Per-environment deploy, sync, monitor, and rollback |
-| [`docs/QUICKSTART.md`](docs/QUICKSTART.md) | End-to-end setup from zero to first registered model |
-| [`docs/VERIFICATION_GUIDE.md`](docs/VERIFICATION_GUIDE.md) | Post-deploy health checks and troubleshooting |
+| [`models/ADDING_A_MODEL.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models/ADDING_A_MODEL.md) | Full field reference and step-by-step model registration |
+| [`argocd/environments/DEPLOYMENT_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md) | Per-environment deploy, sync, monitor, and rollback |
+| [`docs/QUICKSTART.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/docs/QUICKSTART.md) | End-to-end setup from zero to first registered model |
+| [`docs/VERIFICATION_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/docs/VERIFICATION_GUIDE.md) | Post-deploy health checks and troubleshooting |
+| [`../../helm/maas-model-registry/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) | ESO / Vault setup for Git credentials and Hugging Face token |

@@ -29,7 +29,9 @@ spec:
     # Manual sync for production
     syncOptions:
       - CreateNamespace=true
-      - PrunePropagationPolicy=foreground
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+      - PrunePropagationPolicy=background  # background avoids blocking sync on cascading deletes
       - PruneLast=true
     
     retry:
@@ -44,6 +46,9 @@ spec:
       kind: BuildConfig
       jsonPointers:
         - /status
+        # Ignore the ConfigChange trigger lastTriggeredImageID to prevent ArgoCD
+        # re-applying the BuildConfig on every sync and re-firing the build trigger.
+        - /spec/triggers
     - group: image.openshift.io
       kind: ImageStream
       jsonPointers:

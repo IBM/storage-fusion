@@ -1,84 +1,43 @@
-## Contributing In General
-Our project welcomes external contributions. If you have an itch, please feel
-free to scratch it.
+# Contributing to IBM Storage Fusion
 
-To contribute code or documentation, please submit a **FIXME** [pull request](https://github.com/ibm/repo-template/pulls).
+## Contribution Policy
 
-A good way to familiarize yourself with the codebase and contribution process is
-to look for and tackle low-hanging fruit in the **FIXME** [issue tracker](https://github.com/ibm/repo-template/issues).
-Before embarking on a more ambitious contribution, please quickly [get in touch](#communication) with us.
+Thank you for your interest in IBM Storage Fusion. This repository is maintained exclusively by the IBM Storage Fusion team. **We do not accept external contributions or pull requests from outside the organization at this time.**
 
-**Note: We appreciate your effort, and want to avoid a situation where a contribution
-requires extensive rework (by you or by us), sits in backlog for a long time, or
-cannot be accepted at all!**
+---
 
-### Proposing new features
+## Feedback and Issues
 
-If you would like to implement a new feature, please **FIXME** [raise an issue](https://github.com/ibm/repo-template/issues)
-before sending a pull request so the feature can be discussed. This is to avoid
-you wasting your valuable time working on a feature that the project developers
-are not interested in accepting into the code base.
+If you encounter bugs, have questions, or wish to request features, please open an issue in the [IBM Storage Fusion Issue Tracker](https://github.com/IBM/storage-fusion/issues).
 
-### Fixing bugs
+For official product support, please refer to [IBM Support](https://www.ibm.com/mysupport) or the [IBM Storage Fusion Documentation](https://www.ibm.com/docs/en/storage-fusion).
 
-If you would like to fix a bug, please **FIXME** [raise an issue](https://github.com/ibm/repo-template/issues) before sending a
-pull request so it can be tracked.
+---
 
-### Merge approval
+## Internal Team Guidelines
 
-The project maintainers use LGTM (Looks Good To Me) in comments on the code
-review to indicate acceptance. A change requires LGTMs from two of the
-maintainers of each component affected.
+Authorized IBM maintainers and team members contributing to this repository must follow the guidelines below:
 
-For a list of the maintainers, see the [MAINTAINERS.md](MAINTAINERS.md) page.
+### Legal and Licensing
 
-## Legal
+Each source file must include an Apache 2.0 license header using SPDX format:
 
-Each source file must include a license header for the Apache
-Software License 2.0. Using the SPDX format is the simplest approach.
-e.g.
-
-```
+```text
 /*
-Copyright <holder> All Rights Reserved.
+Copyright IBM Corporation All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
 ```
 
-We have tried to make it as easy as possible to make contributions. This
-applies to how we handle the legal aspects of contribution. We use the
-same approach - the [Developer's Certificate of Origin 1.1 (DCO)](https://github.com/hyperledger/fabric/blob/master/docs/source/DCO1.1.txt) - that the Linux® Kernel [community](https://elinux.org/Developer_Certificate_Of_Origin)
-uses to manage code contributions.
+### Developer's Certificate of Origin (DCO)
 
-We simply ask that when submitting a patch for review, the developer
-must include a sign-off statement in the commit message.
+All commits must include a `Signed-off-by` line indicating adherence to the [Developer's Certificate of Origin 1.1](https://elinux.org/Developer_Certificate_Of_Origin):
 
-Here is an example Signed-off-by line, which indicates that the
-submitter accepts the DCO:
-
-```
-Signed-off-by: John Doe <john.doe@example.com>
+```bash
+git commit -s -m "Commit message"
 ```
 
-You can include this automatically when you commit a change to your
-local git repository using the following command:
+### Review and Merge
 
-```
-git commit -s
-```
-
-## Communication
-**FIXME** Please feel free to connect with us on our [Slack channel](link).
-
-## Setup
-**FIXME** Please add any special setup instructions for your project to help the developer
-become productive quickly.
-
-## Testing
-**FIXME** Please provide information that helps the developer test any changes they make
-before submitting.
-
-## Coding style guidelines
-**FIXME** Optional, but recommended: please share any specific style guidelines you might
-have for your project.
+All pull requests require review and approval from repository maintainers listed in [`MAINTAINERS.md`](MAINTAINERS.md) before merging.

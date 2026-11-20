@@ -2,43 +2,51 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: nvidia-aiq-blueprint
-  title: How to deploy NVIDIA AIQ on IBM Fusion HCI
+  title: NVIDIA AI-Q Blueprint on IBM Fusion HCI
   description: |
-    Deploy NVIDIA AI-Q, a research assistant blueprint that helps users extract insights from documents using generative AI. 
-    AI-Q combines RAG pipelines for document-based Q&A, GPU-accelerated LLM inference, multi-stage reasoning and validation, and a simple UI for running research workflows.
-    
-    Unlike a simple chatbot, AI-Q represents a full AI workflow, making it ideal for validating enterprise AI platforms like IBM Fusion HCI. The platform provides predictable GPU scheduling and utilization using Red Hat OpenShift with the NVIDIA GPU Operator, secure controlled deployment within enterprise infrastructure, and a unified platform for multiple AI blueprints on the same Red Hat OpenShift-based environment.
+    NVIDIA AI-Q is a validated AI blueprint that turns your document collections into a searchable, AI-queryable knowledge base — deployed on IBM Fusion HCI using NVIDIA NIM microservices. This card covers v2 (latest); the original v1 deployment guide is also available on IBM Tech Exchange.
+
+    How it works:
+    - Ingests PDFs, spreadsheets, and complex documents through OCR and layout parsing
+    - Indexes content into a GPU-accelerated vector store for fast semantic retrieval
+    - At query time, retrieves the most relevant document chunks and runs multi-hop reasoning
+    - Returns precise answers with source citations — fully traceable, no hallucination
+
+    What makes it different from a chatbot:
+    - Full multi-stage AI workflow, not a single LLM call
+    - Answers are grounded with citations from your actual documents
+    - Handles complex enterprise content — tables, charts, scanned PDFs
+    - Optionally enriches answers with live web search via Tavily
+    - Ideal for policy Q&A, technical documentation search, and knowledge management
+
+    Why IBM Fusion HCI:
+    - Converged compute and storage — GPU nodes and NVMe storage on the same platform
+    - Predictable GPU scheduling via Red Hat OpenShift with the NVIDIA GPU Operator
+    - IBM-mirrored container images (icr.io/cp/fsh/) — air-gap ready, no NVIDIA NGC pull required
+    - Unified environment where multiple AI blueprints (RAG, AI-Q, VSS) coexist on one cluster
+    - Fully automated deployment via OpenShift Software Catalog or Helm — no manual YAML editing
   tags:
     - nvidia
-    - aiq
-    - ai
     - blueprint
     - fusion
-    - gpu
-    - llm
     - rag
-    - research-assistant
   annotations:
     backstage.io/techdocs-ref: dir:.
     github.com/project-slug: IBM/storage-fusion
-    
   links:
-    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/02/15/unlocking-ai-powered-video-analytics-on-ibm-fusion
-      title: Read on IBM Tech Exchange
+    - url: https://community.ibm.com/community/user/blogs/hasrat-ali-arzoo/2026/08/30/deploying-nvidia-ai-q-on-ibm-fusion-hci-v2
+      title: Read the IBM Tech Exchange Blog
       icon: article
     - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
-      title: View on Fusion Tech Community
+      title: Explore on Fusion Tech Community
       icon: web
-    - url: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20AIQ/Fusion_NVIDIA_AIQ_Guide.md
-      title: Complete deployment guide on GitHub
-      icon: docs
     - url: https://build.nvidia.com/nvidia/aiq
-      title: NVIDIA AI-Q Blueprint
+      title: Explore on NVIDIA Blueprint Catalog
       icon: launch
 spec:
   type: blueprint
   lifecycle: production
-  owner: IBM
-  
-  providesApis: []
-  consumesApis: []
+  owner: group:default/fusion-platform-team
+  system: fusion-ai-services
+  dependsOn:
+    - component:default/nvidia-rag-blueprint

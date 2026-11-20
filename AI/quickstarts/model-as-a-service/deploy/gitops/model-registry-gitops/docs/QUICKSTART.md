@@ -268,9 +268,9 @@ argocd app sync fusion-model-registry-gitops-prod
 
 ## Next Steps
 
-- **Add more models** — see [`../models/ADDING_A_MODEL.md`](../models/ADDING_A_MODEL.md) for the full field reference
-- **Understand the full deployment runbook** — see [`../argocd/environments/DEPLOYMENT_GUIDE.md`](../argocd/environments/DEPLOYMENT_GUIDE.md)
-- **Verify a deployment** — see [`VERIFICATION_GUIDE.md`](VERIFICATION_GUIDE.md)
+- **Add more models** — see [`../models/ADDING_A_MODEL.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models/ADDING_A_MODEL.md) for the full field reference
+- **Understand the full deployment runbook** — see [`../argocd/environments/DEPLOYMENT_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md)
+- **Verify a deployment** — see [`VERIFICATION_GUIDE.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/docs/VERIFICATION_GUIDE.md)
 
 ## Success Criteria
 

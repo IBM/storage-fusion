@@ -4,9 +4,11 @@
 [![OpenShift](https://img.shields.io/badge/OpenShift-4.12+-red.svg)](https://www.redhat.com/en/technologies/cloud-computing/openshift)
 [![Red Hat](https://img.shields.io/badge/Red%20Hat-Certified-red.svg)](https://www.redhat.com/)
 
-IBM Fusion Developer Hub is an enterprise developer portal for IBM Fusion, built on Red Hat Developer Hub (Backstage). It provides a centralized experience for discovering AI models, quickstarts, blueprints, templates, documentation, and other curated resources available across your environment.
+IBM Fusion Developer Hub is an enterprise developer portal for IBM Fusion, built on Red Hat Developer Hub (Backstage). It provides a single, centralized experience for discovering AI models, quickstarts, blueprints, self-service templates, documentation, and curated resources available across your environment.
 
 The portal integrates with OpenShift AI for automatic model discovery and OpenShift GitOps (ArgoCD) for lifecycle management, while supporting enterprise authentication and role-based access control.
+
+**Without a unified portal**, teams face scattered tools and documentation across multiple interfaces, no visibility into deployed AI models, manual resource discovery, and inconsistent application deployments. **Fusion Developer Hub** solves this with a single pane of glass for all AI development needs.
 
 ---
 
@@ -14,26 +16,28 @@ The portal integrates with OpenShift AI for automatic model discovery and OpenSh
 
 1. [What You Get](#1-what-you-get)
 2. [Architecture](#2-architecture)
-3. [Repository Layout](#3-repository-layout)
-4. [Prerequisites](#4-prerequisites) — incl. [optional auth secrets](#optional-kubernetes-secrets-not-required-for-basic-install)
-5. [Deployment — Helm](#5-deployment--helm)
-6. [Deployment — GitOps (ArgoCD)](#6-deployment--gitops-argocd)
-7. [Verify & Access](#7-verify--access)
-8. [Configure and Customize](#8-configure-and-customize)
-   - [8.1 Customize Homepage](#81-customize-homepage)
-   - [8.2 Customize the Catalog](#82-customize-the-catalog)
-   - [8.3 Configure GitHub Integration](#83-configure-github-integration)
-   - [8.4 Configure OIDC Authentication](#84-configure-oidc-authentication)
-   - [8.5 OpenShift AI (RHOAI) Model Discovery](#85-openshift-ai-rhoai-model-discovery)
-   - [8.6 Apply Your Changes](#86-apply-your-changes)
-9. [Using Developer Hub](#9-using-developer-hub)
-10. [IBM Fusion AI Service Discovery (CAS / DCS)](#10-ibm-fusion-ai-service-discovery-cas--dcs)
-11. [Self-Service Software Templates](#11-self-service-software-templates)
-12. [Console QuickStarts](#12-console-quickstarts)
-13. [Upgrade](#13-upgrade)
-14. [Troubleshooting](#14-troubleshooting)
-15. [Additional Resources](#15-additional-resources)
-16. [Support](#16-support)
+3. [What Gets Deployed](#3-what-gets-deployed)
+4. [Repository Layout](#4-repository-layout)
+5. [Prerequisites](#5-prerequisites)
+6. [Deployment — Helm](#6-deployment--helm)
+7. [Deployment — GitOps (ArgoCD)](#7-deployment--gitops-argocd)
+8. [Verify & Access](#8-verify--access)
+9. [Configure and Customize](#9-configure-and-customize)
+   - [9.1 Customize Homepage](#91-customize-homepage)
+   - [9.2 Customize the Catalog](#92-customize-the-catalog)
+   - [9.3 Configure GitHub Integration](#93-configure-github-integration)
+   - [9.4 Configure OIDC Authentication](#94-configure-oidc-authentication)
+   - [9.5 OpenShift AI (RHOAI) Model Discovery](#95-openshift-ai-rhoai-model-discovery)
+   - [9.6 Apply Your Changes](#96-apply-your-changes)
+   - [9.7 Advanced Customizations](#97-advanced-customizations)
+10. [Using Developer Hub](#10-using-developer-hub)
+11. [IBM Fusion AI Service Discovery (CAS / DCS)](#11-ibm-fusion-ai-service-discovery-cas--dcs)
+12. [Self-Service Software Templates](#12-self-service-software-templates)
+13. [Console QuickStarts](#13-console-quickstarts)
+14. [Upgrade](#14-upgrade)
+15. [Troubleshooting](#15-troubleshooting)
+16. [Additional Resources](#16-additional-resources)
+17. [Support](#17-support)
 
 ---
 
@@ -43,7 +47,7 @@ The portal integrates with OpenShift AI for automatic model discovery and OpenSh
 |---|---|
 | **AI homepage** | Automatic OpenShift AI model discovery — KServe InferenceServices cataloged every 30 s |
 | **Pre-built AI templates** | Chatbot, RAG, code generation, audio-to-text, object detection |
-| **Software catalog** | Fusion components, NVIDIA blueprints, custom services |
+| **Software catalog** | Fusion components, NVIDIA blueprints (RAG, AIQ, VSS), custom services |
 | **GitHub integration** | GitHub.com and GitHub Enterprise |
 | **OIDC authentication** | IBM ID, Okta, Auth0, Keycloak, Azure AD, Google Workspace, or any OIDC-compliant provider |
 | **HA PostgreSQL** | 3-instance Crunchy cluster, automatic failover, daily backups to ODF (30-day retention) |
@@ -85,14 +89,53 @@ The portal integrates with OpenShift AI for automatic model discovery and OpenSh
 
 ---
 
-## 3. Repository Layout
+## 3. What Gets Deployed
+
+**Operators (installed automatically):**
+- Red Hat Developer Hub Operator — manages the Developer Hub lifecycle
+- Crunchy PostgreSQL Operator — manages the PostgreSQL HA cluster
+
+**Developer Hub (namespace: `fusion-developer-hub`):**
+
+| Profile | Replicas | CPU (limit / request) | Memory (limit / request) | Network Policies |
+|---|---|---|---|---|
+| Development | 1 | 2000m / 500m | 4 Gi / 1 Gi | Disabled |
+| Staging | 3 | 2000m / 1000m | 4 Gi / 2 Gi | Enabled |
+| Production | 3 | 2000m / 1000m | 4 Gi / 2 Gi | Enabled |
+
+- IBM Fusion AI homepage with OpenShift AI model connector
+- Software catalog, self-service templates, TechDocs, Learning Paths
+- RBAC, pod security standards, secret encryption
+
+**PostgreSQL HA Cluster (namespace: `fusion-developer-hub`):**
+
+| Profile | Instances | Backup | Network Policies |
+|---|---|---|---|
+| Development | 1 | Disabled | Disabled |
+| Staging | 3 | Enabled (daily, ODF) | Enabled |
+| Production | 3 | Enabled (daily, ODF, 30-day retention) | Enabled |
+
+- 1 primary (read-write) + replicas (read-only)
+- Automatic failover; backups to ODF via NooBaa S3
+
+**High Availability & Security (Production):**
+- 3 Developer Hub replicas + 3 PostgreSQL instances with automatic failover
+- Daily automated backups with 30-day retention
+- Prometheus metrics + Grafana dashboards enabled
+- Network policies, RBAC, and pod security standards enforced
+
+---
+
+## 4. Repository Layout
 
 ```
 quickstarts/fusion-developerhub/
 ├── deploy/
 │   ├── helm/                                    # Helm chart
 │   │   ├── Chart.yaml
-│   │   ├── values.yaml                          # Default values
+│   │   ├── values.yaml                          # Default values (full schema reference)
+│   │   ├── ARCHITECTURE.md                      # Helm chart architecture notes
+│   │   ├── VERSION_MANAGEMENT.md                # Snapshot versioning guide
 │   │   ├── templates/                           # Kubernetes resource templates
 │   │   └── environments/
 │   │       ├── dev/values.yaml                  # Development values
@@ -107,20 +150,33 @@ quickstarts/fusion-developerhub/
 │   ├── catalog/
 │   │   ├── locations.yaml                       # Catalog root index
 │   │   └── platform-entities.yaml              # Domain, System, Group entities
-│   ├── clusters/cluster-template/catalog-info.yaml
+│   ├── clusters/cluster-template/               # Template for new cluster catalog-info
+│   ├── k8s/
+│   │   ├── sa-rbac.yaml                         # ServiceAccount RBAC for self-hosted clusters
+│   │   └── secrets-template.yaml                # Secret template for cluster tokens
 │   └── techdocs/
 │       ├── cas/                                 # TechDocs for CAS API entity
-│       └── dcs/                                 # TechDocs for DCS API entity
+│       ├── dcs/                                 # TechDocs for DCS API entity
+│       └── fusion-ai-services/                  # TechDocs for Fusion AI Services guide
+├── backstage/                                   # Catalog entries for Fusion quickstarts
+│   ├── fusion-developerhub/catalog-info.yaml
+│   ├── fusion-gitops/catalog-info.yaml
+│   └── model-as-a-service/catalog-info.yaml
 ├── templates/                                   # Self-service RHDH Software Templates
 │   ├── add-cas-cluster/template.yaml
 │   ├── add-dcs-cluster/template.yaml
-│   └── add-fusion-cluster/template.yaml
+│   ├── add-fusion-cluster/template.yaml
+│   ├── fusion-ai-template.yaml                  # AI application templates
+│   └── naas/                                    # Namespace-as-a-Service templates
+├── plugins/                                     # Custom RHDH plugins
+│   └── namespace-validator/                     # Frontend + backend namespace validator
 ├── quickstarts/
 │   └── console-quickstarts/
 │       └── getting-started.yaml                 # OpenShift console interactive tutorial
 ├── docs/                                        # Supplemental reference documentation
 │   ├── homepage-customization.md
 │   ├── adding-fusion-services.md
+│   ├── namespace-as-a-service.md
 │   ├── getting-started/
 │   │   ├── oidc-providers.md
 │   │   └── rhoai-integration.md
@@ -129,14 +185,14 @@ quickstarts/fusion-developerhub/
 │       ├── postgresql-connection-fix.md
 │       ├── homepage-404-fix.md
 │       └── crd-installation-fix.md
-├── examples/                                    # Sample values files
+├── examples/                                    # Sample values files for different profiles
 ├── scripts/                                     # Validation and diagnostic tools
-└── assets/                                      # Screenshots and branding
+└── assets/                                      # Screenshots, branding, learning-paths data
 ```
 
 ---
 
-## 4. Prerequisites
+## 5. Prerequisites
 
 ### Required
 
@@ -152,16 +208,16 @@ quickstarts/fusion-developerhub/
 
 | Requirement | Details |
 |---|---|
-| Red Hat OpenShift AI (RHOAI) | For automatic AI model discovery (can be disabled — see [Section 8.5](#85-openshift-ai-rhoai-model-discovery)) |
+| Red Hat OpenShift AI (RHOAI) | For automatic AI model discovery (can be disabled — see [Section 9.5](#95-openshift-ai-rhoai-model-discovery)) |
 | OpenShift GitOps (ArgoCD) | Required for the GitOps deployment path only |
 
 ### Optional Kubernetes Secrets (not required for basic install)
 
 Neither secret is needed for a basic deployment. Create them only when you enable the corresponding feature.
 
-#### `fusion-cluster-tokens` — required only when `fusionServices.enabled: true`
+#### `fusion-cluster-tokens` — required only for `clusterType: self-hosted` clusters
 
-Enables CAS/DCS service discovery from one or more IBM Fusion clusters. See [Section 10](#10-ibm-fusion-ai-service-discovery-cas--dcs) and [RUNBOOK.md Phase 2](deploy/gitops/environments/prod/RUNBOOK.md#phase-2--create-serviceaccount-tokens-on-the-fusion-cluster) for full token creation steps.
+Needed when registering a CAS/DCS cluster with `clusterType: self-hosted` under `fusionServices.clusters[]`. Proxy-only clusters require no token. See [Section 11](#11-ibm-fusion-ai-service-discovery-cas--dcs) and [RUNBOOK.md Phase 2](deploy/gitops/environments/prod/RUNBOOK.md#phase-2--create-serviceaccount-tokens-on-the-fusion-cluster) for full token creation steps.
 
 ```bash
 oc create secret generic fusion-cluster-tokens \
@@ -206,10 +262,13 @@ developerHub:
 
 ### Resource Requirements
 
-| Profile | CPU | Memory | Storage |
-|---------|-----|--------|---------|
-| Guest / Dev (testing) | 2 cores | 4 GB | 20 GB |
-| Production (HA) | 12 cores | 24 GB | 150 GB |
+These are the namespace resource quotas enforced by the Helm chart:
+
+| Profile | Namespace CPU quota | Namespace Memory quota | Min storage |
+|---------|---------------------|------------------------|-------------|
+| Development | 8 cores | 16 Gi | 25 Gi (5Gi hub PVC + 20Gi PG) |
+| Staging | 32 cores | 64 Gi | 25 Gi |
+| Production | 32 cores | 64 Gi | 25 Gi + backup storage (ODF) |
 
 ### Verify Prerequisites
 
@@ -232,9 +291,11 @@ oc get dsc -n redhat-ods-operator
 
 ---
 
-## 5. Deployment — Helm
+## 6. Deployment — Helm
 
 Use Helm when you want a direct, one-command installation. All configuration is done locally in a values file before deploying.
+
+> **Choose your deployment method:** Use Helm for direct one-command installs or quick evaluation. Use GitOps (Section 7) for production — it gives you a declarative, auditable, Git-driven deployment model where all changes are tracked and applied through ArgoCD.
 
 ### Step 1 — Clone the Repository
 
@@ -243,19 +304,26 @@ git clone https://github.com/IBM/storage-fusion.git
 cd storage-fusion/AI/quickstarts/fusion-developerhub
 ```
 
-### Step 2 — Choose an Environment
+### Step 2 — Log in to OpenShift
+
+```bash
+oc login --server=https://api.your-cluster.com:6443
+oc whoami   # verify
+```
+
+### Step 3 — Choose an Environment
 
 Three pre-configured environments are available:
 
 | Environment | Values file | Replicas (Hub / PG) | Auth | Best for |
 |---|---|---|---|---|
 | **Development** | `deploy/helm/environments/dev/values.yaml` | 1 / 1 | Guest + OIDC | Rapid testing |
-| **Staging** | `deploy/helm/environments/staging/values.yaml` | 2 / 2 | OIDC | Pre-prod validation |
+| **Staging** | `deploy/helm/environments/staging/values.yaml` | 3 / 3 | OIDC | Pre-prod validation |
 | **Production** | `deploy/helm/environments/prod/values.yaml` | 3 / 3 | OIDC (recommended) | Production workloads |
 
 The following steps use **Production** as the example. Substitute `dev` or `staging` as needed.
 
-### Step 3 — Configure the Values File
+### Step 4 — Configure the Values File
 
 Open `deploy/helm/environments/prod/values.yaml` and make the two required changes below.
 
@@ -306,7 +374,7 @@ postgresql:
 
 > Leave `storageClassName: ""` to use the cluster default.
 
-### Step 4 — Deploy
+### Step 5 — Deploy
 
 ```bash
 helm install fusion-developer-hub \
@@ -317,18 +385,7 @@ helm install fusion-developer-hub \
   --timeout 20m
 ```
 
-**What happens during deployment:**
-
-| Time | Action |
-|---|---|
-| ~2 min | Red Hat Developer Hub Operator installed |
-| ~2 min | Crunchy PostgreSQL Operator installed |
-| ~2 min | CRDs registered (`Backstage`, `PostgresCluster`) |
-| ~5 min | PostgreSQL HA cluster provisioned (3 instances in prod) |
-| ~5 min | Developer Hub deployed (3 replicas in prod) |
-| ~1 min | OpenShift AI model connector configured |
-
-### Step 5 — Monitor Deployment
+### Step 6 — Monitor Deployment
 
 ```bash
 # Watch operators reach Succeeded phase
@@ -361,7 +418,7 @@ developer-hub    Ready    8m
 
 ---
 
-## 6. Deployment — GitOps (ArgoCD)
+## 7. Deployment — GitOps (ArgoCD)
 
 Use GitOps when you want all configuration tracked in Git and applied declaratively through ArgoCD. This is the recommended approach for production.
 
@@ -388,11 +445,11 @@ If ArgoCD is not installed, follow the [Fusion GitOps quickstart guide](../../fu
 
 ### Step 3 — Choose an Environment
 
-| Environment | Application CR | Sync policy |
-|---|---|---|
-| **Development** | `deploy/gitops/environments/dev/application.yaml` | Automated — auto-sync + self-heal |
-| **Staging** | `deploy/gitops/environments/staging/application.yaml` | Automated — auto-sync + self-heal |
-| **Production** | `deploy/gitops/environments/prod/application.yaml` | **Manual** — must explicitly approve |
+| Environment | Application CR | Target namespace | Branch | Sync policy |
+|---|---|---|---|---|
+| **Development** | `deploy/gitops/environments/dev/application.yaml` | `fusion-developer-hub-development` | `master` | Automated — auto-sync + self-heal |
+| **Staging** | `deploy/gitops/environments/staging/application.yaml` | `fusion-developer-hub-staging` | `master` | **Manual** — must explicitly approve |
+| **Production** | `deploy/gitops/environments/prod/application.yaml` | `fusion-developer-hub` | `master` | **Manual** — must explicitly approve |
 
 The following steps use **Production**. Navigate to the file:
 
@@ -409,7 +466,7 @@ vim application.yaml
 spec:
   source:
     repoURL: https://github.com/<YOUR-USERNAME>/storage-fusion.git  # ← your fork
-    targetRevision: main     # branch ArgoCD watches — must match what you push to
+    targetRevision: master   # must match the branch you push to
 ```
 
 #### Required Change 2 — Cluster Domain
@@ -446,7 +503,7 @@ spec:
 ```bash
 git add deploy/gitops/environments/prod/application.yaml
 git commit -m "Configure Fusion Developer Hub for production cluster"
-git push origin main    # push to the branch set in targetRevision
+git push origin master   # must match targetRevision set above
 ```
 
 ### Step 6 — Apply the ArgoCD Application
@@ -482,11 +539,16 @@ oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.hos
 # 2. Open in browser, find 'fusion-developer-hub', click Sync → Synchronize
 ```
 
-**Development / Staging** (auto-sync enabled — ArgoCD picks up within 3 minutes):
+**Development** (auto-sync enabled — ArgoCD picks up automatically):
 
 ```bash
-# Trigger immediate sync if you don't want to wait:
+# Trigger immediate sync if desired:
 argocd app sync fusion-developer-hub-development    # dev
+```
+
+**Staging** (manual sync required — same as production):
+
+```bash
 argocd app sync fusion-developer-hub-staging        # staging
 ```
 
@@ -527,7 +589,7 @@ status:
 
 ---
 
-## 7. Verify & Access
+## 8. Verify & Access
 
 ### Verify All Resources
 
@@ -568,7 +630,7 @@ Open the URL in your browser. Log in with **Guest** access (click **Enter**) for
 - ✅ Guest login works (click **Enter**)
 - ✅ AI models appear if OpenShift AI models are deployed
 
-> **Production recommendation:** Guest access is enabled by default to simplify initial evaluation. Before going live, configure OIDC or GitHub OAuth and disable guest access (see [Section 8.3](#83-configure-github-integration) and [Section 8.4](#84-configure-oidc-authentication)).
+> **Production recommendation:** Guest access is enabled by default to simplify initial evaluation. Before going live, configure OIDC or GitHub OAuth and disable guest access (see [Section 9.3](#93-configure-github-integration) and [Section 9.4](#94-configure-oidc-authentication)).
 
 ### Run Validation Scripts
 
@@ -580,14 +642,14 @@ Open the URL in your browser. Log in with **Guest** access (click **Enter**) for
 
 ---
 
-## 8. Configure and Customize
+## 9. Configure and Customize
 
 All customization is done by editing the values file for your chosen environment:
 
 - **GitOps:** `deploy/helm/environments/{env}/values.yaml` → commit and push → ArgoCD auto-syncs
 - **Helm:** same file → run `helm upgrade`
 
-### 8.1 Customize Homepage
+### 9.1 Customize Homepage
 
 Edit `deploy/helm/environments/prod/values.yaml`:
 
@@ -637,9 +699,17 @@ developerHub:
 - Must be publicly accessible (or use `data:image/svg+xml;base64,...` inline)
 - Test on dark backgrounds — Developer Hub uses a dark theme
 
-### 8.2 Customize the Catalog
+### 9.2 Customize the Catalog
 
-The default catalog includes NVIDIA blueprints (RAG, AIQ, VSS) and IBM Fusion quickstarts. To add custom catalog sources:
+The default catalog includes the following pre-configured entries:
+
+**NVIDIA Blueprints:** RAG, AIQ, VSS
+
+**IBM Fusion Quickstarts:** Developer Hub, GitOps, Model-as-a-Service
+
+**Other:** NaaS (Namespace-as-a-Service) template, Storage Fusion repository
+
+These are configured under `developerHub.catalog.blueprints.locations` in `deploy/helm/values.yaml` and rendered into the `app-config-fusion-blueprints` ConfigMap. To add custom catalog sources:
 
 ```yaml
 developerHub:
@@ -660,7 +730,7 @@ developerHub:
 
 End users can also register catalog entries through the self-service templates at `/create` — no values file change required.
 
-### 8.3 Configure GitHub Integration
+### 9.3 Configure GitHub Integration
 
 #### GitHub.com (Public GitHub)
 
@@ -719,7 +789,16 @@ developerHub:
       - github-auth-secret
 ```
 
-### 8.4 Configure OIDC Authentication
+**Key flags:**
+- `enterpriseHost` — GitHub Enterprise hostname (enables enterprise API calls, no `https://`)
+- `enterpriseInstanceUrl` — full URL for OAuth provider
+- `enableToken: true` — enables token-based repo access
+- `environment: "production"` — OAuth only, no guest access
+- `environment: "development"` — OAuth + guest access both available
+
+**Reference:** [Red Hat Developer Hub — GitHub Integration](https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.9/html/integrating_red_hat_developer_hub_with_your_git_provider/integrate-with-github_integrating-rhdh-with-your-git-provider)
+
+### 9.4 Configure OIDC Authentication
 
 The chart supports any OIDC-compliant provider via the generic `oidc` configuration:
 
@@ -767,84 +846,71 @@ https://<your-developer-hub-url>/api/auth/oidc/handler/frame
 curl https://your-provider.com/.well-known/openid-configuration
 ```
 
-### 8.5 OpenShift AI (RHOAI) Model Discovery
+### 9.5 OpenShift AI (RHOAI) Model Discovery
 
 The RHOAI connector is **enabled by default** in production and staging. It automatically discovers KServe InferenceServices every 30 seconds.
 
-#### Enable / Disable
+**Full configuration reference** (all options in one block):
 
 ```yaml
 developerHub:
   fusion:
     ai:
       rhoaiConnector:
-        enabled: true   # set false to disable model discovery
+        enabled: true                              # set false to disable
         tokenSecretName: "rhdh-rhoai-connector-token"
         rbac:
-          create: true    # auto-creates ClusterRole + ClusterRoleBinding
-          watchNamespaces: []   # empty = watch all namespaces
+          create: true                             # auto-creates ClusterRole + ClusterRoleBinding
+          watchNamespaces:                         # empty = all namespaces
+            - model-serving
+            - maas-runtime
+            - redhat-ods-applications
+          modelRegistryNamespace: "rhoai-model-registries"   # or "odh-model-registries"
+          modelRegistryRoleName: "registry-user-modelregistry-public"
+  config:
+    homepage:
+      plugins:
+        - name: openshift-ai-connector
+          enabled: true
+          config:
+            discoveryInterval: 30s
+            displayOptions:
+              showMetrics: true
+              showEndpoints: true
+              showStatus: true
 ```
 
-#### Namespace Scoping
-
-```yaml
-rbac:
-  create: true
-  watchNamespaces:
-    - model-serving
-    - maas-runtime
-    - redhat-ods-applications
-    - your-custom-namespace
-```
-
-#### Create the Token Secret
+**Create the token secret:**
 
 ```bash
-# Get your RHOAI access token from OpenShift AI → Settings → Access Tokens
 oc create secret generic rhdh-rhoai-connector-token \
   --from-literal=token=<YOUR_RHOAI_TOKEN> \
   -n fusion-developer-hub
 ```
 
-#### Verify Model Connector
+**Verify connector is working:**
 
 ```bash
-# Check connector logs
 oc logs -n fusion-developer-hub \
   -l rhdh.redhat.com/app=backstage-developer-hub \
   -c rhoai-normalizer
-
-# Verify the container is running
-oc get pods -n fusion-developer-hub \
-  -l rhdh.redhat.com/app=backstage-developer-hub \
-  -o jsonpath='{.items[0].spec.containers[*].name}'
 ```
 
-Expected log output when working:
-```
-[RHOAI Connector] Found 5 InferenceServices across 2 namespaces
-[RHOAI Connector] Successfully registered models in catalog
-```
+**What gets disabled if you set `enabled: false`:** InferenceService discovery, model catalog integration, model endpoint/metadata display, RHOAI sidecars. Homepage, catalog, templates, and TechDocs remain functional.
 
-#### What Gets Disabled (if you turn it off)
+> Deep-dive: [`docs/getting-started/rhoai-integration.md`](docs/getting-started/rhoai-integration.md)
 
-- Automatic InferenceService discovery
-- Model catalog integration with RHOAI
-- Model endpoint and metadata display
-- RHOAI-specific sidecars
-
-The custom homepage, quick access links, Fusion AI templates, software catalog, and TechDocs **remain fully functional** regardless.
-
-### 8.6 Apply Your Changes
+### 9.6 Apply Your Changes
 
 #### GitOps
 
 ```bash
 git add deploy/helm/environments/prod/values.yaml
 git commit -m "Customize Developer Hub homepage and catalog"
-git push origin main        # push to the branch set in targetRevision
+git push origin master   # push to the branch set in targetRevision
 
-# ArgoCD auto-syncs within 3 minutes, or trigger immediately:
+# For dev (auto-sync): ArgoCD picks up automatically
+# For staging/prod (manual sync): trigger explicitly:
 argocd app sync fusion-developer-hub
 
 # Verify
@@ -862,11 +928,21 @@ helm upgrade fusion-developer-hub \
 oc rollout status deployment/backstage-developer-hub -n fusion-developer-hub
 ```
 
+### 9.7 Advanced Customizations
+
+- **Dynamic Plugins:** Add additional Backstage plugins — see [`deploy/helm/values.yaml`](deploy/helm/values.yaml)
+- **TechDocs:** Configure documentation publishing — see `developerHub.techdocs` section in values
+- **Resource Limits:** Adjust CPU/memory for Developer Hub and PostgreSQL
+- **Monitoring:** Enable Prometheus metrics and Grafana dashboards
+- **Backup Configuration:** Customize PostgreSQL backup schedules and retention
+
+**Complete values reference:** [`deploy/helm/values.yaml`](deploy/helm/values.yaml)
+
 ---
 
-## 9. Using Developer Hub
+## 10. Using Developer Hub
 
-### 9.1 Authentication
+### 10.1 Authentication
 
 By default, the quickstart enables **Guest Access** for easy evaluation:
 
@@ -875,7 +951,7 @@ By default, the quickstart enables **Guest Access** for easy evaluation:
 
 > **Before production:** configure GitHub OAuth or OIDC and set `auth.environment: "production"` to require real credentials.
 
-### 9.2 Homepage
+### 10.2 Homepage
 
 The homepage is your central hub. It has four quick-access sections:
 
@@ -895,7 +971,7 @@ The homepage is your central hub. It has four quick-access sections:
 - [Fusion Tech Community](https://ibm.github.io/storage-fusion/fusion-ai/overview/) — articles, architecture patterns, best practices
 - [IBM Tech Exchange](https://community.ibm.com/community/user/groups/community-home/recent-community-blogs?communitykey=e596ba82-cd57-4fae-8042-163e59279ff3) — blogs, use cases, Q&A
 
-### 9.3 Software Catalog
+### 10.3 Software Catalog
 
 Navigate to **Catalog** in the left menu:
 
@@ -903,35 +979,37 @@ Navigate to **Catalog** in the left menu:
 - **Filter by Kind** — Component, API, System, Resource
 - **Filter by Type** — model-server, service, blueprint, quickstart
 - **Search** across all entries
+- **Personal filters** — Owned and Starred items for quick access
+- **Self-service** button to register new components
 
 **Browse a blueprint:**
 1. Go to Catalog → filter Type: `blueprint`
 2. Click **NVIDIA RAG Blueprint**
 3. View description, GitHub link, TechDocs, and related components
 
-### 9.4 Self-Service Templates
+**View a deployed model:**
+1. Go to Catalog → filter Type: `model-server`
+2. Click any model to see name, version, lifecycle stage, tags, endpoints, and authentication requirements
 
-Click **Create** (or **Self-service** top-right) to access AI application templates:
+### 10.4 Self-Service Templates
 
-| Template | Description |
-|---|---|
-| **Audio to Text Application** | AI-enabled audio transcription using whisper |
-| **Chatbot Application** | LLM-enabled chat with llamacpp/vLLM |
-| **Code Generation Application** | Generate code from natural language |
-| **Model Server, No Application** | Deploy granite-3.1 8b with vLLM |
-| **Object Detection Application** | Identify objects in images using DETR |
-| **RAG Chatbot Application** | Chatbot with Retrieval-Augmented Generation |
+Click **Create** (or **Self-service** top-right) to access the available templates. What you see depends on which templates are registered in your catalog (see [Section 12](#12-self-service-software-templates)).
 
-**4-step creation wizard:**
+The IBM Fusion AI application template (`fusion-ai-template.yaml`) supports:
 
-1. **Application Information** — Name, owner, ArgoCD configuration
-2. **Repository Information** — Git repository settings
-3. **Deployment Information** — Deployment configuration
-4. **Review** — Review and create
+- Granite Code (Code Generation)
+- Granite Chat (Conversational AI)
+- watsonx models
 
-The wizard automatically creates a GitOps-managed deployment via ArgoCD.
+The **`add-fusion-cluster`** template uses a 4-step wizard:
+1. **Application Information** — cluster name, owner
+2. **Repository Information** — Git repo details
+3. **Deployment Information** — namespace, cluster URL
+4. **Review** — verify and submit
 
-### 9.5 Deploy and Discover AI Models
+This template commits a `catalog-info.yaml` to your repository via GitHub OAuth. Other templates (WXO, CAS, DCS) use different flows — see [Section 12](#12-self-service-software-templates) for details.
+
+### 10.5 Deploy and Discover AI Models
 
 To deploy AI models that will be automatically discovered by Developer Hub, follow the [Model Serving Guide](../../fusion-model-serving/README.md).
 
@@ -942,7 +1020,7 @@ After deployment:
 
 ---
 
-## 10. IBM Fusion AI Service Discovery (CAS / DCS)
+## 11. IBM Fusion AI Service Discovery (CAS / DCS)
 
 Surface IBM Fusion **CAS** (Content Aware Storage) and **DCS** (Data Cataloging Service) as discoverable catalog entries inside Developer Hub — with MCP endpoints, Swagger docs, TechDocs, and health checks — no VPN or cluster access required.
 
@@ -1137,32 +1215,85 @@ oc rollout status  deployment/backstage-developer-hub -n $NS
 
 ---
 
-## 11. Self-Service Software Templates
+## 12. Self-Service Software Templates
 
 The `templates/` directory contains RHDH Software Templates for onboarding Fusion clusters via the Developer Hub UI.
 
 ### Available Templates
 
-| Template | Purpose |
-|---|---|
-| `add-cas-cluster` | Onboard a new CAS cluster to the catalog via the Hub UI |
-| `add-dcs-cluster` | Onboard a new DCS cluster to the catalog via the Hub UI |
-| `add-fusion-cluster` | Full cluster registration (skeleton-based) with guided wizard |
-| `fusion-ai-template.yaml` | AI application template (chatbot, RAG, code gen, etc.) |
+| Template | Purpose | Prerequisite |
+|---|---|---|
+| `add-wxo-instance` | Register a watsonx Orchestrate instance — generates `values.yaml` snippet, you commit and push | None — always visible |
+| `add-cas-cluster` | Onboard a new CAS cluster to the catalog via the Hub UI | `fusionServices.enabled: true` |
+| `add-dcs-cluster` | Onboard a new DCS cluster to the catalog via the Hub UI | `fusionServices.enabled: true` |
+| `add-fusion-cluster` | Full cluster registration (skeleton-based) with guided wizard | GitHub OAuth token |
+| `fusion-ai-template.yaml` | AI application template (chatbot, RAG, code gen, etc.) | None — always visible |
 
-### Using the Templates
+> `add-cas-cluster` and `add-dcs-cluster` are only rendered and mounted when `developerHub.fusionServices.enabled: true` is set in your `values.yaml`. They will not appear in the Hub UI otherwise.
 
-1. Open Developer Hub → click **Create** in the left navigation
-2. Find the template under the **IBM Fusion** section
-3. Click **Choose** and complete the 4-step wizard:
+### Add watsonx Orchestrate Instance
+
+The **"Add watsonx Orchestrate Instance"** template is always available in the Hub (no extra prerequisites). It does **not** create entities automatically — it generates the exact `values.yaml` snippet you need, then you commit and push it yourself.
+
+**Steps:**
+
+1. Open Developer Hub → **Create** → find **"Add watsonx Orchestrate Instance"**
+2. Fill in 4 fields: cluster name, WXO UI URL, OCP namespace, and optionally the version
+3. Work through the **3 output tabs** in order:
+
+**Tab 1 — Get the repo**
+
+```bash
+git clone https://github.com/<your-org>/storage-fusion.git
+cd storage-fusion
+git checkout <your-deployed-branch>
+```
+
+> Ask your platform engineer for the fork URL and deployed branch.
+
+**Tab 2 — Edit values.yaml**
+
+Open `AI/quickstarts/fusion-developerhub/deploy/helm/environments/<your-env>/values.yaml`. The template shows the exact snippet — paste it under `fusionServices.clusters:`.
+
+For a **new** cluster entry:
+```yaml
+- name: <cluster-name>
+  ocpApiUrl: ""
+  clusterType: proxy-only
+  services:
+    wxo:
+      enabled: true
+      version: "<version>"
+      namespace: <ocp-namespace>
+      wxoUrl: "<wxo-ui-url>"
+```
+
+For an **existing** cluster entry, add only the `wxo:` block under its existing `services:` key.
+
+**Tab 3 — Push and deploy**
+
+```bash
+git add AI/quickstarts/fusion-developerhub/deploy/helm/environments/<your-env>/values.yaml
+git commit -m "feat(fusion): register WXO instance <cluster-name>"
+git push origin <your-deployed-branch>
+```
+
+Then trigger an ArgoCD sync or `helm upgrade` — see [Section 9.6](#96-apply-your-changes). The WXO entry appears in the catalog after the sync completes.
+
+### Using `add-fusion-cluster`
+
+This template does a real Git commit (requires GitHub OAuth — see [Section 9.3](#93-configure-github-integration)):
+
+1. Open Developer Hub → click **Create**
+2. Find **"Add Fusion Cluster"** under the **IBM Fusion** section
+3. Complete the 4-step wizard:
    - **Application Information** — cluster name, owner
-   - **Repository Information** — your Git repo details
+   - **Repository Information** — your fork URL and branch
    - **Deployment Information** — namespace, cluster URL
    - **Review** — verify and submit
+4. The template commits a `catalog-info.yaml` to your repository; RHDH ingests the entities automatically.
 
-The template generates a `catalog-info.yaml` and commits it to your repository. ArgoCD picks up the change and RHDH ingests the new entities automatically.
-
-> **Note:** The Software Template is a convenience GUI alternative to editing `values.yaml` directly. The authoritative cluster registration always remains the `fusionServices.clusters[]` entry in `values.yaml`.
+> For CAS and DCS cluster registration, use the `add-cas-cluster` / `add-dcs-cluster` templates or edit `values.yaml` directly (see [Section 11](#11-ibm-fusion-ai-service-discovery-cas--dcs)).
 
 ### Deploy Templates Manually
 
@@ -1173,40 +1304,9 @@ oc apply -f templates/add-cas-cluster/template.yaml -n fusion-developer-hub
 # Or let ArgoCD manage them (recommended — already included in the Helm chart)
 ```
 
-### Version Update Scenarios
-
-#### Scenario A — Self-hosted cluster (GitOps / Helm)
-
-```bash
-# Step 1: Detect installed version
-oc get pods -n <dcs-namespace> \
-  -o jsonpath='{.items[0].spec.containers[0].image}' | grep -oP '\d+\.\d+\.\d+'
-
-# Step 2: Update values.yaml
-#   services.dcs.version: "2.5.x"   # ← new version
-#   services.cas.version: "2.13.x"
-
-# Step 3: Commit and push
-git add deploy/helm/environments/prod/values.yaml
-git commit -m "feat: update DCS to 2.5.x on <cluster-id>"
-git push
-
-# ArgoCD auto-syncs in ~30 s — no pod restart needed
-```
-
-#### Scenario B — Proxy-only cluster
-
-Follow the same `values.yaml` edit as Scenario A. Entities are auto-refreshed via ConfigMap mount — no additional steps.
-
-#### Scenario C — Template-registered cluster (re-run from UI)
-
-1. Go to Developer Hub → **Create**
-2. Run the same **Add IBM Fusion Cluster** template with the updated version
-3. The template overwrites the existing `catalog-info.yaml` and commits
-
 ---
 
-## 12. Console QuickStarts
+## 13. Console QuickStarts
 
 Interactive guided tutorials that appear directly in the OpenShift web console.
 
@@ -1279,7 +1379,7 @@ oc apply -f my-quickstart.yaml
 
 ---
 
-## 13. Upgrade
+## 14. Upgrade
 
 ### Helm Upgrade
 
@@ -1289,7 +1389,7 @@ cp deploy/helm/environments/prod/values.yaml \
    deploy/helm/environments/prod/value-v1-$(date +%b%Y | tr '[:upper:]' '[:lower:]').yaml
 
 # Step 2: Pull latest chart
-git pull origin main
+git pull origin master
 
 # Step 3: Preview changes (optional, requires helm-diff plugin)
 helm diff upgrade fusion-developer-hub \
@@ -1327,16 +1427,16 @@ cp values.yaml value-v1-june2026.yaml
 
 # Step 2: Pull latest changes from IBM upstream
 cd storage-fusion/AI/quickstarts/fusion-developerhub
-git pull origin main
+git pull origin master
 
 # Step 3: Resolve any merge conflicts, then commit
 git add deploy/helm/environments/prod/
 git commit -m "chore: Archive v1 (June 2026) and apply upstream updates"
-git push origin main
+git push origin master
 
 # Step 4: Deploy via ArgoCD
-#   Dev/Staging: auto-syncs within 3 minutes
-#   Production:  review diff in ArgoCD UI → click Sync
+#   Dev: auto-syncs automatically
+#   Staging/Production: review diff in ArgoCD UI → click Sync
 
 # Step 5: Verify
 oc get pods -n fusion-developer-hub
@@ -1366,13 +1466,13 @@ cp deploy/helm/environments/prod/value-v0-may2026.yaml \
 
 git add deploy/helm/environments/prod/values.yaml
 git commit -m "rollback: Restore v0 (May 2026) configuration"
-git push origin main
-# ArgoCD auto-syncs or trigger manually
+git push origin master
+# Dev: ArgoCD auto-syncs; Staging/Production: trigger sync manually in ArgoCD UI
 ```
 
 ---
 
-## 14. Troubleshooting
+## 15. Troubleshooting
 
 ### Quick Health Check
 
@@ -1396,8 +1496,6 @@ oc logs -n $NS -l rhdh.redhat.com/app=backstage-developer-hub --tail=100
 oc logs -n $NS \
   -l postgres-operator.crunchydata.com/cluster=developerhub-postgres --tail=50
 ```
-
----
 
 ### Problem: "CRDs are not installed" during Helm install
 
@@ -1432,8 +1530,6 @@ oc get installplan -n rhdh-operator
 oc patch installplan <name> -n rhdh-operator \
   --type merge -p '{"spec":{"approved":true}}'
 ```
-
----
 
 ### Problem: PostgreSQL cluster not ready
 
@@ -1474,8 +1570,6 @@ Expected:
  developerhub-postgres | t
 ```
 
----
-
 ### Problem: Developer Hub pods not starting (CrashLoopBackOff)
 
 ```bash
@@ -1493,8 +1587,6 @@ oc logs -n fusion-developer-hub \
 # Check events for the pod
 oc describe pod -n fusion-developer-hub <pod-name>
 ```
-
----
 
 ### Problem: Homepage shows 404
 
@@ -1529,8 +1621,6 @@ quickLinks:
     url: "https://www.ibm.com/docs"  # ✅ full URL for external links
 ```
 
----
-
 ### Problem: AI models not appearing on homepage
 
 ```bash
@@ -1554,8 +1644,6 @@ oc get secret rhdh-rhoai-connector-token -n fusion-developer-hub
 oc get clusterrole rhoai-connector-reader
 oc get clusterrolebinding rhoai-connector-reader-binding
 ```
-
----
 
 ### Problem: OIDC authentication not working
 
@@ -1584,8 +1672,6 @@ oc logs -n fusion-developer-hub \
 | `Discovery endpoint not found` | Wrong issuer URL | Set `discoveryUrl` explicitly if provider uses non-standard path |
 | `User not found after login` | Sign-in resolver mismatch | Check resolver config; verify user entities exist in catalog |
 
----
-
 ### Problem: Operators not installing
 
 ```bash
@@ -1601,8 +1687,6 @@ oc get installplan -n postgres-operator
 oc patch installplan <name> -n rhdh-operator \
   --type merge -p '{"spec":{"approved":true}}'
 ```
-
----
 
 ### Clean Up and Redeploy
 
@@ -1648,7 +1732,7 @@ helm version
 
 ---
 
-## 15. Additional Resources
+## 16. Additional Resources
 
 ### Deployment and Configuration
 
@@ -1660,6 +1744,7 @@ helm version
 | Helm Architecture | [`deploy/helm/ARCHITECTURE.md`](deploy/helm/ARCHITECTURE.md) |
 | Homepage customization reference | [`docs/homepage-customization.md`](docs/homepage-customization.md) |
 | Adding Fusion services | [`docs/adding-fusion-services.md`](docs/adding-fusion-services.md) |
+| Namespace-as-a-Service guide | [`docs/namespace-as-a-service.md`](docs/namespace-as-a-service.md) |
 | OIDC provider reference | [`docs/getting-started/oidc-providers.md`](docs/getting-started/oidc-providers.md) |
 | RHOAI integration deep-dive | [`docs/getting-started/rhoai-integration.md`](docs/getting-started/rhoai-integration.md) |
 
@@ -1679,6 +1764,7 @@ helm version
 | RHOAI Installation | [`../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md`](../../fusion-openshift-ai/docs/01-RHOAI-Installation-Guide.md) |
 | Model Serving Guide | [`../../fusion-model-serving/README.md`](../../fusion-model-serving/README.md) |
 | GitOps with ArgoCD | [`../../fusion-gitops-argocd/README.md`](../../fusion-gitops-argocd/README.md) |
+| Fusion GitOps Quickstart | [`../../fusion-gitops/README.md`](../fusion-gitops/README.md) |
 
 ### Troubleshooting References
 
@@ -1699,7 +1785,7 @@ helm version
 
 ---
 
-## 16. Support
+## 17. Support
 
 - **GitHub Issues:** [github.com/IBM/storage-fusion/issues](https://github.com/IBM/storage-fusion/issues)
 - **IBM Fusion Support:** Contact your IBM Fusion support team

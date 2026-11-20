@@ -1,0 +1,17 @@
+{{- if .Values.modelCatalog.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.modelCatalog.name | default "ibm-fusion-model-catalog" }}
+  namespace: {{ .Values.modelCatalog.namespace | default "redhat-ods-applications" }}
+  labels:
+    app.kubernetes.io/part-of: rhods-dashboard
+    app.opendatahub.io/catalog-source: "true"
+    opendatahub.io/catalog-source: "true"
+    opendatahub.io/dashboard: "true"
+data:
+  model-catalog.yaml: |
+    source: {{ .Values.modelCatalog.sourceName | default "IBM Fusion Enterprise" | quote }}
+    models:
+      {{- toYaml .Values.modelCatalog.models | nindent 6 }}
+{{- end }}

@@ -1,0 +1,123 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fusion-developer-hub
+  # ArgoCD namespace: OpenShift GitOps default is openshift-gitops
+  namespace: openshift-gitops
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    environment: production
+    app.kubernetes.io/managed-by: argocd
+
+spec:
+  project: default
+  source:
+    # REQUIRED: Replace with your Git repository URL
+    repoURL: https://github.ibm.com/ProjectAbell/Fusion-AI
+    path: quickstarts/fusion-developerhub/deploy/helm
+    # REQUIRED: Replace with your target branch
+    targetRevision: cas-dcs-rhdh
+    helm:
+      valueFiles:
+        - values.yaml
+        - environments/prod/values.yaml
+      valuesObject:
+        global:
+          # REQUIRED: OCP wildcard domain — replace with your cluster's wildcard domain.
+          # Run: oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}'
+          # Example: apps.mycluster.example.com
+          wildcardDomain: apps.<cluster-domain>
+        developerHub:
+          storage:
+            # REQUIRED: RWX StorageClass — leave empty ("") to use the cluster default.
+            # Only set this if your cluster default does not support ReadWriteMany (RWX).
+            # Common RWX classes: ocs-storagecluster-cephfs (ODF), nfs-client (NFS)
+            storageClassName: ""
+          catalog:
+            # ── Namespace-as-a-Service (NaaS) ──────────────────────────────────────
+            # Set enabled: true to register the NaaS Software Template in the catalog
+            # AND deploy the ArgoCD namespace-controller that watches the namespaces/
+            # directory for new namespace manifests.
+            # When enabled: false (default) neither resource is deployed.
+            naas:
+              enabled: false          # <-- flip to true to activate NaaS
+              # gitopsRepoURL must point to YOUR fork/mirror of this repository
+              # gitopsRepoURL: "https://github.com/your-org/your-repo.git"
+              # templateBranch: main
+        argocd:
+          enabled: true
+          rbac:
+            enabled: true
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fusion-developer-hub
+
+  revisionHistoryLimit: 10
+
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      # Replace=true intentionally removed — global Replace overrides per-resource
+      # argocd.argoproj.io/sync-options: Replace=false on the dynamic-plugins-root PVC.
+      # Removing this allows the PVC annotation to take effect and prevents the
+      # "spec is immutable after creation" failure on every ArgoCD sync.
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: operators.coreos.com
+      kind: Subscription
+      jsonPointers:
+        - /status
+        - /spec/installPlanApproval
+    - group: operators.coreos.com
+      kind: InstallPlan
+      jsonPointers:
+        - /status
+    - group: operators.coreos.com
+      kind: ClusterServiceVersion
+      jsonPointers:
+        - /status
+        - /metadata/annotations
+    - group: rhdh.redhat.com
+      kind: Backstage
+      jsonPointers:
+        - /status
+    - group: postgres-operator.crunchydata.com
+      kind: PostgresCluster
+      jsonPointers:
+        - /status
+
+  info:
+    - name: 'Deployment Order'
+      value: |
+        Wave -10: RBAC Foundation (18 resources - ArgoCD RBAC, Job ServiceAccounts, Developer Hub RBAC)
+        Wave 0: Namespaces (4 resources - Postgres & RHDH operator namespaces)
+        Wave 10: Pre-install Jobs (2 resources - Operator check, Namespace labeler)
+        Wave 20: OperatorGroups (2 resources - must be Healthy + Synced)
+        Wave 30: Subscriptions (2 resources - Postgres & RHDH operators, must be Healthy + Synced)
+        Wave 40: Operator Validation (3 resources - Wait jobs & CRD validation, must be Healthy + Synced)
+        Wave 50: Configuration (15 resources - ConfigMaps, RHOAI RBAC, Secrets, Policies)
+        Wave 60: Database (3 resources - PostgresCluster, CREATEDB Job, Backup setup)
+        Wave 70: Application (2 resources - Backstage CR, PVC)
+    - name: 'Add a CAS/DCS Cluster'
+      value: |
+        Wave 50: Configuration — add cluster to environments/prod/values.yaml:
+          developerHub.fusionServices.clusters:
+            - name: <cluster-id>
+              ocpApiUrl: https://api.<cluster-domain>:6443
+              clusterType: self-hosted   # or proxy-only
+        Wave 50: ArgoCD syncs → Helm rerenders ConfigMaps (no restart needed)
+        Wave 70: RHDH catalog processor picks up new entities (~30 s)

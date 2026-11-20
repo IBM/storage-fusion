@@ -1,0 +1,42 @@
+{{/*
+  PersistentVolumeClaim — model weights storage
+
+  Only rendered when BOTH conditions are true:
+    pvc.enabled: true   — model uses PVC storage (source.uri: pvc://...)
+    pvc.create: true    — Helm should own the PVC lifecycle
+
+  Set pvc.create: false when the PVC already exists (e.g. pre-populated by the
+  NooBaa S3 download job) so Helm does not adopt or delete it.
+
+  Sizing:
+    pvc.size         — storage request (e.g. "450Gi")
+    pvc.storageClass — "ocs-storagecluster-cephfs" for RWX (multi-node)
+                       "ocs-storagecluster-ceph-rbd" for RWO (single-node)
+  For large models that span multiple GPU nodes use cephfs (RWX).
+  For single-node GPU deployments rbd (RWO) is sufficient and lower latency.
+*/}}
+{{- if and .Values.pvc.enabled .Values.pvc.create }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.pvc.claimName }}
+  namespace: {{ include "maas-model-service.namespace" . }}
+  labels:
+    {{- include "maas-model-service.labels" . | nindent 4 }}
+  annotations:
+    {{- include "maas-model-service.annotations" . | nindent 4 }}
+    maas.redhat.com/purpose: model-weights
+    maas.redhat.com/model: {{ include "maas-model-service.modelName" . }}
+spec:
+  accessModes:
+    {{- if .Values.pvc.readWriteMany }}
+    - ReadWriteMany
+    {{- else }}
+    - ReadWriteOnce
+    {{- end }}
+  storageClassName: {{ .Values.pvc.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.pvc.size | required "pvc.size is required when pvc.create: true" }}
+{{- end }}

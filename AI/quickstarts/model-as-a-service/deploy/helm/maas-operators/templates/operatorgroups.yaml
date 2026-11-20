@@ -40,17 +40,10 @@ spec:
 {{- end }}
 {{- end }}
 
-{{- if .Values.operators.connectivityLink.enabled }}
----
-apiVersion: operators.coreos.com/v1
-kind: OperatorGroup
-metadata:
-  name: kuadrant-operator-group
-  namespace: {{ .Values.operators.connectivityLink.namespace }}
-  labels:
-    {{- include "maas-operators.labels" . | nindent 4 }}
-spec: {}
-{{- end }}
+{{- /* connectivityLink Subscription is installed in openshift-operators which already
+     has the cluster-provided global-operators OperatorGroup — do NOT create another one.
+     kuadrant-operator-group in kuadrant-system is created by the rhcl-operator itself
+     after installation and must not be managed here. */}}
 
 {{- if .Values.operators.leaderWorkerSet.enabled }}
 ---

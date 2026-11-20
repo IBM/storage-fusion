@@ -147,7 +147,7 @@ developerHub:
     # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
     # - If using NFS: use "nfs-client" or your NFS storage class
     # - Other filesystem storage classes that support RWX
-    storageClassName: "" # Uses cluster default
+    storageClassName: "ocs-storagecluster-cephfs"
     # Storage size for dynamic plugins
     size: 5Gi
   # High Availability - 3 replicas
@@ -192,7 +192,7 @@ developerHub:
         
         🚀 **Getting Started**
 
-        Follow the [Quickstart Guide](https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops) to begin navigating your portal — explore the software catalog, view available blueprints, and access unified documentation.
+        New here? Open the [Developer Hub Handbook](/docs/default/component/fusion-ai-services-guide) to explore what this portal offers — the catalog, self-service templates, learning paths, and Fusion AI Services.
       
       # Quick access links (optional - defaults to Fusion quick links). Add quicklinks here if you want to override the default quicklinks. Defaults are present in dynamic-plugins.yaml file
       # Uncomment to customize:
@@ -210,6 +210,12 @@ developerHub:
       #     links:
       #       - text: "Link 1"
       #         url: "/path1"
+
+      # Learning Paths customisation
+      learningPaths:
+        enabled: true
+        githubRawBaseUrl: "https://raw.githubusercontent.com"
+        dataJsonPath: "/IBM/storage-fusion/master/AI/quickstarts/fusion-developerhub/assets/learning-paths/data.json"
 
       # OpenShift AI Model Connector (KEY FEATURE)
       plugins:
@@ -339,37 +345,46 @@ developerHub:
 
         # Fusion Developer Hub Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-developerhub/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Fusion GitOps Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-gitops/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Model-as-a-Service Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/model-as-a-service/catalog-info.yaml
           rules:
             - allow: [Component]
 
+        # Namespace-as-a-Service Quickstart
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/templates/naas/backstage/catalog-info.yaml
+          rules:
+            - allow: [Component]
+            
         # Storage Fusion Repository
         - type: url
           target: https://github.com/IBM/storage-fusion/blob/master/catalog-info.yaml
           rules:
             - allow: [Component]
-    # GitHub integration for catalog imports
-    # For GitHub Enterprise set enterpriseHost to your GHE hostname (e.g. github.example.com).
-    # Leave enterpriseHost empty to use public GitHub (github.com).
+    # GitHub integration for catalog imports — OFF by default (no GitHub secret needed).
+    # To enable (all four steps):
+    #   1. Set enabled: true and target to your GitHub organisation URL.
+    #   2. For GitHub Enterprise, set enterpriseHost to the hostname only (e.g. github.example.com);
+    #      leave it empty for public GitHub (github.com).
+    #   3. Create the secret:  oc create secret generic github-auth-secret \
+    #        --from-literal=GITHUB_TOKEN=<your-pat> -n <rhdh-namespace>
+    #   4. Set enableToken: true and add github-auth-secret under developerHub.extraEnvs.secrets.
     github:
-      enabled: true
+      enabled: false
       enterpriseHost: ""
       target: "https://github.com/your-org"
-      # Enable GitHub PAT token for repository access
-      # Requires GITHUB_TOKEN in github-auth-secret
-      enableToken: true
+      enableToken: false
     # GitLab integration
     gitlab:
       enabled: false
@@ -378,18 +393,26 @@ developerHub:
     naas:
       # Toggle NaaS on or off.  When false the Software Template catalog entry and
       # the ArgoCD namespace-controller Application are both omitted from the deployment.
-      # Set to true and fill in the values below to enable NaaS for your deployment.
       enabled: false
       # Repository name that holds the NaaS template (must match the actual GitHub repo name)
       repoName: "your-gitops-repo"
       # Branch in the GitOps repo that holds the NaaS template
       templateBranch: "main"
-      # Path to the template.yaml within the repo
-      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
+      # Paths to the individual NaaS template files within the repo
+      requestTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
+      updateTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
+      deleteTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
       # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
       gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
       # Directory inside the GitOps repo where provisioned namespace manifests land
       namespacesPath: "namespaces"
+      # Namespace validator plugins — loaded whenever naas.enabled is true.
+      # The referenced OCI artifacts must be built for the deployed RHDH release.
+      namespaceValidator:
+        ociRepository: "your-registry.example.com"
+        frontendPackage: "namespace-validator-frontend"
+        backendPackage: "namespace-validator-backend"
+        version: "latest"
   # TechDocs configuration
   techdocs:
     enabled: true
@@ -408,11 +431,12 @@ developerHub:
     # environment: "production"
     guest:
       enabled: true
-    # GitHub OAuth Authentication
-    # Enables "Sign in with GitHub" button
+    # GitHub OAuth Authentication — OFF by default.
+    # Enables "Sign in with GitHub" button when set to true.
     # Requires github-auth-secret with GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET
+    # (also add github-auth-secret under developerHub.extraEnvs.secrets).
     github:
-      enabled: true
+      enabled: false
       enterpriseInstanceUrl: ""  # Set to your GitHub Enterprise URL (e.g. https://github.example.com); leave empty for public GitHub
       # Allow any GitHub Enterprise user to sign in (not just users already in the catalog)
       allowSignInWithoutCatalog: true
@@ -433,8 +457,7 @@ developerHub:
   #   secrets:
   #     - name: custom-secrets
   extraEnvs:
-    secrets:
-      - name: github-auth-secret  # must contain GITHUB_TOKEN
+    secrets: []
   # Production resources
   resources:
     limits:
@@ -532,6 +555,12 @@ developerHub:
         drop:
           - ALL
       readOnlyRootFilesystem: false # Developer Hub needs to write temp files
+  # IBM Fusion CAS/DCS services: enables the "Add IBM Fusion CAS Cluster" and
+  # "Add IBM Fusion DCS Cluster" templates and the Fusion AI catalog entities.
+  # To add clusters, list them under clusters: (see deploy/helm/values.yaml).
+  fusionServices:
+    enabled: true
+    clusters: []
 
 # OpenShift Console QuickStart Configuration
 quickstart:
@@ -688,13 +717,3 @@ autoscaling:
   # maxReplicas: 10
   # targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
-
-# IBM Fusion CAS/DCS Services — explicitly disabled for the dev environment.
-# fusionServices controls only the CAS/DCS catalog entities and self-service scaffolder
-# templates that are injected into the Developer Hub catalog. Disabling it does NOT affect
-# any other RHDH functionality (homepage, RHOAI connector, existing catalog entries, auth,
-# TechDocs, etc.). All other developerHub settings remain fully active.
-# To enable, set to true and configure the clusters list (see deploy/helm/values.yaml).
-developerHub:
-  fusionServices:
-    enabled: false

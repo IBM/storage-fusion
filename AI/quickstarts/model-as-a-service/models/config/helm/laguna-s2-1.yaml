@@ -1,0 +1,90 @@
+# =============================================================================
+# MaaS Generic Model Specification — poolside/Laguna-S-2.1 (FP8)
+# =============================================================================
+# Architecture: Laguna-S-2.1 MoE (FP8-quantized)
+# GPU Requirement: multiple high-VRAM NVIDIA GPUs. accelerator.count sets the
+#   tensor-parallel size (do NOT also pass --tensor-parallel-size below). It must
+#   equal the GPU count of the hardware profile you deploy with. Create a profile
+#   for your hardware from profiles/template.yaml.
+# Use Cases: Deep Code Reasoning, Multi-File Refactoring, Agentic Tasks
+# Recommended vLLM settings: https://www.ibm.com/docs/en/bob-self-hosted/latest/vllm-runtime-configuration
+#
+#   ./scripts/deploy-model.sh --profile profiles/<profile>.yaml models/laguna-s2-1.yaml
+# =============================================================================
+
+accelerator:
+  vendor: nvidia                  # 'nvidia' or 'amd'
+  count: 4                        # tensor-parallel size; match your profile's GPU count
+
+model:
+  name: laguna-s2-1-version-1
+  displayName: "Laguna S2.1 FP8"
+  namespace: deploy-models-rhoai
+
+project:
+  create: true
+
+modelRegistry:
+  enabled: true
+  name: default-modelregistry
+  namespace: rhoai-model-registries
+  registeredModelName: "laguna-s2-1"
+  connectionSecret: "model-registry-connection"
+  createConnectionSecret: true
+  connectionSecretData:
+    ociHost: "registry.redhat.io"
+
+source:
+  uri: ""                         # Auto-resolved from Model Registry
+
+inference:
+  engine: vllm
+  image: registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3.0
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  # Passed to the image via VLLM_ADDITIONAL_ARGS. The bundled entrypoint expands this
+  # variable with `eval`, which can strip double quotes from the JSON values below
+  # (--default-chat-template-kwargs, --speculative-config). If vLLM rejects them, switch
+  # to the direct `command`/`args` form used in models/nemotron-3-ultra-550b-nvfp4.yaml.
+  extraArgs:
+    # vLLM args for Laguna S2.1 (FP8) — see the vLLM runtime configuration page above
+    - --trust-remote-code
+    - --served-model-name=poolside/Laguna-S-2.1
+    - --tool-call-parser=poolside_v1
+    - --enable-auto-tool-choice
+    - --reasoning-parser=poolside_v1
+    - --enable-prompt-tokens-details
+    - --max-model-len=131072            # increase context window for large code reasoning tasks
+    - --max-num-batched-tokens=16384
+    - --enable-prefix-caching
+    - --gpu-memory-utilization=0.90
+    - --moe-backend=triton
+    - --default-chat-template-kwargs={"preserve_thinking":true,"enable_thinking":true}
+    - --speculative-config={"num_speculative_tokens":7,"method":"dflash","model":"/mnt/models/dflash-fp8"}
+
+# GPUs are added from accelerator.count; do not list nvidia.com/gpu here.
+resources:
+  limits:
+    cpu: "32"
+    memory: 128Gi
+  requests:
+    cpu: "16"
+    memory: 64Gi
+
+# Node selection and tolerations come from the hardware profile (profiles/).
+scheduling:
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+labels:
+  app.kubernetes.io/name: laguna-s2-1
+  app.kubernetes.io/part-of: maas-platform
+  tier: premium

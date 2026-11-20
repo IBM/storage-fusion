@@ -130,7 +130,7 @@ developerHub:
     # - If using OpenShift Data Foundation (ODF): use "ocs-storagecluster-cephfs"
     # - If using NFS: use "nfs-client" or your NFS storage class
     # - Other filesystem storage classes that support RWX
-    storageClassName: "" # Uses cluster default
+    storageClassName: "ocs-storagecluster-cephfs"
     # Storage size for dynamic plugins
     size: 5Gi
   # High Availability - 3 replicas
@@ -193,6 +193,16 @@ developerHub:
       #     links:
       #       - text: "Link 1"
       #         url: "/path1"
+
+      # Learning Paths customisation
+      # Hosts the learning-paths data.json on GitHub and serves it via the RHDH proxy.
+      # IMPORTANT: the /developer-hub/learning-paths pathRewrite must be declared
+      # before /developer-hub (homepage) in the proxy config — this is handled automatically.
+      learningPaths:
+        enabled: true
+        # Raw URL base for the hosted data.json.
+        githubRawBaseUrl: "https://raw.githubusercontent.com"
+        dataJsonPath: "/IBM/storage-fusion/master/AI/quickstarts/fusion-developerhub/assets/learning-paths/data.json"
 
       # OpenShift AI Model Connector (KEY FEATURE)
       plugins:
@@ -304,12 +314,21 @@ developerHub:
       repoName: "your-gitops-repo"
       # Branch in the GitOps repo that holds the NaaS template
       templateBranch: "main"
-      # Path to the template.yaml within the repo
-      templatePath: "quickstarts/fusion-developerhub/templates/naas/template.yaml"
+      # Paths to the individual NaaS template files within the repo
+      requestTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-request-template.yaml"
+      updateTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-update-template.yaml"
+      deleteTemplatePath: "quickstarts/fusion-developerhub/templates/naas/naas-delete-template.yaml"
       # GitOps repository URL watched by the NaaS ArgoCD namespace-controller
       gitopsRepoURL: "https://github.com/your-org/your-gitops-repo.git"
       # Directory inside the GitOps repo where provisioned namespace manifests land
       namespacesPath: "namespaces"
+      # Namespace validator plugins — loaded whenever naas.enabled is true.
+      # The referenced OCI artifacts must be built for the deployed RHDH release.
+      namespaceValidator:
+        ociRepository: "your-registry.example.com"
+        frontendPackage: "namespace-validator-frontend"
+        backendPackage: "namespace-validator-backend"
+        version: "latest"
     # Fusion Blueprints Configuration
     # Define catalog locations for IBM Fusion AI blueprints and components
     # Each blueprint can have its own catalog-info.yaml with TechDocs support
@@ -336,19 +355,25 @@ developerHub:
 
         # Fusion Developer Hub Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-developerhub/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Fusion GitOps Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-gitops/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/fusion-gitops/catalog-info.yaml
           rules:
             - allow: [Component]
 
         # Model-as-a-Service Quickstart
         - type: url
-          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/backstage/catalog-info.yaml
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/backstage/model-as-a-service/catalog-info.yaml
+          rules:
+            - allow: [Component]
+        
+        # Namespace-as-a-Service Quickstart
+        - type: url
+          target: https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/fusion-developerhub/templates/naas/backstage/catalog-info.yaml
           rules:
             - allow: [Component]
 
@@ -589,6 +614,12 @@ developerHub:
     #         enabled: true
     #         version: "<dcs-version>"
     #         namespace: ibm-data-cataloging
+    #       # ── watsonx Orchestrate (optional — add when WXO is installed) ──────
+    #       # wxo:
+    #       #   enabled: true
+    #       #   wxoUrl: "https://wxo.apps.<cluster-domain>"  # required — no auto-derivation
+    #       #   namespace: watson-orchestrate                # default shown
+    #       #   version: ""                                  # optional
 
     # ── RHDH proxy endpoints — auto-generated from clusters[] ────────────────
     # Each cluster's services generate proxy entries automatically when

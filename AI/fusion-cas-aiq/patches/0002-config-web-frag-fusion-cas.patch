@@ -1,0 +1,84 @@
+# Patch 0002 — Frontend auth + config changes (v2)
+#
+# Source of truth: blog post "Connecting IBM Fusion CAS to NVIDIA AI-Q on OpenShift - v2"
+#
+# Files patched (all done by 01-patch-aiq.sh):
+#   frontends/ui/src/adapters/auth/providers/index.ts   — swap disabled → OpenShift provider
+#   frontends/ui/src/adapters/auth/config.ts            — two JWT callback fixes
+#   configs/config_web_frag.yml                         — multi-store retriever config
+#   deploy/helm/deployment-k8s/values.yaml              — CONFIG_FILE + secretEnv
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── frontends/ui/src/adapters/auth/providers/index.ts ────────────────────────
+#
+# FIND (entire file content):
+#   import type { AuthProviderConfig } from './types'
+#
+#   export const getAuthProviderConfig = (): AuthProviderConfig => ({
+#     provider: null,
+#     providerId: 'disabled-auth',
+#     refreshToken: async () => {
+#       throw new Error('No auth provider configured')
+#     },
+#   })
+#
+# REPLACE WITH:
+#   import type { AuthProviderConfig } from './types'
+#   import { getOpenShiftProviderConfig } from './openshift-oidc'
+#
+#   export const getAuthProviderConfig = (): AuthProviderConfig =>
+#     getOpenShiftProviderConfig()
+
+# ── frontends/ui/src/adapters/auth/config.ts — Fix 1: missing id_token ───────
+#
+# FIND:
+#   idToken: account.id_token,
+# REPLACE WITH:
+#   idToken: account.id_token ?? account.access_token,
+#
+# Why: OpenShift does not always issue a separate id_token.
+# Without this fix, the idToken cookie becomes undefined and
+# authenticated backend requests fail.
+
+# ── frontends/ui/src/adapters/auth/config.ts — Fix 2: missing expires_at ─────
+#
+# FIND:
+#   expiresAt: account.expires_at,
+# REPLACE WITH:
+#   expiresAt:
+#     account.expires_at ??
+#     Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS,
+#
+# Why: OpenShift does not always return expires_at.
+# Without this fix the token refresh logic fails.
+
+# ── configs/config_web_frag.yml (multi-store) ─────────────────────────────────
+#
+# Rendered from templates/config_web_frag.yml.template by 01-patch-aiq.sh.
+# Key v2 additions:
+#   - Nemotron models: nvidia/nemotron-3-super-120b-a12b (intent + super) and
+#     nvidia/nemotron-3-ultra-550b-a55b (ultra) — these are the models that
+#     worked in the upstream repo. mistralai/mistral-large-2-instruct was a
+#     placeholder and caused [404] Not Found errors.
+#   - enable_thinking: true on all three LLMs.
+#     CAUTION: NIM rejects requests that combine tool schemas with thinking mode
+#     (HTTP 500). If shallow_research_agent or clarifier_agent start returning
+#     HTTP 500, remove enable_thinking from nemotron_super_llm only.
+#     nemotron_llm_intent is safe — it is never bound to tools.
+#   - max_tokens raised to 65536 for super/ultra (was 4096) to support long
+#     deep-research responses.
+#   - vector_stores list instead of single vector_store
+#   - source_id_store_map: maps data-source IDs → store names
+#   - Multiple data_source_registry entries (one per store)
+#
+# See templates/config_web_frag.yml.template for the full structure.
+
+# ── deploy/helm/deployment-k8s/values.yaml ───────────────────────────────────
+#
+# Change 1: CONFIG_FILE
+#   FROM: configs/config_web_default_llamaindex.yml
+#   TO:   configs/config_web_frag.yml
+#
+# Change 2: secretEnv under aiq.apps.backend
+#   secretEnv:
+#     FUSION_CAS_TOKEN: FUSION_CAS_TOKEN

@@ -57,6 +57,6 @@ The following example registers the **granite-8b-code-instruct** model from the 
 ## Next Steps
 
 Once your model is registered, you can:
-- **Deploy the model as a service** - See [Deploying Model Services](../03-model-deployment/DEPLOYING_MODEL_SERVICES.md) for detailed deployment instructions
+- **Deploy the model as a service** - See [Deploying Model Services](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/03-model-deployment/DEPLOYING_MODEL_SERVICES.md) for detailed deployment instructions
 - Configure monitoring and rate limiting for the deployed model
 - Manage model versions and lifecycle in the Model Registry

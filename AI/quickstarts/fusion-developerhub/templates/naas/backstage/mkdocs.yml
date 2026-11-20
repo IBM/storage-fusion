@@ -1,0 +1,27 @@
+site_name: Namespace-as-a-Service on IBM Fusion
+site_description: Self-service OpenShift namespace provisioning via Developer Hub and GitOps
+
+repo_url: https://github.com/IBM/storage-fusion
+repo_name: IBM/storage-fusion
+
+docs_dir: docs
+
+nav:
+  - Home: index.md
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+
+plugins:
+  - techdocs-core
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+# Made with Bob

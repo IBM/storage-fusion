@@ -1,0 +1,115 @@
+[
+  {
+    "label": "Getting started with Model-as-a-Service on Fusion",
+    "description": "Deploy the full MaaS platform on IBM Fusion HCI with GitOps: install OpenShift AI operators, connect Fusion object storage, stand up a Model Registry, deploy GPU-backed inference, expose models through an API gateway, and validate a live endpoint.",
+    "url": "https://community.ibm.com/community/user/blogs/harichandana-kotha/2026/06/29/quickstart-maas-ibm-fusion-gitops",
+    "paths": 1,
+    "hours": 1
+  },
+  {
+    "label": "Configure subscription-based model governance on Fusion MaaS",
+    "description": "Put access control and quota management in place for your running models: deploy MaaSSubscription and MaaSAuthPolicy resources with the maas-config Helm chart via ArgoCD, create API keys, and enforce per-group token rate limits through the gateway.",
+    "url": "https://community.ibm.com/community/user/blogs/harichandana-kotha/2026/07/27/model-governance",
+    "paths": 1,
+    "minutes": 45
+  },
+  {
+    "label": "CPU-based LLM inference on Fusion with GitOps",
+    "description": "Deploy small open-source language models (Qwen2.5, SmolLM2) on standard x86 CPU nodes using the vLLM CPU ServingRuntime for KServe — no GPU required. All resources are declared in Git and reconciled by ArgoCD on IBM Fusion.",
+    "url": "https://community.ibm.com/community/user/blogs/harichandana-kotha/2026/08/25/cpu-based-llm-inference-ibm-fusion-gitops",
+    "paths": 1,
+    "minutes": 45
+  },
+  {
+    "label": "Build an agentic chat assistant on Fusion AI",
+    "description": "Deploy a production-ready React + FastAPI chat application on IBM Fusion using ArgoCD, HashiCorp Vault, External Secrets Operator, and Stakater Reloader — with automated secret rotation, unified model selection across gateway and KServe, and RAG-powered responses via CAS.",
+    "url": "https://community.ibm.com/community/user/blogs/harichandana-kotha/2026/08/25/deploying-agentic-chat-assistant-with-gitops",
+    "paths": 1,
+    "hours": 1
+  },
+  {
+    "label": "Registering models from the Model Catalog",
+    "description": "Import and register foundation models from HuggingFace or the Red Hat model repository into the Model Registry, including versioning and metadata setup, before you deploy them for inference.",
+    "url": "https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/docs/02-model-catalog-and-registry/ADDING_MODELS_TO_REGISTRY.md",
+    "paths": 1,
+    "minutes": 20
+  },
+  {
+    "label": "Getting started with Namespace-as-a-Service on Fusion",
+    "description": "Turn namespace provisioning into a self-service Developer Hub wizard backed by GitOps: platform-team setup, GitHub auth, Helm values, the ArgoCD controller, and the developer flow for requesting, resizing, and deleting namespaces with auto-applied RBAC and quotas.",
+    "url": "https://community.ibm.com/community/user/blogs/christo-abraham2/2026/08/31/quick-start-fusion-namespace-as-a-service",
+    "paths": 1,
+    "hours": 1,
+    "minutes": 30
+  },
+  {
+    "label": "Building agents with the watsonx Orchestrate AI Builder",
+    "description": "Describe the agent you want and let the AI Builder generate it from scratch, then refine it through conversation or by feeding back past interactions to adjust its behavior.",
+    "url": "https://developer.watson-orchestrate.ibm.com/ai_builder/creating_agent",
+    "paths": 1,
+    "minutes": 25
+  },
+  {
+    "label": "Running watsonx Orchestrate Developer Edition locally",
+    "description": "Set up the local watsonx Orchestrate server and UI on your own machine, giving you a dedicated environment with its own API endpoints to build and test agents.",
+    "url": "https://developer.watson-orchestrate.ibm.com/developer_edition/wxOde_overview",
+    "paths": 1,
+    "minutes": 30
+  },
+  {
+    "label": "Creating and building AI agents with the watsonx Orchestrate ADK",
+    "description": "Install the watsonx Orchestrate Agent Development Kit and build agents using either the conversational AI Builder or declarative YAML definitions, including tools, connections, and knowledge bases.",
+    "url": "https://developer.watson-orchestrate.ibm.com/",
+    "paths": 1,
+    "minutes": 30
+  },
+  {
+    "label": "Deploying agents in watsonx Orchestrate",
+    "description": "Release a working agent into production so users can access it, either through the watsonx Orchestrate UI or the ADK command-line interface, and undeploy it when it's no longer needed.",
+    "url": "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=agents-deploying-agent",
+    "paths": 1,
+    "minutes": 20
+  },
+  {
+    "label": "Deploying watsonx.ai and watsonx Orchestrate on Fusion HCI",
+    "description": "Use the Software Hub service on IBM Fusion HCI to automate prerequisites, storage class selection, and resource pre-checks before installing watsonx.ai and watsonx Orchestrate.",
+    "url": "https://www.ibm.com/docs/en/fusion-hci-systems/2.13.x?topic=services-software-hub",
+    "paths": 1,
+    "hours": 1
+  },
+  {
+    "label": "AI workloads on IBM Fusion HCI",
+    "description": "How IBM Fusion HCI runs container and VM AI workloads on its GPU nodes, validated end-to-end with watsonx for consistent training and inference performance.",
+    "url": "https://www.ibm.com/docs/en/fusion-hci-systems/2.13.x?topic=workloads-ai-fusion",
+    "paths": 1,
+    "minutes": 25
+  },
+  {
+    "label": "GPU servers and sizing on Fusion HCI",
+    "description": "Reference for available GPU server hardware, card counts, and capacity on Fusion HCI, used to size GPU nodes for Model-as-a-Service inference workloads.",
+    "url": "https://www.ibm.com/docs/en/fusion-hci-systems/2.13.x?topic=overview-gpu-servers",
+    "paths": 1,
+    "minutes": 15
+  },
+  {
+    "label": "Getting started with Fusion Developer Hub",
+    "description": "Deploy Red Hat Developer Hub on Fusion using GitOps, the platform both NaaS and MaaS self-service templates run on top of.",
+    "url": "https://community.ibm.com/community/user/blogs/namita-singroha/2026/06/25/quickstart-fusion-developer-hub-via-gitops",
+    "paths": 1,
+    "hours": 1
+  },
+  {
+    "label": "Getting started with Fusion GitOps (ArgoCD)",
+    "description": "Install OpenShift GitOps and ArgoCD on your Fusion cluster, the reconciliation engine the NaaS controller and other self-service templates depend on.",
+    "url": "https://community.ibm.com/community/user/blogs/christo-abraham/2026/05/27/fusion-gitops-quickstart",
+    "paths": 1,
+    "minutes": 45
+  },
+  {
+    "label": "Understanding IBM Fusion's AI Data Platform for inference",
+    "description": "Learn why unified namespace, AFM data federation, and CAS auto-refreshed embeddings matter for AI inference cost and quality, and how to size NVMe working sets versus federated capacity storage to cut token economics.",
+    "url": "https://community.ibm.com/community/user/blogs/matthew-geiser1/2026/01/25/ibm-fusion-delivering-an-ai-data-platform",
+    "paths": 1,
+    "minutes": 30
+  }
+]

@@ -1,0 +1,150 @@
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  name: {{ include "maas-model-service.modelName" . }}
+  namespace: {{ include "maas-model-service.namespace" . }}
+  labels:
+    {{- include "maas-model-service.labels" . | nindent 4 }}
+    {{- if .Values.modelRegistry.enabled }}
+    {{- if .Values.modelRegistry.registeredModelId }}
+    modelregistry.opendatahub.io/registered-model-id: "{{ .Values.modelRegistry.registeredModelId }}"
+    {{- end }}
+    {{- if .Values.modelRegistry.modelVersionId }}
+    modelregistry.opendatahub.io/model-version-id: "{{ .Values.modelRegistry.modelVersionId }}"
+    {{- end }}
+    {{- if .Values.modelRegistry.name }}
+    modelregistry.opendatahub.io/name: {{ .Values.modelRegistry.name }}
+    {{- end }}
+    opendatahub.io/dashboard: "true"
+    {{- end }}
+  annotations:
+    {{- include "maas-model-service.annotations" . | nindent 4 }}
+    security.opendatahub.io/enable-auth: "false"
+    {{- if .Values.hardwareProfile.name }}
+    opendatahub.io/hardware-profile-name: {{ .Values.hardwareProfile.name | quote }}
+    opendatahub.io/hardware-profile-namespace: {{ .Values.hardwareProfile.namespace | quote }}
+    {{- end }}
+    {{- if .Values.accelerator.vendor }}
+    {{- if eq .Values.accelerator.vendor "nvidia" }}
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+    {{- else if eq .Values.accelerator.vendor "amd" }}
+    opendatahub.io/recommended-accelerators: '["amd.com/gpu"]'
+    {{- end }}
+    {{- end }}
+    {{- if .Values.modelRegistry.enabled }}
+    {{- if .Values.modelRegistry.connectionSecret }}
+    opendatahub.io/connections: {{ .Values.modelRegistry.connectionSecret }}
+    {{- end }}
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: {{ .Values.model.displayName }}
+    {{- end }}
+spec:
+  {{- if and .Values.advanced (index .Values.advanced "enabled") }}
+  {{- toYaml .Values.advanced.spec | nindent 2 }}
+  {{- else }}
+  model:
+    name: {{ include "maas-model-service.modelName" . }}
+    uri: {{ .Values.source.uri }}
+  replicas: {{ .Values.inference.replicas }}
+  # parallelism.tensor tells the IS controller to pass --tensor-parallel-size.
+  # Do NOT duplicate --tensor-parallel-size in VLLM_ADDITIONAL_ARGS.
+  # GPU resources are set on the container below (no spec.worker block: the
+  # operator webhook rejects it for tensor-only parallelism).
+  {{- if .Values.accelerator.vendor }}
+  parallelism:
+    tensor: {{ .Values.accelerator.count | int }}
+  {{- end }}
+  {{- if .Values.modelRegistry.enabled }}
+  router:
+    gateway: {}
+    route: {}
+    scheduler: {}
+  {{- end }}
+  template:
+    {{- if and (not .Values.modelRegistry.enabled) (or .Values.s3.enabled .Values.pvc.enabled) }}
+    serviceAccountName: {{ include "maas-model-service.modelName" . }}-sa
+    {{- end }}
+    {{- if .Values.imagePullSecrets }}
+    imagePullSecrets:
+    {{- toYaml .Values.imagePullSecrets | nindent 4 }}
+    {{- end }}
+    containers:
+    - name: main
+      {{- if .Values.inference.image }}
+      image: {{ .Values.inference.image }}
+      {{- end }}
+      {{- if .Values.inference.imagePullPolicy }}
+      imagePullPolicy: {{ .Values.inference.imagePullPolicy }}
+      {{- end }}
+      {{- if .Values.inference.command }}
+      command:
+        {{- toYaml .Values.inference.command | nindent 8 }}
+      {{- end }}
+      {{- $args := .Values.inference.args | default list }}
+      {{- if .Values.inference.command }}
+      {{- $args = concat $args (.Values.accelerator.args | default list) }}
+      {{- end }}
+      {{- if $args }}
+      args:
+        {{- toYaml $args | nindent 8 }}
+      {{- end }}
+      {{- $accEnv := .Values.accelerator.env | default list }}
+      {{- if or .Values.inference.extraArgs .Values.inference.env $accEnv }}
+      env:
+        {{- if and .Values.inference.extraArgs (not .Values.inference.command) }}
+        - name: VLLM_ADDITIONAL_ARGS
+          value: {{ join " " .Values.inference.extraArgs | quote }}
+        {{- end }}
+        {{- if .Values.inference.env }}
+        {{- toYaml .Values.inference.env | nindent 8 }}
+        {{- end }}
+        {{- if $accEnv }}
+        {{- toYaml $accEnv | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.inference.startupProbe }}
+      startupProbe:
+        {{- toYaml .Values.inference.startupProbe | nindent 8 }}
+      {{- end }}
+      {{- if .Values.inference.volumeMounts }}
+      volumeMounts:
+        {{- toYaml .Values.inference.volumeMounts | nindent 8 }}
+      {{- end }}
+      {{- if .Values.accelerator.vendor }}
+      resources:
+        {{- include "maas-model-service.gpuResources" . | nindent 8 }}
+      {{- end }}
+      {{- if and .Values.securityContext (index .Values.securityContext "container") }}
+      securityContext:
+        {{- toYaml .Values.securityContext.container | nindent 8 }}
+      {{- end }}
+    {{- if .Values.modelRegistry.enabled }}
+    {{- if .Values.modelRegistry.connectionSecret }}
+    imagePullSecrets:
+    - name: {{ .Values.modelRegistry.connectionSecret }}
+    {{- end }}
+    {{- end }}
+    {{- $ns := include "maas-model-service.nodeSelector" . }}
+    {{- if $ns }}
+    nodeSelector:
+      {{- $ns | nindent 6 }}
+    {{- end }}
+    {{- $tols := include "maas-model-service.tolerations" . }}
+    {{- if $tols }}
+    tolerations:
+      {{- $tols | nindent 6 }}
+    {{- end }}
+    {{- if .Values.scheduling.affinity }}
+    affinity:
+      {{- toYaml .Values.scheduling.affinity | nindent 6 }}
+    {{- end }}
+    {{- if .Values.inference.volumes }}
+    volumes:
+      {{- toYaml .Values.inference.volumes | nindent 6 }}
+    {{- end }}
+    {{- if and .Values.securityContext (index .Values.securityContext "pod") }}
+    securityContext:
+      {{- toYaml .Values.securityContext.pod | nindent 6 }}
+    {{- end }}
+  
+  {{- end }}

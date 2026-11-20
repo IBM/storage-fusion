@@ -2,7 +2,7 @@
 
 ArgoCD manifests for deploying LLM models on Red Hat OpenShift AI via the [`maas-model-deploy`](../../helm/maas-model-deploy) Helm chart.
 
-Each environment has one `AppProject` and one `Application` manifest **per model**. For values file conventions, naming rules, and add/remove procedures see [`../../helm/maas-model-deploy/environments/CHANGELOG.md`](../../helm/maas-model-deploy/environments/CHANGELOG.md).
+Each environment has one `AppProject` and one `Application` manifest **per model**. For values file conventions, naming rules, and add/remove procedures see [`../../helm/maas-model-deploy/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/CHANGELOG.md).
 
 ---
 
@@ -56,7 +56,9 @@ Shared resources (Namespace, connection Secret, ServiceAccount, `storage-config`
    ```bash
    oc get application fusion-maas-runtime-prod -n openshift-gitops
    ```
-2. **S3 credentials** are set in the model's env values file or injected via Argo CD Helm parameters.
+2. **S3 credentials** — choose one:
+   - **ESO / Vault (production):** Store S3 credentials in Vault at `secret/maas/model-deploy/<model-name>/s3` and set `s3.externalSecret.enabled: true` in the environment values file. Vault secrets must exist **before** the first ArgoCD sync. See [`../../helm/maas-model-deploy/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md).
+   - **Manual (dev/quick-start):** Set `s3.accessKeyId` and `s3.secretAccessKey` in the values file or supply via `--set` at sync time.
 3. **ArgoCD is running:**
    ```bash
    oc get pods -n openshift-gitops
@@ -89,7 +91,7 @@ The `source` block looks like this in every file:
 ```yaml
 source:
   repoURL: https://github.com/IBM/storage-fusion.git   # change this
-  targetRevision: master                                # change this
+  targetRevision: master                                          # change this
   path: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy
 ```
 
@@ -124,8 +126,8 @@ If `appproject-*.yaml` has an explicit allowlist (not `['*']`), add the new `rep
 # appproject-prod.yaml (excerpt)
 spec:
   sourceRepos:
-    - https://github.com/IBM/storage-fusion.git           # existing
-    - https://github.com/my-org/storage-fusion.git        # add new URL
+    - https://github.com/IBM/storage-fusion.git   # existing
+    - https://github.com/my-org/storage-fusion.git             # add new URL
 ```
 
 **4. Continue with the environment-specific steps below**, then verify:
@@ -200,8 +202,9 @@ oc get events -n deploy-models --sort-by='.lastTimestamp'
 
 | Resource | Location |
 |---|---|
-| **Testing guide** | [`TEST_MODELS.md`](TEST_MODELS.md) |
-| Helm chart README | [`../../helm/maas-model-deploy/README.md`](../../helm/maas-model-deploy/README.md) |
+| **Testing guide** | [`TEST_MODELS.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/TEST_MODELS.md) |
+| Helm chart README | [`../../helm/maas-model-deploy/README.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/README.md) |
+| **ESO / Vault setup** | [`../../helm/maas-model-deploy/VAULT-SECRET-SETUP.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) |
 | Helm chart | [`../../helm/maas-model-deploy/`](../../helm/maas-model-deploy/) |
-| Values file conventions | [`../../helm/maas-model-deploy/environments/CHANGELOG.md`](../../helm/maas-model-deploy/environments/CHANGELOG.md) |
+| Values file conventions | [`../../helm/maas-model-deploy/environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) |
 

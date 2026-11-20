@@ -15,13 +15,28 @@
 """
 IBM Fusion CAS — NAT retriever provider and client.
 
-Registers _type: fusion_cas in the retrievers: section of any workflow YAML:
+Registers _type: fusion_cas in the retrievers: section of any workflow YAML.
+
+Single store (backward-compatible):
 
     retrievers:
       fusion_cas_store:
         _type: fusion_cas
         fusion_url: ${FUSION_CAS_URL:-}
         vector_store: ${FUSION_VECTOR_STORE:-}
+        token: ${FUSION_CAS_TOKEN:-}
+        top_k: 5
+
+Multiple stores — results from all stores are merged and re-ranked by score:
+
+    retrievers:
+      fusion_cas_store:
+        _type: fusion_cas
+        fusion_url: ${FUSION_CAS_URL:-}
+        vector_stores:
+          - farming-docs
+          - machinery-docs
+          - weather-data
         token: ${FUSION_CAS_TOKEN:-}
         top_k: 5
 
@@ -50,6 +65,7 @@ import requests
 import urllib3
 from pydantic import Field
 from pydantic import SecretStr
+from pydantic import model_validator
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -71,16 +87,52 @@ logger = logging.getLogger(__name__)
 # Config — _type: fusion_cas in the retrievers: section
 # ---------------------------------------------------------------------------
 
+
 class FusionCASRetrieverConfig(RetrieverBaseConfig, name="fusion_cas"):
-    """Configuration for the IBM Fusion CAS retriever."""
+    """Configuration for the IBM Fusion CAS retriever.
+
+    Supports a single vector store (backward-compatible ``vector_store`` field)
+    **or** a list of stores (``vector_stores``).  When both are supplied,
+    ``vector_stores`` takes precedence.  The resolved list is available as
+    ``effective_vector_stores`` after model validation.
+
+    For UI-driven per-store selection use ``source_id_store_map`` to map each
+    data-source registry ID (e.g. ``fusion_cas_farming``) to a Fusion CAS
+    vector store name.  At search time the caller can pass
+    ``enabled_source_ids`` as a keyword argument; the retriever intersects that
+    list with the map and fans out only to the enabled stores in parallel.
+    """
 
     fusion_url: str = Field(
         default_factory=lambda: os.environ.get("FUSION_CAS_URL", ""),
         description="Base URL of the Fusion CAS service, e.g. https://ibm-cas-...apps.cluster.ibm.com",
     )
-    vector_store: str = Field(
-        default_factory=lambda: os.environ.get("FUSION_VECTOR_STORE", ""),
-        description="Vector store name (case-sensitive, must match the Fusion UI).",
+    vector_store: str | None = Field(
+        default=None,
+        description=(
+            "Single vector store name (backward-compatible). "
+            "Ignored when vector_stores is also set. "
+            "Falls back to the FUSION_VECTOR_STORE env var when None."
+        ),
+    )
+    vector_stores: list[str] = Field(
+        default_factory=list,
+        description=(
+            "List of vector store names to search. When non-empty this takes precedence "
+            "over vector_store. Results from all stores are merged and re-ranked by score."
+        ),
+    )
+    source_id_store_map: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Mapping of data-source registry ID → Fusion CAS vector store name. "
+            "Used by the knowledge_retrieval function to resolve which stores to query "
+            "based on the data_sources selected by the user in the AI-Q UI. "
+            'Example: {"fusion_cas_farming": "farming-docs", '
+            '"fusion_cas_machinery": "machinery-docs"}. '
+            "When non-empty, an enabled_source_ids kwarg passed to search() takes "
+            "precedence over vector_stores/vector_store."
+        ),
     )
     token: SecretStr | None = Field(
         default=None,
@@ -105,10 +157,29 @@ class FusionCASRetrieverConfig(RetrieverBaseConfig, name="fusion_cas"):
         description="Verify TLS certificates. Set false only for self-signed lab clusters.",
     )
 
+    # Resolved list — set by the validator below; never supplied directly in YAML.
+    effective_vector_stores: list[str] = Field(default_factory=list, exclude=True)
+
+    @model_validator(mode="after")
+    def _resolve_vector_stores(self) -> "FusionCASRetrieverConfig":
+        """Merge scalar and list fields into effective_vector_stores."""
+        if self.vector_stores:
+            self.effective_vector_stores = list(self.vector_stores)
+            return self
+        # scalar field: use it, or fall back to the env var if field was not set in YAML
+        scalar = self.vector_store or os.environ.get("FUSION_VECTOR_STORE", "")
+        if scalar:
+            self.effective_vector_stores = [scalar]
+        else:
+            # Neither field set — leave empty; the retriever will warn at search time.
+            self.effective_vector_stores = []
+        return self
+
 
 # ---------------------------------------------------------------------------
 # Retriever client — implements the standard NAT Retriever interface
 # ---------------------------------------------------------------------------
+
 
 def _make_session(timeout: int, verify_ssl: bool) -> requests.Session:
     session = requests.Session()
@@ -121,14 +192,23 @@ def _make_session(timeout: int, verify_ssl: bool) -> requests.Session:
 
 
 class FusionCASRetriever(Retriever):
-    """NAT Retriever implementation for IBM Fusion CAS."""
+    """NAT Retriever implementation for IBM Fusion CAS.
+
+    When multiple vector stores are configured the retriever fans out one
+    concurrent HTTP search per store, merges all results, re-ranks them by
+    descending ``score``, and returns the top ``top_k`` documents overall.
+    """
 
     def __init__(self, config: FusionCASRetrieverConfig) -> None:
         self._config = config
         self._fusion_url = config.fusion_url.rstrip("/")
-        self._vector_store = config.vector_store
         self._session = _make_session(config.timeout, config.verify_ssl)
-        logger.info("FusionCASRetriever initialized: url=%s store=%s", self._fusion_url, self._vector_store)
+        stores = config.effective_vector_stores
+        logger.info(
+            "FusionCASRetriever initialized: url=%s stores=%s",
+            self._fusion_url,
+            stores,
+        )
 
     def _resolve_token(self) -> str:
         if self._config.token:
@@ -145,10 +225,8 @@ class FusionCASRetriever(Retriever):
             headers["Authorization"] = f"Bearer {token}"
         return headers
 
-    async def search(self, query: str, **kwargs) -> RetrieverOutput:
-        """Search Fusion CAS and return a standard NAT RetrieverOutput."""
-        top_k = kwargs.get("top_k", self._config.top_k)
-        vector_store = kwargs.get("collection_name", self._vector_store)
+    async def _search_one_store(self, query: str, vector_store: str, top_k: int) -> list[Document]:
+        """Search a single vector store and return a list of Documents."""
         endpoint = f"{self._fusion_url}/cas/api/v1/vector_stores/{vector_store}/search"
         payload: dict[str, Any] = {
             "query": query,
@@ -156,7 +234,6 @@ class FusionCASRetriever(Retriever):
             "enable_source": True,
             "enable_content_metadata": True,
         }
-
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
@@ -164,10 +241,80 @@ class FusionCASRetriever(Retriever):
         )
         response.raise_for_status()
         data = response.json() or {}
-        return RetrieverOutput(results=[d for d in (_parse_document(item) for item in data.get("data", [])) if d])
+        docs = [d for d in (_parse_document(item, vector_store) for item in data.get("data", [])) if d]
+        logger.debug("FusionCASRetriever: store=%s returned %d docs", vector_store, len(docs))
+        return docs
+
+    async def search(self, query: str, **kwargs) -> RetrieverOutput:
+        """Search one or more Fusion CAS vector stores and return a merged RetrieverOutput.
+
+        Keyword args (all optional):
+            top_k (int): Override the configured default number of results.
+            collection_name (str): Search exactly this store (backward-compatible
+                single-store override used by the legacy ``nat_retriever`` path).
+            enabled_source_ids (list[str]): Data-source registry IDs selected by
+                the user in the AI-Q UI.  When supplied, the retriever looks each
+                ID up in ``config.source_id_store_map`` and fans out only to the
+                matching stores in parallel — giving true single-call parallelism
+                instead of serial LLM tool calls.
+        """
+        top_k = kwargs.get("top_k", self._config.top_k)
+
+        # Priority 1: UI-driven selection via source_id_store_map.
+        enabled_source_ids: list[str] | None = kwargs.get("enabled_source_ids")
+        if enabled_source_ids is not None and self._config.source_id_store_map:
+            stores = [
+                self._config.source_id_store_map[sid]
+                for sid in enabled_source_ids
+                if sid in self._config.source_id_store_map
+            ]
+            if not stores:
+                logger.warning(
+                    "FusionCASRetriever: none of the enabled_source_ids %s matched source_id_store_map; "
+                    "falling back to configured store list",
+                    enabled_source_ids,
+                )
+                stores = self._config.effective_vector_stores
+        # Priority 2: per-call single-store override (legacy nat_retriever path).
+        elif kwargs.get("collection_name"):
+            stores = [kwargs["collection_name"]]
+        # Priority 3: static list from config.
+        else:
+            stores = self._config.effective_vector_stores
+
+        if not stores:
+            logger.warning("FusionCASRetriever: no vector stores configured, returning empty result")
+            return RetrieverOutput(results=[])
+
+        if len(stores) == 1:
+            # Fast path — no fan-out overhead.
+            docs = await self._search_one_store(query, stores[0], top_k)
+            return RetrieverOutput(results=docs[:top_k])
+
+        # Fan-out: search all stores concurrently, each asking for top_k results.
+        # After merging we re-rank and truncate to top_k overall.
+        tasks = [self._search_one_store(query, store, top_k) for store in stores]
+        per_store_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        merged: list[Document] = []
+        for store, result in zip(stores, per_store_results):
+            if isinstance(result, Exception):
+                logger.error("FusionCASRetriever: search failed for store=%s: %s", store, result)
+            else:
+                merged.extend(result)
+
+        # Re-rank by descending score (metadata["score"] set by _parse_document).
+        merged.sort(key=lambda doc: float((doc.metadata or {}).get("score", 0.0)), reverse=True)
+        logger.info(
+            "FusionCASRetriever: merged %d docs from %d stores, returning top %d",
+            len(merged),
+            len(stores),
+            top_k,
+        )
+        return RetrieverOutput(results=merged[:top_k])
 
 
-def _parse_document(item: Any) -> Document | None:
+def _parse_document(item: Any, vector_store: str = "") -> Document | None:
     """Convert one Fusion CAS search result into a NAT Document."""
     if not isinstance(item, dict):
         return None
@@ -177,7 +324,8 @@ def _parse_document(item: Any) -> Document | None:
     score_obj = item.get("score") or {}
     score = float(
         score_obj.get("combined_probability_score") or score_obj.get("score") or 0.0
-        if isinstance(score_obj, dict) else score_obj or 0.0
+        if isinstance(score_obj, dict)
+        else score_obj or 0.0
     )
 
     content_items = item.get("content") or []
@@ -202,6 +350,7 @@ def _parse_document(item: Any) -> Document | None:
             "page_number": page_number,
             "score": max(0.0, min(1.0, score)),
             "file_id": item.get("file_id"),
+            "vector_store": vector_store,
         },
     )
 
@@ -209,6 +358,7 @@ def _parse_document(item: Any) -> Document | None:
 # ---------------------------------------------------------------------------
 # NAT provider + client registration (mirrors nemo_retriever/register.py)
 # ---------------------------------------------------------------------------
+
 
 @register_retriever_provider(config_type=FusionCASRetrieverConfig)
 async def fusion_cas_retriever_provider(config: FusionCASRetrieverConfig, builder: Builder):

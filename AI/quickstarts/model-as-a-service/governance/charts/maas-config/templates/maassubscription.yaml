@@ -1,0 +1,58 @@
+{{- range .Values.subscriptions }}
+---
+# MaaSSubscription – {{ .name }}
+# -----------------------------------------------------------------------
+# Grants quota for one or more models to the specified groups / users.
+# Both a MaaSSubscription and a MaaSAuthPolicy are required for users to
+# access models through the MaaS gateway:
+#   - MaaSSubscription  enforces token rate limits per model.
+#   - MaaSAuthPolicy    grants API gateway access to model endpoints.
+# Without a matching MaaSAuthPolicy, users receive 403 Forbidden errors.
+# -----------------------------------------------------------------------
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSSubscription
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "maas-config.maasNamespace" $ }}
+  labels:
+    {{- include "maas-config.labels" $ | nindent 4 }}
+    maas.redhat.com/subscription: {{ .name }}
+  annotations:
+    {{- include "maas-config.annotations" $ | nindent 4 }}
+    {{- if .description }}
+    maas.redhat.com/description: {{ .description | quote }}
+    {{- end }}
+    {{- if .displayName }}
+    openshift.io/display-name: {{ .displayName | quote }}
+    {{- end }}
+spec:
+  # Priority determines which subscription wins when a user belongs to
+  # multiple groups. Higher number = higher priority. Default: 0.
+  # Recommended scheme: production=100, staging=50, dev=0, sandbox=-10
+  priority: {{ .priority | default 0 }}
+  owner:
+    groups:
+      {{- range .groups }}
+      - name: {{ . }}
+      {{- end }}
+    users:
+      {{- if .users }}
+      {{- range .users }}
+      - {{ . }}
+      {{- end }}
+      {{- else }}
+      []
+      {{- end }}
+  modelRefs:
+    {{- range .modelRefs }}
+    - name: {{ .name }}
+      namespace: {{ .namespace }}
+      tokenRateLimits:
+        # window units: s (seconds), m (minutes), h (hours).
+        # NOTE: 'd' (days) is NOT supported – use 24h, 168h, etc.
+        {{- range .tokenRateLimits }}
+        - limit: {{ .limit }}
+          window: {{ .window | quote }}
+        {{- end }}
+    {{- end }}
+{{- end }}

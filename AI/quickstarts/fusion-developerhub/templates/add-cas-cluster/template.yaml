@@ -66,16 +66,15 @@ spec:
               • MCP streamable    → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/mcp-streamable/
               • Health            → https://console-ibm-spectrum-fusion-ns.apps.<domain>/cas/api/v1/health
               • OCP Console       → https://console-openshift-console.apps.<domain>
-          pattern: "^https://api\\."
+          pattern: "^https://api\."
           ui:placeholder: "https://api.mycluster.example.com:6443"
 
         serviceVersion:
-          title: "CAS Installed Version"
+          title: "CAS Installed Version (optional)"
           type: string
           description: >
             The installed CAS version from your cluster.
             Run: oc get casinstall -n ibm-cas -o jsonpath='{.items[0].status.installedVersion}'
-            Used as the service-version annotation in the catalog entity.
             Leave blank if unknown — can be updated later by re-running this template.
           ui:placeholder: "1.1.5"
 
@@ -84,13 +83,17 @@ spec:
     # ─────────────────────────────────────────────────────────────────────────
     # Single step: catalog:write
     #
-    # Writes the entity object directly into the Backstage catalog.
-    # No file. No proxy. No token. No external server.
+    # Writes the entity directly into the Backstage catalog database.
+    # No Git commit. No token. No external server.
+    # The entity is visible in the catalog immediately after this step.
+    #
+    # Any customer can run this for any cluster — today cluster1, next week
+    # cluster5 — each run adds one more entity with no values.yaml changes.
     #
     # Domain derivation (Nunjucks):
     #   "https://api.mycluster.example.com:6443"
-    #   → replace 'https://api.' with ''  → "mycluster.example.com:6443"
-    #   → replace ':6443' with ''         → "mycluster.example.com"
+    #   → replace 'https://api.' → "mycluster.example.com:6443"
+    #   → replace ':6443'        → "mycluster.example.com"
     # ─────────────────────────────────────────────────────────────────────────
     - id: register
       name: "Add to Catalog"
@@ -115,7 +118,7 @@ spec:
             annotations:
               fusion.ibm.com/cluster-id: "${{ parameters.clusterName }}"
               fusion.ibm.com/service-type: cas
-              fusion.ibm.com/service-version: "${{ parameters.serviceVersion }}"
+              fusion.ibm.com/service-version: "${{ parameters.serviceVersion | default('') }}"
               fusion.ibm.com/ocp-api-url: "${{ parameters.ocpApiUrl }}"
               fusion.ibm.com/ocp-console-url: "https://console-openshift-console.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}"
               fusion.ibm.com/console-url: "https://console-ibm-spectrum-fusion-ns.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}"
@@ -207,19 +210,6 @@ spec:
             - name: fusion-cas-${{ parameters.clusterName }}
               connection_type: http
               url: https://console-ibm-spectrum-fusion-ns.apps.${{ parameters.ocpApiUrl | replace("https://api.", "") | replace(":6443", "") }}/cas/api/v1/mcp
-              headers:
-                Accept: "application/json"
-                Content-Type: "application/json"
-          ```
-
-          **Bob (RHDH AI assistant) — `app-config.yaml`:**
-          ```yaml
-          bob:
-            mcp:
-              servers:
-                - name: fusion-cas-${{ parameters.clusterName }}
-                  url: /api/proxy/fusion-${{ parameters.clusterName }}-cas/cas/api/v1/mcp-streamable/
-                  transport: http
           ```
 
           ---
@@ -234,21 +224,12 @@ spec:
 
           ---
 
-          ## Resources
-
-          - [Bob meets IBM CAS MCP — IBM Community Blog](https://community.ibm.com/community/user/blogs/namita-singroha/2026/03/24/bob-meets-ibm-cas-mcp)
-          - [IBM Bob meets CAS MCP — Everything You Need to Get Started (Medium)](https://medium.com/@singrohanamita/ibm-bob-meets-cas-mcp-everything-you-need-to-get-started-95d7e01b7f20)
-          - [CAS + watsonx Orchestrate via MCP — IBM Docs](https://www.ibm.com/docs/en/fusion-software/2.13.0?topic=cas-integrating-watsonx-orchestrate-by-using-mcp)
-
           > To remove: open the component in the catalog → three-dot menu (**⋮**) → **Unregister entity**.
 
     links:
       - title: "View in Catalog"
         url: "/catalog/default/component/fusion-cas-${{ parameters.clusterName }}"
         icon: catalog
-      - title: "TechDocs"
-        url: "/docs/default/component/fusion-cas-${{ parameters.clusterName }}"
-        icon: docs
       - title: "CAS Console"
         url: "https://console-ibm-spectrum-fusion-ns.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/cas/overview"
         icon: dashboard
@@ -261,3 +242,6 @@ spec:
       - title: "Swagger UI"
         url: "https://console-ibm-spectrum-fusion-ns.apps.${{ parameters.ocpApiUrl | replace('https://api.', '') | replace(':6443', '') }}/cas/api/v1/docs"
         icon: code
+      - title: "Bob meets CAS MCP"
+        url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/03/24/bob-meets-ibm-cas-mcp
+        icon: chat

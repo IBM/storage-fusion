@@ -58,6 +58,38 @@ spec:
 
 ---
 apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fusion-ai-services-guide
+  title: "IBM Fusion AI Services — Getting Started"
+  description: |
+    Getting started guide for IBM Fusion AI Services (CAS, DCS, watsonx Orchestrate).
+    Covers what each service does, how to register your cluster in the catalog,
+    and how to connect your AI tools to the available endpoints.
+  tags: [fusion, ibm, ai, getting-started, guide, onboarding]
+  annotations:
+    backstage.io/techdocs-ref: "url:https://github.com/IBM/storage-fusion/tree/main/quickstarts/fusion-developerhub/fusion-ai-discovery/techdocs/fusion-ai-services"
+  links:
+    - url: https://www.ibm.com/docs/en/fusion-software
+      title: "IBM Fusion Knowledge Center"
+      icon: article
+    - url: /create/templates/default/add-cas-cluster
+      title: "Add IBM Fusion CAS Cluster"
+      icon: add-circle
+    - url: /create/templates/default/add-dcs-cluster
+      title: "Add IBM Fusion DCS Cluster"
+      icon: add-circle
+    - url: /create/templates/default/add-wxo-instance
+      title: "Register watsonx Orchestrate Instance"
+      icon: add-circle
+spec:
+  type: documentation
+  lifecycle: production
+  owner: group:default/fusion-platform-team
+  system: fusion-ai-services
+
+---
+apiVersion: backstage.io/v1alpha1
 kind: Group
 metadata:
   name: fusion-platform-team

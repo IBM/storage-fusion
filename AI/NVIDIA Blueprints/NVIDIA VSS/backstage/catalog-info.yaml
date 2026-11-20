@@ -2,45 +2,48 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: nvidia-vss-blueprint
-  title: Guide to deploy NVIDIA VSS Blueprint on IBM Fusion HCI
+  title: NVIDIA VSS Blueprint on IBM Fusion HCI
   description: |
-    Deploy NVIDIA Video Search and Summarization (VSS), an AI-powered visual intelligence blueprint that transforms video from passive recordings into intelligent, queryable knowledge bases.
-    
-    VSS delivers automated video summarization with timestamped key events, natural language Q&A over video content, semantic search that understands meaning and context, and flexible processing for both live streams and archived footage. The architecture combines Cosmos-Reason2 8B VLM for visual understanding, Llama 3.1 70B LLM for natural language reasoning, and NeMo embedding and reranking models for intelligent retrieval. Together, these components convert raw video into structured, searchable intelligence, making video data searchable, understandable, and actionable for enterprise use cases.
+    NVIDIA Video Search and Summarization (VSS) is a validated AI blueprint that transforms video archives into a queryable knowledge base — ingest footage, generate AI-powered timestamped captions, and ask questions in natural language. Ask "what happened during the morning shift?" and get an answer with timestamps, without scrubbing through hours of footage. Deployed on IBM Fusion HCI using NVIDIA NIM microservices. This card covers v2 (latest); the original v1 deployment guide is also available on IBM Tech Exchange.
+
+    How it works:
+    - Video is split into chunks and processed in parallel across GPUs
+    - A Vision Language Model (VLM) generates timestamped natural language captions per chunk
+    - Captions are embedded and indexed in a vector store for semantic search
+    - At query time, retrieves the most relevant captions, re-ranks them, and passes context to the LLM
+    - LLM generates a grounded answer with timestamps — fully traceable to source footage
+
+    What makes it production-ready:
+    - Bring-your-own model endpoints — connect your own VLM and LLM services
+    - IBM-mirrored container images (icr.io/cp/fsh) — air-gap ready, no NGC pull required
+    - Dedicated offline deployment scripts for air-gapped clusters
+    - Deployed directly from the OpenShift Software Catalog — no Helm CLI required
+
+    Why IBM Fusion HCI:
+    - Converged compute and storage — GPU nodes and NVMe storage on the same platform
+    - Predictable GPU scheduling via Red Hat OpenShift with the NVIDIA GPU Operator
+    - Unified environment where multiple AI blueprints (RAG, AI-Q, VSS) coexist on one cluster
+    - IBM Fusion Data Foundation provides the RWO and RWX storage VSS requires out of the box
   tags:
     - nvidia
-    - vss
-    - ai
     - blueprint
     - fusion
-    - gpu
     - video-analytics
-    - computer-vision
-    - llm
   annotations:
     backstage.io/techdocs-ref: dir:.
     github.com/project-slug: IBM/storage-fusion
-    
   links:
-    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/02/15/unlocking-ai-powered-video-analytics-on-ibm-fusion
-      title: Read on IBM Tech Exchange
+    - url: https://community.ibm.com/community/user/blogs/namita-singroha/2026/08/26/unlocking-ai-powered-video-analytics-on-ibm-fusion
+      title: Read the IBM Tech Exchange Blog
       icon: article
     - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
-      title: View on Fusion Tech Community
+      title: Explore on Fusion Tech Community
       icon: web
-    - url: https://github.com/IBM/storage-fusion/blob/master/AI/NVIDIA%20Blueprints/NVIDIA%20VSS/Fusion_NVIDIA_VSS_Guide.md
-      title: Complete deployment guide on GitHub
-      icon: docs
     - url: https://build.nvidia.com/nvidia/video-search-and-summarization
-      title: NVIDIA VSS Blueprint
-      icon: launch
-    - url: https://docs.nvidia.com/vss/latest/content/vss_dep_helm.html
-      title: NVIDIA VSS Documentation
+      title: Explore on NVIDIA Blueprint Catalog
       icon: launch
 spec:
   type: blueprint
   lifecycle: production
-  owner: IBM
-  
-  providesApis: []
-  consumesApis: []
+  owner: group:default/fusion-platform-team
+  system: fusion-ai-services

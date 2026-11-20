@@ -1,0 +1,73 @@
+{{- /* Only create a namespace if it does not already exist on the cluster.
+     Using lookup prevents "cannot be imported into the current release" errors
+     when namespaces were created outside Helm (e.g. by OLM or a prior install). */}}
+
+{{- if .Values.operators.openshiftAI.enabled }}
+{{- if not (lookup "v1" "Namespace" "" .Values.operators.openshiftAI.namespace).metadata }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.openshiftAI.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+{{- end }}
+
+{{- if .Values.operators.certManager.enabled }}
+{{- if not (lookup "v1" "Namespace" "" .Values.operators.certManager.namespace).metadata }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.certManager.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+{{- end }}
+
+{{- if false }}
+{{- if .Values.operators.grafana.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.grafana.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+{{- end }}
+
+{{- /* connectivityLink Subscription targets openshift-operators which is a
+     cluster-provided namespace — do NOT attempt to create it via Helm.
+     kuadrant-system is a separate dedicated namespace for Kuadrant components
+     and IS created by the chart below via connectivityLink.kuadrantNamespace. */}}
+
+{{- if .Values.operators.connectivityLink.enabled }}
+{{- if not (lookup "v1" "Namespace" "" .Values.operators.connectivityLink.kuadrantNamespace).metadata }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.connectivityLink.kuadrantNamespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+{{- end }}
+
+{{- if .Values.operators.leaderWorkerSet.enabled }}
+{{- if not (lookup "v1" "Namespace" "" .Values.operators.leaderWorkerSet.namespace).metadata }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.operators.leaderWorkerSet.namespace }}
+  labels:
+    {{- include "maas-operators.labels" . | nindent 4 }}
+    openshift.io/cluster-monitoring: "true"
+{{- end }}
+{{- end }}

@@ -197,9 +197,9 @@ Per-chart setup guides (read before syncing the corresponding ArgoCD Application
 
 | Chart | Secrets managed | Guide |
 |---|---|---|
-| **maas-platform** | `maas-db-config` (DB connection URL), `maas-postgres-creds` | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) |
-| **maas-model-deploy** | S3 connection Secret + KServe `storage-config` Secret (per model) | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) |
-| **maas-model-registry** | Git credentials + Hugging Face token | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) |
+| **maas-platform** | `maas-db-config` (DB connection URL), `maas-postgres-creds` | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md) |
+| **maas-model-deploy** | S3 connection Secret + KServe `storage-config` Secret (per model) | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) |
+| **maas-model-registry** | Git credentials + Hugging Face token | [VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) |
 
 ### GPU Enablement (Required for LLM Serving)
 
@@ -335,14 +335,14 @@ git clone git@github.com:<your-username>/storage-fusion.git
 cd storage-fusion/AI/quickstarts/model-as-a-service
 ```
 
-**Note:** The `AI/quickstarts/model-as-a-service-rhoai-3.5` directory is located under the `AI/` parent directory within the storage-fusion repository (path: `storage-fusion/AI/AI/quickstarts/model-as-a-service-rhoai-3.5`).
+**Note:** The `AI/quickstarts/model-as-a-service` directory is located under the `AI/` parent directory within the storage-fusion repository (path: `storage-fusion/AI/AI/quickstarts/model-as-a-service`).
 
 ### Step 2: Configure ArgoCD RBAC
 
 Apply cluster-level RBAC permissions for ArgoCD to manage MaaS resources:
 
 ```bash
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/argocd-cluster-rbac.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/argocd-cluster-rbac.yaml
 ```
 
 This creates:
@@ -357,7 +357,7 @@ oc get clusterrolebinding argocd-maas-cluster-admin
 
 ### Step 3: Update Application Manifests with Custom Values
 
-Before deploying, update all application manifests in `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/prod/applications/` to reference your custom values file.
+Before deploying, update all application manifests in `AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/applications/` to reference your custom values file.
 
 **Edit each application file** (`01-maas-operators-prod.yaml`, `02-maas-platform-prod.yaml`, `03-maas-runtime-prod.yaml`) and make two changes:
 
@@ -370,7 +370,7 @@ spec:
   source:
     repoURL: https://github.com/<your-username>/storage-fusion.git  # Update this
     targetRevision: master  # Or your branch name
-    path: AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-operators
+    path: AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-operators
     helm:
       valueFiles:
         - values.yaml
@@ -379,16 +379,16 @@ spec:
 ```
 
 **Apply both changes to all three application files:**
-- `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/prod/applications/01-maas-operators-prod.yaml`
-- `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/prod/applications/02-maas-platform-prod.yaml`
-- `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/prod/applications/03-maas-runtime-prod.yaml`
+- `AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/applications/01-maas-operators-prod.yaml`
+- `AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/applications/02-maas-platform-prod.yaml`
+- `AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/applications/03-maas-runtime-prod.yaml`
 
 **Commit and push your changes to Git:**
 
 Since this is a GitOps deployment, ArgoCD needs to pull the updated manifests from your Git repository. Commit and push your changes:
 
 ```bash
-git add AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/prod/applications/
+git add AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/applications/
 git commit -m "Add custom values file to MaaS GitOps applications"
 git push
 ```
@@ -400,7 +400,7 @@ git push
 Create the ArgoCD AppProject for the production environment:
 
 ```bash
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/prod/appproject-prod.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/appproject-prod.yaml
 ```
 
 The AppProject defines:
@@ -414,14 +414,14 @@ The AppProject defines:
 oc get appproject -n openshift-gitops
 ```
 
-**Note:** For other environments (dev, staging), you can find the corresponding AppProject files in `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/`.
+**Note:** For other environments (dev, staging), you can find the corresponding AppProject files in `AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/`.
 
 ### Step 5: Deploy the App-of-Apps
 
 Deploy the main orchestrator application that manages all MaaS components:
 
 ```bash
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/prod/00-prod-app-of-apps.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/prod/00-prod-app-of-apps.yaml
 ```
 
 This creates the `fusion-maas-platform-orchestrator` Application that manages three child applications:
@@ -486,7 +486,7 @@ leader-worker-set.v0.3.0      Leader Worker Set          0.3.0     Succeeded
 
 #### 6.2: Sync MaaS Platform
 
-> **If using ESO for database credentials:** Populate Vault secrets before this sync. See [maas-platform VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md). Verify the `ClusterSecretStore` named `vault-backend` is `Ready` before syncing.
+> **If using ESO for database credentials:** Populate Vault secrets before this sync. See [maas-platform VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md). Verify the `ClusterSecretStore` named `vault-backend` is `Ready` before syncing.
 
 ```bash
 # Via ArgoCD CLI
@@ -522,9 +522,9 @@ default-dsc   5m    Ready   2024-01-15T10:30:00Z
 > 2. **Configure Authorino TLS** — required for gateway authentication
 > 3. **Patch `OdhDashboardConfig`** — enable MaaS dashboard features (`modelAsService`, `genAiStudio`, `maasAuthPolicies`)
 >
-> Full commands and verification steps: [POST_SYNC_MANUAL_STEPS.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md)
+> Full commands and verification steps: [POST_SYNC_MANUAL_STEPS.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md)
 >
-> Run the full verification checklist afterwards: [VERIFICATION.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VERIFICATION.md)
+> Run the full verification checklist afterwards: [VERIFICATION.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VERIFICATION.md)
 
 #### 6.3: Sync MaaS Runtime
 
@@ -589,7 +589,7 @@ Enable automated model registration from Git repositories:
 Create the ArgoCD AppProject for model registry:
 
 ```bash
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/argocd/environments/prod/appproject-prod.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/prod/appproject-prod.yaml
 ```
 
 This creates the `fusion-model-registry-gitops-prod` namespace and AppProject.
@@ -609,7 +609,7 @@ vault kv put secret/maas/model-registry/git \
   password="<your-github-token>"
 ```
 
-In `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/environments/prod/values.yaml`, set:
+In `AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/environments/prod/values.yaml`, set:
 
 ```yaml
 gitCredentials:
@@ -623,7 +623,7 @@ gitCredentials:
       key: maas/model-registry/git
 ```
 
-Full walkthrough: [maas-model-registry VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) — Scenario A.
+Full walkthrough: [maas-model-registry VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md) — Scenario A.
 
 **Option B — kubectl (development / non-production)**
 
@@ -646,7 +646,7 @@ rm ./git-username.txt ./git-token.txt
 
 #### 8.3: Update and Deploy Model Registry Application
 
-Update the application manifest with your forked repository URL in `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/argocd/environments/prod/application.yaml`:
+Update the application manifest with your forked repository URL in `AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/prod/application.yaml`:
 
 ```yaml
 spec:
@@ -658,7 +658,7 @@ spec:
 Push the changes to Git, then register the Application with ArgoCD using a direct apply. This is a one-time bootstrap — ArgoCD cannot sync an Application it does not yet know about. Once registered, ArgoCD takes over and all subsequent syncs go through GitOps:
 
 ```bash
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/argocd/environments/prod/application.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/prod/application.yaml
 ```
 
 #### 8.4: Sync Model Registry Application
@@ -691,7 +691,7 @@ model-sync-29710880-d4pr2           0/1     Completed   0          3m
 ```
 
 The Model Registry GitOps system will:
-- Watch model definitions in `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/models/`
+- Watch model definitions in `AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models/`
 - Download models from HuggingFace or other sources
 - Upload artifacts to S3 object storage
 - Register models in the Model Registry
@@ -708,7 +708,7 @@ The Model Registry GitOps system will:
 
 **Available Models:**
 
-The following models are pre-configured in `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/models/`:
+The following models are pre-configured in `AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models/`:
 
 | Model ID | Display Name |
 |---|---|
@@ -753,14 +753,14 @@ Each model has its own per-model values file under `environments/prod/`. Do **no
 
 | Model | Values file |
 |---|---|
-| `gpt-oss-20b` | [`environments/prod/values-gpt-oss-20b.yaml`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/prod/values-gpt-oss-20b.yaml) |
-| `tiny-llama-test` | [`environments/prod/values-tiny-llama.yaml`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/prod/values-tiny-llama.yaml) |
+| `gpt-oss-20b` | [`environments/prod/values-gpt-oss-20b.yaml`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values-gpt-oss-20b.yaml) |
+| `tiny-llama-test` | [`environments/prod/values-tiny-llama.yaml`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/prod/values-tiny-llama.yaml) |
 
-Each file overrides only the model-specific keys — `model.name`, `model.displayName`, `s3.modelPath`, and resource allocation. Shared S3 settings (`endpoint`, `region`, `bucket`) are inherited from the base [`values.yaml`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/values.yaml) and only overridden if they differ for a specific model.
+Each file overrides only the model-specific keys — `model.name`, `model.displayName`, `s3.modelPath`, and resource allocation. Shared S3 settings (`endpoint`, `region`, `bucket`) are inherited from the base [`values.yaml`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/values.yaml) and only overridden if they differ for a specific model.
 
 **Option A — ESO / Vault (production, recommended)**
 
-Store all five S3 fields in Vault at `secret/maas/model-deploy/<model-name>/s3` and enable `s3.externalSecret.enabled: true`. No credentials are committed to Git. See [maas-model-deploy VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) — **Vault secrets must exist before the first ArgoCD sync.**
+Store all five S3 fields in Vault at `secret/maas/model-deploy/<model-name>/s3` and enable `s3.externalSecret.enabled: true`. No credentials are committed to Git. See [maas-model-deploy VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md) — **Vault secrets must exist before the first ArgoCD sync.**
 
 ```bash
 # Store S3 credentials in Vault
@@ -828,7 +828,7 @@ resources:
     nvidia.com/mig-3g.20gb: "1"
 ```
 
-To add a new model, create a new `values-<model-name>.yaml` in `environments/prod/` following the same structure. See [`environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) for the full add/remove procedure.
+To add a new model, create a new `values-<model-name>.yaml` in `environments/prod/` following the same structure. See [`environments/CHANGELOG.md`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/environments/CHANGELOG.md) for the full add/remove procedure.
 
 #### 10.3: Update the Application Manifests
 
@@ -840,14 +840,14 @@ deploy/gitops/maas-model-deploy/environments/prod/
 └── application-tiny-llama.yaml      # ArgoCD Application for tiny-llama
 ```
 
-Open the Application manifest for your model (e.g. [`environments/prod/application-gpt-oss-20b.yaml`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/environments/prod/application-gpt-oss-20b.yaml)) and update the two source fields to point to your forked repository:
+Open the Application manifest for your model (e.g. [`environments/prod/application-gpt-oss-20b.yaml`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/application-gpt-oss-20b.yaml)) and update the two source fields to point to your forked repository:
 
 ```yaml
 spec:
   source:
     repoURL: https://github.com/<your-username>/storage-fusion.git  # your forked repo
     targetRevision: master                                           # your branch or tag
-    path: AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy
+    path: AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy
     helm:
       valueFiles:
         - values.yaml
@@ -860,7 +860,7 @@ spec:
 Repeat for each model's Application manifest, then commit and push:
 
 ```bash
-git add AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/environments/prod/
+git add AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/
 git commit -m "Configure prod model deployment applications"
 git push
 ```
@@ -871,11 +871,11 @@ The AppProject is shared across all prod model Applications and only needs to be
 
 ```bash
 # 1. Create the shared AppProject (RBAC) — apply once for all prod models
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/environments/prod/appproject-prod.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/appproject-prod.yaml
 
 # 2. Register each model's Application with ArgoCD
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/environments/prod/application-gpt-oss-20b.yaml
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/environments/prod/application-tiny-llama.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/application-gpt-oss-20b.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/environments/prod/application-tiny-llama.yaml
 ```
 
 Verify ArgoCD has registered both Applications:
@@ -1155,7 +1155,7 @@ NAME                  CLASS             ADDRESS    PROGRAMMED
 maas-default-gateway  openshift-default 10.x.x.x   True
 ```
 
-For the full testing runbook — including rate-limit validation, token refresh, and rollback procedures — see [`deploy/gitops/maas-model-deploy/TEST_MODELS.md`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/TEST_MODELS.md).
+For the full testing runbook — including rate-limit validation, token refresh, and rollback procedures — see [`deploy/gitops/maas-model-deploy/TEST_MODELS.md`](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/TEST_MODELS.md).
 
 ---
 
@@ -1187,34 +1187,34 @@ For additional information, refer to the guides below, grouped by topic.
 
 ### MaaS GitOps Deployment
 
-- **[MaaS GitOps Deployment README](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/README.md)** — Environment-specific GitOps deployment structure for the MaaS platform
-- **[MaaS Platform Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-gitops-deployment/environments/DEPLOYMENT_GUIDE.md)** — Full operational runbook: step-by-step sync, troubleshooting, RBAC, and migration
+- **[MaaS GitOps Deployment README](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/README.md)** — Environment-specific GitOps deployment structure for the MaaS platform
+- **[MaaS Platform Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-gitops-deployment/environments/DEPLOYMENT_GUIDE.md)** — Full operational runbook: step-by-step sync, troubleshooting, RBAC, and migration
 
 ### Platform Post-Deploy
 
-- **[Post-Sync Manual Steps](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md)** — Required steps after every `maas-platform` ArgoCD sync: User Workload Monitoring, Authorino TLS, OdhDashboardConfig
-- **[MaaS Deployment Verification](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VERIFICATION.md)** — Full health check checklist to confirm MaaS is operational after deployment
+- **[Post-Sync Manual Steps](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/POST_SYNC_MANUAL_STEPS.md)** — Required steps after every `maas-platform` ArgoCD sync: User Workload Monitoring, Authorino TLS, OdhDashboardConfig
+- **[MaaS Deployment Verification](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VERIFICATION.md)** — Full health check checklist to confirm MaaS is operational after deployment
 
 ### Secret Management (ESO / Vault)
 
 Populate Vault secrets **before** the first ArgoCD sync for each chart. ESO resolves `ExternalSecret` CRs at sync time — missing Vault paths cause `SecretSyncedError`.
 
-- **[maas-platform VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md)** — DB connection URL (`maas-db-config`) and in-cluster PostgreSQL credentials (`maas-postgres-creds`): Scenario A (in-cluster PG) and Scenario B (external managed DB); includes testing, rotation, and troubleshooting
-- **[maas-model-deploy VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md)** — S3 connection Secret and KServe `storage-config` Secret per model; Vault path convention `secret/maas/model-deploy/<model-name>/s3`; includes credential rotation and troubleshooting
-- **[maas-model-registry VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md)** — Git credentials (Scenario A), Hugging Face token (Scenario B), and both together (Scenario C); includes rotation and troubleshooting
+- **[maas-platform VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-platform/VAULT-SECRET-SETUP.md)** — DB connection URL (`maas-db-config`) and in-cluster PostgreSQL credentials (`maas-postgres-creds`): Scenario A (in-cluster PG) and Scenario B (external managed DB); includes testing, rotation, and troubleshooting
+- **[maas-model-deploy VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy/VAULT-SECRET-SETUP.md)** — S3 connection Secret and KServe `storage-config` Secret per model; Vault path convention `secret/maas/model-deploy/<model-name>/s3`; includes credential rotation and troubleshooting
+- **[maas-model-registry VAULT-SECRET-SETUP.md](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/VAULT-SECRET-SETUP.md)** — Git credentials (Scenario A), Hugging Face token (Scenario B), and both together (Scenario C); includes rotation and troubleshooting
 
 ### Model Registry GitOps
 
-- **[Model Registry GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/README.md)** — Architecture overview and prerequisites for automated model registration
-- **[Model Registry Quick Start](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/docs/QUICKSTART.md)** — Step-by-step guide to get from zero to a registered model in production
-- **[Model Registry Environment Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md)** — Operational runbook for deploying across dev, staging, and prod
-- **[Adding a Model to the Registry](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/models/ADDING_A_MODEL.md)** — How to register a new model via a GitOps YAML commit
-- **[Model Registry Verification Guide](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/model-registry-gitops/docs/VERIFICATION_GUIDE.md)** — Post-deployment health checks for the GitOps pipeline
+- **[Model Registry GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/README.md)** — Architecture overview and prerequisites for automated model registration
+- **[Model Registry Quick Start](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/docs/QUICKSTART.md)** — Step-by-step guide to get from zero to a registered model in production
+- **[Model Registry Environment Deployment Guide](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/argocd/environments/DEPLOYMENT_GUIDE.md)** — Operational runbook for deploying across dev, staging, and prod
+- **[Adding a Model to the Registry](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/models/ADDING_A_MODEL.md)** — How to register a new model via a GitOps YAML commit
+- **[Model Registry Verification Guide](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/model-registry-gitops/docs/VERIFICATION_GUIDE.md)** — Post-deployment health checks for the GitOps pipeline
 
 ### Model Deployment
 
-- **[Model Deploy GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/README.md)** — Per-model ArgoCD Applications, multi-model design, and values file conventions
-- **[Test Models Guide](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/TEST_MODELS.md)** — End-to-end testing: API calls, rate-limit validation, token refresh, and rollback
+- **[Model Deploy GitOps README](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/README.md)** — Per-model ArgoCD Applications, multi-model design, and values file conventions
+- **[Test Models Guide](https://github.com/IBM/storage-fusion/blob/master/AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/TEST_MODELS.md)** — End-to-end testing: API calls, rate-limit validation, token refresh, and rollback
 
 ### Use Case Examples
 
@@ -1329,7 +1329,7 @@ oc get rolebinding argocd-externalsecret-manager -n redhat-ods-applications
 
 # Confirm ESO is enabled in values (should print the template)
 helm template test \
-  AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-model-deploy \
+  AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-model-deploy \
   --values environments/prod/values-gpt-oss-20b.yaml \
   --show-only templates/argocd-externalsecret-rbac.yaml
 ```

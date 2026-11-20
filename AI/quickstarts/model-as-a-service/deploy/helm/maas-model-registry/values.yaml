@@ -70,11 +70,60 @@ reconciler:
 
 # Hugging Face configuration
 huggingface:
-  # Enable if you have a Hugging Face token secret
+  # Enable if you have a Hugging Face token secret.
+  # When true, the reconciler will authenticate to Hugging Face using the
+  # token stored in the Secret named by secretName. Required for gated models
+  # (Llama, Mistral, etc.). Public models work without a token.
   enabled: false
   
-  # Name of the secret containing the HF token
+  # Name of the Secret containing the HF token.
+  # The reconciler reads key "token" from this Secret in modelRegistry.namespace
+  # (i.e. rhoai-model-registries), not the reconciler namespace.
+  #
+  # Two modes — choose one:
+  #
+  #   externalSecret.enabled: false (default) — Manual mode.
+  #     Create the Secret yourself before deploying:
+  #       oc create secret generic huggingface-token \
+  #         -n <modelRegistry.namespace> \
+  #         --from-literal=token=hf_xxxxxxxxxxxxxxxxxxxx
+  #
+  #   externalSecret.enabled: true — ESO mode.
+  #     Helm creates an ExternalSecret CR; ESO reads the token from Vault
+  #     and writes the huggingface-token Secret into modelRegistry.namespace.
+  #     Requires External Secrets Operator + ClusterSecretStore to be ready.
+  #
+  #     Vault command:
+  #       vault kv put secret/maas/model-registry-gitops/huggingface \
+  #         token="hf_xxxxxxxxxxxxxxxxxxxx"
   secretName: huggingface-token
+
+  # ── ESO mode — let External Secrets Operator own huggingface-token ──────────
+  externalSecret:
+    # Set to true to have ESO manage huggingface-token instead of creating it manually.
+    # Only effective when huggingface.enabled: true.
+    enabled: false
+
+    # Refresh interval — how often ESO re-reads the token from the backend.
+    refreshInterval: 24h
+
+    # Reference to the ClusterSecretStore (or SecretStore) created by the
+    # external-secrets-operator Helm chart.
+    secretStoreRef:
+      name: vault-backend        # must match ClusterSecretStore name in ESO chart
+      kind: ClusterSecretStore   # ClusterSecretStore (cluster-wide) or SecretStore (namespaced)
+
+    # Target Secret name ESO will create in modelRegistry.namespace.
+    # Defaults to huggingface.secretName ("huggingface-token").
+    # Override during testing to avoid touching the live secret, e.g.:
+    #   targetName: huggingface-token-eso-test
+    targetName: ""               # empty = use huggingface.secretName
+
+    # Vault KV path and field containing the Hugging Face token.
+    # e.g. vault kv put secret/maas/model-registry-gitops/huggingface token="hf_..."
+    remoteRef:
+      key: maas/model-registry-gitops/huggingface
+      property: token
 
 # BuildConfig configuration (OpenShift only)
 buildConfig:
@@ -87,10 +136,59 @@ buildConfig:
     ref: master
     contextDir: AI/quickstarts/model-as-a-service/deploy/helm/maas-model-registry/reconciler
   
-  # Git credentials secret (for private repos)
+  # Git credentials for private repos.
+  #
+  # Two modes — choose one:
+  #
+  #   externalSecret.enabled: false (default) — Manual mode.
+  #     Create the Secret yourself before deploying:
+  #       oc create secret generic git-credentials -n <namespace> \
+  #         --from-literal=username=<user> \
+  #         --from-literal=token=<pat>
+  #     The Secret is referenced by both BuildConfig (sourceSecret) and
+  #     the model-sync CronJob (volume mount at /git-credentials).
+  #
+  #   externalSecret.enabled: true — ESO mode.
+  #     Helm creates an ExternalSecret CR; ESO reads the fields from Vault
+  #     and writes the git-credentials Secret into .Values.namespace.
+  #     Requires External Secrets Operator + ClusterSecretStore to be ready.
+  #     Vault path: secret/maas/model-registry-gitops/git-credentials
+  #       username   → /git-credentials/username  (read by CronJob)
+  #       token      → /git-credentials/token     (read by CronJob)
+  #     Optional fields (populate whichever auth method you use):
+  #       password       → /git-credentials/password
+  #       ssh-privatekey → /git-credentials/ssh-privatekey
+  #
+  #     e.g. vault kv put secret/maas/model-registry-gitops/git-credentials \
+  #              username="<git-user>" token="<personal-access-token>"
   gitCredentials:
     enabled: true
     secretName: git-credentials
+
+    # ── ESO mode — let External Secrets Operator own git-credentials ───────────
+    externalSecret:
+      # Set to true to have ESO manage git-credentials instead of creating it manually.
+      enabled: false
+
+      # Refresh interval — how often ESO re-reads values from the backend.
+      refreshInterval: 24h
+
+      # Reference to the ClusterSecretStore (or SecretStore) created by the
+      # external-secrets-operator Helm chart.
+      secretStoreRef:
+        name: vault-backend        # must match ClusterSecretStore name in ESO chart
+        kind: ClusterSecretStore   # ClusterSecretStore (cluster-wide) or SecretStore (namespaced)
+
+      # Target Secret name ESO will create in .Values.namespace.
+      # Defaults to gitCredentials.secretName ("git-credentials").
+      # Override during testing to avoid touching the live secret, e.g.:
+      #   targetName: git-credentials-eso-test
+      targetName: ""               # empty = use gitCredentials.secretName
+
+      # Vault KV path containing the git credential fields.
+      # Populate whichever fields match your auth method (token, password, or ssh-privatekey).
+      remoteRef:
+        key: maas/model-registry-gitops/git-credentials
   
   # Build resources
   resources:

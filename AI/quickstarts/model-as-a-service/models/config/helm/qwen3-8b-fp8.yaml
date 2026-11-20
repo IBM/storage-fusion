@@ -1,0 +1,74 @@
+# =============================================================================
+# MaaS Generic Model Specification — Qwen/Qwen2.5-Coder-7B-Instruct (FP8 Dynamic)
+# =============================================================================
+# Architecture: Qwen FP8 Dynamic Quantized
+# GPU Requirement: 1 GPU (FP8 reduces the VRAM footprint)
+# Use Cases: Fast Code Generation, Memory-Constrained Deployments
+# =============================================================================
+
+accelerator:
+  vendor: nvidia                  # 'nvidia' or 'amd'
+  count: 1
+
+model:
+  name: qwen3-8b-fp8-version-1
+  displayName: "Qwen 8B (FP8 Dynamic Quantized)"
+  namespace: deploy-models-rhoai
+
+project:
+  create: true
+
+modelRegistry:
+  enabled: true
+  name: default-modelregistry
+  namespace: rhoai-model-registries
+  registeredModelName: "qwen3-8b-fp8-dynamic"
+  connectionSecret: "model-registry-connection"
+  createConnectionSecret: true
+  connectionSecretData:
+    ociHost: "registry.redhat.io"
+
+source:
+  uri: ""                         # Auto-resolved from Model Registry
+
+inference:
+  engine: vllm
+  image: registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3.0
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  extraArgs:
+    - --enable-force-include-usage
+    - --max-model-len=8192
+    - --gpu-memory-utilization=0.85
+    - --quantization=fp8
+    - --kv-cache-dtype=fp8
+
+# GPUs are added from accelerator.count; do not list nvidia.com/gpu here.
+resources:
+  limits:
+    cpu: "8"
+    memory: 24Gi
+  requests:
+    cpu: "4"
+    memory: 12Gi
+
+# Add nodeSelector / tolerations here or via a hardware profile (profiles/).
+scheduling:
+  nodeSelector: {}
+  tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+  affinity: {}
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+labels:
+  app.kubernetes.io/name: qwen3-8b-fp8
+  app.kubernetes.io/part-of: maas-platform
+  tier: standard

@@ -22,14 +22,16 @@ metadata:
     opendatahub.io/connections: {{ include "maas-model-deploy.connectionSecretName" . }}
     opendatahub.io/connection-path: {{ .Values.s3.modelPath | quote }}
     openshift.io/display-name: {{ include "maas-model-deploy.displayName" . | quote }}
-    security.opendatahub.io/enable-auth: "false"
 spec:
   model:
     name: {{ .Values.model.name }}
     uri: {{ printf "s3://%s/%s" .Values.s3.bucket .Values.s3.modelPath | quote }}
   replicas: {{ .Values.inference.replicas }}
   router:
-    gateway: {}
+    gateway:
+      refs:
+        - name: {{ .Values.gateway.name }}
+          namespace: {{ .Values.gateway.namespace }}
     route: {}
     scheduler: {}
   template:

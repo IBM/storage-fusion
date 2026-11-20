@@ -13,14 +13,20 @@ spec:
   name: rhods-operator
   source: {{ .Values.operators.openshiftAI.source }}
   sourceNamespace: {{ .Values.operators.openshiftAI.sourceNamespace }}
+  {{- if .Values.operators.openshiftAI.startingCSV }}
+  startingCSV: {{ .Values.operators.openshiftAI.startingCSV }}
+  {{- end }}
 {{- end }}
 
 {{- if .Values.operators.connectivityLink.enabled }}
 ---
+# Subscription name MUST be "rhcl-operator" — the DSC kserve controller looks up
+# the Subscription by metadata.name (not spec.name/package).
+# Ref: opendatahub-operator/.../kserve/kserve.go: RHCLOperatorSubscription = "rhcl-operator"
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: kuadrant-operator
+  name: rhcl-operator
   namespace: {{ .Values.operators.connectivityLink.namespace }}
   labels:
     {{- include "maas-operators.labels" . | nindent 4 }}

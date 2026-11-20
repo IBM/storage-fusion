@@ -1,0 +1,451 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: openshift-naas-template
+  title: Request OpenShift Namespace (NaaS)
+  description: >
+    Self-service provision a secured OpenShift namespace with built-in resource
+    quotas, LimitRange, network policies, and RBAC roles.
+  tags:
+    - openshift
+    - naas
+    - platform-engineering
+spec:
+  owner: platform-team
+  type: service
+
+  # ──────────────────────────────────────────────
+  # 1. Parameters
+  # ──────────────────────────────────────────────
+  parameters:
+
+    # ── Step 1: Namespace details ─────────────────────────────────────────────
+    # Hidden platform fields are co-located here so they don't create a blank
+    # wizard step. They are never rendered in the UI (ui:widget: hidden) and
+    # their default: values are the live deployment configuration.
+    # To reconfigure for a different deployment, update the default: values
+    # below and commit — RHDH re-fetches this file from GitHub on each run.
+    - title: Namespace Details
+      required:
+        - projectName
+        - environment
+        - businessUnit
+      properties:
+        # Platform settings
+        # Set these defaults to match your deployment before registering this template.
+        # githubHost: leave empty for public GitHub, or set to your GHE hostname (e.g. github.example.com)
+        # repoOrg: GitHub organisation that owns the GitOps repository
+        # repoName: name of the GitOps repository
+        # targetBranch: base branch PRs are opened against (e.g. main)
+        # prReviewers: comma-separated list of GitHub usernames to request review from (optional)
+        # namespacesPath: repo-relative directory where namespace manifests are stored (default: namespaces)
+        githubHost:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoOrg:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        repoName:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        targetBranch:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'main'
+        prReviewers:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        namespacesPath:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'namespaces'
+        argoCdInstance:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'openshift-gitops'
+        acmReplicate:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'false'
+        podSecurityStandard:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'baseline'
+        catalogOwner:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'platform-team'
+        catalogSystem:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: 'naas-platform'
+        consoleBaseUrl:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        argocdBaseUrl:
+          type: string
+          ui:widget: hidden
+          ui:backstage:
+            review:
+              show: false
+          default: ''
+        # ── Visible fields
+        projectName:
+          title: Project Name
+          type: string
+          description: >
+            Unique identifier for your project (lowercase, alphanumeric, hyphens only).
+            The namespace will be named `{Project Name}-{Environment}` and must not already exist.
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          ui:field: NamespaceName
+          ui:options:
+            environmentField: environment
+            label: true
+          ui:autofocus: true
+        environment:
+          title: Environment
+          type: string
+          description: Select the target environment tier.
+          default: development
+          enum:
+            - development
+            - staging
+            - production
+          enumNames:
+            - Development
+            - Staging
+            - Production
+        businessUnit:
+          title: Business Unit / Cost Center
+          type: string
+          description: Used for chargeback and resource tracking labels.
+          enum:
+            - engineering
+            - marketing
+            - finance
+            - retail
+          enumNames:
+            - Engineering
+            - Marketing
+            - Finance
+            - Retail
+
+    # ── Step 2: Resource sizing ───────────────────────────────────────────────
+    - title: Resource Sizing
+      required:
+        - size
+      properties:
+        size:
+          title: Namespace Size Tier
+          type: string
+          description: Pre-configured resource quota allocations.
+          enum:
+            - small
+            - medium
+            - large
+          enumNames:
+            - 'Small  (4 CPU · 8 Gi RAM)'
+            - 'Medium (8 CPU · 16 Gi RAM)'
+            - 'Large  (16 CPU · 32 Gi RAM)'
+          default: small
+
+    # ── Step 3: Access control ────────────────────────────────────────────────
+    - title: Access Control
+      required:
+        - ownerGroup
+      properties:
+        ownerGroup:
+          title: Owner Group
+          type: string
+          description: OpenShift group granted namespace-admin rights.
+          ui:field: OcGroupField
+          ui:autofocus: true
+        developerGroup:
+          title: Developer Group (optional)
+          type: string
+          description: OpenShift group granted namespace-developer rights.
+          ui:field: OcGroupField
+        viewerGroup:
+          title: Viewer Group (optional)
+          type: string
+          description: OpenShift group granted namespace-viewer (read-only) rights.
+          ui:field: OcGroupField
+
+    # ── Step 4: ArgoCD Application (optional) ────────────────────────────────
+    # Toggle createArgoApp to Yes to reveal and require the repository fields.
+    - title: ArgoCD Application (Optional)
+      description: >
+        Optionally wire up an ArgoCD Application for this namespace.
+        Set the toggle to Yes and fill in the repository details below.
+        Leave the toggle as No to skip ArgoCD wiring, you can add it later
+        via the Update Namespace template.
+      required:
+        - createArgoApp
+      properties:
+        createArgoApp:
+          title: Create an ArgoCD Application?
+          type: boolean
+          default: false
+          ui:widget: radio
+          enum:
+            - true
+            - false
+          enumNames:
+            - 'Yes'
+            - 'No'
+      # When the user opts in, the sub-fields become required and visible.
+      allOf:
+        - if:
+            properties:
+              createArgoApp:
+                const: true
+          then:
+            required:
+              - argoAppDetails
+            properties:
+              argoAppDetails:
+                type: object
+                ui:field: ArgoAppField
+                ui:options:
+                  label: false
+                required:
+                  - applicationRepoURL
+                  - applicationName
+                  - applicationTargetRevision
+                  - applicationPath
+                  - applicationSourceType
+                properties:
+                  applicationRepoURL:
+                    title: Repository URL
+                    type: string
+                    minLength: 1
+                    pattern: '^https://.+'
+                    errorMessage:
+                      minLength: 'Repository URL is required.'
+                      pattern: 'Must be a valid HTTPS URL (e.g. https://github.com/org/repo).'
+                    description: >
+                      HTTPS URL of the application repository.
+                  applicationName:
+                    title: Application Name
+                    type: string
+                    minLength: 1
+                    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                    errorMessage:
+                      minLength: 'Application Name is required.'
+                      pattern: 'Must contain only lowercase alphanumeric characters or hyphens, starting and ending with an alphanumeric character.'
+                    description: >
+                      A short name for the application (lowercase, alphanumeric, hyphens only).
+                      Used as the ArgoCD Application name.
+                  applicationTargetRevision:
+                    title: Target Revision
+                    type: string
+                    minLength: 1
+                    pattern: '^[a-zA-Z0-9_./+-]+$'
+                    errorMessage:
+                      minLength: 'Target Revision is required.'
+                      pattern: 'Must be a valid Git branch, tag, or commit SHA (no whitespace).'
+                    description: >
+                      Branch, tag, or commit SHA to track (e.g. main, v1.2.0).
+                  applicationPath:
+                    title: Path
+                    type: string
+                    minLength: 1
+                    pattern: '^(\.|[a-zA-Z0-9_.-]+(\/[a-zA-Z0-9_.-]+)*\/?)$'
+                    errorMessage:
+                      minLength: 'Path is required.'
+                      pattern: "Must be '.' for repo root or a valid relative directory path (e.g. deploy, charts/my-app)."
+                    description: >
+                      Path within the repository where the manifests or Helm chart live
+                      (e.g. deploy/, chart/, k8s/overlays/dev).
+                      Use `.` for the repo root.
+                  applicationSourceType:
+                    title: Source Type
+                    type: string
+                    minLength: 1
+                    errorMessage:
+                      minLength: 'Source Type is required.'
+                    description: >
+                      How ArgoCD should interpret the contents at the given path:
+                      Directory — raw Kubernetes YAML/JSON (including Kustomize);
+                      Helm — a Helm chart (Chart.yaml must exist at the path).
+                    enum:
+                      - Directory
+                      - Helm
+                    enumNames:
+                      - 'Directory (raw manifests / Kustomize)'
+                      - 'Helm chart'
+
+  # ──────────────────────────────────────────────
+  # 2. Actions triggered on form submit
+  # ──────────────────────────────────────────────
+  steps:
+    - id: validate-namespace
+      name: Validate Namespace Availability
+      action: naas:namespace:available
+      input:
+        projectName: ${{ parameters.projectName }}
+        environment: ${{ parameters.environment }}
+
+    - id: fetch-base
+      name: Fetch Manifest Skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        targetPath: ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}
+        values:
+          projectName: ${{ parameters.projectName }}
+          environment: ${{ parameters.environment }}
+          businessUnit: ${{ parameters.businessUnit }}
+          size: ${{ parameters.size }}
+          ownerGroup: ${{ parameters.ownerGroup }}
+          developerGroup: ${{ parameters.developerGroup }}
+          viewerGroup: ${{ parameters.viewerGroup }}
+          # Platform values forwarded to skeleton files
+          argoCdInstance: ${{ parameters.argoCdInstance }}
+          acmReplicate: ${{ parameters.acmReplicate }}
+          podSecurityStandard: ${{ parameters.podSecurityStandard }}
+          catalogOwner: ${{ parameters.catalogOwner }}
+          catalogSystem: ${{ parameters.catalogSystem }}
+          consoleBaseUrl: ${{ parameters.consoleBaseUrl }}
+          argocdBaseUrl: ${{ parameters.argocdBaseUrl }}
+          # Composed GitHub base URL — works for public GitHub and any GHE instance.
+          # When githubHost is blank the scaffolder resolves to github.com.
+          githubBaseUrl: ${{ ("https://" + parameters.githubHost) if parameters.githubHost else "https://github.com" }}
+          repoOrg: ${{ parameters.repoOrg }}
+          repoName: ${{ parameters.repoName }}
+          targetBranch: ${{ parameters.targetBranch }}
+          # Application details — passed through even when blank so catalog-info.yaml
+          # can render conditionally without a missing-variable error.
+          # All five values are forwarded so namespace.yaml can write the
+          # ArgoCD annotations when an application was wired up at provision time.
+          applicationName: ${{ parameters.argoAppDetails.applicationName or '' }}
+          applicationRepoURL: ${{ parameters.argoAppDetails.applicationRepoURL or '' }}
+          applicationTargetRevision: ${{ parameters.argoAppDetails.applicationTargetRevision or '' }}
+          applicationPath: ${{ parameters.argoAppDetails.applicationPath or '' }}
+          applicationSourceType: ${{ parameters.argoAppDetails.applicationSourceType or '' }}
+
+    - id: fetch-argocd-app
+      name: Fetch ArgoCD Application Skeleton
+      # Only runs when the developer has opted in to ArgoCD wiring.
+      if: ${{ parameters.createArgoApp }}
+      action: fetch:template
+      input:
+        url: ./argocd
+        targetPath: ${{ parameters.namespacesPath }}/${{ parameters.projectName }}-${{ parameters.environment }}
+        values:
+          projectName: ${{ parameters.projectName }}
+          environment: ${{ parameters.environment }}
+          argoCdInstance: ${{ parameters.argoCdInstance }}
+          applicationName: ${{ parameters.argoAppDetails.applicationName }}
+          applicationRepoURL: ${{ parameters.argoAppDetails.applicationRepoURL }}
+          applicationTargetRevision: ${{ parameters.argoAppDetails.applicationTargetRevision or 'main' }}
+          applicationPath: ${{ parameters.argoAppDetails.applicationPath or '.' }}
+          applicationSourceType: ${{ parameters.argoAppDetails.applicationSourceType or 'Directory' }}
+
+    - id: publish-gitops
+      name: Publish to GitOps Repository
+      action: publish:github:pull-request
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        # repoUrl format: <host>?repo=<name>&owner=<org>
+        # An empty githubHost falls back to "github.com" (public GitHub).
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        title: 'NaaS: provision ${{ parameters.projectName }}-${{ parameters.environment }}'
+        description: |
+          Namespace provisioning request from Fusion Developer Hub.
+
+          | Field | Value |
+          |---|---|
+          | Project | `${{ parameters.projectName }}` |
+          | Environment | `${{ parameters.environment }}` |
+          | Business Unit | `${{ parameters.businessUnit }}` |
+          | Size | `${{ parameters.size }}` |
+          | Owner Group | `${{ parameters.ownerGroup }}` |
+          | Developer Group | `${{ parameters.developerGroup or '-' }}` |
+          | Viewer Group | `${{ parameters.viewerGroup or '-' }}` |
+          | Application Name | `${{ parameters.argoAppDetails.applicationName or '-' }}` |
+          | Application Repo | `${{ parameters.argoAppDetails.applicationRepoURL or '-' }}` |
+          | App Path | `${{ parameters.argoAppDetails.applicationPath or '-' }}` |
+          | App Revision | `${{ parameters.argoAppDetails.applicationTargetRevision or '-' }}` |
+          | Source Type | `${{ parameters.argoAppDetails.applicationSourceType or '-' }}` |
+
+          **Merge this PR** to trigger ArgoCD sync and provision the namespace.
+        branchName: naas-${{ parameters.projectName }}-${{ parameters.environment }}
+        targetBranchName: ${{ parameters.targetBranch }}
+        # prReviewers is a comma-separated string; split to array, filter blanks.
+        reviewers: ${{ parameters.prReviewers.split(",") | reject("equalto", "") | list if parameters.prReviewers else [] }}
+
+    - id: tag-pr-metadata
+      name: Tag Pull Request Metadata Labels
+      action: github:issues:label
+      input:
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
+        repoUrl: ${{ (parameters.githubHost if parameters.githubHost else "github.com") + "?repo=" + parameters.repoName + "&owner=" + parameters.repoOrg }}
+        number: ${{ steps['publish-gitops'].output.pullRequestNumber }}
+        labels:
+          - 'Project Name: ${{ parameters.projectName }}'
+          - 'Environment: ${{ parameters.environment }}'
+          - 'Business Unit: ${{ parameters.businessUnit }}'
+          - 'Size: ${{ parameters.size }}'
+          - 'NaaS - Provision'
+
+    - id: register
+      name: Register in RHDH Catalog
+      action: catalog:register
+      input:
+        # Full raw-file URL constructed from deploy-time parts pointing to the target base branch.
+        # Pattern: <githubBaseUrl>/<org>/<repo>/blob/<targetBranch>/<namespacesPath>/<ns>/catalog-info.yaml
+        catalogInfoUrl: ${{ (("https://" + parameters.githubHost) if parameters.githubHost else "https://github.com") + "/" + parameters.repoOrg + "/" + parameters.repoName + "/blob/" + parameters.targetBranch + "/" + parameters.namespacesPath + "/" + parameters.projectName + "-" + parameters.environment + "/catalog-info.yaml" }}
+
+  # ──────────────────────────────────────────────
+  # 3. Output links shown to the requester
+  # ──────────────────────────────────────────────
+  output:
+    links:
+      - title: View Pull Request
+        url: ${{ steps['publish-gitops'].output.remoteUrl }}
+        icon: github
+      - title: View Catalog Entry
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}

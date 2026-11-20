@@ -1,0 +1,42 @@
+{{- range .Values.groups }}
+---
+# OpenShift Group – {{ .name }}
+# -----------------------------------------------------------------------
+# Creates (or updates) an OpenShift Group resource of the form:
+#   apiVersion: user.openshift.io/v1
+#   kind: Group
+#
+# These groups are pre-created by OpenShift AI:
+#   rhods-admins          – users who can administer OpenShift AI
+#   model-registry-users  – users who can access Model Registry
+#
+# If the Group already exists on the cluster, Argo CD applies this
+# resource via ServerSideApply (enabled in the Application syncOptions),
+# which means ONLY the "users" list is reconciled. Any other fields
+# managed by other controllers are left untouched.
+#
+# To add a user to a group, add their OpenShift username to the users
+# list in the matching values file and re-sync the Application.
+# To remove a user, remove them from the list and re-sync.
+# -----------------------------------------------------------------------
+apiVersion: user.openshift.io/v1
+kind: Group
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "maas-config.labels" $ | nindent 4 }}
+    maas.redhat.com/group: {{ .name }}
+  annotations:
+    {{- include "maas-config.annotations" $ | nindent 4 }}
+    {{- if .description }}
+    maas.redhat.com/description: {{ .description | quote }}
+    {{- end }}
+users:
+  {{- if .users }}
+  {{- range .users }}
+  - {{ . | quote }}
+  {{- end }}
+  {{- else }}
+  []
+  {{- end }}
+{{- end }}

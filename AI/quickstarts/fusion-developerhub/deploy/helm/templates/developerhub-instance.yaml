@@ -166,18 +166,32 @@ spec:
           
           # Wait for PostgreSQL cluster to be ready (max 15 minutes)
           echo "Step 2: Waiting for PostgreSQL cluster to be ready..."
+          CLUSTER_READY=false
           for i in {1..180}; do
-            # Check if cluster has ready replicas
-            READY_REPLICAS=$(oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.instances[0].readyReplicas}' 2>/dev/null || echo "0")
-            TOTAL_REPLICAS=$(oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.instances[0].replicas}' 2>/dev/null || echo "0")
+            # Default to "0" when the field is absent (operator not yet reconciled)
+            READY_REPLICAS=$(oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.instances[0].readyReplicas}' 2>/dev/null)
+            READY_REPLICAS="${READY_REPLICAS:-0}"
+            TOTAL_REPLICAS=$(oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o jsonpath='{.status.instances[0].replicas}' 2>/dev/null)
+            TOTAL_REPLICAS="${TOTAL_REPLICAS:-0}"
             
-            if [ "$READY_REPLICAS" -gt "0" ] && [ "$READY_REPLICAS" = "$TOTAL_REPLICAS" ]; then
+            if [[ "$READY_REPLICAS" =~ ^[0-9]+$ ]] && [[ "$TOTAL_REPLICAS" =~ ^[0-9]+$ ]] && \
+               [ "$READY_REPLICAS" -gt "0" ] && [ "$READY_REPLICAS" = "$TOTAL_REPLICAS" ]; then
               echo "PostgreSQL cluster is ready (readyReplicas: $READY_REPLICAS/$TOTAL_REPLICAS)"
+              CLUSTER_READY=true
               break
             fi
             echo "Waiting for PostgreSQL cluster... (attempt $i/180, readyReplicas: $READY_REPLICAS/$TOTAL_REPLICAS)"
             sleep 5
           done
+          
+          if [ "$CLUSTER_READY" != "true" ]; then
+            echo "ERROR: PostgreSQL cluster did not become ready within timeout (15 minutes)"
+            echo "Operator status:"
+            oc get csv -n {{ .Values.operators.postgres.namespace | default "postgres-operator" }} 2>/dev/null || echo "Could not list CSVs"
+            echo "PostgresCluster status:"
+            oc get postgrescluster {{ .Values.developerHub.database.clusterName }} -n {{ include "fusion-developer-hub.namespace" . }} -o yaml 2>/dev/null | grep -A 20 "^status:" || true
+            exit 1
+          fi
           
           # Additional wait for pods to be fully running
           echo "Step 3: Waiting for PostgreSQL pods to be running..."
@@ -444,11 +458,11 @@ data:
       baseUrl: https://{{ .Values.developerHub.config.hostname | default (printf "backstage-%s-%s.%s" .Values.developerHub.instanceName (include "fusion-developer-hub.namespace" .) (include "fusion-developer-hub.wildcardDomain" .)) }}
       listen:
         port: 7007
-      {{- if and .Values.developerHub.catalog.github.enabled .Values.developerHub.catalog.github.enterpriseHost }}
-      # Allow backend to read from GitHub Enterprise
+      {{- if .Values.developerHub.catalog.github.enabled }}
+      # Allow backend to read from GitHub — GHE host when set, otherwise github.com
       reading:
         allow:
-          - host: {{ .Values.developerHub.catalog.github.enterpriseHost }}
+          - host: {{ .Values.developerHub.catalog.github.enterpriseHost | default "github.com" }}
       {{- end }}
       csp:
         connect-src: ["'self'", 'http:', 'https:']
@@ -470,17 +484,23 @@ data:
             rejectUnauthorized: false
       {{- end }}
     
-    {{- if and .Values.developerHub.catalog.github.enabled .Values.developerHub.catalog.github.enterpriseHost }}
-    # GitHub Enterprise Integration
-    # Enables repository access for catalog imports and TechDocs
+    {{- if .Values.developerHub.catalog.github.enabled }}
+    # GitHub Integration — covers both GitHub Enterprise and public github.com
     integrations:
       github:
+        {{- if .Values.developerHub.catalog.github.enterpriseHost }}
         - host: {{ .Values.developerHub.catalog.github.enterpriseHost }}
           apiBaseUrl: https://{{ .Values.developerHub.catalog.github.enterpriseHost }}/api/v3
           rawBaseUrl: https://raw.{{ .Values.developerHub.catalog.github.enterpriseHost }}
           {{- if .Values.developerHub.catalog.github.enableToken }}
           token: ${GITHUB_TOKEN}
           {{- end }}
+        {{- else }}
+        - host: github.com
+          {{- if .Values.developerHub.catalog.github.enableToken }}
+          token: ${GITHUB_TOKEN}
+          {{- end }}
+        {{- end }}
     {{- end }}
     
     # Dynamic Plugins configuration for homepage (only when homepage.enabled is true)
@@ -566,46 +586,30 @@ data:
                     {{- end }}
             {{- end }}
             {{- end }}
-            # Timezone clocks
-            - mountPoint: home.page/cards
-              importName: WorldClockCard
-              config:
-                layouts:
-                  xl: { w: 12, h: 2 }
-                  lg: { w: 12, h: 2 }
-                  md: { w: 12, h: 2 }
-                  sm: { w: 12, h: 2 }
-                  xs: { w: 12, h: 2 }
-                props:
-                  clockConfigs:
-                    - label: UTC
-                      timeZone: UTC
-                    - label: NYC
-                      timeZone: America/New_York
-                    - label: London
-                      timeZone: Europe/London
-                    - label: Tokyo
-                      timeZone: Asia/Tokyo
     {{- end }}
-    
+
+    {{- $lpEnabled := and .Values.developerHub.config.homepage .Values.developerHub.config.homepage.learningPaths .Values.developerHub.config.homepage.learningPaths.enabled }}
+    {{- if $lpEnabled }}
+    # Learning Paths proxy — must be declared BEFORE the broader /developer-hub
+    # (homepage) rewrite to prevent pathRewrite shadowing.
+    proxy:
+      endpoints:
+        '/developer-hub':
+          target: {{ .Values.developerHub.config.homepage.learningPaths.githubRawBaseUrl | quote }}
+          pathRewrite:
+            '^/api/proxy/developer-hub/learning-paths': {{ .Values.developerHub.config.homepage.learningPaths.dataJsonPath | quote }}
+          changeOrigin: true
+          secure: true
+    {{- end }}
+
     {{- if .Values.developerHub.catalog.enabled }}
     catalog:
+      orphanStrategy: delete
       import:
         entityFilename: catalog-info.yaml
       rules:
         - allow: [Component, System, API, Resource, Location, Template]
       locations:
-        {{- if .Values.developerHub.fusion.enabled }}
-        {{- if .Values.developerHub.catalog.github.enterpriseHost }}
-        {{- $gheHost := .Values.developerHub.catalog.github.enterpriseHost }}
-        {{- $gheOrg := .Values.developerHub.catalog.github.target | trimSuffix "/" | trimPrefix (printf "https://%s/" $gheHost) }}
-        - type: url
-          target: https://{{ $gheHost }}/{{ $gheOrg }}/{{ .Values.developerHub.catalog.naas.repoName }}/blob/{{ .Values.developerHub.catalog.naas.templateBranch }}/catalog-info.yaml
-        {{- else }}
-        - type: url
-          target: https://github.com/{{ .Values.developerHub.catalog.github.target | trimSuffix "/" | trimPrefix "https://github.com/" }}/{{ .Values.developerHub.catalog.naas.repoName }}/blob/{{ .Values.developerHub.catalog.naas.templateBranch }}/catalog-info.yaml
-        {{- end }}
-        {{- end }}
         {{- if and .Values.developerHub.fusion.ai .Values.developerHub.fusion.ai.rhoaiConnector .Values.developerHub.fusion.ai.rhoaiConnector.enabled }}
         # RHOAI Model Catalog Location - reads from location provider sidecar
         - type: url
@@ -824,18 +828,21 @@ spec:
         {{- /* They go into extraFiles.configMaps below — mounted as files, not loaded as config */}}
         - name: app-config-fusion-services
         {{- end }}
-        {{- if and .Values.developerHub.enabled .Values.developerHub.fusionServices.enabled }}
-        {{- /* Fusion AI Services — app-config ONLY (catalog locations, rules, k8s, proxy) */}}
-        {{- /* NOTE: catalog entity files (multi-doc YAML) must NOT be in appConfig.configMaps */}}
-        {{- /* They go into extraFiles.configMaps below — mounted as files, not loaded as config */}}
-        - name: app-config-fusion-services
-        {{- end }}
-        {{- if .Values.templates.naas }}
-        - name: app-config-naas
-        {{- end }}
+        # ── Single source of truth for all catalog.locations ──────────────
+        # Must be last — loaded after all other configs so it owns catalog.locations.
+        # Never add catalog.locations to any other ConfigMap.
+        - name: app-config-catalog-locations
     
-    # Dynamic plugins ConfigMap — always set; fusion-dynamic-plugins is always created
+    # Dynamic plugins ConfigMap
+    # When fusionServices + dynamicPlugins are both enabled, use the fuller
+    # fusion-ai-dynamic-plugins ConfigMap (TechDocs, API Docs, Search, etc.)
+    # Otherwise fall back to the standard fusion-dynamic-plugins.
+    {{- $fusionDynPlugins := and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled .Values.developerHub.fusionServices.dynamicPlugins .Values.developerHub.fusionServices.dynamicPlugins.enabled }}
+    {{- if $fusionDynPlugins }}
+    dynamicPluginsConfigMapName: fusion-ai-dynamic-plugins
+    {{- else }}
     dynamicPluginsConfigMapName: fusion-dynamic-plugins
+    {{- end }}
     
     {{- if or .Values.developerHub.database.useOperator (and .Values.developerHub.extraEnvs .Values.developerHub.extraEnvs.secrets (gt (len .Values.developerHub.extraEnvs.secrets) 0)) }}
     extraEnvs:
@@ -876,10 +883,15 @@ spec:
     patch:
       spec:
         replicas: {{ .Values.developerHub.replicas }}
-        {{- if or $rhoaiEnabled (and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled) }}
+        {{- if or .Values.developerHub.catalog.naas.enabled $rhoaiEnabled (and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled) }}
         template:
           spec:
+            {{- if .Values.developerHub.catalog.naas.enabled }}
+            # The NaaS validator uses this workload identity to read namespaces.
+            serviceAccountName: developerhub-sa
             automountServiceAccountToken: true
+            {{- end }}
+            {{- if or $rhoaiEnabled (and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled) }}
             volumes:
               - $patch: replace
                 name: dynamic-plugins-root
@@ -888,6 +900,11 @@ spec:
               - name: homepage-data
                 configMap:
                   name: {{ .Values.developerHub.instanceName }}-home-quick-access
+              # ── WXO template ConfigMap — always-on (no fusionServices guard) ──
+              - name: wxo-template
+                configMap:
+                  name: wxo-template
+                  defaultMode: 0444
               {{- if and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled }}
               # ── Fusion AI Services entity ConfigMaps ─────────────────────────
               # Mounted as directories (no subPath) so Kubernetes auto-refreshes
@@ -982,6 +999,13 @@ spec:
                   - "--metrics-address=:8081"
               {{- end }}{{- /* end if $rhoaiEnabled containers */}}
               - name: backstage-backend
+                {{- if .Values.developerHub.catalog.naas.enabled }}
+                # NODE_EXTRA_CA_CERTS ensures Node.js trusts the cluster's self-signed
+                # CA when the backend makes HTTPS calls to the Kubernetes API server.
+                env:
+                  - name: NODE_EXTRA_CA_CERTS
+                    value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                {{- end }}
                 volumeMounts:
                   - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/data.json
@@ -999,11 +1023,27 @@ spec:
                   - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/nvidia-green.svg
                     subPath: nvidia-green.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/naas-guide-icon.svg
+                    subPath: naas-guide-icon.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/naas-template-icon.svg
+                    subPath: naas-template-icon.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/maas-cap-icon.svg
+                    subPath: maas-cap-icon.svg
                   # Backward-compat mount: community-icon.png path resolves to ai-models-icon.png
                   # to avoid 404s from any existing iconUrl references.
                   - name: homepage-data
                     mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/community-icon.png
                     subPath: ai-models-icon.png
+                  # Fusion AI Services section icons
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/mcp-icon.svg
+                    subPath: mcp-icon.svg
+                  - name: homepage-data
+                    mountPath: /opt/app-root/src/packages/app/dist/homepage/icons/watsonx-icon.svg
+                    subPath: watsonx-icon.svg
                   {{- if and .Values.developerHub.fusionServices .Values.developerHub.fusionServices.enabled }}
                   # ── Fusion AI entity files ────────────────────────────────────
                   # Platform entities: single file, subPath is fine (static key).
@@ -1023,6 +1063,11 @@ spec:
                     mountPath: /opt/app-root/src/add-dcs-cluster-template.yaml
                     subPath: add-dcs-cluster-template.yaml
                   {{- end }}
+                  # ── WXO template — always-on (outside fusionServices block) ──
+                  - name: wxo-template
+                    mountPath: /opt/app-root/src/wxo-template.yaml
+                    subPath: wxo-template.yaml
+            {{- end }}
         {{- end }}
   
   {{- if .Values.developerHub.database.useOperator }}
@@ -1106,6 +1151,16 @@ rules:
 - apiGroups: ["apiextensions.k8s.io"]
   resources: ["customresourcedefinitions"]
   verbs: ["get", "list"]
+{{- if .Values.developerHub.catalog.naas.enabled }}
+# The validator reads a single Namespace by name, lists NaaS-managed Namespaces,
+# and lists OpenShift Groups.
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
+- apiGroups: ["user.openshift.io"]
+  resources: ["groups"]
+  verbs: ["get", "list"]
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

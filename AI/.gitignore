@@ -1,0 +1,32 @@
+# macOS binary metadata files
+.DS_Store
+*.DS_Store
+._*
+.Trashes
+
+# Editor and OS temporary files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Python bytecode / cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment / secrets files — NEVER commit these
+*.env
+!*.env.example
+
+# Namespace validator plugin build artifacts
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/node_modules/
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/dist/
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/dist-dynamic/
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/dist-scalprum/
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/dist-types/
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/*.d.ts
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/tsconfig.tsbuildinfo
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/yarn.lock
+quickstarts/fusion-developerhub/plugins/namespace-validator/**/package-lock.json

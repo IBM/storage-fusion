@@ -1,0 +1,281 @@
+# This is the configuration for the Web mode with Fusion CAS knowledge retrieval.
+# It is the default configuration for the Helm deployment.
+# It has the following features:
+# - Web search enabled by default
+# - Knowledge retrieval using IBM Fusion CAS (nat_retriever backend).
+#   This requires a running Fusion CAS instance with at least one vector store.
+#   See fusion-cas-aiq/README.md for setup instructions.
+
+general:
+  use_uvloop: true
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+    # tracing:
+    #   langsmith: # Optional: LangSmith tracing - requires langsmith API key. Set using `export LANGSMITH_API_KEY=<your-langsmith-api-key>`
+    #     _type: langsmith
+    #     project: nvidia-aiq
+
+  front_end:
+    _type: aiq_api
+    runner_class: aiq_api.plugin.AIQAPIWorker
+    # =========================================================================
+    # Knowledge API is automatically enabled when knowledge_retrieval function
+    # is configured
+    # =========================================================================
+    # Async Job API Settings
+    # =========================================================================
+    # Async job infrastructure database (NAT JobStore + EventStore)
+    # Used by: /v1/jobs/async routes, SSE streaming, job status persistence
+    # Requires async driver for SQLite (aiosqlite) or PostgreSQL (asyncpg)
+    # NAT_JOB_STORE_DB_URL is injected from aiq-credentials secret via Helm secretEnv.
+    # It points to the aiq-postgres Pod: postgresql+asyncpg://<user>:<pass>@aiq-postgres:5432/aiq_jobs
+    # The sqlite fallback is kept for local dev only — it requires /app/data/ to exist.
+    # Environment overrides:
+    # - NAT_JOB_STORE_DB_URL (direct override)
+    # - NAT_JOB_STORE_DB_URL_DEV / NAT_JOB_STORE_DB_URL_PROD (via NAT_ENV)
+    db_url: ${NAT_JOB_STORE_DB_URL:-sqlite+aiosqlite:///./jobs.db}
+    # Job expiry - how long completed jobs stay in database before cleanup
+    expiry_seconds: 86400  # 24 hours (min: 600, max: 604800/7 days)
+    cors:
+      allow_origin_regex: 'http://localhost(:\d+)?|http://127.0.0.1(:\d+)?'
+      allow_methods:
+        - GET
+        - POST
+        - DELETE
+        - OPTIONS
+      allow_headers:
+        - "*"
+      allow_credentials: true
+      expose_headers:
+        - "*"
+
+llms:
+  # Intent classifier — uses thinking mode to improve query classification.
+  # This LLM is NOT bound to any tools, so enable_thinking is safe here.
+  # NOTE: enable_thinking is DISABLED here to reduce GPU time per request.
+  # Thinking mode causes the model to emit a long reasoning block before the
+  # JSON intent response, which consumes significantly more GPU capacity and
+  # is the primary cause of [503] Service temporarily overloaded responses
+  # from the NIM endpoint under concurrent load. Intent classification does
+  # not benefit enough from thinking to justify the capacity cost.
+  nemotron_llm_intent:
+    _type: nim
+    model_name: nvidia/nemotron-3-super-120b-a12b
+    base_url: "https://integrate.api.nvidia.com/v1"
+    temperature: 0.5
+    top_p: 0.9
+    max_tokens: 4096
+    # chat_template_kwargs:
+    #   enable_thinking: true  # DISABLED: causes [503] overload under concurrent load
+
+  # Super LLM — used by clarifier and shallow research agents.
+  # NOTE: enable_thinking must be FALSE/REMOVED here because these agents
+  # bind tools (knowledge_search, web_search_tool). NIM rejects requests
+  # that combine tool schemas with thinking mode (HTTP 500).
+  # max_tokens: 32768 — hard output-token limit for nemotron-3-super-120b-a12b.
+  # Requesting more (e.g. 65536) causes NIM to return [500] on every request
+  # regardless of prompt length.
+  nemotron_super_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-super-120b-a12b
+    base_url: "https://integrate.api.nvidia.com/v1"
+    temperature: 0.7
+    top_p: 0.7
+    max_tokens: 32768
+    # chat_template_kwargs:
+    #   enable_thinking: true  # DISABLED: causes HTTP 500 when tools are bound
+
+  # Ultra LLM — used by deep research orchestrator, planner, and researcher.
+  # NOTE: enable_thinking must be FALSE/REMOVED here because deep_research_agent
+  # binds tools (knowledge_search). NIM rejects requests that combine tool
+  # schemas with thinking mode (HTTP 500).
+  # max_tokens: 32768 — hard output-token limit for nemotron-3-ultra-550b-a55b.
+  # Requesting more (e.g. 65536) causes NIM to return [500] on every request
+  # regardless of prompt length.
+  nemotron_ultra_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-ultra-550b-a55b
+    base_url: "https://integrate.api.nvidia.com/v1"
+    temperature: 0.7
+    top_p: 0.7
+    max_tokens: 32768
+    # chat_template_kwargs:
+    #   enable_thinking: true  # DISABLED: causes HTTP 500 when tools are bound (deep_research_agent binds knowledge_search)
+
+# =========================================================================
+# Retrievers — one Fusion CAS retriever holding ALL vector stores
+# =========================================================================
+# A single retriever is configured with all vector store names and a
+# source_id_store_map that maps each data-source registry ID to its
+# Fusion CAS vector store name.
+#
+# How per-store UI selection works:
+#   - The UI shows one card per data_source entry (fusion_cas_1, fusion_cas_2…).
+#   - All cards map to the SAME knowledge_search tool (one tool, one LLM call).
+#   - When the user enables one or more stores, the enabled source IDs flow
+#     through _active_data_sources ContextVar to the retriever.
+#   - The retriever intersects those IDs with source_id_store_map and fans out
+#     to only the matching stores IN PARALLEL (asyncio.gather) — one HTTP
+#     request per store, all fired simultaneously, results merged and ranked.
+#
+#   User selects only "Store 1"  → 1 HTTP call to that store only.
+#   User selects both stores     → 2 concurrent HTTP calls, results merged+ranked.
+#   User selects nothing (all off) → knowledge_search tool excluded from agent.
+#
+# ── How to configure your stores ─────────────────────────────────────────
+#
+# Vector store names and display labels come from the aiq-credentials secret:
+#   FUSION_VECTOR_STORE_1       / FUSION_VECTOR_STORE_1_LABEL
+#   FUSION_VECTOR_STORE_2       / FUSION_VECTOR_STORE_2_LABEL
+#
+# Connection secrets also come from aiq-credentials:
+#   FUSION_CAS_URL      Base URL of the Fusion CAS service
+#   FUSION_CAS_TOKEN    Bearer token (from aiq-credentials secret)
+#   FUSION_VERIFY_SSL   true/false TLS verification (default: true)
+#
+# To add a store:
+#   1. Append a new ${FUSION_VECTOR_STORE_N:-} entry to vector_stores below.
+#   2. Add a fusion_cas_N: ${FUSION_VECTOR_STORE_N:-} entry to source_id_store_map.
+#   3. Add a matching entry to data_sources.sources (id, name, description).
+#   4. Add FUSION_VECTOR_STORE_N and FUSION_VECTOR_STORE_N_LABEL to:
+#        - aiq-fusion.env (and .example)
+#        - 03-setup-secrets-and-token.sh  (--from-literal)
+#        - fusion-config-override.yaml    (secretEnv block)
+#   Rebuild the ConfigMap and restart the backend — no Helm reinstall needed.
+#
+# To remove a store: reverse the above steps.
+# =========================================================================
+retrievers:
+  fusion_cas_store:
+    _type: fusion_cas
+    fusion_url: ${FUSION_CAS_URL:-}
+    # ── List your Fusion CAS vector store names here ──────────────────────
+    # These are the exact names as they appear in the Fusion CAS UI.
+    # Add one line per store; remove lines for stores that don't exist.
+    vector_stores:
+      - ${FUSION_VECTOR_STORE_1:-}
+      - ${FUSION_VECTOR_STORE_2:-}
+    # ── Map each data-source ID → store name ─────────────────────────────
+    # Keys must match the `id` fields in data_sources.sources below.
+    source_id_store_map:
+      fusion_cas_1: ${FUSION_VECTOR_STORE_1:-}
+      fusion_cas_2: ${FUSION_VECTOR_STORE_2:-}
+    token: ${FUSION_CAS_TOKEN:-}
+    verify_ssl: ${FUSION_VERIFY_SSL:-true}
+    top_k: 5
+    timeout: 120
+
+functions:
+  # =========================================================================
+  # Tools — declared first so data_source_registry resolves them at build time
+  # =========================================================================
+  web_search_tool:
+    _type: tavily_web_search
+    max_results: 5
+    max_content_length: 1000
+
+  advanced_web_search_tool:
+    _type: tavily_web_search
+    max_results: 2
+    advanced_search: true
+
+  # Single knowledge search tool — backed by the multi-store retriever above.
+  # The retriever fans out to enabled stores in parallel at call time.
+  knowledge_search:
+    _type: knowledge_retrieval
+    backend: nat_retriever
+    fusion_cas_retriever: fusion_cas_store
+    top_k: 5
+
+  # =========================================================================
+  # Data Source Registry — one entry per vector store for UI toggle granularity.
+  # All entries map to the same knowledge_search tool.
+  # The tool reads which sources are enabled at call time and queries only
+  # those stores, in parallel.
+  # =========================================================================
+  # Customise `name` and `description` to match what users see in the panel.
+  # =========================================================================
+  data_sources:
+    _type: data_source_registry
+    sources:
+      - id: web_search
+        name: "Web Search"
+        description: "Search the web for real-time information."
+        tools:
+          - web_search_tool
+          - advanced_web_search_tool
+
+      # ── One entry per vector store ────────────────────────────────────
+      # id   : must match the key in source_id_store_map above
+      # name : what the user sees in the Data Sources panel
+      # Store 1
+      - id: fusion_cas_1
+        name: "Knowledge Base — ${FUSION_VECTOR_STORE_1_LABEL}"
+        description: "Search the ${FUSION_VECTOR_STORE_1_LABEL} knowledge base."
+        tools:
+          - knowledge_search
+
+      # Store 2
+      - id: fusion_cas_2
+        name: "Knowledge Base — ${FUSION_VECTOR_STORE_2_LABEL}"
+        description: "Search the ${FUSION_VECTOR_STORE_2_LABEL} knowledge base."
+        tools:
+          - knowledge_search
+
+  # Paper Search (optional - requires SERPER_API_KEY)
+  # Uncomment the block below and set SERPER_API_KEY to enable academic paper search.
+  # paper_search_tool:
+  #   _type: paper_search
+  #   max_results: 5
+  #   serper_api_key: ${SERPER_API_KEY}
+
+  # =========================================================================
+  # Agents — inherit all registry tools; use exclude_tools to specialize
+  # =========================================================================
+  intent_classifier:
+    _type: intent_classifier
+    llm: nemotron_llm_intent
+    # tools: omitted -> inherits all from data_source_registry
+    # exclude_tools: []
+
+  clarifier_agent:
+    _type: clarifier_agent
+    llm: nemotron_super_llm
+    # tools: omitted -> inherits all from data_source_registry
+    # exclude_tools: []
+    max_turns: 3
+    log_response_max_chars: 2000
+    verbose: true
+
+  shallow_research_agent:
+    _type: shallow_research_agent
+    llm: nemotron_super_llm
+    # tools: omitted -> inherits all from data_source_registry
+    exclude_tools:
+      - advanced_web_search_tool
+    max_llm_turns: 10
+    max_tool_iterations: 5
+
+  deep_research_agent:
+    _type: deep_research_agent
+    enable_citation_verification: true
+    orchestrator_llm: nemotron_ultra_llm
+    source_router_llm: nemotron_ultra_llm
+    researcher_llm: nemotron_ultra_llm
+    planner_llm: nemotron_ultra_llm
+    writer_llm: nemotron_super_llm
+    # tools: omitted -> inherits all from data_source_registry
+    exclude_tools:
+      - web_search_tool
+
+workflow:
+  _type: chat_deepresearcher_agent
+  enable_escalation: true
+  enable_clarifier: true
+  use_async_deep_research: true
+  # AIQ_CHECKPOINT_DB is injected from the aiq-credentials secret via Helm secretEnv.
+  # It points to aiq-postgres: postgresql://<user>:<pass>@aiq-postgres:5432/aiq_jobs
+  checkpoint_db: ${AIQ_CHECKPOINT_DB:-./checkpoints.db}

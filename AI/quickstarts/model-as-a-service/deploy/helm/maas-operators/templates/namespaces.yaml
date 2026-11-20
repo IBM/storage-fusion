@@ -33,12 +33,17 @@ metadata:
 {{- end }}
 {{- end }}
 
+{{- /* connectivityLink Subscription targets openshift-operators which is a
+     cluster-provided namespace — do NOT attempt to create it via Helm.
+     kuadrant-system is a separate dedicated namespace for Kuadrant components
+     and IS created by the chart below via connectivityLink.kuadrantNamespace. */}}
+
 {{- if .Values.operators.connectivityLink.enabled }}
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.operators.connectivityLink.namespace }}
+  name: {{ .Values.operators.connectivityLink.kuadrantNamespace }}
   labels:
     {{- include "maas-operators.labels" . | nindent 4 }}
     openshift.io/cluster-monitoring: "true"

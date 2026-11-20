@@ -1,0 +1,147 @@
+# MaaS Platform - Production Environment
+# Environment-specific platform configuration for production
+#
+# Cluster-specific values to set before applying:
+#
+#   global.wildcardDomain — output of:
+#     oc get ingresses.config/cluster -o jsonpath={.spec.domain}
+#
+#   gateway.gatewayClassName — output of:
+#     oc get gatewayclasses -o name | head -1
+#     Typical values: "data-science-gateway-class", "openshift-default"
+#
+#   platformKuadrant.namespace — namespace where Authorino/Kuadrant runs:
+#     oc get pods -A -l app=authorino --no-headers | awk '{print $1}' | head -1
+#     Typical values: "openshift-operators" (RHOAI-bundled), "kuadrant-system" (standalone)
+
+global:
+  # Set to: oc get ingresses.config/cluster -o jsonpath={.spec.domain}
+  wildcardDomain: apps.CLUSTER_DOMAIN
+  toolsImage: quay.io/openshift/origin-cli:latest
+
+platform:
+  namespaces:
+    modelRegistry: rhoai-model-registries
+    workbench: rhods-notebooks
+
+dataScienceCluster:
+  enabled: true
+  # DataScienceCluster is cluster-scoped — no namespace field.
+  name: default-dsc
+  components:
+    dashboard:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+    kserve:
+      managementState: Managed
+      # modelsAsService is deprecated in RHOAI 3.5+ — do NOT set to Managed;
+      # once set to Removed it cannot be re-enabled. Use aigateway below instead.
+      rawDeploymentServiceConfig: Headless
+      nim:
+        managementState: Managed
+    # aigateway replaces kserve.modelsAsService in RHOAI 3.5+
+    # Parent managementState is required — without it MaaS CRDs are never installed.
+    aigateway:
+      managementState: Managed
+      modelsAsAService:
+        managementState: Managed
+    ogx:
+      managementState: Managed
+    modelregistry:
+      managementState: Managed
+    feastoperator:
+      managementState: Removed
+    trustyai:
+      managementState: Managed  # Enabled for production
+    aipipelines:
+      managementState: Managed
+    ray:
+      managementState: Managed
+    trainingoperator:
+      managementState: Managed
+    trainer:
+      managementState: Removed
+    mlflowoperator:
+      managementState: Removed
+    llamastackoperator:
+      managementState: Removed
+    kueue:
+      managementState: Removed
+
+# ── MaaS Database — Prod (in-cluster PostgreSQL, testing only) ────────────────
+# ⚠  Temporary: using in-cluster postgres for prod testing.
+#    Switch to external: true and a managed database before go-live.
+#
+# ESO path (recommended for prod):
+#   1. vault kv put secret/maas/postgres username=maas password=<pw> database=maas sslMode=disable
+#   2. Set enabled: false, externalSecret.enabled: true, internal.externalSecret.enabled: true
+#   3. Clear internal.username and internal.password (set to "")
+#
+# Helm path (current):
+#   enabled: true, externalSecret.enabled: false — Helm manages secrets
+maasDatabase:
+  enabled: true               # Helm creates maas-db-config Secret
+  external: false
+  secretNamespace: redhat-ods-applications
+  connectionUrl: ""
+  externalSecret:
+    enabled: false            # set true (and enabled: false above) to switch to ESO
+  internal:
+    enabled: true             # deploy in-cluster Postgres Deployment + Service
+    namespace: redhat-ods-applications
+    purpose: poc
+    username: maas
+    password: "changeme-prod-test"  # REPLACE before go-live
+    database: maas
+    sslMode: disable            # switch to "require" only when using an external managed DB with TLS
+    image: "registry.redhat.io/rhel9/postgresql-16:latest"       # AIR-GAPPED / OFFLINE CLUSTERS ONLY: :latest bypasses IDMS mirroring in disconnected clusters.
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+    persistence:
+      enabled: true             # PVC so data survives pod restarts during testing
+      size: 10Gi
+      storageClassName: ""
+
+# ── Gateway — clusterip mode for bare-metal / HostNetwork IngressController ──
+# This cluster uses HostNetwork (not LoadBalancer) on the IngressController.
+# Wildcard DNS resolves to router node IPs, not a MetalLB VIP, so the Gateway
+# must use ClusterIP + OpenShift Route instead of a LoadBalancer Service.
+#
+# Set gatewayClassName to the GatewayClass installed on your cluster:
+#   oc get gatewayclasses -o name
+# Common values: "data-science-gateway-class", "openshift-default"
+gateway:
+  ingressMode: clusterip
+  gatewayClassName: data-science-gateway-class
+
+platformKuadrant:
+  enabled: true
+  # Set namespace to where Authorino/Kuadrant runs on your cluster:
+  #   oc get pods -A -l app=authorino --no-headers | awk '{print $1}' | head -1
+  # "openshift-operators"  — RHOAI-bundled RHCL (AllNamespaces OperatorGroup)
+  # "kuadrant-system"      — standalone RHCL subscription
+  namespace: openshift-operators
+  instance:
+    enabled: true
+    name: kuadrant
+
+leaderWorkerSet:
+  # Set enabled: true once the LWS CSV reaches Succeeded and the CRD
+  # leaderworkerset.x-k8s.io is confirmed present on your cluster:
+  #   oc get crd leaderworkersets.leaderworkerset.x-k8s.io
+  # Required only for tensor-parallel models (Laguna S2.1 etc); single-GPU models unaffected.
+  enabled: false
+  namespace: openshift-lws-operator
+  instance:
+    enabled: false
+    name: cluster
+    managementState: Managed

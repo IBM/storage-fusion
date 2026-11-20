@@ -1,0 +1,80 @@
+aiq:
+  fusionConfig:
+    enabled: false
+
+  apps:
+    frontend:
+      service:
+        ports:
+          - name: http
+            port: 3000
+            targetPort: 3000
+            protocol: TCP
+
+      # Note: the upstream Helm chart has no Route template — route.enabled is
+      # silently ignored. The Route is created explicitly by 04-deploy-helm.sh.
+
+      env:
+        REQUIRE_AUTH: 'true'
+        SECURE_COOKIES: 'true'
+        NODE_EXTRA_CA_CERTS: /etc/ssl/oauth-ca/ca.crt
+
+      # All cluster-specific and user-supplied values come from the
+      # aiq-credentials Kubernetes Secret — nothing is hardcoded here.
+      secretEnv:
+        NEXTAUTH_SECRET: NEXTAUTH_SECRET
+        OAUTH_CLIENT_SECRET: OAUTH_CLIENT_SECRET
+        OAUTH_ISSUER: OAUTH_ISSUER
+        OAUTH_CLIENT_ID: OAUTH_CLIENT_ID
+        NEXTAUTH_URL: NEXTAUTH_URL
+
+      volumes:
+        - name: aiq-oauth-ca
+          configMap:
+            name: aiq-oauth-ca
+
+      volumeMounts:
+        - name: aiq-oauth-ca
+          mountPath: /etc/ssl/oauth-ca
+          readOnly: true
+
+    backend:
+      env:
+        CONFIG_FILE: configs/config_web_frag.yml
+
+      # All cluster-specific and user-supplied values come from the
+      # aiq-credentials Kubernetes Secret — nothing is hardcoded here.
+      # Note: NAT_JOB_STORE_DB_URL / AIQ_CHECKPOINT_DB / AIQ_SUMMARY_DB are
+      # already defined as plain env in the upstream values.yaml using
+      # $(DB_USER_NAME):$(DB_USER_PASSWORD) interpolation — do NOT re-declare
+      # them here or Helm's strategic-merge patch will produce duplicate env
+      # entries and fail with "order in patch list doesn't match" errors.
+      secretEnv:
+        FUSION_CAS_TOKEN: FUSION_CAS_TOKEN
+        NVIDIA_API_KEY: NVIDIA_API_KEY
+        TAVILY_API_KEY: TAVILY_API_KEY
+        FUSION_CAS_URL: FUSION_CAS_URL
+        FUSION_VERIFY_SSL: FUSION_VERIFY_SSL
+        FUSION_VECTOR_STORE_1: FUSION_VECTOR_STORE_1
+        FUSION_VECTOR_STORE_2: FUSION_VECTOR_STORE_2
+        FUSION_VECTOR_STORE_1_LABEL: FUSION_VECTOR_STORE_1_LABEL
+        FUSION_VECTOR_STORE_2_LABEL: FUSION_VECTOR_STORE_2_LABEL
+        # DB_USER_NAME / DB_USER_PASSWORD are the credentials that the upstream
+        # env vars interpolate into the Postgres URLs at pod startup.
+        DB_USER_NAME: DB_USER_NAME
+        DB_USER_PASSWORD: DB_USER_PASSWORD
+
+      volumes:
+        - name: postgres-init
+          configMap:
+            name: aiq-postgres-init
+
+        - name: aiq-config-frag
+          configMap:
+            name: aiq-config-frag
+
+      volumeMounts:
+        - name: aiq-config-frag
+          mountPath: /app/configs/config_web_frag.yml
+          subPath: config_web_frag.yml
+          readOnly: true

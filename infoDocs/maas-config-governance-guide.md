@@ -63,7 +63,7 @@ If you need to deploy the IBM Fusion MaaS platform from scratch or get your firs
 ### Repository Access
 
 - **GitHub account with write access** to a fork of the [storage-fusion](https://github.com/IBM/storage-fusion) repository. You must push values file and manifest changes before ArgoCD can apply them; read-only access is not sufficient.
-- The `maas-config` manifests live at `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/` within the repository
+- The `maas-config` manifests live at `AI/AI/quickstarts/model-as-a-service/` within the repository
 
 ### Verify Your Environment
 
@@ -348,7 +348,7 @@ Wave 300  →  maas-config         (MaaSSubscription + MaaSAuthPolicy for all mo
 
 ### Step 1: Fork and Clone the Repository
 
-The `maas-config` manifests and Helm chart live in the [storage-fusion](https://github.com/IBM/storage-fusion) repository under `AI/AI/quickstarts/model-as-a-service-rhoai-3.5`.
+The `maas-config` manifests and Helm chart live in the [storage-fusion](https://github.com/IBM/storage-fusion) repository under `AI/AI/quickstarts/model-as-a-service`.
 
 **Fork the repository:**
 
@@ -362,8 +362,8 @@ cd storage-fusion/AI/quickstarts/model-as-a-service
 ```
 
 The `maas-config` files are located at:
-- Helm chart: `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/`
-- GitOps manifests: `AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-config/`
+- Helm chart: `AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/`
+- GitOps manifests: `AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-config/`
 
 ---
 
@@ -475,9 +475,9 @@ Key fields to confirm or change:
 
 ```bash
 helm template maas-config \
-  AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config \
-  -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/values.yaml \
-  -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/environments/prod/values-prod.yaml
+  AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config \
+  -f AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/values.yaml \
+  -f AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/environments/prod/values-prod.yaml
 ```
 
 ---
@@ -492,7 +492,7 @@ spec:
   source:
     repoURL: https://github.com/<your-username>/storage-fusion.git       # update
     targetRevision: master                                                  # update if needed
-    path: AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config
+    path: AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config
     helm:
       valueFiles:
         - values.yaml
@@ -522,8 +522,8 @@ spec:
 Since this is a GitOps deployment, ArgoCD pulls configuration from your Git repository. Commit and push all changes before applying:
 
 ```bash
-git add AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-config/environments/prod/
-git add AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/environments/prod/
+git add AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-config/environments/prod/
+git add AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/environments/prod/
 git commit -m "Configure maas-config governance for production: all models"
 git push
 ```
@@ -537,7 +537,7 @@ git push
 Apply the `AppProject` that governs RBAC for the production `maas-config` Application. This only needs to be applied once per cluster:
 
 ```bash
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-config/environments/prod/appproject-prod.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-config/environments/prod/appproject-prod.yaml
 ```
 
 This creates the `fusion-maas-governance-config-prod` AppProject which defines:
@@ -565,7 +565,7 @@ fusion-maas-governance-config-prod   1m
 Apply the governance Application manifest to register it with ArgoCD. This does not sync resources to the cluster yet. It only tells ArgoCD that the Application exists and where to find its configuration:
 
 ```bash
-oc apply -f AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-config/environments/prod/application-governance-prod.yaml
+oc apply -f AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-config/environments/prod/application-governance-prod.yaml
 ```
 
 **Verify ArgoCD has registered the Application:**
@@ -1124,7 +1124,7 @@ authPolicies:
 
 ```bash
 # Commit the updated values file
-git add AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/environments/prod/values-prod.yaml
+git add AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/environments/prod/values-prod.yaml
 git commit -m "Add governance for <model-name> to maas-prod-subscription and maas-prod-auth-policy"
 git push
 
@@ -1299,7 +1299,7 @@ Key points to carry forward:
 | Resource | Link |
 |---|---|
 | storage-fusion repository | [github.com/IBM/storage-fusion](https://github.com/IBM/storage-fusion) |
-| Helm chart - maas-config | [`AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/`](../deploy/helm/maas-config/) |
-| Helm chart README | [`AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/helm/maas-config/README.md`](../deploy/helm/maas-config/README.md) |
-| GitOps manifests - maas-config | [`AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-config/`](../deploy/gitops/maas-config/) |
-| Model deploy GitOps | [`AI/AI/quickstarts/model-as-a-service-rhoai-3.5/deploy/gitops/maas-model-deploy/`](../deploy/gitops/maas-model-deploy/) |
+| Helm chart - maas-config | [`AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/`](../deploy/helm/maas-config/) |
+| Helm chart README | [`AI/AI/quickstarts/model-as-a-service/deploy/helm/maas-config/README.md`](../deploy/helm/maas-config/README.md) |
+| GitOps manifests - maas-config | [`AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-config/`](../deploy/gitops/maas-config/) |
+| Model deploy GitOps | [`AI/AI/quickstarts/model-as-a-service/deploy/gitops/maas-model-deploy/`](../deploy/gitops/maas-model-deploy/) |

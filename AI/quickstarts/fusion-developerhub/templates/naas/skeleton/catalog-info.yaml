@@ -9,8 +9,17 @@ metadata:
   annotations:
     github.com/project-slug: ${{ values.repoOrg }}/${{ values.repoName }}
     backstage.io/source-location: >
-      url:${{ values.githubBaseUrl }}/${{ values.repoOrg }}/${{ values.repoName }}/blob/naas-${{ values.projectName }}-${{ values.environment }}/namespaces/${{ values.projectName }}-${{ values.environment }}/catalog-info.yaml
+      url:${{ values.githubBaseUrl }}/${{ values.repoOrg }}/${{ values.repoName }}/blob/${{ values.targetBranch }}/namespaces/${{ values.projectName }}-${{ values.environment }}/catalog-info.yaml
     openshift.io/display-name: "${{ values.projectName }}-${{ values.environment }}"
+  links:
+    - title: OpenShift Console
+      url: ${{ values.consoleBaseUrl }}/k8s/cluster/namespaces/${{ values.projectName }}-${{ values.environment }}
+      icon: dashboard
+    {%- if values.applicationName %}
+    - title: ArgoCD Application
+      url: ${{ values.argocdBaseUrl }}/applications/${{ values.applicationName }}-${{ values.environment }}
+      icon: dashboard
+    {%- endif %}
   labels:
     business-unit: ${{ values.businessUnit }}
     environment: ${{ values.environment }}
@@ -21,6 +30,9 @@ metadata:
     - openshift
     - naas
     - ${{ values.environment }}
+    {%- if values.applicationName %}
+    - ${{ values.applicationName }}
+    {%- endif %}
 spec:
   type: openshift-namespace
   owner: ${{ values.catalogOwner }}

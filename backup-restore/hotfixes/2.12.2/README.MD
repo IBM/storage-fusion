@@ -74,15 +74,26 @@ If your environment does not have direct internet access, mirror the hotfix imag
 
 **Execute the mirroring script:**
 ```bash
-./br-2.12.2patch-offline-mirror.sh <TARGET_PATH>
+./br-2.12.2patch-offline-mirror.sh [ -hci | -sds ] <TARGET_PATH>
 ```
 
 **Parameters:**
 - `<TARGET_PATH>`: Your local registry path in format `$LOCAL_ISF_REGISTRY/$LOCAL_ISF_REPOSITORY`
+- `-hci` (optional): Mirror only the images required for HCI deployments
+- `-sds` (optional): Mirror only the images required for SDS deployments
 
-**Example:**
+If neither `-hci` nor `-sds` is specified, the images for both HCI and SDS deployments are mirrored.
+
+**Examples:**
 ```bash
+# Mirror images for both HCI and SDS
 ./br-2.12.2patch-offline-mirror.sh myregistry.example.com:5000/isf-images
+
+# Mirror only the images required for HCI
+./br-2.12.2patch-offline-mirror.sh -hci myregistry.example.com:5000/isf-images
+
+# Mirror only the images required for SDS
+./br-2.12.2patch-offline-mirror.sh -sds myregistry.example.com:5000/isf-images
 ```
 
 > **Note:** Skip this step if your cluster has direct internet access.

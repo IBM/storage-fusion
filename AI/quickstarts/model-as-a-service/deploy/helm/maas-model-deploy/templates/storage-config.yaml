@@ -1,5 +1,6 @@
+{{- if not .Values.s3.externalSecret.enabled }}
 ---
-# storage-config Secret
+# storage-config Secret — Manual mode
 # -----------------------------------------------------------------------
 # KServe's storage-initializer reads S3 credentials from a secret named
 # "storage-config" in the model namespace.  Each key in the secret is the
@@ -9,6 +10,10 @@
 # This mirrors the secret that RHOAI creates automatically when you deploy
 # a model via the dashboard.  Without it, the KServe init-container cannot
 # authenticate to S3 and the pod will fail to start.
+#
+# This resource is rendered only when s3.externalSecret.enabled is false
+# (the default). When ESO mode is on, templates/storage-config-externalsecret.yaml
+# owns this secret instead and ESO assembles the JSON from Vault fields.
 # -----------------------------------------------------------------------
 apiVersion: v1
 kind: Secret
@@ -36,3 +41,4 @@ stringData:
       "bucket": {{ .Values.s3.bucket | quote }},
       "cabundle_configmap": "odh-kserve-custom-ca-bundle"
     }
+{{- end }}

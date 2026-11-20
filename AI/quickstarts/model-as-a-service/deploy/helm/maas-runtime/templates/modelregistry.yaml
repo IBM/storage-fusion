@@ -14,6 +14,10 @@ metadata:
 ---
 {{- end }}
 {{- if .Values.modelRegistry.objectStorage.enabled }}
+{{- /* ── Mutual exclusion guard: autoCreateBucket + ESO cannot both be true ── */}}
+{{- if and .Values.modelRegistry.objectStorage.autoCreateBucket .Values.modelRegistry.objectStorage.externalSecret.enabled }}
+  {{- fail "modelRegistry.objectStorage.autoCreateBucket: true and objectStorage.externalSecret.enabled: true are mutually exclusive. The OBC hook Job would overwrite the ESO-managed Secret. Set autoCreateBucket: false to use ESO." }}
+{{- end }}
 {{- if .Values.modelRegistry.objectStorage.autoCreateBucket }}
 # ObjectBucketClaim for automatic bucket creation using IBM Fusion / OpenShift Data Foundation
 apiVersion: objectbucket.io/v1alpha1
@@ -44,6 +48,10 @@ spec:
   {{- end }}
 ---
 {{- end }}
+{{- if not .Values.modelRegistry.objectStorage.externalSecret.enabled }}
+# model-registry-object-storage Secret — Helm-managed.
+# Skipped when objectStorage.externalSecret.enabled: true; ESO owns the Secret entirely
+# in that mode (model-registry-objectstorage-externalsecret.yaml).
 apiVersion: v1
 kind: Secret
 metadata:
@@ -65,7 +73,14 @@ stringData:
   # the model-registry-fusion-setup hook Job and must not be overwritten.
   AWS_S3_BUCKET: {{ .Values.modelRegistry.objectStorage.bucket | quote }}
   {{- else }}
-  # Manual IBM Fusion credentials
+  # Manual IBM Fusion credentials (Helm-managed).
+  # To stop committing credentials to Git, switch to the ESO path:
+  #   objectStorage.autoCreateBucket: false
+  #   objectStorage.externalSecret.enabled: true
+  #   objectStorage.accessKeyId: ""      # clear from values
+  #   objectStorage.secretAccessKey: ""  # clear from values
+  #   objectStorage.endpoint: ""         # clear from values
+  # See templates/model-registry-objectstorage-externalsecret.yaml.
   AWS_ACCESS_KEY_ID: {{ .Values.modelRegistry.objectStorage.accessKeyId | quote }}
   AWS_SECRET_ACCESS_KEY: {{ .Values.modelRegistry.objectStorage.secretAccessKey | quote }}
   AWS_S3_ENDPOINT: {{ .Values.modelRegistry.objectStorage.endpoint | quote }}
@@ -74,8 +89,9 @@ stringData:
   AWS_DEFAULT_REGION: {{ .Values.modelRegistry.objectStorage.region | quote }}
   AWS_STORAGE_CLASS: {{ .Values.modelRegistry.objectStorage.storageClass | quote }}
   VERIFY_SSL: {{ .Values.modelRegistry.objectStorage.verifySSL | quote }}
----
+{{- end }}
 {{- if .Values.modelRegistry.objectStorage.autoCreateBucket }}
+---
 # Hook Job to populate credentials from IBM Fusion ObjectBucketClaim.
 # Runs as a post-install AND post-upgrade Helm hook so it fires on every
 # ArgoCD sync, re-populating credentials even if the secret was just created.
@@ -192,8 +208,8 @@ spec:
           echo "Successfully configured Model Registry with IBM Fusion Object Storage"
 {{- end }}
 {{- end }}
----
 {{- if not .Values.modelRegistry.database.external }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -307,6 +323,19 @@ spec:
   selector:
     app.kubernetes.io/component: database
 {{- else }}
+{{- /* ── external: true ─────────────────────────────────────────────────────── */}}
+{{- /* Path A (externalSecret.enabled: false): Helm writes model-registry-db-credentials */}}
+{{- /* Path B (externalSecret.enabled: true):  this block is skipped entirely;            */}}
+{{- /*   model-registry-db-externalsecret.yaml creates the ExternalSecret instead.        */}}
+{{- if not .Values.modelRegistry.database.externalSecret.enabled }}
+---
+# model-registry-db-credentials Secret — Helm-managed (external DB, Helm path).
+# Skipped when database.externalSecret.enabled: true; ESO owns the Secret entirely
+# in that mode (templates/model-registry-db-externalsecret.yaml).
+# To stop committing the password to Git, switch to the ESO path:
+#   modelRegistry.database.external: true
+#   modelRegistry.database.externalSecret.enabled: true
+#   modelRegistry.database.externalDatabase.password: ""   # clear from values
 apiVersion: v1
 kind: Secret
 metadata:
@@ -314,14 +343,20 @@ metadata:
   namespace: {{ .Values.modelRegistry.namespace }}
   labels:
     {{- include "maas-runtime.labels" . | nindent 4 }}
+  annotations:
+    # Prevent ArgoCD from overwriting credentials after initial creation.
+    argocd.argoproj.io/sync-options: Prune=false
+    helm.sh/resource-policy: keep
 type: Opaque
 stringData:
-  DB_HOST: {{ .Values.modelRegistry.database.externalDatabase.host | quote }}
-  DB_PORT: {{ .Values.modelRegistry.database.externalDatabase.port | quote }}
-  DB_NAME: {{ .Values.modelRegistry.database.externalDatabase.database | quote }}
-  DB_USER: {{ .Values.modelRegistry.database.externalDatabase.username | quote }}
+  DB_HOST:    {{ .Values.modelRegistry.database.externalDatabase.host | quote }}
+  DB_PORT:    {{ .Values.modelRegistry.database.externalDatabase.port | quote }}
+  DB_NAME:    {{ .Values.modelRegistry.database.externalDatabase.database | quote }}
+  DB_USER:    {{ .Values.modelRegistry.database.externalDatabase.username | quote }}
   DB_PASSWORD: {{ .Values.modelRegistry.database.externalDatabase.password | quote }}
   DB_SSLMODE: {{ .Values.modelRegistry.database.externalDatabase.sslMode | quote }}
+{{- end }}
+{{- /* ── end external: true block ─────────────────────────────────────────── */}}
 {{- end }}
 ---
 apiVersion: v1
@@ -363,6 +398,7 @@ spec:
       name: model-registry-db-credentials
       key: POSTGRES_PASSWORD
     username: modelregistry
+    sslMode: {{ .Values.modelRegistry.database.internalDatabase.sslMode | default "disable" }}
     skipDBCreation: false
   {{- else }}
   postgres:

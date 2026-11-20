@@ -1,0 +1,77 @@
+# =============================================================================
+# MaaS Generic Model Specification — gpt-oss-20b
+# =============================================================================
+# Architecture: OpenAI GPT-OSS-20B
+# GPU Requirement: 1 GPU (set accelerator.vendor to 'nvidia' or 'amd')
+# Use Cases: General Chat, Code Completion, Agent Workflows, guardrail model
+# =============================================================================
+
+accelerator:
+  vendor: nvidia                  # 'nvidia' or 'amd'
+  count: 1
+
+model:
+  name: gpt-oss-20b-version-1
+  displayName: "GPT-OSS 20B (Standard Serving)"
+  namespace: deploy-models-rhoai
+
+project:
+  create: true
+
+modelRegistry:
+  enabled: true
+  name: model-registry
+  namespace: rhoai-model-registries
+  registeredModelName: "gpt-oss-20b"
+  connectionSecret: "model-registry-connection"
+  createConnectionSecret: true
+  connectionSecretData:
+    ociHost: "registry.redhat.io"
+
+source:
+  uri: ""                         # Auto-resolved from Model Registry
+
+inference:
+  engine: vllm
+  image: registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3.0
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  extraArgs:
+    - --enable-force-include-usage
+    - --served-model-name=openai/gpt-oss-20b
+    - --max-model-len=32768
+    - --gpu-memory-utilization=0.90
+    - --trust-remote-code
+    - --dtype=bfloat16
+    - --enable-auto-tool-choice
+    - --tool-call-parser=openai
+
+# GPUs are added from accelerator.count; do not list nvidia.com/gpu here.
+resources:
+  limits:
+    cpu: "8"
+    memory: 32Gi
+  requests:
+    cpu: "4"
+    memory: 16Gi
+
+# Add nodeSelector / tolerations here or via a hardware profile (profiles/).
+scheduling:
+  nodeSelector: {}
+  tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+  affinity: {}
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+labels:
+  app.kubernetes.io/name: gpt-oss-20b
+  app.kubernetes.io/part-of: maas-platform
+  tier: standard

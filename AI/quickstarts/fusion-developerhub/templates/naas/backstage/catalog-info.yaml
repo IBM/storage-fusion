@@ -1,0 +1,47 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: namespace-as-a-service-quickstart
+  title: "Quickstart: Namespace-as-a-Service on IBM Fusion"
+  description: |
+    The Namespace-as-a-Service (NaaS) Quickstart turns namespace provisioning into a self-service form in Developer Hub. A developer fills in their project name, picks a size, and names their team groups. A GitOps Pull Request is opened automatically, and once approved, ArgoCD provisions a fully configured, policy-compliant namespace with no manual oc commands on either side.
+
+    What gets provisioned:
+    - Isolated OpenShift Namespace — scoped to the requesting team with standardized naming and cost-center labels
+    - Resource Quota — CPU, memory, pod count, and storage caps scaled to the chosen Small / Medium / Large tier
+    - LimitRange — per-container and per-pod CPU/memory defaults so pods without explicit requests don't exhaust quota
+    - Network Policies — default-deny ingress with allow-rules for intra-namespace traffic, the OpenShift router, and Prometheus scraping
+    - RBAC Roles — namespace-admin, namespace-developer, and namespace-viewer bindings pre-wired to the developer's groups, plus a dedicated CICD ServiceAccount
+
+    Why this quickstart:
+    - Zero-touch provisioning — developers get a namespace in minutes; no cluster-admin ticket required
+    - Consistent guardrails — every namespace carries the same security and resource policies, enforced by the platform
+    - GitOps-driven — namespace manifests are committed to Git and reconciled by ArgoCD; full audit trail included
+    - Scalable platform engineering — one template serves all teams; policy changes propagate to all future namespaces automatically
+
+    Ideal for:
+    - Platform engineering teams standardizing namespace lifecycle management across multiple developer squads
+    - Development teams needing isolated workspaces on demand without waiting for manual cluster operations
+    - Organizations adopting a self-service internal developer platform model on OpenShift
+  tags:
+    - openshift
+    - platform-engineering
+    - quickstart
+    - naas
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: IBM/storage-fusion
+  links:
+    - url: https://community.ibm.com/community/user/blogs/christo-abraham2/2026/08/31/quick-start-fusion-namespace-as-a-service
+      title: Read the IBM Tech Exchange Blog
+      icon: article
+    - url: https://ibm.github.io/storage-fusion/fusion-ai/resources/
+      title: Explore on Fusion Tech Community
+      icon: web
+spec:
+  type: quickstart
+  lifecycle: production
+  owner: group:default/fusion-platform-team
+  system: fusion-ai-services
+  dependsOn:
+    - component:default/fusion-developerhub-quickstart
