@@ -1,0 +1,338 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lldp-remediation
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-reader-sa
+  namespace: lldp-remediation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-reader-role
+rules:
+  # Read and cordon/uncordon nodes
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "patch", "update"]
+  # Get own pod (to find which node we are on), delete self for migration,
+  # and watch pods in the temp namespace that oc debug node/... creates
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "delete", "create"]
+  # oc debug node/... needs exec, attach, and log to stream command output
+  - apiGroups: [""]
+    resources: ["pods/exec", "pods/attach", "pods/log"]
+    verbs: ["get", "create"]
+  # oc debug node/... creates, watches, and deletes a temporary namespace
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  # oc debug node/... needs to list SCCs to find a usable one
+  - apiGroups: ["security.openshift.io"]
+    resources: ["securitycontextconstraints"]
+    verbs: ["get", "list"]
+  # Get and patch NNCPs to disable LLDP
+  - apiGroups: ["nmstate.io"]
+    resources: ["nodenetworkconfigurationpolicies"]
+    verbs: ["get", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-reader-role
+subjects:
+  - kind: ServiceAccount
+    name: node-reader-sa
+    namespace: lldp-remediation
+---
+# Grant node-reader-sa permission to use the privileged SCC,
+# which oc debug node/... requires to run a host-network pod.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-reader-privileged-scc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:privileged
+subjects:
+  - kind: ServiceAccount
+    name: node-reader-sa
+    namespace: lldp-remediation
+---
+# ============================================================
+# Job: reboot-cluster-nodes
+#
+# Purpose:
+#   Disables LLDP on bond0 and bond1 across every cluster node
+#   by checking each node via oc debug and rebooting only those
+#   where a change was made. The pod's own node is always
+#   processed last to avoid killing the job pod prematurely.
+#
+# Steps:
+#   1. Detect which node this pod is running on (MY_NODE_NAME)
+#      and build the node list with that node moved to the end.
+#   2. Verify the NNCP 'enable-lldp-bonds' exists, then patch
+#      it to set lldp.enabled=false on bond1. Wait up to 15 min
+#      for nmstate to apply it cluster-wide.
+#   3. Uncordon all nodes to clean up any leftover cordon from
+#      a previous failed run.
+#   4. Wait 60 seconds for the cluster to settle after NNCP apply.
+#   5. For each node (own node last):
+#      a. Check all cluster nodes are Ready (wait up to 20 min).
+#         Auto-uncordon any node that is Ready but still cordoned.
+#         Abort if any node remains NotReady after the timeout.
+#      b. Cordon the node.
+#      c. Check LLDP on bond0 and bond1 via nmcli on the host.
+#         Disable LLDP on any bond where it is still enabled.
+#      d. Reboot the node only if at least one bond was changed.
+#         Wait up to 15 min for the node to come back Ready.
+#      e. Uncordon the node before moving to the next.
+#   6. Log success when all nodes are processed.
+#
+# Fault tolerance:
+#   - restartPolicy: OnFailure reschedules the pod on another
+#     node if the job pod is killed (e.g. its own node reboots).
+#   - backoffLimit: 5 allows up to 5 pod restarts before giving up.
+#   - LLDP checks are idempotent: already-fixed nodes are skipped.
+#   - Uncordon-all at startup cleans up from any prior crash.
+# ============================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: reboot-cluster-nodes
+  namespace: lldp-remediation
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      serviceAccountName: node-reader-sa
+      restartPolicy: OnFailure
+      containers:
+      - name: reboot-nodes
+        image: icr.io/fusion-open/utils/fusion-oc-utils:1.0.0
+        env:
+        # MY_NODE_NAME is injected by Kubernetes (Downward API) so the script
+        # knows which node it is running on and can process it last.
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -euo pipefail
+
+          NAMESPACE="lldp-remediation"
+
+          # ------------------------------------------------------------------
+          # STEP 1: Build node list — own node goes last.
+          # The pod's node is excluded from the front of the list and appended
+          # at the end. This ensures all other nodes are processed before the
+          # pod's own node is rebooted, avoiding premature pod death and
+          # wasting backoffLimit retries.
+          # ------------------------------------------------------------------
+          echo "[$(date -u +%H:%M:%SZ)] Job pod is running on node: ${MY_NODE_NAME}"
+          ALL_NODES=$(oc get nodes \
+            -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
+            | grep -v "^${MY_NODE_NAME}$")
+          ALL_NODES="${ALL_NODES}"$'\n'"${MY_NODE_NAME}"
+
+          echo "Node list (own node last):"
+          echo "${ALL_NODES}"
+          echo "---"
+
+          # ------------------------------------------------------------------
+          # STEP 2: Patch NNCP to disable LLDP on bond1 cluster-wide.
+          # Verifies the NNCP exists first, then patches it and waits up to
+          # 15 min (60 x 15s) for nmstate to report SuccessfullyConfigured.
+          # ------------------------------------------------------------------
+          NNCP_NAME="enable-lldp-bonds"
+          echo "[$(date -u +%H:%M:%SZ)] Checking if NNCP '${NNCP_NAME}' exists..."
+          if ! oc get nodenetworkconfigurationpolicy "${NNCP_NAME}" &>/dev/null; then
+            echo "[$(date -u +%H:%M:%SZ)] ERROR: NNCP '${NNCP_NAME}' not found. Aborting."
+            exit 1
+          fi
+          echo "[$(date -u +%H:%M:%SZ)] NNCP '${NNCP_NAME}' found. Patching to disable LLDP on bond1..."
+          oc patch nodenetworkconfigurationpolicy "${NNCP_NAME}" --type=merge -p '{
+            "spec": {
+              "desiredState": {
+                "interfaces": [
+                  {"name": "bond1", "type": "bond", "state": "up", "lldp": {"enabled": false}}
+                ]
+              }
+            }
+          }'
+          echo "[$(date -u +%H:%M:%SZ)] Waiting for NNCP '${NNCP_NAME}' to reach Available state..."
+          for i in $(seq 1 60); do
+            NNCP_STATUS=$(oc get nodenetworkconfigurationpolicy "${NNCP_NAME}" \
+              -o jsonpath='{.status.conditions[?(@.type=="Available")].status}')
+            NNCP_REASON=$(oc get nodenetworkconfigurationpolicy "${NNCP_NAME}" \
+              -o jsonpath='{.status.conditions[?(@.type=="Available")].reason}')
+            if [ "${NNCP_STATUS}" = "True" ] && [ "${NNCP_REASON}" = "SuccessfullyConfigured" ]; then
+              echo "[$(date -u +%H:%M:%SZ)] NNCP '${NNCP_NAME}' successfully applied."
+              break
+            fi
+            echo "[$(date -u +%H:%M:%SZ)]   NNCP not ready yet (${i}/60, status=${NNCP_STATUS}, reason=${NNCP_REASON}), retrying in 15s..."
+            sleep 15
+            if [ "${i}" -eq 60 ]; then
+              echo "[$(date -u +%H:%M:%SZ)] ERROR: NNCP '${NNCP_NAME}' did not reach Available state within timeout. Aborting."
+              exit 1
+            fi
+          done
+          echo "---"
+
+          # ------------------------------------------------------------------
+          # STEP 3: Uncordon all nodes.
+          # Cleans up any nodes left cordoned by a previous failed run so the
+          # cluster is in a clean state before the per-node loop begins.
+          # ------------------------------------------------------------------
+          echo "[$(date -u +%H:%M:%SZ)] Uncordoning all nodes before starting..."
+          for NODE in ${ALL_NODES}; do
+            oc adm uncordon "${NODE}" || true
+          done
+          echo "[$(date -u +%H:%M:%SZ)] All nodes uncordoned."
+          echo "---"
+
+          # ------------------------------------------------------------------
+          # STEP 4: Wait 60 seconds for the cluster to settle after NNCP apply.
+          # ------------------------------------------------------------------
+          echo "[$(date -u +%H:%M:%SZ)] Waiting 60 seconds before processing nodes..."
+          sleep 60
+          echo "[$(date -u +%H:%M:%SZ)] Starting node processing."
+          echo "---"
+
+          # ------------------------------------------------------------------
+          # STEP 5: Per-node loop — own node is always last in ALL_NODES.
+          # ------------------------------------------------------------------
+          for NODE in ${ALL_NODES}; do
+            echo "[$(date -u +%H:%M:%SZ)] === Processing node: ${NODE} ==="
+
+            # ----------------------------------------------------------------
+            # STEP 5a: Cluster-wide Ready check before touching this node.
+            # - Any node that is Ready but cordoned (SchedulingDisabled) is
+            #   uncordoned automatically.
+            # - If any node is NotReady, wait up to 20 min (40 x 30s).
+            # - Abort with the offending node name if not recovered in time.
+            # ----------------------------------------------------------------
+            echo "[$(date -u +%H:%M:%SZ)] Checking if all cluster nodes are Ready before processing ${NODE}..."
+            ALL_READY=false
+            for i in $(seq 1 40); do
+              # Uncordon any node that is Ready but still cordoned (SchedulingDisabled)
+              while IFS= read -r CORDONED_NODE; do
+                [ -z "${CORDONED_NODE}" ] && continue
+                echo "[$(date -u +%H:%M:%SZ)]   Node ${CORDONED_NODE} is Ready but cordoned - uncordoning..."
+                oc adm uncordon "${CORDONED_NODE}" || true
+              done < <(oc get nodes \
+                -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.conditions[?(@.type=="Ready")].status}{" "}{.spec.unschedulable}{"\n"}{end}' \
+                | awk '$2 == "True" && $3 == "true" {print $1}')
+
+              # Check if any node is still NotReady
+              NOT_READY_NODE=$(oc get nodes \
+                -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' \
+                | awk '$2 != "True" {print $1}' | head -1)
+              if [ -z "${NOT_READY_NODE}" ]; then
+                ALL_READY=true
+                break
+              fi
+              echo "[$(date -u +%H:%M:%SZ)]   Node ${NOT_READY_NODE} is NotReady (${i}/40), retrying in 30s..."
+              sleep 30
+            done
+            if [ "${ALL_READY}" = "false" ]; then
+              echo "[$(date -u +%H:%M:%SZ)] ERROR: Node ${NOT_READY_NODE} is not Ready after 20 minutes. Aborting."
+              exit 1
+            fi
+            echo "[$(date -u +%H:%M:%SZ)]   All cluster nodes are Ready. Proceeding with ${NODE}."
+
+            # ----------------------------------------------------------------
+            # STEP 5b: Cordon the node to prevent new workloads scheduling on it.
+            # ----------------------------------------------------------------
+            echo "[$(date -u +%H:%M:%SZ)] Cordoning ${NODE}..."
+            oc adm cordon "${NODE}"
+
+            # ----------------------------------------------------------------
+            # STEP 5c: Check and disable LLDP on bond0 and bond1.
+            # Uses oc debug to chroot into the host and query nmcli.
+            # Sets IS_REBOOT_REQUIRED=true if LLDP was enabled on either bond.
+            # ----------------------------------------------------------------
+            IS_REBOOT_REQUIRED=false
+
+            echo "[$(date -u +%H:%M:%SZ)] Checking LLDP on bond0 for ${NODE}..."
+            BOND0_LLDP=$(oc debug node/${NODE} -- chroot /host bash -c \
+              'nmcli con show "bond0" 2>/dev/null | grep "connection.lldp"' || true)
+            echo "[$(date -u +%H:%M:%SZ)]   bond0 lldp value: ${BOND0_LLDP}"
+            if echo "${BOND0_LLDP}" | grep -qi "enable"; then
+              echo "[$(date -u +%H:%M:%SZ)]   LLDP is enabled on bond0 - disabling..."
+              oc debug node/${NODE} -- chroot /host bash -c \
+                'nmcli con mod "bond0" connection.lldp disable'
+              IS_REBOOT_REQUIRED=true
+            else
+              echo "[$(date -u +%H:%M:%SZ)]   LLDP already disabled on bond0, no change needed."
+            fi
+
+            echo "[$(date -u +%H:%M:%SZ)] Checking LLDP on bond1 for ${NODE}..."
+            BOND1_LLDP=$(oc debug node/${NODE} -- chroot /host bash -c \
+              'nmcli con show "bond1" 2>/dev/null | grep "connection.lldp"' || true)
+            echo "[$(date -u +%H:%M:%SZ)]   bond1 lldp value: ${BOND1_LLDP}"
+            if echo "${BOND1_LLDP}" | grep -qi "enable"; then
+              echo "[$(date -u +%H:%M:%SZ)]   LLDP is enabled on bond1 - disabling..."
+              oc debug node/${NODE} -- chroot /host bash -c \
+                'nmcli con mod "bond1" connection.lldp disable'
+              IS_REBOOT_REQUIRED=true
+            else
+              echo "[$(date -u +%H:%M:%SZ)]   LLDP already disabled on bond1, no change needed."
+            fi
+
+            # ----------------------------------------------------------------
+            # STEP 5d: Reboot the node only if LLDP was changed on at least one
+            # bond. Wait up to 15 min (60 x 15s) for the node to come back
+            # Ready. Abort the job if the node does not recover in time.
+            # ----------------------------------------------------------------
+            if [ "${IS_REBOOT_REQUIRED}" = "true" ]; then
+              echo "[$(date -u +%H:%M:%SZ)] LLDP change detected - rebooting ${NODE}..."
+              oc debug node/${NODE} -- chroot /host systemctl reboot || true
+
+              echo "[$(date -u +%H:%M:%SZ)] Waiting for ${NODE} to come back Ready..."
+              NODE_READY=false
+              for i in $(seq 1 60); do
+                READY_STATUS=$(oc get node "${NODE}" \
+                  -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
+                if [ "${READY_STATUS}" = "True" ]; then
+                  echo "[$(date -u +%H:%M:%SZ)] ${NODE} is Ready."
+                  NODE_READY=true
+                  break
+                fi
+                echo "[$(date -u +%H:%M:%SZ)]   Not Ready yet (${i}/60, status=${READY_STATUS}), retrying in 15s..."
+                sleep 15
+              done
+
+              if [ "${NODE_READY}" = "false" ]; then
+                echo "[$(date -u +%H:%M:%SZ)] ERROR: ${NODE} did not come back Ready within timeout. Aborting."
+                exit 1
+              fi
+            else
+              echo "[$(date -u +%H:%M:%SZ)] No LLDP changes on ${NODE} - skipping reboot."
+            fi
+
+            # ----------------------------------------------------------------
+            # STEP 5e: Uncordon the node to return it to the schedulable pool.
+            # ----------------------------------------------------------------
+            echo "[$(date -u +%H:%M:%SZ)] Uncordoning ${NODE}..."
+            oc adm uncordon "${NODE}"
+
+            echo "[$(date -u +%H:%M:%SZ)] Done with ${NODE}. Moving to next node."
+            echo "---"
+          done
+
+          echo "[$(date -u +%H:%M:%SZ)] All nodes processed successfully."
